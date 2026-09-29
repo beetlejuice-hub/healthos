@@ -93,8 +93,15 @@ Vite + React + TypeScript · Supabase (own project, same account as Tempo) · Cl
 not required. Cloud storage OK. A test account for agents like Tempo's: maybe. Running cost
 ~€20/month is fine. Private repo `healthos`.
 
-## 7. Next
+## 7. Status and next
 
-1. [ ] Owner picks a look (or mix) from `prototypes/looks.html`.
-2. [ ] Prototype the Log flow (add food, tick stack, log a set) and one Insights screen in that look.
-3. [ ] Scaffold the app; P0 = food + intake + caffeine curve + stack ticks, cached-first, tested `/lib`.
+**Built (29 Sept):** Today, Log (food via Open Food Facts + saved foods, drinks, stack, weight),
+Workout (templates, suggested weights, rest timer), Insights (master graph + panels), Settings
+(goals, caffeine/sleep, sample data, export). All logic in `src/lib`, tested. Data is stored on
+the device only until Supabase sync lands.
+
+1. [ ] **Supabase sync** — needs the project URL + anon key from Arnold. Phone ↔ laptop.
+2. [ ] **Deploy** — Cloudflare, connected to this repo.
+3. [ ] Owner sets real goals (Settings) and uses it for a few days.
+4. [ ] Wearable: pick the device, then import heart rate, sleep, HRV into the master graph.
+5. [ ] AI layer on top of the computed stats (weekly summary, experiment suggestions).

@@ -1,0 +1,14 @@
+{
+  "name": "HealthOS",
+  "short_name": "HealthOS",
+  "description": "Your body's data in one place.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#131a2b",
+  "theme_color": "#131a2b",
+  "icons": [
+    { "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+  ]
+}
