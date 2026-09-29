@@ -22,6 +22,31 @@ export function Insights() {
   const data = useMemo(() => lanes(s.entries, s.workouts, s.supplements, s.settings, now), [s.entries, s.workouts, s.supplements, s.settings, now]);
   const facts = useMemo(() => dailyFacts(s.entries, s.workouts, s.settings, addDays(today, -89), today), [s.entries, s.workouts, s.settings, today]);
   const sample = s.entries.some((e) => e.id.startsWith("sample:"));
+  // Show a section only once there's something in it; list the rest in one line each, so a new
+  // account sees a short page instead of ten empty panels (owner: "looks really complex").
+  const has = useMemo(() => {
+    const kinds = new Set(s.entries.map((e) => e.kind));
+    const workoutsPerExercise = new Map<string, Set<string>>();
+    s.entries.forEach((e) => { if (e.kind === "set") workoutsPerExercise.set(e.exercise, (workoutsPerExercise.get(e.exercise) ?? new Set()).add(e.workoutId)); });
+    return {
+      food: kinds.has("food"),
+      caffeine: facts.some((d) => d.caffeineMg > 0 || d.alcoholG > 0),
+      strength: [...workoutsPerExercise.values()].some((w) => w.size >= 2),
+      sets: kinds.has("set"),
+      supps: kinds.has("supp"),
+      effects: suppEffects(facts, s.supplements).some((e) => e.diff),
+      pairs: pairs(facts).some((p) => p.r),
+    };
+  }, [s.entries, s.supplements, facts]);
+  const locked: [string, string][] = [
+    !has.food && ["Nutrition", "log food on a few days to see averages against your goals"],
+    !has.caffeine && ["Caffeine and alcohol", "log drinks to see what's left in you at bedtime"],
+    !has.strength && ["Strength", "log the same exercise in two workouts"],
+    !has.sets && ["Sets per muscle", "log a workout"],
+    !has.supps && ["Supplements", "tick your stack on Today"],
+    !has.effects && ["Does it do anything?", "needs 5+ days both on and off a supplement, plus how you felt the next day"],
+    !has.pairs && ["What moves what", "needs 10+ days with both the cause and next-day feeling logged"],
+  ].filter((x): x is [string, string] => !!x);
   const nothing = s.entries.length === 0;
 
   return (
@@ -34,16 +59,22 @@ export function Insights() {
         {sample && <span className="badge">INCLUDES SAMPLE DATA · remove it in Settings</span>}
       </header>
       {nothing && <div className="needs">Nothing logged yet. Log food, drinks and supplements for a few days and this fills in — or load sample data in Settings to see what it will look like.</div>}
-      <Kpis facts={facts} today={today} now={now} />
-      <MasterGraph data={data} supplements={s.supplements} />
+      {!nothing && <Kpis facts={facts} today={today} now={now} />}
+      {!nothing && <MasterGraph data={data} supplements={s.supplements} />}
       <div className="pgrid">
-        <Nutrition now={now} />
-        <CaffeineAlcohol facts={facts} />
-        <Strength now={now} />
-        <Muscles now={now} />
-        <Supplements facts={facts} today={today} />
-        <SuppEffects facts={facts} />
-        <WhatMovesWhat facts={facts} />
+        {has.food && <Nutrition now={now} />}
+        {has.caffeine && <CaffeineAlcohol facts={facts} />}
+        {has.strength && <Strength now={now} />}
+        {has.sets && <Muscles now={now} />}
+        {has.supps && <Supplements facts={facts} today={today} />}
+        {has.effects && <SuppEffects facts={facts} />}
+        {has.pairs && <WhatMovesWhat facts={facts} />}
+        {locked.length > 0 && (
+          <section className="p w12">
+            <h2>Unlocks as you log <span>{locked.length} more sections</span></h2>
+            <ul className="notes">{locked.map(([name, how]) => <li key={name}><b>{name}</b>: {how}</li>)}</ul>
+          </section>
+        )}
       </div>
     </div>
   );
@@ -74,7 +105,7 @@ function Kpis({ facts, today, now }: { facts: DayFacts[]; today: string; now: nu
   ];
   return (
     <section className="kpis" aria-label="Last 7 days">
-      {items.map(([k, v, u, d]) => <div className="kpi" key={k}><span className="k">{k}</span><span className="v">{v}<small>{u}</small></span><span className="d">{d}</span></div>)}
+      {items.filter(([, v]) => v !== "—").map(([k, v, u, d]) => <div className="kpi" key={k}><span className="k">{k}</span><span className="v">{v}<small>{u}</small></span><span className="d">{d}</span></div>)}
     </section>
   );
 }

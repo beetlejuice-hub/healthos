@@ -118,9 +118,13 @@ function Session({ w }: { w: Workout }) {
           <span>Last time: {prev.length ? <b style={{ color: "var(--k-ink)" }}>{prev[0].kg} × {prev.map((s) => s.reps).join("/")}</b> : "first time"}</span>
           {sug && <span><b>{sug.kg} kg × {sug.reps}</b>: {sug.reason}</span>}
         </div>
-        {exDone && i < plan.length - 1
-          ? <button type="button" className="go" onClick={() => setI(i + 1)}>Next: {plan[i + 1].name}</button>
-          : <button type="button" className="go" onClick={log}>Log set</button>}
+        {/* After the planned sets, the big button moves you on — it never keeps adding sets by
+            accident (found in testing: 17 sets logged on a 12-set plan). An extra set is still
+            one deliberate tap away. */}
+        {!exDone && <button type="button" className="go" onClick={log}>Log set</button>}
+        {exDone && i < plan.length - 1 && <button type="button" className="go" onClick={() => setI(i + 1)}>Next: {plan[i + 1].name}</button>}
+        {exDone && i === plan.length - 1 && <button type="button" className="go" onClick={() => act.endWorkout(w.id)}>Finish workout</button>}
+        {exDone && <button type="button" className="kbtn" onClick={log}>+ Extra set of {cur.name}</button>}
         <div className="sets">
           {Array.from({ length: Math.max(cur.sets, mine.length) }, (_, k) => {
             const s = mine[k];
@@ -159,7 +163,7 @@ function Session({ w }: { w: Workout }) {
           </div>
         ))}
       </div>
-      <button type="button" className="go alt" onClick={() => { act.endWorkout(w.id); }}>Finish workout</button>
+      {!(exDone && i === plan.length - 1) && <button type="button" className="go alt" onClick={() => { act.endWorkout(w.id); }}>Finish early</button>}
     </div>
   );
 }

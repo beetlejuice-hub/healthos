@@ -18,7 +18,8 @@ describe("nowItems", () => {
   it("lists missed supplements, not answered or inactive ones", () => {
     const items = nowItems(ctx(at(14, 20), [{ id: "t", kind: "supp", at: at(8, 20), suppId: "cre", status: "taken" }]));
     const supps = items.filter((i) => i.kind === "supp-missed");
-    expect(supps.map((i) => i.id)).toEqual(["supp:cumin"]);
+    expect(supps).toHaveLength(1);
+    expect(supps[0]).toMatchObject({ suppIds: ["cumin"], title: "Black cumin oil 1 tsp" });
   });
 
   it("treats a skip as an answer", () => {
@@ -28,7 +29,7 @@ describe("nowItems", () => {
 
   it("shows a supplement as due within the hour before its time", () => {
     const items = nowItems(ctx(at(21, 45), [{ id: "t", kind: "supp", at: at(8), suppId: "cre", status: "taken" }, { id: "u", kind: "supp", at: at(8), suppId: "cumin", status: "taken" }]));
-    expect(items.find((i) => i.id === "supp:mag")?.kind).toBe("supp-due");
+    expect(items.find((i) => i.kind === "supp-due")).toMatchObject({ suppIds: ["mag"] });
   });
 
   it("warns the coffee cut-off has passed, with the numbers from the prototype", () => {
@@ -38,19 +39,31 @@ describe("nowItems", () => {
   });
 
   it("gives advance notice when the cut-off is under 90 minutes away", () => {
-    const item = nowItems(ctx(at(8), [])).find((i) => i.kind === "caffeine");
-    expect(item).toBeUndefined(); // cut-off is ~18:22 with an empty body
-    const late = nowItems(ctx(at(17, 30), [])).find((i) => i.kind === "caffeine")!;
-    expect(late.title).toBe("Last coffee by 18:22");
+    // One espresso-sized trace at 08:00 barely moves the cut-off (~18:2x).
+    const tiny: Entry = { id: "t", kind: "drink", at: at(8), name: "Tea", ml: 250, caffeineMg: 1, alcoholG: 0, kcal: 0 };
+    expect(nowItems(ctx(at(9), [tiny])).find((i) => i.kind === "caffeine")).toBeUndefined();
+    const late = nowItems(ctx(at(17, 30), [tiny])).find((i) => i.kind === "caffeine")!;
+    expect(late.title).toMatch(/^Last coffee by 18:2\d$/);
+  });
+
+  it("says nothing about a coffee cut-off on a day with no caffeine", () => {
+    expect(nowItems(ctx(at(20), [])).some((i) => i.kind === "caffeine")).toBe(false);
+  });
+
+  it("groups supplements due at the same time into one card", () => {
+    const items = nowItems({ ...ctx(at(10), []), supplements: stack.map((s) => (s.id === "cumin" ? { ...s, at: 8 * 60 + 15 } : s)) });
+    const g = items.filter((i) => i.kind === "supp-missed");
+    expect(g).toHaveLength(1);
+    expect(g[0]).toMatchObject({ suppIds: ["cre", "cumin"], title: "Morning stack: Creatine, Black cumin oil" });
   });
 
   it("says nothing about caffeine after bedtime", () => {
     expect(nowItems(ctx(at(23, 30), [coffee(22)])).some((i) => i.kind === "caffeine")).toBe(false);
   });
 
-  it("nudges food and feelings only once it's late enough", () => {
+  it("nudges food only once it's late enough", () => {
     expect(nowItems(ctx(at(9), [])).some((i) => i.kind === "food")).toBe(false);
-    expect(nowItems(ctx(at(12, 30), [])).map((i) => i.kind)).toEqual(expect.arrayContaining(["food", "feel"]));
+    expect(nowItems(ctx(at(12, 30), [])).some((i) => i.kind === "food")).toBe(true);
   });
 });
 

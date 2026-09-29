@@ -10,10 +10,9 @@ import { caffeineAt, latestDoseFor, type Dose } from "./caffeine";
 import { atMinute, clock, localDay, minuteOfDay } from "./time";
 
 export type NowItem =
-  | { id: string; kind: "supp-missed" | "supp-due"; suppId: string; title: string; body: string }
+  | { id: string; kind: "supp-missed" | "supp-due"; suppIds: string[]; title: string; body: string }
   | { id: string; kind: "caffeine"; title: string; body: string }
-  | { id: string; kind: "food"; title: string; body: string }
-  | { id: string; kind: "feel"; title: string; body: string };
+  | { id: string; kind: "food"; title: string; body: string };
 
 export type NowContext = {
   now: number;
@@ -36,17 +35,23 @@ export function nowItems(c: NowContext): NowItem[] {
   const todays = c.entries.filter((e) => localDay(e.at) === day);
   const out: NowItem[] = [];
 
-  // Supplements: missed ones first, then ones due soon. A skip is an answer too.
-  for (const s of c.supplements.filter((s) => s.active).sort((a, b) => a.at - b.at)) {
-    const answered = todays.some((e) => e.kind === "supp" && e.suppId === s.id);
-    if (answered) continue;
-    if (nowMin > s.at + MISSED_AFTER_MIN) out.push({ id: `supp:${s.id}`, kind: "supp-missed", suppId: s.id, title: `${s.name} ${s.dose}`.trim(), body: `Not ticked yet — usually ${clockOf(s.at)}.` });
-    else if (nowMin >= s.at - DUE_WITHIN_MIN) out.push({ id: `supp:${s.id}`, kind: "supp-due", suppId: s.id, title: `${s.name} ${s.dose}`.trim(), body: `Due at ${clockOf(s.at)}.` });
+  // Supplements, grouped by their usual time: one card for "the morning stack", not one per pill
+  // (owner, first look: "really complex right out of the gate"). A skip is an answer too.
+  const open = c.supplements.filter((s) => s.active && !todays.some((e) => e.kind === "supp" && e.suppId === s.id));
+  const slots = [...new Set(open.map((s) => s.at))].sort((a, b) => a - b);
+  for (const at of slots) {
+    const group = open.filter((s) => s.at === at);
+    const names = group.map((s) => s.name).join(", ");
+    const title = group.length === 1 ? `${group[0].name} ${group[0].dose}`.trim() : `${at < 12 * 60 ? "Morning" : at < 18 * 60 ? "Afternoon" : "Evening"} stack: ${names}`;
+    if (nowMin > at + MISSED_AFTER_MIN) out.push({ id: `supp:${at}`, kind: "supp-missed", suppIds: group.map((s) => s.id), title, body: `Not ticked yet — usually ${clockOf(at)}.` });
+    else if (nowMin >= at - DUE_WITHIN_MIN) out.push({ id: `supp:${at}`, kind: "supp-due", suppIds: group.map((s) => s.id), title, body: `Due at ${clockOf(at)}.` });
   }
 
-  // Caffeine cut-off, only while bedtime is still ahead.
+  // Caffeine cut-off: only on a day you've had caffeine, and only while bedtime is still ahead.
+  // Warning about a coffee you haven't had and may not want is noise.
   const bed = atMinute(day, c.bedMinute);
-  if (c.now < bed) {
+  const hadCaffeine = todays.some((e) => e.kind === "drink" && e.caffeineMg > 0 && e.at <= c.now);
+  if (hadCaffeine && c.now < bed) {
     const doses: Dose[] = c.entries.filter((e): e is Extract<Entry, { kind: "drink" }> => e.kind === "drink" && e.caffeineMg > 0 && e.at <= c.now).map((e) => ({ at: e.at, mg: e.caffeineMg }));
     const atBed = caffeineAt(doses, bed, c.halfLifeMin);
     const latest = latestDoseFor(doses, bed, c.coffeeMg, c.caffeineTargetMg, c.halfLifeMin);
@@ -63,8 +68,6 @@ export function nowItems(c: NowContext): NowItem[] {
   // Food: nothing logged by late morning is worth a nudge; otherwise say where you stand after lunch.
   const foods = todays.filter((e) => e.kind === "food");
   if (!foods.length && nowMin >= 11 * 60) out.push({ id: "food", kind: "food", title: "Nothing eaten logged yet", body: "Log what you've had so today's totals mean something." });
-
-  if (nowMin >= 12 * 60 && !todays.some((e) => e.kind === "feel")) out.push({ id: "feel", kind: "feel", title: "How do you feel?", body: "Ten seconds: energy, mood, focus, stress." });
 
   return out;
 }

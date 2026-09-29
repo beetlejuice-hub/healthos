@@ -40,7 +40,7 @@ export function Today() {
     return d.length ? d.reduce((a, x) => a + x.totals.kcal, 0) / d.length : null;
   })();
 
-  const answer = (suppId: string, status: "taken" | "skipped") => act.addEntry({ kind: "supp", at: Date.now(), suppId, status });
+  const answer = (suppIds: string[], status: "taken" | "skipped") => suppIds.forEach((suppId) => act.addEntry({ kind: "supp", at: Date.now(), suppId, status }));
 
   return (
     <div className="calm">
@@ -63,12 +63,13 @@ export function Today() {
           <div><b>{it.title}</b><p>{it.body}</p></div>
           <div className="acts">
             {(it.kind === "supp-missed" || it.kind === "supp-due") && <>
-              <button type="button" className="pill-btn pri" onClick={() => answer(it.suppId, "taken")}>Took it</button>
-              <button type="button" className="pill-btn" onClick={() => answer(it.suppId, "skipped")}>Skip today</button>
+              <button type="button" className="pill-btn pri" onClick={() => answer(it.suppIds, "taken")}>{it.suppIds.length > 1 ? "Took all" : "Took it"}</button>
+              {it.suppIds.length > 1
+                ? <button type="button" className="pill-btn" onClick={() => document.getElementById("stack")?.scrollIntoView({ behavior: "smooth" })}>Pick…</button>
+                : <button type="button" className="pill-btn" onClick={() => answer(it.suppIds, "skipped")}>Skip today</button>}
             </>}
             {it.kind === "caffeine" && <button type="button" className="pill-btn" onClick={() => setDismissed((d) => [...d, it.id])}>Got it</button>}
             {it.kind === "food" && <button type="button" className="pill-btn pri" onClick={() => go("log", "food")}>Log food</button>}
-            {it.kind === "feel" && <button type="button" className="pill-btn" onClick={() => document.getElementById("feel")?.scrollIntoView({ behavior: "smooth" })}>Rate now</button>}
           </div>
         </div>
       ))}
@@ -151,7 +152,7 @@ function Stack({ now }: { now: number }) {
   };
   const taken = [...answers.values()].filter((a) => a.status === "taken").length;
   return (
-    <div className="card">
+    <div className="card" id="stack">
       <h3>Stack <span>{taken} of {supps.length} taken</span></h3>
       {supps.map((s) => {
         const a = answers.get(s.id);
