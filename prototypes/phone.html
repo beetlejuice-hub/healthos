@@ -1,0 +1,301 @@
+<title>HealthOS Phone</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Barlow+Condensed:wght@500;600;700&family=Figtree:wght@400;500;600;700&family=Newsreader:ital,opsz,wght@0,6..72,400;1,6..72,400&display=swap">
+<style>
+/* Layout: two working phone screens side by side, Today (calm, from look B) and Workout (cockpit, from look D). Dark by owner's choice. */
+:root {
+  --page: #0f1013; --ink: #e9e7e2; --ink-2: #a3a19b; --ink-3: #6d6b66; --rule: #2a2b30;
+  /* Today */
+  --b-bg: #131a2b; --b-card: #1b2338; --b-card2: #232c45; --b-ink: #eef0f6; --b-ink2: #a9b0c4; --b-dim: #6f7892;
+  --b-caf: #f0b27a; --b-kcal: #9fc2ff; --b-p: #f29b8b; --b-c: #e8c77f; --b-f: #9fd7c7; --b-ok: #a8dcc0; --b-warn: #f0b27a;
+  /* Workout */
+  --d-bg: #0f1012; --d-tile: #1a1c20; --d-tile2: #23262b; --d-ink: #f3f3f1; --d-ink2: #9c9ea3; --d-dim: #62646a; --d-gym: #ffd166; --d-go: #ffd166; --d-hr: #ff8a7a;
+  --f-page: "Figtree", system-ui, sans-serif; --f-serif: "Newsreader", Georgia, serif;
+  --f-cond: "Barlow Condensed", "Arial Narrow", sans-serif; --f-bar: "Barlow", system-ui, sans-serif;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html, body { background: var(--page); color: var(--ink); }
+body { font-family: var(--f-page); padding-inline: 16px; padding-block: 28px 56px; line-height: 1.45; }
+.wrap { max-width: 900px; margin: 0 auto; display: grid; gap: 24px; }
+header.page { display: grid; gap: 8px; max-width: 68ch; }
+header.page h1 { margin: 0; font-size: clamp(24px, 4vw, 32px); font-weight: 700; letter-spacing: -.01em; }
+header.page p { margin: 0; color: var(--ink-2); font-size: 14.5px; }
+.gallery { display: grid; grid-template-columns: repeat(auto-fit, minmax(330px, 1fr)); gap: 32px 28px; align-items: start; }
+.look { display: grid; gap: 10px; min-width: 0; justify-items: start; }
+.look h2 { margin: 0; font-size: 17px; }
+.look > p { margin: 0; color: var(--ink-2); font-size: 13.5px; max-width: 46ch; }
+.phone { width: 100%; max-width: 390px; border-radius: 32px; overflow: hidden; box-shadow: 0 0 0 1px var(--rule), 0 24px 60px -30px #000; }
+button { font: inherit; color: inherit; cursor: pointer; }
+button:focus-visible, input:focus-visible { outline: 2px solid currentColor; outline-offset: 2px; }
+svg { display: block; max-width: 100%; }
+.tabs { display: flex; justify-content: space-around; padding: 10px 6px 16px; font-size: 11px; }
+.tabs span { display: grid; justify-items: center; gap: 4px; }
+.tabs i { display: block; width: 18px; height: 3px; border-radius: 2px; background: transparent; }
+
+/* ---------- Today */
+.T { background: linear-gradient(180deg, #1a2440 0%, var(--b-bg) 45%); color: var(--b-ink); min-height: 800px; display: grid; align-content: start; }
+.T .top { padding: 24px 20px 4px; display: flex; justify-content: space-between; font-size: 12.5px; color: var(--b-ink2); }
+.T .sum { margin: 0; padding: 6px 20px 16px; font-family: var(--f-serif); font-size: 21px; line-height: 1.35; text-wrap: pretty; }
+.T .sum em { color: var(--b-caf); font-style: italic; }
+.T .h { font-size: 11px; letter-spacing: .1em; text-transform: uppercase; color: var(--b-dim); padding: 0 20px 8px; display: flex; justify-content: space-between; }
+.T .do { display: grid; gap: 8px; padding: 0 14px 16px; }
+.T .item { background: var(--b-card); border-radius: 18px; padding: 12px 14px; display: grid; grid-template-columns: 30px 1fr; gap: 4px 10px; align-items: start; }
+.T .item .ic { width: 30px; height: 30px; border-radius: 10px; display: grid; place-items: center; font-size: 14px; font-weight: 700; }
+.T .item b { font-weight: 600; font-size: 14px; display: block; }
+.T .item p { margin: 2px 0 0; font-size: 12.5px; color: var(--b-ink2); }
+.T .item .acts { grid-column: 2; display: flex; gap: 6px; margin-top: 6px; flex-wrap: wrap; }
+.T .item .acts button { border: 0; border-radius: 999px; padding: 7px 13px; font-size: 12.5px; font-weight: 600; background: var(--b-card2); color: var(--b-ink); }
+.T .item .acts button.pri { background: var(--b-ink); color: var(--b-bg); }
+.T .item.warn .ic { background: color-mix(in srgb, var(--b-warn) 20%, transparent); color: var(--b-warn); }
+.T .item.supp .ic { background: color-mix(in srgb, var(--b-ok) 18%, transparent); color: var(--b-ok); }
+.T .item.food .ic { background: color-mix(in srgb, var(--b-kcal) 18%, transparent); color: var(--b-kcal); }
+.T .item.gym .ic { background: color-mix(in srgb, var(--d-gym) 18%, transparent); color: var(--d-gym); }
+.T .item.done { opacity: .5; }
+.T .item.done .acts { display: none; }
+.T .card { margin: 0 14px 12px; padding: 14px 16px; border-radius: 20px; background: var(--b-card); display: grid; gap: 12px; }
+.T .card h3 { margin: 0; font-size: 13px; font-weight: 600; color: var(--b-ink2); display: flex; justify-content: space-between; }
+.T .card h3 span { font-weight: 400; color: var(--b-dim); }
+.T .fuel { display: grid; grid-template-columns: 112px 1fr; gap: 14px; align-items: center; }
+.T .ring { position: relative; width: 112px; height: 112px; }
+.T .ring div { position: absolute; inset: 0; display: grid; place-content: center; text-align: center; }
+.T .ring b { font-size: 22px; font-weight: 700; font-variant-numeric: tabular-nums; line-height: 1.1; }
+.T .ring span { font-size: 11px; color: var(--b-ink2); }
+.T .macros { display: grid; gap: 10px; }
+.T .mac { display: grid; gap: 4px; font-size: 12.5px; }
+.T .mac div:first-child { display: flex; justify-content: space-between; color: var(--b-ink2); }
+.T .mac div:first-child b { color: var(--b-ink); font-weight: 600; font-variant-numeric: tabular-nums; }
+.T .track { height: 6px; border-radius: 4px; background: #26304a; overflow: hidden; }
+.T .track i { display: block; height: 100%; border-radius: 4px; }
+.T .feel { display: grid; grid-template-columns: 58px 1fr 52px; align-items: center; gap: 10px; font-size: 12.5px; color: var(--b-ink2); }
+.T .feel input { width: 100%; accent-color: #9fb6ec; }
+.T .feel em { font-style: normal; color: var(--b-ink); font-size: 12px; text-align: right; }
+.T .tabs { color: var(--b-dim); } .T .tabs .on { color: var(--b-ink); } .T .tabs .on i { background: var(--b-caf); }
+
+/* ---------- Workout */
+.W { background: var(--d-bg); color: var(--d-ink); font-family: var(--f-bar); min-height: 800px; display: grid; align-content: start; }
+.W .top { padding: 20px 16px 10px; display: flex; justify-content: space-between; align-items: end; }
+.W .top h3 { margin: 0; font-family: var(--f-cond); font-size: 30px; font-weight: 700; text-transform: uppercase; letter-spacing: .02em; line-height: 1; }
+.W .top .meta { text-align: right; font-size: 12px; color: var(--d-ink2); font-variant-numeric: tabular-nums; }
+.W .top .meta b { display: block; font-family: var(--f-cond); font-size: 22px; color: var(--d-ink); font-weight: 600; }
+.W .prog { display: flex; gap: 3px; padding: 0 16px 12px; }
+.W .prog i { flex: 1; height: 4px; border-radius: 2px; background: var(--d-tile2); }
+.W .prog i.on { background: var(--d-gym); }
+.W .cur { margin: 0 10px; background: var(--d-tile); border-radius: 20px; padding: 16px; display: grid; gap: 14px; }
+.W .cur .ex { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.W .cur .ex b { font-family: var(--f-cond); font-size: 30px; font-weight: 700; line-height: 1; }
+.W .cur .ex span { font-size: 13px; color: var(--d-ink2); white-space: nowrap; }
+.W .steppers { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.W .step { background: var(--d-tile2); border-radius: 16px; padding: 10px; display: grid; gap: 4px; justify-items: center; }
+.W .step .lbl { font-size: 11px; letter-spacing: .1em; text-transform: uppercase; color: var(--d-ink2); }
+.W .step .row { display: grid; grid-template-columns: 44px 1fr 44px; align-items: center; width: 100%; }
+.W .step button { height: 44px; border-radius: 12px; border: 0; background: #2d3036; font-size: 22px; font-weight: 600; }
+.W .step output { font-family: var(--f-cond); font-size: 46px; font-weight: 700; text-align: center; font-variant-numeric: tabular-nums; line-height: 1; }
+.W .hint { font-size: 12.5px; color: var(--d-ink2); display: flex; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+.W .hint b { color: var(--d-gym); font-weight: 600; }
+.W .go { height: 64px; border-radius: 18px; border: 0; background: var(--d-go); color: #1a1508; font-family: var(--f-cond); font-size: 26px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; }
+.W .go:active { transform: scale(.99); }
+.W .sets { display: grid; gap: 4px; }
+.W .set { display: grid; grid-template-columns: 22px 1fr auto; gap: 8px; align-items: center; font-size: 14px; padding: 6px 2px; border-top: 1px solid #25282d; }
+.W .set:first-child { border-top: 0; }
+.W .set i { font-style: normal; color: var(--d-dim); font-size: 12px; }
+.W .set b { font-family: var(--f-cond); font-size: 20px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.W .set span { font-size: 12px; color: var(--d-ink2); }
+.W .set.done b { color: var(--d-ink); } .W .set.todo b { color: var(--d-dim); }
+.W .rest { margin: 10px 10px 0; background: var(--d-tile); border-radius: 20px; padding: 12px 16px; display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 8px; }
+.W .rest .k { font-size: 11px; letter-spacing: .1em; text-transform: uppercase; color: var(--d-ink2); }
+.W .rest output { font-family: var(--f-cond); font-size: 40px; font-weight: 700; font-variant-numeric: tabular-nums; line-height: 1; }
+.W .rest .bt { display: flex; gap: 6px; }
+.W .rest button { border: 0; border-radius: 12px; background: var(--d-tile2); padding: 10px 12px; font-weight: 600; font-size: 13px; }
+.W .rest.idle output { color: var(--d-dim); }
+.W .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 10px 10px 0; }
+.W .tile { background: var(--d-tile); border-radius: 16px; padding: 12px; display: grid; gap: 2px; min-width: 0; }
+.W .tile .k { font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--d-ink2); font-weight: 600; }
+.W .tile .big { font-family: var(--f-cond); font-size: 30px; font-weight: 600; font-variant-numeric: tabular-nums; line-height: 1.05; }
+.W .tile .big small { font-size: 14px; color: var(--d-ink2); margin-left: 2px; }
+.W .tile .s { font-size: 12px; color: var(--d-ink2); }
+.W .next { margin: 10px 10px 0; background: var(--d-tile); border-radius: 16px; padding: 10px 14px; display: grid; gap: 2px; }
+.W .next .k { font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--d-ink2); font-weight: 600; margin-bottom: 4px; }
+.W .next div { display: flex; justify-content: space-between; font-size: 14px; padding: 3px 0; }
+.W .next div span:last-child { font-family: var(--f-cond); font-size: 18px; font-weight: 600; color: var(--d-ink2); font-variant-numeric: tabular-nums; }
+.W .next div.cur-ex span:first-child { color: var(--d-gym); }
+.W .tabs { color: var(--d-dim); font-weight: 600; text-transform: uppercase; } .W .tabs .on { color: var(--d-ink); } .W .tabs .on i { background: var(--d-gym); }
+.foot { color: var(--ink-3); font-size: 12.5px; max-width: 70ch; }
+.foot a { color: var(--ink-2); }
+@media (prefers-reduced-motion: no-preference) { .T .item { transition: opacity .25s; } }
+</style>
+
+<div class="wrap">
+  <header class="page">
+    <h1>HealthOS on your phone</h1>
+    <p>Two screens with one job each. <b>Today</b> shows only what needs you now and where you stand. <b>Workout</b> is for logging sets at the gym: big numbers, one hand, no typing. Both work: tick things off, move the sliders, log a few sets. Sample day, Tuesday 29 Sep, 14:20.</p>
+  </header>
+
+  <div class="gallery">
+    <section class="look">
+      <h2>Today</h2>
+      <p>From look B. The to-do list only holds what's due or worth a warning, and it empties as you act.</p>
+      <div class="phone"><div class="T" id="today">
+        <div class="top"><span>Tuesday 29 Sep</span><span>14:20</span></div>
+        <p class="sum" id="sum"></p>
+        <div class="h"><span>Now</span><span id="doCount"></span></div>
+        <div class="do" id="do"></div>
+        <div class="card">
+          <h3>Fuel <span>goal 2,600 kcal</span></h3>
+          <div class="fuel">
+            <div class="ring"><svg viewBox="0 0 112 112" width="112" height="112" aria-hidden="true"><circle cx="56" cy="56" r="48" fill="none" stroke="#26304a" stroke-width="9"/><circle id="kring" cx="56" cy="56" r="48" fill="none" stroke="var(--b-kcal)" stroke-width="9" stroke-linecap="round" transform="rotate(-90 56 56)" stroke-dasharray="0 302"/></svg>
+              <div><b id="kcal">0</b><span id="kleft"></span></div></div>
+            <div class="macros" id="macros"></div>
+          </div>
+        </div>
+        <div class="card">
+          <h3>Caffeine <span id="cafNow"></span></h3>
+          <div id="cafCurve"></div>
+        </div>
+        <div class="card">
+          <h3>How do you feel? <span id="feelAt">not logged today</span></h3>
+          <div class="feel"><span>Energy</span><input type="range" id="f-energy" min="1" max="10" value="6" aria-label="Energy"><em data-for="f-energy"></em></div>
+          <div class="feel"><span>Mood</span><input type="range" id="f-mood" min="1" max="10" value="7" aria-label="Mood"><em data-for="f-mood"></em></div>
+          <div class="feel"><span>Focus</span><input type="range" id="f-focus" min="1" max="10" value="7" aria-label="Focus"><em data-for="f-focus"></em></div>
+          <div class="feel"><span>Stress</span><input type="range" id="f-stress" min="1" max="10" value="4" aria-label="Stress"><em data-for="f-stress"></em></div>
+        </div>
+        <div class="tabs"><span class="on"><i></i>Today</span><span><i></i>Log</span><span><i></i>Workout</span><span><i></i>Insights</span></div>
+      </div></div>
+    </section>
+
+    <section class="look">
+      <h2>Workout</h2>
+      <p>From look D. The current set fills the screen, pre-filled with the suggested weight. One tap logs it and starts the rest timer.</p>
+      <div class="phone"><div class="W" id="workout">
+        <div class="top"><h3>Upper A</h3><div class="meta"><b id="elapsed">24:10</b>elapsed</div></div>
+        <div class="prog" id="prog"></div>
+        <div class="cur">
+          <div class="ex"><b id="exName"></b><span id="setOf"></span></div>
+          <div class="steppers">
+            <div class="step"><span class="lbl">kg</span><div class="row"><button type="button" data-d="w,-2.5" aria-label="Less weight">−</button><output id="w"></output><button type="button" data-d="w,2.5" aria-label="More weight">+</button></div></div>
+            <div class="step"><span class="lbl">reps</span><div class="row"><button type="button" data-d="r,-1" aria-label="Fewer reps">−</button><output id="r"></output><button type="button" data-d="r,1" aria-label="More reps">+</button></div></div>
+          </div>
+          <div class="hint"><span>Last time <span id="last"></span></span><span id="sugg"></span></div>
+          <button type="button" class="go" id="logSet">Log set</button>
+          <div class="sets" id="sets"></div>
+        </div>
+        <div class="rest idle" id="rest"><div><span class="k">Rest</span><br><output id="restT">2:30</output></div><div class="bt"><button type="button" id="rMinus">−30s</button><button type="button" id="rPlus">+30s</button><button type="button" id="rSkip">Skip</button></div></div>
+        <div class="grid2">
+          <div class="tile"><span class="k">Volume</span><span class="big" id="vol">0<small>kg</small></span><span class="s" id="volVs"></span></div>
+          <div class="tile"><span class="k" style="color:var(--d-hr)">Heart rate</span><span class="big" style="color:var(--d-dim)">–</span><span class="s">Connect a wearable</span></div>
+        </div>
+        <div class="next" id="next"></div>
+        <div class="tabs"><span><i></i>Today</span><span><i></i>Log</span><span class="on"><i></i>Workout</span><span><i></i>Insights</span></div>
+      </div></div>
+    </section>
+  </div>
+
+  <p class="foot">The warnings are arithmetic, not AI. The coffee warning adds one 95 mg coffee to the caffeine already in your body, lets it halve every 5 hours, and reads off 23:00. The deep-sleep figure is the correlation from the Insights prototype. Goals are examples until you set yours.</p>
+</div>
+
+<script>
+(() => {
+/* ---------- Today ---------- */
+const NOW = 14 * 60 + 20, BED = 23 * 60, HALF = 300;
+const doses = [[8 * 60 + 10, 95], [13 * 60, 95]];
+const caf = (t, extra = []) => [...doses, ...extra].reduce((s, [at, mg]) => t >= at ? s + mg * Math.pow(.5, (t - at) / HALF) : s, 0);
+const nowMg = Math.round(caf(NOW)), bedMg = Math.round(caf(BED)), bedIfCoffee = Math.round(caf(BED, [[NOW, 95]]));
+const GOAL = { kcal: 2600, p: 160, c: 300, f: 80 };
+const food = { kcal: 1400, p: 102, c: 170, f: 36 };
+
+const items = [
+  { id: "cumin", cls: "supp", ic: "✓", title: "Black cumin oil", body: "Missed this morning (usually 08:18). Fine to take now with food.", acts: [["Took it", "done"], ["Skip today", "done"]] },
+  { id: "coffee", cls: "warn", ic: "!", title: "Coffee cut-off has passed", body: `Another coffee now leaves about <b>${bedIfCoffee} mg</b> at 23:00 instead of ${bedMg}. On your nights, every 10 mg at bedtime came with about 2.4 min less deep sleep.`, acts: [["Got it", "done"]] },
+  { id: "snack", cls: "food", ic: "+", title: "Log your 16:30 snack", body: `You're at ${food.kcal.toLocaleString("en-GB")} of 2,600 kcal and ${food.p} of 160 g protein. Training at 17:30.`, acts: [["Log food", "done", true]] },
+  { id: "gym", cls: "gym", ic: "↑", title: "Upper A at 17:30", body: "Bench 80 kg × 6/6/6: repeat last week's weight until all three sets hit 6.", acts: [["Open workout", "done", true]] },
+];
+const doEl = document.getElementById("do");
+function renderDo() {
+  doEl.innerHTML = items.map(it => `<div class="item ${it.cls}${it.done ? " done" : ""}" data-id="${it.id}"><span class="ic" aria-hidden="true">${it.ic}</span><div><b>${it.title}</b><p>${it.body}</p></div>
+    <div class="acts">${it.acts.map(([t, a, pri], i) => `<button type="button" class="${pri ? "pri" : ""}" data-i="${i}">${t}</button>`).join("")}</div></div>`).join("");
+  const left = items.filter(i => !i.done).length;
+  document.getElementById("doCount").textContent = left ? `${left} to do` : "all clear";
+  document.getElementById("sum").innerHTML = left
+    ? `Afternoon's on track. ${food.kcal.toLocaleString("en-GB")} kcal in, <em>${nowMg} mg</em> of caffeine in your body, falling to ${bedMg} mg by bedtime. Upper A at 17:30.`
+    : `Nothing needs you right now. Next up: Upper A at 17:30, then magnesium and saffron at 22:30.`;
+}
+doEl.addEventListener("click", (e) => { const b = e.target.closest("button"); if (!b) return; const it = items.find(i => i.id === b.closest(".item").dataset.id); it.done = true; renderDo(); });
+renderDo();
+
+// Fuel
+document.getElementById("kcal").textContent = food.kcal.toLocaleString("en-GB");
+document.getElementById("kleft").textContent = `${(GOAL.kcal - food.kcal).toLocaleString("en-GB")} left`;
+document.getElementById("kring").setAttribute("stroke-dasharray", `${(food.kcal / GOAL.kcal * 302).toFixed(1)} 302`);
+document.getElementById("macros").innerHTML = [["Protein", food.p, GOAL.p, "var(--b-p)"], ["Carbs", food.c, GOAL.c, "var(--b-c)"], ["Fat", food.f, GOAL.f, "var(--b-f)"]].map(([n, v, g, c]) =>
+  `<div class="mac"><div><span>${n}</span><span><b>${v}</b> / ${g} g</span></div><div class="track"><i style="width:${Math.min(100, v / g * 100)}%;background:${c}"></i></div></div>`).join("");
+
+// Caffeine curve
+document.getElementById("cafNow").textContent = `${nowMg} mg now · ${bedMg} mg at 23:00`;
+{
+  const W = 320, H = 96, pl = 26, pr = 6, pt = 8, pb = 16, t0 = 6 * 60, t1 = 24 * 60, max = 200;
+  const x = (t) => pl + (t - t0) / (t1 - t0) * (W - pl - pr), y = (mg) => pt + (1 - mg / max) * (H - pt - pb);
+  const pts = (a, b) => { const p = []; for (let t = a; t <= b; t += 5) p.push(`${x(t).toFixed(1)},${y(caf(t)).toFixed(1)}`); return p.join(" "); };
+  let g = "";
+  [0, 100, 200].forEach(v => g += `<line x1="${pl}" x2="${W - pr}" y1="${y(v)}" y2="${y(v)}" stroke="#26304a"/><text x="${pl - 4}" y="${y(v) + 3}" text-anchor="end" font-size="9" fill="#6f7892" font-family="Figtree">${v}</text>`);
+  [6, 12, 18, 24].forEach(h => g += `<text x="${x(h * 60)}" y="${H - 3}" text-anchor="middle" font-size="9" fill="#6f7892" font-family="Figtree">${String(h % 24).padStart(2, "0")}</text>`);
+  g += `<polygon points="${x(t0)},${y(0)} ${pts(t0, NOW)} ${x(NOW)},${y(0)}" fill="#f0b27a" fill-opacity=".18"/>`;
+  g += `<polyline points="${pts(t0, NOW)}" fill="none" stroke="#f0b27a" stroke-width="2.2"/>`;
+  g += `<polyline points="${pts(NOW, t1)}" fill="none" stroke="#f0b27a" stroke-width="2" stroke-dasharray="3 3" stroke-opacity=".7"/>`;
+  g += `<circle cx="${x(NOW)}" cy="${y(nowMg)}" r="3.5" fill="#f0b27a"/><circle cx="${x(BED)}" cy="${y(bedMg)}" r="3" fill="none" stroke="#f0b27a" stroke-width="1.5"/>`;
+  document.getElementById("cafCurve").innerHTML = `<svg viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="Caffeine in your body today: ${nowMg} mg now, ${bedMg} mg at 23:00">${g}</svg>`;
+}
+
+// Feelings
+const words = { "f-energy": ["drained", "low", "ok", "steady", "high"], "f-mood": ["low", "flat", "ok", "good", "great"], "f-focus": ["foggy", "scattered", "ok", "sharp", "locked in"], "f-stress": ["calm", "low", "some", "high", "maxed"] };
+document.querySelectorAll(".feel input").forEach(inp => { const em = document.querySelector(`[data-for="${inp.id}"]`);
+  const set = () => { em.textContent = words[inp.id][Math.min(4, Math.floor((inp.value - 1) / 2))]; };
+  inp.addEventListener("input", () => { set(); document.getElementById("feelAt").textContent = "logged 14:20"; }); set(); });
+
+/* ---------- Workout ---------- */
+const plan = [
+  { ex: "Bench press", w: 80, r: 6, sets: 3, last: [6, 6, 5], lastW: 80, rest: 150, why: "Repeat 80 kg: last time 6/6/5" },
+  { ex: "Barbell row", w: 70, r: 8, sets: 3, last: [8, 8, 8], lastW: 67.5, rest: 120, why: "+2.5 kg: last time 8/8/8" },
+  { ex: "Overhead press", w: 47.5, r: 6, sets: 3, last: [6, 6, 6], lastW: 45, rest: 150, why: "+2.5 kg: last time 6/6/6" },
+  { ex: "Lat pulldown", w: 65, r: 10, sets: 3, last: [10, 9, 9], lastW: 65, rest: 90, why: "Repeat 65 kg: last time 10/9/9" },
+];
+const LAST_VOL = 7350; // last Upper A, kg
+const st = { i: 0, done: plan.map(() => []), w: plan[0].w, r: plan[0].r, rest: 0, restMax: 0 };
+st.done[0] = []; // start at bench, set 1
+const $ = (id) => document.getElementById(id);
+function renderW() {
+  const p = plan[st.i], done = st.done[st.i];
+  $("exName").textContent = p.ex;
+  $("setOf").textContent = done.length < p.sets ? `Set ${done.length + 1} of ${p.sets}` : "Done";
+  $("w").textContent = st.w % 1 ? st.w.toFixed(1) : st.w; $("r").textContent = st.r;
+  $("last").innerHTML = `<b style="color:var(--d-ink);font-weight:600">${p.lastW} × ${p.last.join("/")}</b>`;
+  $("sugg").innerHTML = `<b>${p.why}</b>`;
+  $("sets").innerHTML = Array.from({ length: p.sets }, (_, k) => { const s = done[k]; return `<div class="set ${s ? "done" : "todo"}"><i>${k + 1}</i><b>${s ? `${s.w} × ${s.r}` : `${p.w} × ${p.r}`}</b><span>${s ? (s.r >= p.r ? "✓ hit" : `${p.r - s.r} short`) : "planned"}</span></div>`; }).join("");
+  const total = plan.reduce((a, x) => a + x.sets, 0), doneN = st.done.reduce((a, x) => a + x.length, 0);
+  $("prog").innerHTML = Array.from({ length: total }, (_, k) => `<i class="${k < doneN ? "on" : ""}"></i>`).join("");
+  const vol = st.done.flat().reduce((a, s) => a + s.w * s.r, 0);
+  $("vol").innerHTML = `${vol.toLocaleString("en-GB")}<small>kg</small>`;
+  $("volVs").textContent = `${Math.round(vol / LAST_VOL * 100)}% of last Upper A`;
+  $("next").innerHTML = `<span class="k">Session</span>` + plan.map((x, k) => `<div class="${k === st.i ? "cur-ex" : ""}"><span>${x.ex}</span><span>${st.done[k].length}/${x.sets} · ${x.w} × ${x.r}</span></div>`).join("");
+  $("logSet").textContent = done.length < p.sets ? "Log set" : st.i < plan.length - 1 ? "Next exercise" : "Finish workout";
+}
+document.querySelectorAll("[data-d]").forEach(b => b.addEventListener("click", () => { const [k, v] = b.dataset.d.split(","); if (k === "w") st.w = Math.max(0, st.w + +v); else st.r = Math.max(1, st.r + +v); renderW(); }));
+let timer = null;
+const fmt = (s) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
+function startRest(sec) { st.rest = sec; $("rest").classList.remove("idle"); $("restT").textContent = fmt(st.rest); clearInterval(timer);
+  timer = setInterval(() => { st.rest = Math.max(0, st.rest - 1); $("restT").textContent = st.rest ? fmt(st.rest) : "Go"; if (!st.rest) { clearInterval(timer); } }, 1000); }
+$("logSet").addEventListener("click", () => {
+  const p = plan[st.i], done = st.done[st.i];
+  if (done.length < p.sets) { done.push({ w: st.w, r: st.r }); if (done.length < p.sets || st.i < plan.length - 1) startRest(p.rest); }
+  else if (st.i < plan.length - 1) { st.i++; st.w = plan[st.i].w; st.r = plan[st.i].r; }
+  else { $("logSet").disabled = true; $("setOf").textContent = "Workout saved"; clearInterval(timer); }
+  renderW();
+});
+$("rPlus").onclick = () => { if (st.rest) { st.rest += 30; $("restT").textContent = fmt(st.rest); } };
+$("rMinus").onclick = () => { if (st.rest) { st.rest = Math.max(1, st.rest - 30); $("restT").textContent = fmt(st.rest); } };
+$("rSkip").onclick = () => { clearInterval(timer); st.rest = 0; $("restT").textContent = "Go"; };
+// Open mid-workout: first bench set already logged, resting.
+st.done[0].push({ w: 80, r: 6 }); renderW(); startRest(118);
+let el = 24 * 60 + 10; setInterval(() => { el++; $("elapsed").textContent = `${Math.floor(el / 60)}:${String(el % 60).padStart(2, "0")}`; }, 1000);
+})();
+</script>

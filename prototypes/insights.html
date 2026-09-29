@@ -1,0 +1,703 @@
+<title>HealthOS Insights</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: desktop instrument panel. One master graph (stacked thin lanes on a shared, scrollable time axis) on top; domain panels below in a 12-col grid that stacks on narrow screens. Dark only, by owner's choice. */
+:root {
+  --bg: #0d1012;
+  --panel: #12171a;
+  --panel-2: #171e22;
+  --ink: #dce3e5;
+  --ink-2: #93a0a4;
+  --dim: #5b676b;
+  --line: #222b2f;
+  --line-2: #2c373c;
+  --hr: #ef7d6d;
+  --caf: #e0a458;
+  --alc: #b48ead;
+  --deep: #4f7fd9;
+  --light: #7fa4e8;
+  --rem: #9d8cf0;
+  --awake: #c9ccd0;
+  --steps: #6f8c99;
+  --food: #9cc97a;
+  --gym: #e8c55a;
+  --supp: #c7a8f0;
+  --hrv: #7fc8b8;
+  --wt: #8fb3c9;
+  --mood: #68c3e0;
+  --good: #8fc0a0;
+  --f-sans: "IBM Plex Sans", system-ui, sans-serif;
+  --f-mono: "IBM Plex Mono", ui-monospace, monospace;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html, body { background: var(--bg); color: var(--ink); }
+body { font-family: var(--f-sans); font-size: 13.5px; line-height: 1.45; padding-inline: 16px; padding-block: 20px 60px; }
+.wrap { max-width: 1480px; margin: 0 auto; display: grid; gap: 16px; }
+.mono { font-family: var(--f-mono); }
+.k { font-family: var(--f-mono); font-size: 10.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--dim); }
+header.top { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: end; gap: 12px; }
+header.top h1 { margin: 0; font-size: 22px; font-weight: 600; letter-spacing: -.01em; }
+header.top p { margin: 2px 0 0; color: var(--ink-2); max-width: 75ch; }
+.sample { font-family: var(--f-mono); font-size: 11px; color: var(--caf); border: 1px dashed color-mix(in srgb, var(--caf) 45%, transparent); padding: 4px 8px; border-radius: 4px; }
+
+/* KPI strip */
+.kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); border: 1px solid var(--line); border-radius: 8px; background: var(--panel); }
+.kpi { padding: 10px 12px; border-right: 1px solid var(--line); display: grid; gap: 2px; min-width: 0; }
+.kpi:last-child { border-right: 0; }
+.kpi .v { font-family: var(--f-mono); font-size: 20px; font-variant-numeric: tabular-nums; }
+.kpi .v small { font-size: 11px; color: var(--ink-2); margin-left: 2px; }
+.kpi .d { font-family: var(--f-mono); font-size: 11px; color: var(--ink-2); font-variant-numeric: tabular-nums; }
+
+/* Master graph */
+.master { border: 1px solid var(--line); border-radius: 8px; background: var(--panel); display: grid; grid-template-columns: minmax(0, 1fr) 250px; }
+.mg-main { min-width: 0; display: grid; }
+.mg-bar { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; padding: 10px 12px; border-bottom: 1px solid var(--line); }
+.seg { display: inline-flex; border: 1px solid var(--line-2); border-radius: 6px; overflow: hidden; }
+.seg button, .btn { font-family: var(--f-mono); font-size: 11.5px; background: transparent; color: var(--ink-2); border: 0; padding: 5px 9px; cursor: pointer; }
+.seg button + button { border-left: 1px solid var(--line-2); }
+.seg button[aria-pressed="true"] { background: var(--panel-2); color: var(--ink); }
+.btn { border: 1px solid var(--line-2); border-radius: 6px; }
+.seg button:hover, .btn:hover { color: var(--ink); }
+button:focus-visible, input:focus-visible { outline: 1px solid var(--ink-2); outline-offset: 1px; }
+.range-lbl { font-family: var(--f-mono); font-size: 11.5px; color: var(--ink); font-variant-numeric: tabular-nums; }
+.scrub { flex: 1 1 180px; display: flex; align-items: center; gap: 8px; min-width: 160px; }
+.scrub input { flex: 1; accent-color: var(--ink-2); }
+.hint { font-size: 11.5px; color: var(--dim); }
+#mg { display: block; width: 100%; touch-action: pan-y; cursor: grab; }
+#mg.drag { cursor: grabbing; }
+.mg-side { border-left: 1px solid var(--line); display: grid; grid-template-rows: auto auto 1fr; min-width: 0; }
+.legend { padding: 10px 12px; display: grid; gap: 2px; border-bottom: 1px solid var(--line); }
+.lg { display: grid; grid-template-columns: 16px 10px 1fr auto; align-items: center; gap: 6px; font-size: 12.5px; padding: 3px 0; }
+.lg input { margin: 0; accent-color: var(--ink-2); }
+.lg i { width: 10px; height: 3px; border-radius: 2px; }
+.lg label { cursor: pointer; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lg button { font-family: var(--f-mono); font-size: 10px; background: transparent; color: var(--dim); border: 1px solid var(--line-2); border-radius: 4px; padding: 1px 5px; cursor: pointer; }
+.lg button[aria-pressed="true"] { color: var(--bg); background: var(--hr); border-color: var(--hr); }
+.lg button:disabled { visibility: hidden; }
+.readout { padding: 10px 12px; display: grid; gap: 3px; font-family: var(--f-mono); font-size: 11.5px; font-variant-numeric: tabular-nums; }
+.readout .t { color: var(--ink); margin-bottom: 4px; }
+.readout div { display: flex; justify-content: space-between; gap: 8px; color: var(--ink-2); }
+.readout div b { color: var(--ink); font-weight: 500; }
+
+/* Panels */
+.grid { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 16px; }
+.p { grid-column: span 6; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); padding: 14px; display: grid; gap: 12px; align-content: start; min-width: 0; }
+.p.w12 { grid-column: 1 / -1; } .p.w4 { grid-column: span 4; } .p.w8 { grid-column: span 8; }
+.p h2 { margin: 0; font-size: 14px; font-weight: 600; display: flex; justify-content: space-between; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+.p h2 span { font-family: var(--f-mono); font-size: 10.5px; font-weight: 400; color: var(--dim); letter-spacing: .06em; text-transform: uppercase; }
+.p h3 { margin: 0; font-size: 12px; font-weight: 600; color: var(--ink-2); }
+.sub { display: grid; gap: 6px; min-width: 0; }
+.twocol { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; }
+.tbl-wrap { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; font-size: 12px; font-variant-numeric: tabular-nums; }
+th { text-align: left; font-family: var(--f-mono); font-size: 10px; letter-spacing: .06em; text-transform: uppercase; color: var(--dim); font-weight: 400; padding: 4px 8px 6px 0; border-bottom: 1px solid var(--line); white-space: nowrap; }
+td { padding: 5px 8px 5px 0; border-bottom: 1px dashed var(--line); vertical-align: top; }
+td.n, th.n { text-align: right; font-family: var(--f-mono); white-space: nowrap; }
+tr:last-child td { border-bottom: 0; }
+.muted { color: var(--ink-2); }
+.dimtxt { color: var(--dim); }
+.bars { display: grid; gap: 7px; }
+.mb { display: grid; grid-template-columns: 74px minmax(0,1fr) auto; align-items: center; gap: 10px; font-size: 12px; }
+.mb .track { height: 8px; border-radius: 4px; background: var(--line); position: relative; overflow: hidden; }
+.mb .track i { position: absolute; inset: 0 auto 0 0; border-radius: 4px; }
+.mb .val { font-family: var(--f-mono); font-size: 11.5px; text-align: right; white-space: nowrap; color: var(--ink-2); font-variant-numeric: tabular-nums; }
+.mb .val b { color: var(--ink); font-weight: 500; }
+.verdict { font-size: 12.5px; padding: 8px 10px; border-left: 2px solid var(--line-2); background: var(--panel-2); border-radius: 0 6px 6px 0; }
+.verdict b { font-weight: 600; }
+.pill { font-family: var(--f-mono); font-size: 10.5px; padding: 1px 6px; border-radius: 4px; border: 1px solid var(--line-2); color: var(--ink-2); white-space: nowrap; }
+.pill.s { color: var(--good); border-color: color-mix(in srgb, var(--good) 45%, transparent); }
+.pill.w { color: var(--caf); border-color: color-mix(in srgb, var(--caf) 45%, transparent); }
+.notes { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.notes li { font-size: 12.5px; padding-left: 12px; position: relative; color: var(--ink-2); }
+.notes li::before { content: ""; position: absolute; left: 0; top: 8px; width: 5px; height: 1px; background: var(--dim); }
+.notes li b { color: var(--ink); font-weight: 500; }
+svg { display: block; max-width: 100%; }
+.foot { color: var(--dim); font-size: 12px; max-width: 90ch; }
+
+@media (max-width: 1100px) { .p, .p.w4, .p.w8 { grid-column: 1 / -1; } }
+@media (max-width: 820px) { .master { grid-template-columns: minmax(0,1fr); } .mg-side { border-left: 0; border-top: 1px solid var(--line); } }
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <div>
+      <h1>Insights</h1>
+      <p>Every metric on one timeline, then the numbers behind training, supplements, nutrition and recovery. Stats are computed from the data: averages, changes against your baseline, correlations with their sample size and how certain they are.</p>
+    </div>
+    <span class="sample">SAMPLE DATA · 90 days generated to look like yours · no wearable connected</span>
+  </header>
+
+  <section class="kpis" id="kpis" aria-label="Last 7 days against your 28-day baseline"></section>
+
+  <section class="master" aria-label="Master graph">
+    <div class="mg-main">
+      <div class="mg-bar">
+        <div class="seg" id="ranges" role="group" aria-label="Time range">
+          <button data-d="1">1D</button><button data-d="3" aria-pressed="true">3D</button><button data-d="7">7D</button><button data-d="30">30D</button><button data-d="90">90D</button>
+        </div>
+        <button class="btn" id="zin" aria-label="Zoom in">＋</button><button class="btn" id="zout" aria-label="Zoom out">－</button>
+        <span class="range-lbl" id="rangeLbl"></span>
+        <label class="scrub"><span class="k">Scroll back</span><input type="range" id="scrub" min="0" max="1000" value="1000" aria-label="Scroll back in time"></label>
+        <button class="btn" id="toNow">Now</button>
+      </div>
+      <canvas id="mg" aria-label="Master graph: stacked lanes of heart rate, caffeine, alcohol, sleep, steps, meals, workouts, supplements and daily metrics"></canvas>
+      <div class="mg-bar"><span class="hint">Drag to scroll back · ⌘/Ctrl + wheel to zoom · a trackpad swipe also scrolls · tick lanes on and off at the right; "on HR" lays that line over heart rate with its own axis.</span></div>
+    </div>
+    <aside class="mg-side">
+      <div class="legend" id="legend"></div>
+      <div class="readout" id="readout"></div>
+      <div></div>
+    </aside>
+  </section>
+
+  <div class="grid">
+    <section class="p w8" id="p-train"></section>
+    <section class="p w4" id="p-vol"></section>
+    <section class="p" id="p-supp"></section>
+    <section class="p" id="p-exp"></section>
+    <section class="p" id="p-food"></section>
+    <section class="p" id="p-sleep"></section>
+    <section class="p w12" id="p-corr"></section>
+  </div>
+
+  <p class="foot">How to read the certainty: <b>r</b> is the correlation (−1 to 1). The range after it is its 95% interval; if that range crosses 0, the data can't yet tell the relationship apart from chance. Nothing here is AI output; AI will sit on top of these numbers later.</p>
+</div>
+
+<script>
+(() => {
+/* ============================== sample data ============================== */
+function mulberry32(a) { return () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+const rnd = mulberry32(20260929);
+const gauss = () => { let u = 0; while (!u) u = rnd(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * rnd()); };
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+const r25 = (w) => Math.round(w / 2.5) * 2.5;
+
+const DAYS = 90, D = 1440, TODAY = DAYS - 1, NOW = TODAY * D + 14 * 60 + 20;
+const START = new Date(2026, 6, 2); // day 0 = Thu 2 Jul 2026; day 89 = Tue 29 Sep
+const dateOf = (m) => new Date(START.getTime() + m * 60000);
+const dow = (d) => dateOf(d * D).getDay(); // 0 Sun
+const WD = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"], MO = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+const hm = (m) => { m = ((Math.round(m) % D) + D) % D; return String(Math.floor(m / 60)).padStart(2, "0") + ":" + String(m % 60).padStart(2, "0"); };
+const dlabel = (m) => { const d = dateOf(m); return `${WD[d.getDay()]} ${d.getDate()} ${MO[d.getMonth()]}`; };
+
+const caffeineDoses = [], drinks = [], meals = [], sessions = [], supps = [], feel = [], weights = [], nights = [];
+const SUPPS = [
+  { id: "creatine", name: "Creatine 5 g", at: 8 * 60 + 15, p: .93 },
+  { id: "vitd", name: "Vitamin D3", at: 8 * 60 + 12, p: .88 },
+  { id: "cumin", name: "Black cumin oil", at: 8 * 60 + 18, p: .7 },
+  { id: "mag", name: "Magnesium 400 mg", at: 22 * 60 + 30, p: .9 },
+  { id: "saffron", name: "Saffron 30 mg", at: 22 * 60 + 32, p: .9, from: 40 },
+];
+const MAG_OFF = [30, 51]; // planned off-block for the magnesium experiment (nights)
+const GOAL = { kcal: 2600, p: 160, c: 300, f: 80 };
+
+// Training: 3x/week (Tue/Thu/Sat), rotating split. Strength trends up slowly.
+const LIFT = { "Bench press": [88, 97, 6], "Barbell row": [78, 87, 8], "Overhead press": [55, 60.5, 6], "Squat": [110, 123, 5], "Romanian deadlift": [100, 112, 8], "Deadlift": [140, 152, 5], "Lat pulldown": [62, 70, 10], "Incline DB press": [30, 34, 10], "Leg press": [180, 205, 10], "Pull-ups": [85, 90, 8] };
+const SPLIT = [
+  ["Upper A", ["Bench press", "Barbell row", "Overhead press", "Lat pulldown"]],
+  ["Lower A", ["Squat", "Romanian deadlift", "Leg press"]],
+  ["Upper B", ["Overhead press", "Pull-ups", "Incline DB press", "Barbell row"]],
+  ["Lower B", ["Deadlift", "Squat", "Leg press"]],
+];
+const MUSCLE = { "Bench press": { Chest: 1, Triceps: .5 }, "Incline DB press": { Chest: 1, Shoulders: .5 }, "Overhead press": { Shoulders: 1, Triceps: .5 }, "Barbell row": { Back: 1, Biceps: .5 }, "Lat pulldown": { Back: 1, Biceps: .5 }, "Pull-ups": { Back: 1, Biceps: .5 }, "Squat": { Quads: 1, Glutes: .5 }, "Leg press": { Quads: 1 }, "Romanian deadlift": { Hamstrings: 1, Glutes: .5 }, "Deadlift": { Hamstrings: .5, Glutes: 1, Back: .5 } };
+let splitIdx = 0;
+
+for (let d = 0; d < DAYS; d++) {
+  const base = d * D, wd = dow(d), weekend = wd === 0 || wd === 6, isToday = d === TODAY;
+  // caffeine
+  if (isToday) { caffeineDoses.push([base + 8 * 60 + 10, 95], [base + 13 * 60, 95]); }
+  else {
+    caffeineDoses.push([base + 8 * 60 + 5 + gauss() * 20, 95]);
+    if (rnd() < .85) caffeineDoses.push([base + 12 * 60 + 50 + gauss() * 40, rnd() < .6 ? 95 : 63]);
+    if (rnd() < .3) caffeineDoses.push([base + 16 * 60 + 10 + gauss() * 55, 63]);
+  }
+  // alcohol (14 g per drink)
+  if (!isToday && ((wd === 5 || wd === 6) ? rnd() < .6 : rnd() < .07)) {
+    const n = 1 + Math.floor(rnd() * 4), t0 = base + 20 * 60 + gauss() * 40;
+    for (let i = 0; i < n; i++) drinks.push([t0 + i * 42, 14]);
+  }
+  // meals (a few whole days not logged, and the rest of today not eaten yet)
+  const logged = isToday || rnd() > .07;
+  if (logged) {
+    const mk = (t, kcal, pShare) => { const P = Math.round(kcal * pShare / 4), F = Math.round(kcal * (.24 + gauss() * .03) / 9), C = Math.max(0, Math.round((kcal - P * 4 - F * 9) / 4)); meals.push({ t, kcal: Math.round(kcal), P, C, F }); };
+    if (isToday) { meals.push({ t: base + 8 * 60 + 10, kcal: 620, P: 42, C: 82, F: 14 }, { t: base + 13 * 60, kcal: 780, P: 60, C: 88, F: 22 }); }
+    else {
+      mk(base + 8 * 60 + gauss() * 15, 560 + gauss() * 70, .26);
+      mk(base + 13 * 60 + gauss() * 30, 780 + gauss() * 90, .28);
+      if (rnd() < .6) mk(base + 16 * 60 + 30 + gauss() * 30, 300 + gauss() * 60, .3);
+      mk(base + 19 * 60 + 40 + gauss() * 35, 860 + gauss() * 120, .27);
+    }
+  }
+  // training
+  if ((wd === 2 || wd === 4 || wd === 6) && !isToday && rnd() < .94) {
+    const [name, exs] = SPLIT[splitIdx++ % SPLIT.length];
+    const s0 = base + (weekend ? 11 * 60 : 17 * 60 + 30) + gauss() * 15, sets = [];
+    exs.forEach((ex, i) => {
+      const [a, b, reps] = LIFT[ex]; const e = a + (b - a) * d / (DAYS - 1) + gauss() * 1.2;
+      const w = r25(e / (1 + reps / 30));
+      for (let k = 0; k < 3; k++) sets.push({ ex, w, r: Math.max(3, reps + Math.round(gauss() * .7) - (k === 2 && rnd() < .4 ? 1 : 0)) });
+    });
+    sessions.push({ d, name, start: s0, end: s0 + 70 + gauss() * 8, sets });
+  }
+  // supplements
+  SUPPS.forEach((s) => {
+    if (s.from && d < s.from) return;
+    if (s.id === "mag" && d >= MAG_OFF[0] && d <= MAG_OFF[1]) return;
+    const later = s.at > 20 * 60;
+    if (isToday && later) return;
+    if (rnd() < s.p) supps.push({ id: s.id, t: base + s.at + gauss() * (later ? 25 : 12) });
+  });
+  // weigh-in
+  if (rnd() < .9 || isToday) weights.push({ d, t: base + 7 * 60 + 30, kg: isToday ? 78.4 : +(80.3 - 1.9 * d / (DAYS - 1) + gauss() * .32).toFixed(1) });
+}
+caffeineDoses.sort((a, b) => a[0] - b[0]);
+
+// Continuous signals on a 5-minute grid.
+const SLOTS = Math.floor(NOW / 5) + 1;
+const cafArr = new Float32Array(SLOTS), alcArr = new Float32Array(SLOTS);
+{ let ci = 0; const active = [];
+  for (let s = 0; s < SLOTS; s++) { const t = s * 5;
+    while (ci < caffeineDoses.length && caffeineDoses[ci][0] <= t) active.push(caffeineDoses[ci++]);
+    let v = 0; for (let i = active.length - 1; i >= 0; i--) { const age = t - active[i][0]; if (age > 36 * 60) { active.splice(i, 1); continue; } v += active[i][1] * Math.pow(.5, age / 300); }
+    cafArr[s] = v; } }
+{ let di = 0, body = 0, gut = 0; const ELIM = 8 / 12; // ~8 g/h eliminated
+  for (let s = 0; s < SLOTS; s++) { const t = s * 5;
+    while (di < drinks.length && drinks[di][0] <= t) gut += drinks[di++][1];
+    const abs = Math.min(gut, gut * .35 + .2); gut -= abs; body = Math.max(0, body + abs - ELIM); alcArr[s] = body; } }
+const cafAt = (t) => cafArr[clamp(Math.round(t / 5), 0, SLOTS - 1)];
+const alcAt = (t) => alcArr[clamp(Math.round(t / 5), 0, SLOTS - 1)];
+
+// Nights: night n runs from day n's evening to day n+1's morning. Deep sleep, HRV and RHR respond to what's in your body at bedtime.
+const sleepSegs = []; // [start, end, stage] stage: 0 awake,1 REM,2 light,3 deep
+const magNight = new Set(supps.filter(s => s.id === "mag").map(s => Math.floor(s.t / D)));
+for (let n = -1; n < TODAY; n++) {
+  const wd = dow(n + 1), bed = n * D + 23 * 60 + 20 + gauss() * 35 + ((dow(n) === 5 || dow(n) === 6) ? 35 : 0);
+  const wake = (n + 1) * D + 7 * 60 + 10 + gauss() * 22 + (wd === 0 || wd === 6 ? 45 : 0);
+  const cafBed = cafAt(bed), alcBed = alcAt(bed), mag = magNight.has(n), trained = sessions.some(s => s.d === n);
+  const deep = clamp(88 + (mag ? 3 : 0) - .22 * cafBed - .9 * alcBed + gauss() * 11, 30, 135);
+  const hrv = clamp(56 + (n + 1) * .06 - .35 * alcBed - .035 * cafBed + (mag ? 1 : 0) + gauss() * 5, 25, 110);
+  const rhr = clamp(53.5 - (n + 1) * .018 + .09 * alcBed + gauss() * 1.4, 44, 70);
+  // hypnogram: ~90-min cycles, deep front-loaded, REM back-loaded
+  let t = bed; sleepSegs.push([t, t + 12, 0]); t += 12;
+  const W = [.42, .3, .17, .08, .03, .0]; let k = 0;
+  while (t < wake - 5) {
+    const dp = deep * (W[k] ?? 0), rm = Math.min(12 + 8 * k, 40), lt = Math.max(20, 90 - dp - rm);
+    for (const [len, st] of [[lt * .5, 2], [dp, 3], [lt * .5, 2], [rm, 1], [rnd() < .5 ? 3 + rnd() * 4 : 0, 0]]) {
+      if (len <= 0 || t >= wake) continue; const e = Math.min(wake, t + len); sleepSegs.push([t, e, st]); t = e; }
+    k++;
+  }
+  const asleep = sleepSegs.filter(s => s[0] >= bed && s[1] <= wake && s[2] !== 0).reduce((a, s) => a + s[1] - s[0], 0);
+  const deepReal = sleepSegs.filter(s => s[0] >= bed && s[1] <= wake && s[2] === 3).reduce((a, s) => a + s[1] - s[0], 0);
+  if (n >= 0) nights.push({ n, bed, wake, asleep, deep: deepReal, hrv, rhr, cafBed, alcBed, mag, trained, saffron: supps.some(s => s.id === "saffron" && Math.floor(s.t / D) === n) });
+}
+const nightOf = new Map(nights.map(x => [x.n, x]));
+
+// Feelings once a day (12:40), shaped by last night's sleep.
+for (let d = 1; d < DAYS; d++) { const nt = nightOf.get(d - 1); if (!nt || rnd() < .12) continue;
+  const sl = (nt.asleep - 420) / 60;
+  feel.push({ d, t: d * D + 12 * 60 + 40, energy: clamp(Math.round(6 + 1.1 * sl + (nt.deep - 80) / 30 + gauss() * 1.1), 1, 10), mood: clamp(Math.round(6.4 + .5 * sl + (d >= 40 ? .3 : 0) + gauss() * 1.2), 1, 10), anxiety: clamp(Math.round(3.6 - .4 * sl + gauss() * 1.2), 1, 10) }); }
+
+// Heart rate every 5 min: sleep, rest, walking, training.
+const hrArr = new Float32Array(SLOTS), stepsHr = new Float32Array(Math.ceil(SLOTS / 12));
+{ let si = 0, gi = 0;
+  for (let s = 0; s < SLOTS; s++) { const t = s * 5, tod = t % D;
+    while (si < sleepSegs.length && sleepSegs[si][1] <= t) si++;
+    const seg = sleepSegs[si] && sleepSegs[si][0] <= t ? sleepSegs[si] : null;
+    while (gi < sessions.length && sessions[gi].end <= t) gi++;
+    const ses = sessions[gi] && sessions[gi].start <= t ? sessions[gi] : null;
+    let hr;
+    if (seg && seg[2] !== 0) { const nt = nightOf.get(Math.floor((t - 12 * 60) / D)); const base = nt ? nt.rhr + 2 : 55; hr = base + (seg[2] === 3 ? -2 : seg[2] === 1 ? 4 : 0) + .25 * alcArr[s] + gauss() * 1.5; }
+    else if (ses) { const ph = (t - ses.start) / 70; hr = 112 + 26 * Math.max(0, Math.sin(ph * 40)) + gauss() * 6; }
+    else { const walk = (tod > 7.5 * 60 && tod < 22 * 60 && rnd() < .12) ? 25 + rnd() * 20 : 0; hr = 68 + walk + .03 * cafArr[s] + .15 * alcArr[s] + gauss() * 3.5;
+      stepsHr[Math.floor(s / 12)] += walk ? 350 + rnd() * 250 : (tod > 7 * 60 && tod < 23 * 60 ? 25 + rnd() * 30 : 0); }
+    hrArr[s] = hr; } }
+
+/* ============================== stats ============================== */
+const mean = (a) => a.reduce((x, y) => x + y, 0) / (a.length || 1);
+const sd = (a) => { const m = mean(a); return Math.sqrt(a.reduce((x, y) => x + (y - m) ** 2, 0) / Math.max(1, a.length - 1)); };
+function pearson(xs, ys) { const mx = mean(xs), my = mean(ys); let a = 0, b = 0, c = 0; for (let i = 0; i < xs.length; i++) { const dx = xs[i] - mx, dy = ys[i] - my; a += dx * dy; b += dx * dx; c += dy * dy; } return a / Math.sqrt(b * c); }
+function slope(xs, ys) { const mx = mean(xs), my = mean(ys); let a = 0, b = 0; for (let i = 0; i < xs.length; i++) { a += (xs[i] - mx) * (ys[i] - my); b += (xs[i] - mx) ** 2; } return a / b; }
+function rCI(r, n) { const z = Math.atanh(r), se = 1 / Math.sqrt(n - 3); return [Math.tanh(z - 1.96 * se), Math.tanh(z + 1.96 * se)]; }
+function welch(a, b) { const d = mean(a) - mean(b), se = Math.sqrt(sd(a) ** 2 / a.length + sd(b) ** 2 / b.length); return { d, lo: d - 1.96 * se, hi: d + 1.96 * se }; }
+const f0 = (v) => Math.round(v).toLocaleString("en-GB"), f1 = (v) => v.toFixed(1), sgn = (v, f = f1) => (v >= 0 ? "+" : "−") + f(Math.abs(v));
+
+/* ============================== KPI strip ============================== */
+{
+  const last = (k, days) => nights.filter(x => x.n >= TODAY - days && x.n < TODAY).map(x => x[k]);
+  const kcalDay = (d) => { const m = meals.filter(x => Math.floor(x.t / D) === d); return m.length ? m.reduce((a, x) => a + x.kcal, 0) : null; };
+  const kcalLogged = (from, to) => { const v = []; for (let d = from; d < to; d++) { const k = kcalDay(d); if (k) v.push(k); } return v; };
+  const w = weights.filter(x => x.d >= TODAY - 27);
+  const wSlope = slope(w.map(x => x.d), w.map(x => x.kg)) * 7;
+  const vol = (from, to) => sessions.filter(s => s.d >= from && s.d < to).reduce((a, s) => a + s.sets.reduce((b, x) => b + x.w * x.r, 0), 0);
+  const k7 = kcalLogged(TODAY - 7, TODAY), k28 = kcalLogged(TODAY - 28, TODAY);
+  const items = [
+    ["Sleep", mean(last("asleep", 7)) / 60, "h", mean(last("asleep", 28)) / 60, 1, "7d vs 28d"],
+    ["Deep sleep", mean(last("deep", 7)), "min", mean(last("deep", 28)), 0],
+    ["HRV", mean(last("hrv", 7)), "ms", mean(last("hrv", 28)), 0],
+    ["Resting HR", mean(last("rhr", 7)), "bpm", mean(last("rhr", 28)), 1],
+    ["Weight trend", wSlope, "kg/wk", null, 2, `28d fit · ${w.length} weigh-ins`],
+    ["Calories", mean(k7), "kcal", mean(k28), 0, `${k7.length}/7 days logged`],
+    ["Training vol.", vol(TODAY - 7, TODAY) / 1000, "t", vol(TODAY - 28, TODAY) / 4000, 1, "kg lifted, 7d vs avg wk"],
+  ];
+  document.getElementById("kpis").innerHTML = items.map(([k, v, u, b, dp, note]) => {
+    const fmt = (x) => dp === 2 ? sgn(x, y => y.toFixed(2)) : dp ? x.toFixed(dp) : f0(x);
+    const d = b == null ? (note || "") : `${sgn(v - b, dp ? (y => y.toFixed(dp)) : f0)} vs ${fmt(b)}${note ? " · " + note : ""}`;
+    return `<div class="kpi"><span class="k">${k}</span><span class="v">${fmt(v)}<small>${u}</small></span><span class="d">${d}</span></div>`;
+  }).join("");
+}
+
+/* ============================== master graph ============================== */
+const css = (v) => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+const C = { hr: css("--hr"), caf: css("--caf"), alc: css("--alc"), deep: css("--deep"), light: css("--light"), rem: css("--rem"), awake: css("--awake"), steps: css("--steps"), food: css("--food"), gym: css("--gym"), supp: css("--supp"), hrv: css("--hrv"), wt: css("--wt"), mood: css("--mood"), ink: css("--ink"), ink2: css("--ink-2"), dim: css("--dim"), line: css("--line"), line2: css("--line-2"), panel: css("--panel") };
+const daily = (arr, k, at) => arr.map(x => [at(x), x[k]]);
+const LANES = [
+  { id: "hr", name: "Heart rate", unit: "bpm", color: C.hr, h: 96, kind: "grid", arr: hrArr, lo: 40, hi: 170, on: true },
+  { id: "caf", name: "Caffeine in body", unit: "mg", color: C.caf, h: 44, kind: "grid", arr: cafArr, lo: 0, hi: 260, on: true, area: true, overlay: true },
+  { id: "alc", name: "Alcohol in body", unit: "g", color: C.alc, h: 38, kind: "grid", arr: alcArr, lo: 0, hi: 50, on: true, area: true },
+  { id: "sleep", name: "Sleep stages", unit: "", color: C.deep, h: 34, kind: "hypno", on: true },
+  { id: "steps", name: "Steps", unit: "/h", color: C.steps, h: 30, kind: "steps", on: true },
+  { id: "food", name: "Meals", unit: "kcal", color: C.food, h: 30, kind: "sticks", on: true },
+  { id: "gym", name: "Workouts", unit: "", color: C.gym, h: 20, kind: "blocks", on: true },
+  { id: "supp", name: "Supplements", unit: "", color: C.supp, h: 34, kind: "ticks", on: true },
+  { id: "hrv", name: "HRV (nightly)", unit: "ms", color: C.hrv, h: 38, kind: "daily", pts: daily(nights, "hrv", x => x.wake), lo: 25, hi: 95, on: false },
+  { id: "rhr", name: "Resting HR", unit: "bpm", color: C.hr, h: 34, kind: "daily", pts: daily(nights, "rhr", x => x.wake), lo: 44, hi: 64, on: false },
+  { id: "deepm", name: "Deep sleep", unit: "min", color: C.deep, h: 34, kind: "daily", pts: daily(nights, "deep", x => x.wake), lo: 20, hi: 140, on: false },
+  { id: "wt", name: "Weight", unit: "kg", color: C.wt, h: 34, kind: "daily", pts: weights.map(x => [x.t, x.kg]), lo: 77.5, hi: 81, on: false },
+  { id: "energy", name: "Energy (you)", unit: "/10", color: C.mood, h: 30, kind: "daily", pts: feel.map(x => [x.t, x.energy]), lo: 0, hi: 10, on: false },
+];
+LANES.forEach(l => { if (l.kind === "grid" || l.kind === "daily") l.overlay = l.id !== "hr"; l.over = false; });
+LANES.find(l => l.id === "caf").over = true; // start with caffeine on heart rate, the owner's example
+
+const cv = document.getElementById("mg"), ctx = cv.getContext("2d");
+const LEFT = 104, RIGHT = 46, TOP = 22, GAP = 7;
+let view = { t1: NOW + 90, span: 3 * D }, hoverT = null;
+const MIN_SPAN = 3 * 60, MAX_SPAN = DAYS * D + 180;
+
+function layout() {
+  const vis = LANES.filter(l => l.on && !(l.over && LANES[0].on));
+  let y = TOP; vis.forEach(l => { l.y = y; y += l.h + GAP; }); return { vis, H: y + 4 };
+}
+function draw() {
+  const { vis, H } = layout();
+  const dpr = window.devicePixelRatio || 1, W = cv.clientWidth;
+  if (cv.width !== Math.round(W * dpr) || cv.height !== Math.round(H * dpr)) { cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr); cv.style.height = H + "px"; }
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.clearRect(0, 0, W, H);
+  const t0 = view.t1 - view.span, pw = W - LEFT - RIGHT;
+  const X = (t) => LEFT + (t - t0) / view.span * pw, T = (x) => t0 + (x - LEFT) / pw * view.span;
+  ctx.font = "10px IBM Plex Mono, monospace"; ctx.textBaseline = "middle";
+
+  // time grid
+  const steps = [60, 180, 360, 720, D, 2 * D, 7 * D, 14 * D], target = view.span / (pw / 90);
+  const st = steps.find(s => s >= target) || 14 * D;
+  const first = Math.ceil(t0 / st) * st;
+  for (let t = first; t <= view.t1; t += st) {
+    const x = X(t); ctx.strokeStyle = C.line; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(x + .5, TOP - 4); ctx.lineTo(x + .5, H - 4); ctx.stroke();
+    ctx.fillStyle = C.dim; ctx.textAlign = "center";
+    const midnight = ((t % D) + D) % D === 0; ctx.fillText(st >= D || midnight ? dlabel(t) : hm(t), x, 10);
+  }
+  // days shading (nights)
+  // lanes
+  vis.forEach(l => {
+    ctx.fillStyle = C.ink2; ctx.textAlign = "left"; ctx.font = "11px IBM Plex Sans, sans-serif";
+    ctx.fillText(l.name, 8, l.y + 8);
+    ctx.font = "10px IBM Plex Mono, monospace"; ctx.fillStyle = C.dim; if (l.unit) ctx.fillText(l.unit, 8, l.y + 21);
+    ctx.strokeStyle = C.line; ctx.beginPath(); ctx.moveTo(LEFT, l.y + l.h + .5); ctx.lineTo(W - RIGHT, l.y + l.h + .5); ctx.stroke();
+    ctx.save(); ctx.beginPath(); ctx.rect(LEFT, l.y - 2, pw, l.h + 4); ctx.clip();
+    drawLane(l, l, X, T, pw, t0);
+    if (l.id === "hr") LANES.filter(o => o.on && o.over).forEach(o => drawLane(o, l, X, T, pw, t0, true));
+    ctx.restore();
+    // axis labels
+    if (l.lo != null) { ctx.textAlign = "right"; ctx.fillStyle = C.dim; ctx.fillText(l.hi, LEFT - 6, l.y + 4); ctx.fillText(l.lo, LEFT - 6, l.y + l.h - 3); }
+    if (l.id === "hr") { let yy = l.y + 4; LANES.filter(o => o.on && o.over).forEach(o => { ctx.textAlign = "left"; ctx.fillStyle = o.color; ctx.fillText(`${o.hi}${o.unit}`, W - RIGHT + 5, yy); ctx.fillText(`${o.lo}`, W - RIGHT + 5, l.y + l.h - 3 - (yy - l.y - 4)); yy += 12; }); }
+  });
+  // now marker
+  if (NOW >= t0 && NOW <= view.t1) { const x = X(NOW); ctx.strokeStyle = C.ink2; ctx.setLineDash([2, 3]); ctx.beginPath(); ctx.moveTo(x + .5, TOP - 6); ctx.lineTo(x + .5, H - 4); ctx.stroke(); ctx.setLineDash([]); }
+  // crosshair
+  if (hoverT != null && hoverT >= t0 && hoverT <= view.t1) { const x = X(hoverT); ctx.strokeStyle = C.ink; ctx.globalAlpha = .45; ctx.beginPath(); ctx.moveTo(x + .5, TOP - 6); ctx.lineTo(x + .5, H - 4); ctx.stroke(); ctx.globalAlpha = 1; }
+  document.getElementById("rangeLbl").textContent = `${dlabel(t0)} ${hm(t0)} → ${dlabel(view.t1)} ${hm(view.t1)}`;
+  const sc = document.getElementById("scrub"); sc.value = Math.round((view.t1 - view.span) / Math.max(1, (NOW + 90 - view.span)) * 1000);
+  readout();
+}
+function yOf(host, lo, hi, v) { return host.y + host.h - (clamp(v, lo, hi) - lo) / (hi - lo) * host.h; }
+function drawLane(l, host, X, T, pw, t0, overlay) {
+  const lo = l.lo, hi = l.hi;
+  if (l.kind === "grid") {
+    const cols = Math.floor(pw), spp = view.span / pw / 5; // slots per pixel
+    const pts = [];
+    for (let i = 0; i <= cols; i++) {
+      const a = T(LEFT + i) / 5, b = a + Math.max(1, spp);
+      let s0 = Math.max(0, Math.floor(a)), s1 = Math.min(SLOTS, Math.ceil(b)); if (s1 <= s0) { pts.push(null); continue; }
+      let mn = Infinity, mx = -Infinity, sum = 0; for (let s = s0; s < s1; s++) { const v = l.arr[s]; mn = Math.min(mn, v); mx = Math.max(mx, v); sum += v; }
+      pts.push([LEFT + i, mn, mx, sum / (s1 - s0)]);
+    }
+    const Y = (v) => yOf(host, lo, hi, v);
+    if (spp > 3 && !l.area) { ctx.fillStyle = l.color; ctx.globalAlpha = .18; pts.forEach(p => p && ctx.fillRect(p[0], Y(p[2]), 1, Math.max(1, Y(p[1]) - Y(p[2])))); ctx.globalAlpha = 1; }
+    if (l.area && !overlay) { ctx.fillStyle = l.color; ctx.globalAlpha = .16; ctx.beginPath(); let started = false; pts.forEach(p => { if (!p) return; if (!started) { ctx.moveTo(p[0], Y(0)); started = true; } ctx.lineTo(p[0], Y(p[3])); }); const lastP = pts.filter(Boolean).pop(); if (lastP) { ctx.lineTo(lastP[0], Y(0)); ctx.closePath(); ctx.fill(); } ctx.globalAlpha = 1; }
+    ctx.strokeStyle = l.color; ctx.lineWidth = overlay ? 1.75 : 1.25; if (overlay) ctx.setLineDash([5, 3]); ctx.beginPath(); let pen = false;
+    pts.forEach(p => { if (!p) { pen = false; return; } const y = Y(p[3]); pen ? ctx.lineTo(p[0], y) : ctx.moveTo(p[0], y); pen = true; }); ctx.stroke(); ctx.setLineDash([]);
+  } else if (l.kind === "daily") {
+    const Y = (v) => yOf(host, lo, hi, v); const inView = l.pts.filter(p => X(p[0]) > LEFT - 60 && X(p[0]) < LEFT + pw + 60);
+    ctx.strokeStyle = l.color; ctx.lineWidth = overlay ? 1.5 : 1.25; ctx.beginPath(); inView.forEach((p, i) => i ? ctx.lineTo(X(p[0]), Y(p[1])) : ctx.moveTo(X(p[0]), Y(p[1]))); ctx.stroke();
+    ctx.fillStyle = l.color; inView.forEach(p => { ctx.beginPath(); ctx.arc(X(p[0]), Y(p[1]), view.span < 20 * D ? 2.5 : 1.3, 0, 7); ctx.fill(); });
+    if (view.span < 8 * D) { ctx.font = "10px IBM Plex Mono, monospace"; ctx.textAlign = "left"; inView.forEach(p => ctx.fillText(Number.isInteger(p[1]) ? p[1] : p[1].toFixed(1), X(p[0]) + 5, Y(p[1]) - 6)); }
+  } else if (l.kind === "hypno") {
+    const col = [C.awake, C.rem, C.light, C.deep], hh = l.h / 4;
+    sleepSegs.forEach(([a, b, s]) => { if (b < t0 || a > view.t1) return; const x0 = X(a), x1 = X(b); ctx.fillStyle = col[s]; ctx.globalAlpha = s === 0 ? .55 : .85; ctx.fillRect(x0, l.y + (s === 0 ? 0 : s === 1 ? hh : s === 2 ? 2 * hh : 3 * hh), Math.max(1, x1 - x0), hh - 1); });
+    ctx.globalAlpha = 1;
+  } else if (l.kind === "steps") {
+    const hourW = pw / (view.span / 60);
+    if (hourW >= 2) { const h0 = Math.max(0, Math.floor(t0 / 60)), h1 = Math.min(stepsHr.length, Math.ceil(view.t1 / 60));
+      ctx.fillStyle = l.color; for (let h = h0; h < h1; h++) { const v = stepsHr[h], bh = Math.min(l.h, v / 2400 * l.h); ctx.fillRect(X(h * 60) + .5, l.y + l.h - bh, Math.max(1, hourW - 1), bh); } }
+    else { const d0 = Math.max(0, Math.floor(t0 / D)), d1 = Math.min(DAYS, Math.ceil(view.t1 / D)); ctx.fillStyle = l.color;
+      for (let d = d0; d < d1; d++) { let v = 0; for (let h = d * 24; h < d * 24 + 24 && h < stepsHr.length; h++) v += stepsHr[h]; const bh = Math.min(l.h, v / 14000 * l.h), x = X(d * D), w = pw / (view.span / D); ctx.fillRect(x + 1, l.y + l.h - bh, Math.max(1, w - 2), bh); } }
+  } else if (l.kind === "sticks") {
+    ctx.fillStyle = l.color; meals.forEach(m => { if (m.t < t0 || m.t > view.t1) return; const x = X(m.t), bh = Math.min(l.h, m.kcal / 1100 * l.h); ctx.fillRect(x - 1, l.y + l.h - bh, 2, bh); if (view.span <= 2 * D) { ctx.fillStyle = C.ink2; ctx.textAlign = "left"; ctx.fillText(m.kcal, x + 4, l.y + l.h - bh + 5); ctx.fillStyle = l.color; } });
+  } else if (l.kind === "blocks") {
+    sessions.forEach(s => { if (s.end < t0 || s.start > view.t1) return; const x0 = X(s.start), x1 = X(s.end); ctx.fillStyle = l.color; ctx.globalAlpha = .85; ctx.fillRect(x0, l.y + 3, Math.max(2, x1 - x0), l.h - 6); ctx.globalAlpha = 1; if (x1 - x0 > 50) { ctx.fillStyle = "#1a1a12"; ctx.textAlign = "left"; ctx.fillText(s.name, x0 + 4, l.y + l.h / 2); } });
+  } else if (l.kind === "ticks") {
+    const rowH = l.h / SUPPS.length;
+    SUPPS.forEach((s, i) => { const y = l.y + i * rowH; if (view.span <= 4 * D) { ctx.fillStyle = C.dim; } });
+    supps.forEach(x => { if (x.t < t0 || x.t > view.t1) return; const i = SUPPS.findIndex(s => s.id === x.id); ctx.fillStyle = l.color; ctx.globalAlpha = .45 + i * .11; ctx.fillRect(X(x.t) - 1, l.y + i * rowH + 1, 2.5, rowH - 2); });
+    ctx.globalAlpha = 1;
+    if (view.span <= 2 * D) { ctx.font = "9.5px IBM Plex Mono, monospace"; ctx.textAlign = "left"; ctx.fillStyle = C.dim; SUPPS.forEach((s, i) => ctx.fillText(s.name.split(" ")[0], LEFT + 3, l.y + i * rowH + rowH / 2)); }
+  }
+}
+function readout() {
+  const el = document.getElementById("readout"), t = hoverT ?? NOW, s = clamp(Math.round(t / 5), 0, SLOTS - 1);
+  const seg = sleepSegs.find(x => x[0] <= t && x[1] > t), stage = seg ? ["awake", "REM", "light", "deep"][seg[2]] : "—";
+  const nearDaily = (pts) => { let best = null; pts.forEach(p => { if (p[0] <= t && (!best || p[0] > best[0])) best = p; }); return best ? best[1] : null; };
+  const ses = sessions.find(x => x.start <= t && x.end >= t);
+  const lastMeal = meals.filter(m => m.t <= t && m.t > t - 6 * 60).pop();
+  const rows = [
+    ["hr", "Heart rate", t <= NOW ? `${Math.round(hrArr[s])} bpm` : "—"],
+    ["caf", "Caffeine", `${Math.round(cafArr[s])} mg`],
+    ["alc", "Alcohol", `${alcArr[s].toFixed(1)} g`],
+    ["sleep", "Sleep", stage],
+    ["gym", "Workout", ses ? ses.name : "—"],
+    ["food", "Last meal", lastMeal ? `${hm(lastMeal.t)} · ${lastMeal.kcal} kcal` : "—"],
+    ["hrv", "HRV (last night)", `${f0(nearDaily(LANES.find(l => l.id === "hrv").pts) ?? 0)} ms`],
+    ["rhr", "Resting HR", `${f1(nearDaily(LANES.find(l => l.id === "rhr").pts) ?? 0)} bpm`],
+    ["wt", "Weight", `${nearDaily(LANES.find(l => l.id === "wt").pts) ?? "—"} kg`],
+  ];
+  el.innerHTML = `<span class="t">${dlabel(t)} · ${hm(t)}${hoverT == null ? " (now)" : ""}</span>` + rows.map(r => `<div><span>${r[1]}</span><b>${r[2]}</b></div>`).join("");
+}
+
+// legend
+const lgEl = document.getElementById("legend");
+lgEl.innerHTML = `<span class="k" style="margin-bottom:4px">Lanes</span>` + LANES.map(l => `
+  <div class="lg"><input type="checkbox" id="lg-${l.id}" ${l.on ? "checked" : ""}><i style="background:${l.color}"></i><label for="lg-${l.id}">${l.name}</label>
+  <button type="button" data-over="${l.id}" aria-pressed="${l.over}" ${l.overlay ? "" : "disabled"} title="Draw on the heart-rate lane">on HR</button></div>`).join("");
+LANES.forEach(l => {
+  document.getElementById("lg-" + l.id).addEventListener("change", (e) => { l.on = e.target.checked; draw(); });
+});
+lgEl.querySelectorAll("[data-over]").forEach(b => b.addEventListener("click", () => { const l = LANES.find(x => x.id === b.dataset.over); l.over = !l.over; b.setAttribute("aria-pressed", l.over); draw(); }));
+
+// controls
+const setSpan = (span, anchor) => { const t = anchor ?? view.t1 - view.span / 2, frac = anchor == null ? .5 : (view.t1 - anchor) / view.span; view.span = clamp(span, MIN_SPAN, MAX_SPAN); view.t1 = anchor == null ? t + view.span / 2 : anchor + frac * view.span; bound(); draw(); };
+const bound = () => { view.t1 = clamp(view.t1, view.span - 60, NOW + 90); };
+document.querySelectorAll("#ranges button").forEach(b => b.addEventListener("click", () => {
+  document.querySelectorAll("#ranges button").forEach(x => x.setAttribute("aria-pressed", x === b)); view.span = +b.dataset.d * D; view.t1 = NOW + 90; bound(); draw(); }));
+document.getElementById("zin").onclick = () => setSpan(view.span / 1.6);
+document.getElementById("zout").onclick = () => setSpan(view.span * 1.6);
+document.getElementById("toNow").onclick = () => { view.t1 = NOW + 90; draw(); };
+document.getElementById("scrub").addEventListener("input", (e) => { const max = NOW + 90 - view.span; view.t1 = view.span + (+e.target.value / 1000) * max; bound(); draw(); });
+let drag = null;
+cv.addEventListener("pointerdown", (e) => { drag = { x: e.clientX, t1: view.t1 }; cv.setPointerCapture(e.pointerId); cv.classList.add("drag"); });
+cv.addEventListener("pointermove", (e) => {
+  const r = cv.getBoundingClientRect(), pw = r.width - LEFT - RIGHT, x = e.clientX - r.left;
+  if (drag) { view.t1 = drag.t1 - (e.clientX - drag.x) / pw * view.span; bound(); }
+  hoverT = x >= LEFT && x <= r.width - RIGHT ? view.t1 - view.span + (x - LEFT) / pw * view.span : null; draw(); });
+const endDrag = () => { drag = null; cv.classList.remove("drag"); };
+cv.addEventListener("pointerup", endDrag); cv.addEventListener("pointercancel", endDrag);
+cv.addEventListener("pointerleave", () => { hoverT = null; if (!drag) draw(); });
+cv.addEventListener("wheel", (e) => {
+  const r = cv.getBoundingClientRect(), pw = r.width - LEFT - RIGHT;
+  if (e.ctrlKey || e.metaKey) { e.preventDefault(); const at = view.t1 - view.span + (e.clientX - r.left - LEFT) / pw * view.span; setSpan(view.span * Math.exp(e.deltaY * .002), at); }
+  else if (Math.abs(e.deltaX) > Math.abs(e.deltaY)) { e.preventDefault(); view.t1 += e.deltaX / pw * view.span; bound(); draw(); }
+}, { passive: false });
+new ResizeObserver(() => draw()).observe(cv);
+
+/* ============================== small chart helpers ============================== */
+function lineChart({ series, w = 560, h = 150, lo, hi, xs, band, yfmt = (v) => v, xlabels = [], targets = [] }) {
+  const pl = 34, pr = 10, pt = 8, pb = 18, X = (x) => pl + (x - xs[0]) / (xs[1] - xs[0]) * (w - pl - pr), Y = (v) => pt + (1 - (v - lo) / (hi - lo)) * (h - pt - pb);
+  let g = "";
+  const ticks = [lo, lo + (hi - lo) / 2, hi];
+  ticks.forEach(v => g += `<line x1="${pl}" x2="${w - pr}" y1="${Y(v)}" y2="${Y(v)}" stroke="${C.line}"/><text x="${pl - 5}" y="${Y(v) + 3}" text-anchor="end" font-size="9.5" fill="${C.dim}" font-family="IBM Plex Mono">${yfmt(v)}</text>`);
+  xlabels.forEach(([x, t]) => g += `<text x="${X(x)}" y="${h - 4}" text-anchor="middle" font-size="9.5" fill="${C.dim}" font-family="IBM Plex Mono">${t}</text>`);
+  if (band) g += `<rect x="${pl}" y="${Y(band[1])}" width="${w - pl - pr}" height="${Y(band[0]) - Y(band[1])}" fill="${C.ink}" fill-opacity=".05"/>`;
+  targets.forEach(([v, lbl]) => g += `<line x1="${pl}" x2="${w - pr}" y1="${Y(v)}" y2="${Y(v)}" stroke="${C.ink2}" stroke-dasharray="4 3"/><text x="${w - pr}" y="${Y(v) - 4}" text-anchor="end" font-size="9.5" fill="${C.ink2}" font-family="IBM Plex Mono">${lbl}</text>`);
+  series.forEach(s => {
+    if (s.bars) { const bw = Math.max(1, (w - pl - pr) / (xs[1] - xs[0] + 1) - 2); s.pts.forEach(([x, v, hollow]) => g += hollow ? `<rect x="${X(x) - bw / 2}" y="${Y(lo) - 3}" width="${bw}" height="3" fill="none" stroke="${C.dim}"/>` : `<rect x="${X(x) - bw / 2}" y="${Y(v)}" width="${bw}" height="${Y(lo) - Y(v)}" fill="${s.color}" fill-opacity="${s.op ?? .7}"/>`); return; }
+    const d = s.pts.map((p, i) => `${i ? "L" : "M"}${X(p[0]).toFixed(1)},${Y(p[1]).toFixed(1)}`).join("");
+    g += `<path d="${d}" fill="none" stroke="${s.color}" stroke-width="${s.sw ?? 1.5}" stroke-opacity="${s.op ?? 1}" ${s.dash ? `stroke-dasharray="${s.dash}"` : ""} stroke-linejoin="round"/>`;
+    if (s.dots) s.pts.forEach(p => g += `<circle cx="${X(p[0])}" cy="${Y(p[1])}" r="${s.r ?? 1.8}" fill="${s.color}" fill-opacity="${s.dotOp ?? .55}"/>`);
+    if (s.end) { const p = s.pts[s.pts.length - 1]; g += `<circle cx="${X(p[0])}" cy="${Y(p[1])}" r="3" fill="${s.color}"/>`; }
+  });
+  return `<svg viewBox="0 0 ${w} ${h}" width="100%" role="img">${g}</svg>`;
+}
+const roll = (pts, k) => pts.map((p, i) => [p[0], mean(pts.slice(Math.max(0, i - k + 1), i + 1).map(x => x[1]))]);
+const dayTicks = [[0, dlabel(0).slice(4)], [30, dlabel(30 * D).slice(4)], [60, dlabel(60 * D).slice(4)], [89, dlabel(89 * D).slice(4)]];
+
+/* ============================== training ============================== */
+{
+  const byLift = {};
+  sessions.forEach(s => { const best = {}; s.sets.forEach(x => { const e = x.w * (1 + x.r / 30); if (!best[x.ex] || e > best[x.ex].e) best[x.ex] = { e, w: x.w, r: x.r }; });
+    Object.entries(best).forEach(([ex, b]) => (byLift[ex] ||= []).push({ d: s.d, ...b })); });
+  const MAIN = [["Bench press", C.hr], ["Squat", C.gym], ["Deadlift", C.caf], ["Overhead press", C.hrv], ["Barbell row", C.light]];
+  const rows = MAIN.map(([ex]) => { const h = byLift[ex]; const now = h[h.length - 1]; const four = h.filter(x => x.d <= TODAY - 28).pop() || h[0];
+    const pr = h.reduce((a, x) => x.e > a.e ? x : a); const trend = slope(h.slice(-6).map(x => x.d), h.slice(-6).map(x => x.e)) * 7;
+    return `<tr><td>${ex}</td><td class="n">${now.w} × ${now.r}</td><td class="n">${f1(now.e)}</td><td class="n">${sgn(now.e - four.e)}</td><td class="n">${sgn(trend)}/wk</td><td class="n">${dlabel(pr.d * D).slice(4)}</td><td class="n">${h.length}</td></tr>`; }).join("");
+  const series = MAIN.map(([ex, c]) => ({ pts: byLift[ex].map(x => [x.d, x.e / byLift[ex][0].e * 100]), color: c, sw: 1.5, end: true }));
+  const next = (() => { const h = byLift["Bench press"]; const last = sessions.filter(s => s.sets.some(x => x.ex === "Bench press")).pop().sets.filter(x => x.ex === "Bench press");
+    const allHit = last.every(x => x.r >= 6); return { w: allHit ? last[0].w + 2.5 : last[0].w, why: allHit ? "all sets reached 6 reps last time, so +2.5 kg" : `last time ${last.map(x => x.r).join("/")} reps, so repeat ${last[0].w} kg until 6/6/6` }; })();
+  document.getElementById("p-train").innerHTML = `
+    <h2>Strength <span>estimated 1-rep max (Epley) · 90 days</span></h2>
+    <div class="twocol">
+      <div class="sub"><h3>e1RM, % of where each lift started</h3>${lineChart({ series, lo: 92, hi: 118, xs: [0, 89], yfmt: v => v + "%", xlabels: dayTicks })}
+        <div class="bars" style="grid-template-columns:repeat(auto-fit,minmax(110px,1fr));display:grid;gap:4px 12px">${MAIN.map(([ex, c]) => `<span class="muted" style="font-size:11.5px"><i style="display:inline-block;width:10px;height:3px;background:${c};vertical-align:middle;margin-right:5px"></i>${ex}</span>`).join("")}</div></div>
+      <div class="sub tbl-wrap"><h3>Main lifts</h3><table><tr><th>Lift</th><th class="n">Last top set</th><th class="n">e1RM kg</th><th class="n">vs 4 wk</th><th class="n">Pace</th><th class="n">Best</th><th class="n">Sessions</th></tr>${rows}</table>
+      <div class="verdict">Next bench: <b>${next.w} kg × 6/6/6</b>. ${next.why[0].toUpperCase() + next.why.slice(1)}.</div></div>
+    </div>`;
+  // weekly sets per muscle
+  const wk = {}; sessions.filter(s => s.d >= TODAY - 7).forEach(s => s.sets.forEach(x => Object.entries(MUSCLE[x.ex]).forEach(([m, f]) => wk[m] = (wk[m] || 0) + f)));
+  const avg4 = {}; sessions.filter(s => s.d >= TODAY - 28).forEach(s => s.sets.forEach(x => Object.entries(MUSCLE[x.ex]).forEach(([m, f]) => avg4[m] = (avg4[m] || 0) + f / 4)));
+  const ms = ["Chest", "Back", "Shoulders", "Quads", "Hamstrings", "Glutes", "Biceps", "Triceps"];
+  document.getElementById("p-vol").innerHTML = `
+    <h2>Weekly sets per muscle <span>last 7 days</span></h2>
+    <div class="bars">${ms.map(m => { const v = wk[m] || 0, a = avg4[m] || 0; return `<div class="mb"><span>${m}</span><div class="track"><i style="width:${Math.min(100, v / 20 * 100)}%;background:${v >= 10 ? C.gym : C.dim}"></i><i style="left:50%;width:1px;background:${C.ink2};opacity:.5"></i></div><span class="val"><b>${f1(v)}</b> · 4wk avg ${f1(a)}</span></div>`; }).join("")}</div>
+    <p class="muted" style="margin:0;font-size:12px">Marker at 10 sets, the low end of the common 10–20 sets/week guideline. Secondary muscles count half a set. Arms and shoulders sit under it on a 3-day split.</p>`;
+}
+
+/* ============================== supplements ============================== */
+{
+  const days = 30, from = TODAY - days + 1;
+  const takenOn = (id, d) => supps.find(x => x.id === id && Math.floor(x.t / D) === d);
+  const grid = SUPPS.map((s, i) => { let cells = "", n = 0, due = 0, times = [];
+    for (let d = from; d <= TODAY; d++) { const late = s.at > 20 * 60 && d === TODAY; const off = s.id === "mag" && d >= MAG_OFF[0] && d <= MAG_OFF[1]; const pre = s.from && d < s.from;
+      const x = takenOn(s.id, d); if (!late && !off && !pre) { due++; if (x) { n++; times.push(x.t % D); } }
+      cells += `<rect x="${(d - from) * 11}" y="${i * 16}" width="9" height="12" rx="2" fill="${x ? C.supp : late ? "none" : C.line}" ${late ? `stroke="${C.dim}" stroke-dasharray="2 2"` : ""} fill-opacity="${x ? .85 : 1}"/>`; }
+    return { s, cells, pct: due ? n / due : 0, tm: times.length ? mean(times) : null, tsd: times.length > 2 ? sd(times) : 0 }; });
+  const svgW = days * 11, svgH = SUPPS.length * 16;
+  const breakfastFat = (() => { let ok = 0, n = 0; supps.filter(x => x.id === "vitd" && x.t > (TODAY - 29) * D).forEach(x => { n++; const m = meals.find(mm => Math.abs(mm.t - x.t) < 60); if (m && m.F >= 10) ok++; }); return [ok, n]; })();
+  const bedCaf = nights.filter(x => x.n >= TODAY - 28).map(x => x.cafBed), lastCoffee = [];
+  for (let d = TODAY - 28; d < TODAY; d++) { const c = caffeineDoses.filter(x => Math.floor(x[0] / D) === d).pop(); if (c) lastCoffee.push(c[0] % D); }
+  const med = (a) => { const b = [...a].sort((x, y) => x - y); return b[Math.floor(b.length / 2)]; };
+  document.getElementById("p-supp").innerHTML = `
+    <h2>Supplements <span>last 30 days</span></h2>
+    <div style="display:grid;grid-template-columns:auto minmax(0,1fr);gap:0 12px;align-items:start">
+      <div style="display:grid;gap:0">${grid.map(g => `<div style="height:16px;font-size:12px;line-height:12px" class="muted">${g.s.name}</div>`).join("")}</div>
+      <div style="overflow-x:auto"><svg viewBox="0 0 ${svgW} ${svgH}" width="${svgW}" height="${svgH}" role="img" aria-label="Which supplements were taken on each of the last 30 days">${grid.map(g => g.cells).join("")}</svg></div>
+    </div>
+    <div class="tbl-wrap"><table><tr><th>Supplement</th><th class="n">Taken</th><th class="n">Usual time</th><th class="n">Spread</th></tr>
+      ${grid.map(g => `<tr><td>${g.s.name}</td><td class="n">${Math.round(g.pct * 100)}%</td><td class="n">${g.tm == null ? "—" : hm(g.tm)}</td><td class="n">±${Math.round(g.tsd)} min</td></tr>`).join("")}</table></div>
+    <ul class="notes">
+      <li><b>Vitamin D3</b> is fat-soluble and absorbs better with a meal that has some fat in it. It was taken within an hour of a meal with ≥10 g fat on <b>${breakfastFat[0]} of ${breakfastFat[1]}</b> days.</li>
+      <li><b>Caffeine:</b> median last coffee <b>${hm(med(lastCoffee))}</b>; median left in your body at bedtime <b>${Math.round(med(bedCaf))} mg</b> (28 nights).</li>
+      <li><b>Saffron 30 mg</b> is the dose used in most mood studies. You started it on ${dlabel(40 * D)}, with no off period since, so its effect can't be separated from everything else that changed.</li>
+      <li><b>Black cumin seed oil:</b> studies report small drops in blood pressure and blood sugar. That matters if you ever take medication for either.</li>
+      <li><b>Creatine and magnesium:</b> no known interaction with each other or with the rest of the stack.</li>
+    </ul>`;
+}
+
+/* ============================== experiment ============================== */
+{
+  const on = nights.filter(x => x.mag).map(x => x.deep), off = nights.filter(x => x.n >= MAG_OFF[0] && x.n <= MAG_OFF[1]).map(x => x.deep);
+  const w = welch(on, off), s = sd([...on, ...off]), need = Math.ceil(2 * (1.96 + .84) ** 2 * s ** 2 / 10 ** 2);
+  const hon = nights.filter(x => x.mag).map(x => x.hrv), hoff = nights.filter(x => x.n >= MAG_OFF[0] && x.n <= MAG_OFF[1]).map(x => x.hrv), wh = welch(hon, hoff);
+  const sOn = nights.filter(x => x.mag).map(x => x.asleep), sOff = nights.filter(x => x.n >= MAG_OFF[0] && x.n <= MAG_OFF[1]).map(x => x.asleep), ws = welch(sOn, sOff);
+  const ci = (r, u, f = f1) => `${sgn(r.d, f)} ${u} <span class="dimtxt">[${sgn(r.lo, f)}, ${sgn(r.hi, f)}]</span>`;
+  const verdict = (r) => r.lo > 0 || r.hi < 0 ? `<span class="pill s">clear</span>` : `<span class="pill w">unclear</span>`;
+  const pts = nights.map(x => [x.n, x.deep]);
+  document.getElementById("p-exp").innerHTML = `
+    <h2>Experiment: magnesium 400 mg <span>off ${dlabel(MAG_OFF[0] * D).slice(4)} – ${dlabel(MAG_OFF[1] * D).slice(4)}</span></h2>
+    ${lineChart({ series: [{ pts, color: C.deep, sw: 0, dots: true, r: 1.8, op: 0 }, { pts: roll(pts, 7), color: C.light, sw: 1.5 }], lo: 20, hi: 140, xs: [0, 89], xlabels: dayTicks, band: null, yfmt: v => v + "m" }).replace("<svg", `<svg style="background:linear-gradient(90deg,transparent ${(34 + MAG_OFF[0] / 89 * 516) / 560 * 100}%,rgba(224,164,88,.08) ${(34 + MAG_OFF[0] / 89 * 516) / 560 * 100}%,rgba(224,164,88,.08) ${(34 + MAG_OFF[1] / 89 * 516) / 560 * 100}%,transparent ${(34 + MAG_OFF[1] / 89 * 516) / 560 * 100}%)"`)}
+    <p class="muted" style="margin:-4px 0 0;font-size:11.5px">Deep sleep per night (dots) and 7-night average; the tinted stretch is the off block.</p>
+    <div class="tbl-wrap"><table><tr><th>On vs off</th><th class="n">Difference [95% range]</th><th class="n">Nights on / off</th><th class="n"></th></tr>
+      <tr><td>Deep sleep</td><td class="n">${ci(w, "min")}</td><td class="n">${on.length} / ${off.length}</td><td class="n">${verdict(w)}</td></tr>
+      <tr><td>HRV</td><td class="n">${ci(wh, "ms")}</td><td class="n">${hon.length} / ${hoff.length}</td><td class="n">${verdict(wh)}</td></tr>
+      <tr><td>Time asleep</td><td class="n">${ci(ws, "min", f0)}</td><td class="n">${sOn.length} / ${sOff.length}</td><td class="n">${verdict(ws)}</td></tr></table></div>
+    <div class="verdict"><b>Not settled yet.</b> Deep sleep was ${f1(Math.abs(w.d))} min ${w.d >= 0 ? "higher" : "lower"} on magnesium nights, but the range runs from ${sgn(w.lo)} to ${sgn(w.hi)} min, so no effect is still possible. To see a 10-minute effect reliably you'd need about <b>${need} nights on and ${need} off</b>; you have ${off.length} off. Another 2–3 week off block would settle it.</div>`;
+}
+
+/* ============================== nutrition ============================== */
+{
+  const dayMeals = (d) => meals.filter(x => Math.floor(x.t / D) === d);
+  const sum = (a, k) => a.reduce((x, y) => x + y[k], 0);
+  const today = dayMeals(TODAY), T = { kcal: sum(today, "kcal"), p: sum(today, "P"), c: sum(today, "C"), f: sum(today, "F") };
+  const bar = (lbl, v, goal, unit, color) => `<div class="mb"><span>${lbl}</span><div class="track"><i style="width:${Math.min(100, v / goal * 100)}%;background:${color}"></i></div><span class="val"><b>${f0(v)}</b> / ${f0(goal)} ${unit} · ${f0(Math.max(0, goal - v))} left</span></div>`;
+  const hist = []; let logged = 0; const pro = [];
+  for (let d = TODAY - 30; d < TODAY; d++) { const m = dayMeals(d); if (m.length) { logged++; hist.push([d, sum(m, "kcal")]); pro.push(sum(m, "P")); } else hist.push([d, 0, true]); }
+  const kc = hist.filter(x => !x[2]).map(x => x[1]);
+  const within = kc.filter(v => Math.abs(v - GOAL.kcal) <= 200).length;
+  const pHit = pro.filter(v => v >= GOAL.p).length;
+  const avgP = mean(pro), avgC = mean(hist.filter(x => !x[2]).map(x => sum(dayMeals(x[0]), "C"))), avgF = mean(hist.filter(x => !x[2]).map(x => sum(dayMeals(x[0]), "F")));
+  const tot = avgP * 4 + avgC * 4 + avgF * 9;
+  document.getElementById("p-food").innerHTML = `
+    <h2>Nutrition <span>goals are examples · set yours</span></h2>
+    <div class="sub"><h3>Today so far (14:20)</h3><div class="bars">
+      ${bar("Calories", T.kcal, GOAL.kcal, "kcal", C.food)}${bar("Protein", T.p, GOAL.p, "g", C.hr)}${bar("Carbs", T.c, GOAL.c, "g", C.caf)}${bar("Fat", T.f, GOAL.f, "g", C.light)}</div></div>
+    <div class="sub"><h3>Last 30 days · ${logged} logged, ${30 - logged} not logged (left out of averages)</h3>
+      ${lineChart({ series: [{ bars: true, pts: hist, color: C.food, op: .7 }], lo: 0, hi: 3400, xs: [TODAY - 30, TODAY - 1], targets: [[GOAL.kcal, "goal 2,600"]], yfmt: v => v >= 1000 ? (v / 1000).toFixed(1) + "k" : v, xlabels: [[TODAY - 30, dlabel((TODAY - 30) * D).slice(4)], [TODAY - 1, dlabel((TODAY - 1) * D).slice(4)]] })}</div>
+    <div class="tbl-wrap"><table><tr><th>30-day, logged days</th><th class="n">Average</th><th class="n">Goal</th><th class="n">Days on goal</th></tr>
+      <tr><td>Calories</td><td class="n">${f0(mean(kc))} kcal</td><td class="n">${f0(GOAL.kcal)}</td><td class="n">${within}/${logged} within ±200</td></tr>
+      <tr><td>Protein</td><td class="n">${f0(avgP)} g · ${f1(avgP / weights[weights.length - 1].kg)} g/kg</td><td class="n">${GOAL.p}</td><td class="n">${pHit}/${logged} ≥ goal</td></tr>
+      <tr><td>Split P / C / F</td><td class="n">${Math.round(avgP * 4 / tot * 100)} / ${Math.round(avgC * 4 / tot * 100)} / ${Math.round(avgF * 9 / tot * 100)}%</td><td class="n">${Math.round(GOAL.p * 4 / (GOAL.p * 4 + GOAL.c * 4 + GOAL.f * 9) * 100)} / ${Math.round(GOAL.c * 4 / (GOAL.p * 4 + GOAL.c * 4 + GOAL.f * 9) * 100)} / ${Math.round(GOAL.f * 9 / (GOAL.p * 4 + GOAL.c * 4 + GOAL.f * 9) * 100)}%</td><td class="n"></td></tr></table></div>`;
+}
+
+/* ============================== sleep & recovery ============================== */
+{
+  const last = nights.filter(x => x.n >= TODAY - 29);
+  const stageMin = (x, st) => sleepSegs.filter(s => s[0] >= x.bed && s[1] <= x.wake + 1 && s[2] === st).reduce((a, s) => a + s[1] - s[0], 0);
+  const w = 560, h = 150, pl = 34, pr = 10, pt = 8, pb = 18, bw = (w - pl - pr) / last.length;
+  const Y = (m) => pt + (1 - m / 600) * (h - pt - pb);
+  let g = ""; [0, 300, 600].forEach(v => g += `<line x1="${pl}" x2="${w - pr}" y1="${Y(v)}" y2="${Y(v)}" stroke="${C.line}"/><text x="${pl - 5}" y="${Y(v) + 3}" text-anchor="end" font-size="9.5" fill="${C.dim}" font-family="IBM Plex Mono">${v / 60}h</text>`);
+  last.forEach((x, i) => { let y = Y(0); [[3, C.deep], [2, C.light], [1, C.rem], [0, C.awake]].forEach(([st, c]) => { const m = stageMin(x, st), hh = Y(0) - Y(m); y -= hh; g += `<rect x="${pl + i * bw + 1}" y="${y}" width="${Math.max(1, bw - 2)}" height="${hh}" fill="${c}" fill-opacity="${st === 0 ? .5 : .85}"/>`; }); });
+  g += `<line x1="${pl}" x2="${w - pr}" y1="${Y(480)}" y2="${Y(480)}" stroke="${C.ink2}" stroke-dasharray="4 3"/><text x="${w - pr}" y="${Y(480) - 4}" text-anchor="end" font-size="9.5" fill="${C.ink2}" font-family="IBM Plex Mono">8h</text>`;
+  const base = nights.filter(x => x.n >= TODAY - 35 && x.n < TODAY - 7), bh = [mean(base.map(x => x.hrv)) - sd(base.map(x => x.hrv)), mean(base.map(x => x.hrv)) + sd(base.map(x => x.hrv))];
+  const hrvPts = nights.map(x => [x.n, x.hrv]), rhrPts = nights.map(x => [x.n, x.rhr]);
+  const l7 = nights.filter(x => x.n >= TODAY - 7);
+  document.getElementById("p-sleep").innerHTML = `
+    <h2>Sleep and recovery <span>wearable · sample</span></h2>
+    <div class="sub"><h3>Last 30 nights by stage</h3><svg viewBox="0 0 ${w} ${h}" width="100%" role="img" aria-label="Sleep stages per night">${g}</svg>
+      <div style="display:flex;gap:14px;flex-wrap:wrap;font-size:11.5px" class="muted">${[["Deep", C.deep], ["Light", C.light], ["REM", C.rem], ["Awake", C.awake]].map(([n, c]) => `<span><i style="display:inline-block;width:9px;height:9px;border-radius:2px;background:${c};margin-right:5px;vertical-align:-1px"></i>${n}</span>`).join("")}</div></div>
+    <div class="twocol">
+      <div class="sub"><h3>HRV · 7-night avg ${f0(mean(l7.map(x => x.hrv)))} ms · usual range ${f0(bh[0])}–${f0(bh[1])}</h3>${lineChart({ series: [{ pts: hrvPts, color: C.hrv, sw: 0, dots: true, r: 1.5, op: 0 }, { pts: roll(hrvPts, 7), color: C.hrv, sw: 1.5, end: true }], lo: 30, hi: 90, xs: [0, 88], band: bh, w: 300, h: 120, xlabels: [[0, "Jul"], [88, "Sep"]] })}</div>
+      <div class="sub"><h3>Resting HR · 7-night avg ${f1(mean(l7.map(x => x.rhr)))} bpm</h3>${lineChart({ series: [{ pts: rhrPts, color: C.hr, sw: 0, dots: true, r: 1.5, op: 0 }, { pts: roll(rhrPts, 7), color: C.hr, sw: 1.5, end: true }], lo: 46, hi: 62, xs: [0, 88], w: 300, h: 120, xlabels: [[0, "Jul"], [88, "Sep"]] })}</div>
+    </div>
+    <p class="muted" style="margin:0;font-size:12px">"Usual range" is your average ± one standard deviation over the 4 weeks before this one; the grey band on the HRV chart.</p>`;
+}
+
+/* ============================== correlations ============================== */
+{
+  const nx = nights.filter(x => x.n < TODAY);
+  const nextEnergy = (x) => feel.find(f => f.d === x.n + 1);
+  const pairs = [
+    { a: "Caffeine left at bedtime", b: "Deep sleep that night", xs: nx.map(x => x.cafBed), ys: nx.map(x => x.deep), ux: "mg", uy: "min", per: 10, c: C.caf },
+    { a: "Alcohol left at bedtime", b: "HRV that night", xs: nx.map(x => x.alcBed), ys: nx.map(x => x.hrv), ux: "g", uy: "ms", per: 10, c: C.alc },
+    { a: "Alcohol left at bedtime", b: "Resting HR that night", xs: nx.map(x => x.alcBed), ys: nx.map(x => x.rhr), ux: "g", uy: "bpm", per: 10, c: C.alc },
+    { a: "Time asleep", b: "Energy next day (you)", xs: nx.filter(nextEnergy).map(x => x.asleep / 60), ys: nx.filter(nextEnergy).map(x => nextEnergy(x).energy), ux: "h", uy: "pts", per: 1, c: C.mood },
+    { a: "Trained that day", b: "Deep sleep that night", xs: nx.map(x => x.trained ? 1 : 0), ys: nx.map(x => x.deep), ux: "", uy: "min", per: 1, c: C.gym, binary: true },
+  ];
+  const scatter = (p) => { const w = 170, h = 96, pl = 6, pb = 6, xmn = Math.min(...p.xs), xmx = Math.max(...p.xs) || 1, ymn = Math.min(...p.ys), ymx = Math.max(...p.ys);
+    const X = (v) => pl + (v - xmn) / (xmx - xmn || 1) * (w - pl * 2) + (p.binary ? (rnd() - .5) * 40 : 0), Y = (v) => 4 + (1 - (v - ymn) / (ymx - ymn || 1)) * (h - pb - 4);
+    const sl = slope(p.xs, p.ys), my = mean(p.ys), mx = mean(p.xs);
+    let g = p.xs.map((x, i) => `<circle cx="${X(x).toFixed(1)}" cy="${Y(p.ys[i]).toFixed(1)}" r="1.9" fill="${p.c}" fill-opacity=".5"/>`).join("");
+    if (!p.binary) g += `<line x1="${pl}" y1="${Y(my + sl * (xmn - mx))}" x2="${w - pl}" y2="${Y(my + sl * (xmx - mx))}" stroke="${C.ink}" stroke-width="1.2" stroke-opacity=".7"/>`;
+    return `<svg viewBox="0 0 ${w} ${h}" width="${w}" height="${h}" aria-hidden="true" style="max-width:100%">${g}</svg>`; };
+  const rows = pairs.map(p => {
+    const n = p.xs.length, r = pearson(p.xs, p.ys), [lo, hi] = rCI(r, n), clear = lo > 0 || hi < 0;
+    const eff = p.binary ? `${sgn(mean(p.ys.filter((_, i) => p.xs[i])) - mean(p.ys.filter((_, i) => !p.xs[i])))} ${p.uy} on training days` : `${sgn(slope(p.xs, p.ys) * p.per)} ${p.uy} per ${p.per === 1 ? "" : p.per + " "}${p.ux}`;
+    const strength = !clear ? "no clear link" : Math.abs(r) >= .5 ? "strong" : Math.abs(r) >= .3 ? "moderate" : "weak";
+    return `<tr><td style="width:180px">${scatter(p)}</td><td><b>${p.a}</b> → ${p.b}<div class="muted" style="font-size:12px">${eff}</div></td><td class="n">${sgn(r, v => v.toFixed(2))}<div class="dimtxt" style="font-size:11px">[${sgn(lo, v => v.toFixed(2))}, ${sgn(hi, v => v.toFixed(2))}]</div></td><td class="n">${n}</td><td class="n"><span class="pill ${clear ? "s" : "w"}">${strength}</span></td></tr>`; }).join("");
+  document.getElementById("p-corr").innerHTML = `
+    <h2>What moves what <span>correlations · all nights to date</span></h2>
+    <div class="tbl-wrap"><table><tr><th></th><th>Pair and size of the effect</th><th class="n">r [95% range]</th><th class="n">n</th><th class="n">Verdict</th></tr>${rows}</table></div>
+    <p class="muted" style="margin:0;font-size:12px">A correlation isn't proof of cause. Late caffeine and alcohol often come on the same nights, for example. The experiment panel is how HealthOS tests cause: switch one thing on and off and compare.</p>`;
+}
+
+draw();
+})();
+</script>

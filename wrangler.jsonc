@@ -1,0 +1,6 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "healthos",
+  "compatibility_date": "2026-09-29",
+  "assets": { "not_found_handling": "single-page-application" }
+}
