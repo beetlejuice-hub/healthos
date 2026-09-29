@@ -5,6 +5,9 @@ import { WorkoutScreen } from "./screens/Workout";
 import { Insights } from "./screens/Insights";
 import { Settings } from "./screens/Settings";
 import { readRoute, type Route } from "./lib/nav";
+import { Dev } from "./screens/Dev";
+import { Auth, NewPassword } from "./components/Auth";
+import { useAuth } from "./lib/session";
 
 /**
  * Four screens, one job each (owner, 29 Sept): Today = what needs you now; Log = add things;
@@ -12,6 +15,7 @@ import { readRoute, type Route } from "./lib/nav";
  * hangs off Today. Hash routes so the back button and home-screen shortcuts just work.
  */
 export function App() {
+  const auth = useAuth();
   const [route, setRoute] = useState<Route>(() => readRoute()[0]);
   useEffect(() => {
     const on = () => { setRoute(readRoute()[0]); window.scrollTo(0, 0); };
@@ -19,14 +23,19 @@ export function App() {
     return () => window.removeEventListener("hashchange", on);
   }, []);
 
+  if (!auth.ready) return <div className="app r-today" />;
+  if (auth.recovering) return <div className="app r-today"><NewPassword done={auth.doneRecovering} /></div>;
+  if (!auth.session) return <div className="app r-today"><Auth /></div>;
+
   return (
-    <div className={`app r-${route}`}>
+    <div className={`app r-${route === "dev" ? "settings" : route}`}>
       <main className="screen">
         {route === "today" && <Today />}
         {route === "log" && <Log />}
         {route === "workout" && <WorkoutScreen />}
         {route === "insights" && <Insights />}
-        {route === "settings" && <Settings />}
+        {route === "settings" && <Settings tester={auth.tester} email={auth.session.user.email ?? ""} />}
+        {route === "dev" && (auth.tester ? <Dev /> : <Settings tester={false} email={auth.session.user.email ?? ""} />)}
       </main>
       <nav className="tabs" aria-label="Screens">
         {(["today", "log", "workout", "insights"] as const).map((r) => (

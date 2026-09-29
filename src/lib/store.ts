@@ -60,7 +60,9 @@ const EMPTY: State = {
   goals: DEFAULT_GOALS, settings: DEFAULT_SETTINGS,
 };
 
-const KEY = "healthos.v1";
+/** The save slot. Per account once signed in, so a tester and a personal account never mix. */
+let KEY = "healthos.v1";
+export const storageKey = () => KEY;
 
 function load(): State {
   try {
@@ -82,17 +84,44 @@ export type Remote = { push: (next: State, prev: State) => void };
 let remote: Remote | null = null;
 export const setRemote = (r: Remote | null) => { remote = r; };
 
-function commit(next: State) {
+function save() {
+  try { localStorage.setItem(KEY, JSON.stringify(state)); } catch { /* full or blocked: the in-memory copy still works */ }
+}
+
+function commit(next: State, fromServer = false) {
   const prev = state;
   state = next;
   listeners.forEach((l) => l());
   if (saveTimer) clearTimeout(saveTimer);
-  saveTimer = setTimeout(() => { try { localStorage.setItem(KEY, JSON.stringify(state)); } catch { /* full or blocked: the in-memory copy still works */ } }, 150);
-  remote?.push(next, prev);
+  saveTimer = setTimeout(save, 150);
+  // Changes that came *from* the server aren't sent back to it.
+  if (!fromServer) remote?.push(next, prev);
 }
 
-/** Replace everything — used when the server's copy arrives. */
-export const replaceState = (next: State) => commit(next);
+/** Apply the server's copy without queuing it to be sent back. */
+export const applyFromServer = (next: State) => commit(next, true);
+
+/**
+ * Switch to an account's save slot. The first time an account opens on a device that has data
+ * from before sign-in (the unscoped slot), that data moves into the account so nothing is lost;
+ * returns true when it did, so sync can upload it.
+ */
+export function openStore(userId: string): boolean {
+  if (saveTimer) { clearTimeout(saveTimer); save(); }
+  const slot = `healthos.v1:${userId}`;
+  let adopted = false;
+  try {
+    if (!localStorage.getItem(slot) && localStorage.getItem("healthos.v1")) {
+      localStorage.setItem(slot, localStorage.getItem("healthos.v1")!);
+      localStorage.removeItem("healthos.v1");
+      adopted = true;
+    }
+  } catch { /* storage blocked */ }
+  KEY = slot;
+  state = load();
+  listeners.forEach((l) => l());
+  return adopted;
+}
 
 export const getState = () => state;
 export const subscribe = (l: () => void) => { listeners.add(l); return () => { listeners.delete(l); }; };

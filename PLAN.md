@@ -97,11 +97,14 @@ not required. Cloud storage OK. A test account for agents like Tempo's: maybe. R
 
 **Built (29 Sept):** Today, Log (food via Open Food Facts + saved foods, drinks, stack, weight),
 Workout (templates, suggested weights, rest timer), Insights (master graph + panels), Settings
-(goals, caffeine/sleep, sample data, export). All logic in `src/lib`, tested. Data is stored on
-the device only until Supabase sync lands.
+(goals, caffeine/sleep, sample data, export). All logic in `src/lib`, tested. Email/password
+login; data saved on the device first and synced per account. Accounts with `+test` in the
+email get Dev tools (`#dev`): raw entry editor, generate/remove sample, wipe account.
 
-1. [ ] **Supabase sync** — needs the project URL + anon key from Arnold. Phone ↔ laptop.
-2. [ ] **Deploy** — Cloudflare, connected to this repo.
+1. [x] **Supabase sync** — built 29 Sept, tested two-device against a fake Supabase (12/12).
+   Owner runs `supabase/migrations/0001_init.sql` once in the SQL editor.
+2. [x] **Deploy** — `wrangler deploy` builds first (`wrangler.jsonc`), so Cloudflare's default
+   deploy command is enough.
 3. [ ] Owner sets real goals (Settings) and uses it for a few days.
 4. [ ] Wearable: pick the device, then import heart rate, sleep, HRV into the master graph.
 5. [ ] AI layer on top of the computed stats (weekly summary, experiment suggestions).

@@ -1,14 +1,15 @@
-import { useState } from "react";
 import { act, getState, useStore } from "../lib/store";
 import { makeSample } from "../lib/sample";
+import { signOut, useSyncStatus, currentSyncer } from "../lib/session";
+import { clock } from "../lib/time";
 
 const hhmm = (m: number) => `${String(Math.floor(m / 60)).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}`;
 
-export function Settings() {
+export function Settings({ tester, email }: { tester: boolean; email: string }) {
+  const sync = useSyncStatus();
   const goals = useStore((s) => s.goals);
   const st = useStore((s) => s.settings);
   const hasSample = useStore((s) => s.entries.some((e) => e.id.startsWith("sample:")));
-  const [confirm, setConfirm] = useState(false);
   const num = (v: string) => Number(v.replace(",", ".")) || 0;
 
   const exportJson = () => {
@@ -21,6 +22,17 @@ export function Settings() {
   return (
     <div className="calm">
       <div className="head"><span>Settings</span><a href="#today">Done</a></div>
+
+      <div className="card">
+        <h3>Account <span>{tester ? "tester" : "personal"}</span></h3>
+        <div className="stack-row"><span>{email}<small>Sync: {sync.state === "idle" ? (sync.lastSync ? `up to date · ${clock(sync.lastSync)}` : "waiting") : sync.state}{sync.pending ? ` · ${sync.pending} waiting to upload` : ""}</small></span>
+          <button type="button" className="pill-btn" onClick={() => void currentSyncer()?.sync()}>Sync</button></div>
+        {sync.message && sync.state !== "idle" && <p className="err">{sync.message}</p>}
+        <div className="row2">
+          {tester && <a className="pill-btn" href="#dev" style={{ textAlign: "center", textDecoration: "none" }}>Dev tools</a>}
+          <button type="button" className="pill-btn" onClick={() => void signOut()}>Sign out</button>
+        </div>
+      </div>
 
       <div className="card">
         <h3>Daily goals <span>used on Today and Insights</span></h3>
@@ -54,14 +66,9 @@ export function Settings() {
       </div>
 
       <div className="card">
-        <h3>Your data <span>stored on this device</span></h3>
-        <p className="note">Sync between phone and laptop arrives with the Supabase connection. Until then, export a backup now and then.</p>
-        <div className="row2">
-          <button type="button" className="pill-btn" onClick={exportJson}>Export JSON</button>
-          {!confirm
-            ? <button type="button" className="pill-btn" onClick={() => setConfirm(true)}>Delete everything…</button>
-            : <button type="button" className="pill-btn" style={{ background: "#5a2a2a" }} onClick={() => { localStorage.removeItem("healthos.v1"); location.reload(); }}>Yes, delete all data</button>}
-        </div>
+        <h3>Your data <span>synced to your account</span></h3>
+        <p className="note">Everything you log is saved on this device first and synced to your account, so it's on your phone and laptop. Export gives you all of it as one file.</p>
+        <button type="button" className="pill-btn" onClick={exportJson}>Export JSON</button>
       </div>
     </div>
   );

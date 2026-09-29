@@ -2,5 +2,9 @@
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "healthos",
   "compatibility_date": "2026-09-29",
-  "assets": { "not_found_handling": "single-page-application" }
+  // `wrangler deploy` builds the app itself first, so a deploy never ships a stale or missing build
+  // (Cloudflare's "npx wrangler deploy" alone is enough — no separate build command needed).
+  "build": { "command": "npx vite build" },
+  // A static single-page app: every unknown path serves index.html.
+  "assets": { "directory": "./dist", "not_found_handling": "single-page-application" }
 }
