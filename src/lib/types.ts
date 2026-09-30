@@ -80,6 +80,10 @@ export type Workout = {
   template: string;
   startedAt: number;
   endedAt: number | null;
+  /** This session's exercises: a copy of the template at start, changed by adds and swaps. */
+  plan?: Template["exercises"];
+  /** How it felt, in your words. */
+  note?: string;
 };
 
 /** A saved split day: "Upper A" → bench, row, OHP, pulldown, with the reps you aim for. */

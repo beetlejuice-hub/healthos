@@ -177,6 +177,13 @@ export const act = {
   },
   setSupplements(list: Supplement[]) { commit({ ...state, supplements: normalizeStack(list) }); },
   setTemplates(list: Template[]) { commit({ ...state, templates: list }); },
+  /** Save one split day. A rename carries past workouts along, so history and "up next" still line up. */
+  saveTemplate(t: Template, oldName?: string) {
+    const exists = state.templates.some((x) => x.id === t.id);
+    const templates = exists ? state.templates.map((x) => (x.id === t.id ? t : x)) : [...state.templates, t];
+    const workouts = oldName && oldName !== t.name ? state.workouts.map((w) => (w.template === oldName ? { ...w, template: t.name } : w)) : state.workouts;
+    commit({ ...state, templates, workouts });
+  },
   setGoals(goals: Goals) { commit({ ...state, goals }); },
   setProfile(profile: Profile) { commit({ ...state, profile }); },
   setSettings(patch: Partial<Settings>) { commit({ ...state, settings: { ...state.settings, ...patch } }); },
@@ -189,9 +196,15 @@ export const act = {
   },
   startWorkout(template: string, at = Date.now()): Workout {
     act.tidyWorkouts(at, true);
-    const w: Workout = { id: newId(), template, startedAt: at, endedAt: null };
+    // The session gets its own copy of the plan, so adding or swapping an exercise today
+    // never changes the saved split (and editing the split never changes a running session).
+    const plan = (state.templates.find((t) => t.name === template)?.exercises ?? []).map((e) => ({ ...e }));
+    const w: Workout = { id: newId(), template, startedAt: at, endedAt: null, plan };
     commit({ ...state, workouts: [...state.workouts, w] });
     return w;
+  },
+  updateWorkout(id: string, patch: Partial<Workout>) {
+    commit({ ...state, workouts: state.workouts.map((w) => (w.id === id ? { ...w, ...patch } : w)) });
   },
   endWorkout(id: string, at = Date.now()) {
     commit({ ...state, workouts: state.workouts.map((w) => (w.id === id ? { ...w, endedAt: at } : w)) });

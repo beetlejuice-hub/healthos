@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { tidyWorkouts, e1rm, e1rmHistory, setsPerMuscle, suggestNext, volume } from "./training";
+import { exerciseHistory, nextTemplate, sessionPlan, templateProblems, tidyWorkouts, e1rm, e1rmHistory, setsPerMuscle, suggestNext, volume } from "./training";
 
 describe("e1rm — Epley", () => {
   it("estimates a one-rep max", () => {
@@ -76,5 +76,36 @@ describe("workouts that end themselves", () => {
   });
   it("leaves finished workouts alone", () => {
     expect(tidyWorkouts([w("a", T, T + 60 * M)], [], T + 500 * M)).toEqual({ end: [], drop: [] });
+  });
+});
+
+describe("your own split", () => {
+  const T = [{ name: "Push", exercises: [] }, { name: "Pull", exercises: [] }, { name: "Legs", exercises: [] }];
+  const w = (template: string, startedAt: number, endedAt: number | null = startedAt + 1) => ({ template, startedAt, endedAt });
+  it("the next day follows the last one you finished, wrapping round", () => {
+    expect(nextTemplate(T, [])?.name).toBe("Push");
+    expect(nextTemplate(T, [w("Push", 1), w("Pull", 2)])?.name).toBe("Legs");
+    expect(nextTemplate(T, [w("Pull", 1), w("Legs", 2)])?.name).toBe("Push");
+    expect(nextTemplate(T, [w("Legs", 1), w("Quick workout", 2)])?.name).toBe("Push"); // a quick one doesn't break the rotation
+    expect(nextTemplate(T, [w("Push", 1), w("Pull", 2, null)])?.name).toBe("Pull"); // unfinished doesn't count
+  });
+  it("checks a day before saving", () => {
+    const ex = { name: "Squat", sets: 3, reps: 5, restSec: 180 };
+    expect(templateProblems({ name: "Legs", exercises: [ex] }, [])).toEqual([]);
+    expect(templateProblems({ name: " ", exercises: [] }, [])).toEqual(["Give the day a name.", "Add at least one exercise."]);
+    expect(templateProblems({ name: "push", exercises: [ex] }, [{ name: "Push" }])).toEqual(["There's already a day called push."]);
+    expect(templateProblems({ name: "X", exercises: [{ ...ex, sets: 0, reps: 99 }] }, [])).toEqual(["Squat: sets must be 1–10.", "Squat: reps must be 1–50."]);
+  });
+  it("a session uses its own copy of the plan", () => {
+    const tpl = [{ name: "Push", exercises: [{ name: "Bench press", sets: 3, reps: 6, restSec: 150 }] }];
+    expect(sessionPlan({ template: "Push" }, tpl)).toEqual(tpl[0].exercises);
+    expect(sessionPlan({ template: "Push", plan: [] }, tpl)).toEqual([]);
+  });
+  it("exercise history: newest first, best estimated 1RM per session", () => {
+    const s = (w: string, at: number, kg: number, reps: number) => ({ at, workoutId: w, exercise: "Squat", kg, reps });
+    const h = exerciseHistory([s("a", 1, 100, 5), s("a", 2, 90, 8), s("b", 10, 105, 5), { ...s("b", 11, 50, 10), exercise: "Row" }], "Squat");
+    expect(h.map((x) => x.workoutId)).toEqual(["b", "a"]);
+    expect(h[1].sets).toEqual([{ kg: 100, reps: 5 }, { kg: 90, reps: 8 }]);
+    expect(h[0].best).toBeCloseTo(122.5, 5);
   });
 });

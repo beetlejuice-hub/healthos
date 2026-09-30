@@ -57,7 +57,35 @@ export const MUSCLES: Record<string, Record<string, number>> = {
   "Bicep curl": { Biceps: 1 },
   "Tricep pushdown": { Triceps: 1 },
   "Lateral raise": { Shoulders: 1 },
+  "DB bench press": { Chest: 1, Triceps: 0.5, Shoulders: 0.5 },
+  "Incline bench press": { Chest: 1, Shoulders: 0.5, Triceps: 0.5 },
+  "Chest fly": { Chest: 1 },
+  "Push-ups": { Chest: 1, Triceps: 0.5 },
+  "DB shoulder press": { Shoulders: 1, Triceps: 0.5 },
+  "Face pull": { Shoulders: 1, Back: 0.5 },
+  "Rear delt fly": { Shoulders: 1 },
+  "Seated cable row": { Back: 1, Biceps: 0.5 },
+  "DB row": { Back: 1, Biceps: 0.5 },
+  "Chin-ups": { Back: 1, Biceps: 1 },
+  "T-bar row": { Back: 1, Biceps: 0.5 },
+  "Hammer curl": { Biceps: 1 },
+  "Preacher curl": { Biceps: 1 },
+  "Skull crusher": { Triceps: 1 },
+  "Overhead tricep extension": { Triceps: 1 },
+  "Hack squat": { Quads: 1, Glutes: 0.5 },
+  "Bulgarian split squat": { Quads: 1, Glutes: 1 },
+  "Lunges": { Quads: 1, Glutes: 1 },
+  "Leg extension": { Quads: 1 },
+  "Hip thrust": { Glutes: 1, Hamstrings: 0.5 },
+  "Seated leg curl": { Hamstrings: 1 },
+  "Seated calf raise": { Calves: 1 },
+  "Plank": { Core: 1 },
+  "Hanging leg raise": { Core: 1 },
+  "Cable crunch": { Core: 1 },
 };
+
+/** Every exercise the app knows (for suggestions while typing); your own names work too. */
+export const EXERCISES = Object.keys(MUSCLES).sort();
 
 /** Hard sets per muscle in the given sets. Unknown exercises are counted under their own name. */
 export function setsPerMuscle(sets: { exercise: string }[]): Record<string, number> {
@@ -92,4 +120,43 @@ export function tidyWorkouts(workouts: { id: string; startedAt: number; endedAt:
     } else if (closeAll || now - w.startedAt > AUTO_END.emptyAfterMin * 60_000) out.drop.push(w.id);
   });
   return out;
+}
+
+type Ex = { name: string; sets: number; reps: number; restSec: number };
+
+/** The day that's due: the one after the last day you finished, in your split's order. */
+export function nextTemplate<T extends { name: string }>(templates: T[], workouts: { template: string; startedAt: number; endedAt: number | null }[]): T | undefined {
+  const done = workouts.filter((w) => w.endedAt !== null).sort((a, b) => a.startedAt - b.startedAt);
+  for (let k = done.length - 1; k >= 0; k--) {
+    const i = templates.findIndex((t) => t.name === done[k].template);
+    if (i >= 0) return templates[(i + 1) % templates.length];
+  }
+  return templates[0];
+}
+
+/** A session's exercises: its own copy when it has one, else the template's (older sessions). */
+export const sessionPlan = (w: { template: string; plan?: Ex[] }, templates: { name: string; exercises: Ex[] }[]): Ex[] =>
+  w.plan ?? templates.find((t) => t.name === w.template)?.exercises ?? [];
+
+/** What's wrong with a split day before saving it, in plain words; empty when it's fine. */
+export function templateProblems(t: { name: string; exercises: Ex[] }, others: { name: string }[]): string[] {
+  const out: string[] = [];
+  if (!t.name.trim()) out.push("Give the day a name.");
+  else if (others.some((o) => o.name.trim().toLowerCase() === t.name.trim().toLowerCase())) out.push(`There's already a day called ${t.name.trim()}.`);
+  if (!t.exercises.length) out.push("Add at least one exercise.");
+  t.exercises.forEach((e, i) => {
+    if (!e.name.trim()) out.push(`Exercise ${i + 1} needs a name.`);
+    if (!(e.sets >= 1 && e.sets <= 10)) out.push(`${e.name || `Exercise ${i + 1}`}: sets must be 1–10.`);
+    if (!(e.reps >= 1 && e.reps <= 50)) out.push(`${e.name || `Exercise ${i + 1}`}: reps must be 1–50.`);
+  });
+  return out;
+}
+
+/** The last `n` sessions of one exercise, newest first: the sets, and the best estimated 1RM. */
+export function exerciseHistory(sets: LoggedSet[], exercise: string, n = 5): { workoutId: string; at: number; sets: { kg: number; reps: number }[]; best: number }[] {
+  const by = new Map<string, LoggedSet[]>();
+  for (const s of sets) if (s.exercise === exercise) by.set(s.workoutId, [...(by.get(s.workoutId) ?? []), s]);
+  return [...by.entries()]
+    .map(([workoutId, ss]) => ({ workoutId, at: Math.min(...ss.map((s) => s.at)), sets: ss.sort((a, b) => a.at - b.at).map((s) => ({ kg: s.kg, reps: s.reps })), best: Math.max(0, ...ss.filter((s) => s.reps <= 12 && s.kg > 0).map((s) => e1rm(s.kg, s.reps))) }))
+    .sort((a, b) => b.at - a.at).slice(0, n);
 }

@@ -172,7 +172,11 @@ email get Dev tools (`#dev`): raw entry editor, generate/remove sample, wipe acc
    1-point effect found in 83% of fake people by 90 days (62% by 60), false alarms ≤10%, not fooled
    by weekends or drift. Reaction test: owner said no.
    AI food (later): unreadable text → ask AI once → saved as your food → free next time.
-9. [ ] **Workouts: your own split** — template editor etc. (claimed 30 Sept, Claude).
+9. [x] **Workouts: your own split**, built 30 Sept. Edit/add/delete split days (name, exercises with
+   suggestions, sets × reps, rest, reorder; renaming carries history along). The day due in your
+   rotation shows first ("Up next"). Quick workout with no plan. In a session: add an exercise, swap
+   one (before its first set), History (last 5 sessions + est. 1RM), a note ("How did it feel?").
+   Each session keeps its own copy of the plan, so today's changes never edit the split.
    Owner's answers (30 Sept): evening feel card on Today ✓ (+ a reminder notification — needs web
    push, not built); real burn only *suggests* goal changes; not tracking closely yet, so 1–2 bad
    days must not corrupt anything (typo weigh-ins and partial days are dropped ✓); 75% / one line /
