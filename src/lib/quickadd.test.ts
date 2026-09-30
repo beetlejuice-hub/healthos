@@ -70,3 +70,21 @@ describe("units", () => {
     expect(macrosOfLine({ food: special, count: 1, unit: "piece" }).kcal).toBeCloseTo(total / 4, 5);
   });
 });
+
+describe("drinks in the same sentence", () => {
+  const d = (text: string) => { const p = parseItem(text); return p.drink ? `${p.drink.count} × ${p.drink.drink.name}` : p.line ? `food: ${p.line.food.name}` : "—"; };
+  it("coffee, beer, wine are drinks — caffeine and alcohol count", () => {
+    expect(parseMeal("2 eggs, 2 toast, coffee").map((p) => (p.drink ? p.drink.drink.name : p.line?.food.name))).toEqual(["Egg, whole", "Toast (white)", "Filter coffee"]);
+    expect([d("2 beers"), d("egy sör"), d("a glass of wine"), d("double espresso"), d("kávé"), d("coke zero")]).toEqual([
+      "2 × Beer 500 ml, 5%", "1 × Beer 500 ml, 5%", "1 × Wine 150 ml, 12%", "1 × Double espresso", "1 × Filter coffee", "1 × Coke Zero 330 ml",
+    ]);
+  });
+  it("only whole names: 'coffee cake' or 'orange juice' stay food", () => {
+    expect(d("orange juice")).toBe("food: Orange juice");
+    expect(parseItem("coffee cake").drink).toBeUndefined();
+  });
+  it("your own drinks by name", () => {
+    const office = { id: "drink:o", name: "Office coffee", ml: 200, caffeineMg: 120, alcoholG: 0, kcal: 5 };
+    expect(parseItem("2 office coffee", [], [office]).drink).toEqual({ drink: office, count: 2 });
+  });
+});

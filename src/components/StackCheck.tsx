@@ -44,10 +44,10 @@ export function FlagText({ f }: { f: Flag }) {
 }
 
 /** The badge next to a supplement in the stack editor; tap for the reasons. */
-export function StackBadge({ name, report }: { name: string; report: Report }) {
+export function StackBadge({ name, report, hideNone }: { name: string; report: Report; hideNone?: boolean }) {
   const [open, setOpen] = useState(false);
   const b: Badge = badgeFor(name, report);
-  if (!name.trim()) return null;
+  if (!name.trim() || (hideNone && (b.verdict === "none" || b.verdict === "unknown"))) return null;
   return <div className="sbadge">
     <button type="button" className="linkish" onClick={() => setOpen(!open)} aria-expanded={open} disabled={!b.flags.length}>
       <VerdictChip v={b.verdict} />{b.flags.length > 0 && <span> {b.flags.length === 1 ? `with ${other(b.flags[0], name)}` : `${b.flags.length} notes`} {open ? "▴" : "▾"}</span>}

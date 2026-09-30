@@ -13,7 +13,7 @@ const { chromium, APP, OUT, handle } = require('./harness.cjs');
 
   // Before About me: black seed has no condition to be checked against.
   await pg.goto(APP + '#log/stack'); await pg.waitForTimeout(200);
-  check('without About me, stack shows no known link', await pg.locator('.sbadge').filter({ hasText: 'No known link' }).count() === 5);
+  check('without About me, the stack shows no badges (nothing to check against yet)', await pg.locator('.sbadge').count() === 0);
 
   // About me: psoriasis, recognised as you type.
   await pg.goto(APP + '#settings');
@@ -37,10 +37,9 @@ const { chromium, APP, OUT, handle } = require('./harness.cjs');
   check('tapping shows reason, grade and source', /CYP450/.test(await badge(2)) && /Evidence: theoretical · reviewed 2026-09-30 · to verify/.test(await badge(2)));
   // Warning while adding.
   await pg.getByRole('button', { name: '+ Add supplement' }).click();
-  await pg.locator('.field input').filter({ hasText: '' }).nth(0);
-  const names = pg.getByLabel('Name'); const n = await names.count();
-  await names.nth(n - 1).fill("St John's wort");
-  check('typing St John\'s wort warns before you take it', /Avoid/.test(await pg.locator('.sbadge').nth(n - 1).innerText()));
+  await pg.getByLabel('Name').fill("St John's wort");
+  check('typing St John\'s wort warns before you take it', /Avoid/.test(await pg.locator('.supp-edit .sbadge').innerText()));
+  await pg.getByRole('button', { name: 'Done' }).click();
   await pg.screenshot({ path: OUT + 'sc-stack.png', fullPage: true });
 
   // Today: red only.
@@ -58,7 +57,8 @@ const { chromium, APP, OUT, handle } = require('./harness.cjs');
 
   // Remove the risky one: alert disappears.
   await pg.goto(APP + '#log/stack'); await pg.waitForTimeout(200);
-  await pg.getByRole('button', { name: 'Remove' }).last().click();
+  await pg.locator('.supp-row').filter({ hasText: "St John's wort" }).getByRole('button', { name: 'Edit' }).click();
+  await pg.getByRole('button', { name: 'Remove' }).click();
   await pg.goto(APP + '#today'); await pg.waitForTimeout(300);
   check('removing it clears the alert', await pg.locator('.noticed-line.alert').count() === 0);
   console.log('errors:', JSON.stringify(errs));

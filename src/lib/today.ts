@@ -14,7 +14,8 @@ export type NowItem =
   | { id: string; kind: "supp-missed" | "supp-due"; suppIds: string[]; title: string; body: string }
   | { id: string; kind: "caffeine"; title: string; body: string }
   | { id: string; kind: "food"; title: string; body: string }
-  | { id: string; kind: "feel"; title: string; body: string };
+  | { id: string; kind: "feel"; title: string; body: string }
+  | { id: string; kind: "weight"; title: string; body: string; lastKg: number | null };
 
 export type NowContext = {
   now: number;
@@ -71,6 +72,12 @@ export function nowItems(c: NowContext): NowItem[] {
   // Food: nothing logged by late morning is worth a nudge; otherwise say where you stand after lunch.
   const foods = todays.filter((e) => e.kind === "food");
   if (!foods.length && nowMin >= 11 * 60) out.push({ id: "food", kind: "food", title: "Nothing eaten logged yet", body: "Log what you've had so today's totals mean something." });
+
+  // Morning weigh-in: the real-burn and weight-trend cards are built from these.
+  if (nowMin >= 5 * 60 && nowMin < 11 * 60 && !todays.some((e) => e.kind === "weight")) {
+    const last = c.entries.reduce<{ at: number; kg: number } | null>((b, e) => (e.kind === "weight" && (!b || e.at > b.at) ? { at: e.at, kg: e.kg } : b), null);
+    out.push({ id: "weight", kind: "weight", title: "Morning weigh-in", body: "Before breakfast is most comparable. Your real burn and weight trend are built from these.", lastKg: last?.kg ?? null });
+  }
 
   // Evening check-in (owner: "a card on the main page"): the outcome Noticed compares everything with.
   if (nowMin >= FEEL_FROM_MIN && !todays.some((e) => e.kind === "feel")) out.push({ id: "feel", kind: "feel", title: "How was today?", body: "10 seconds: energy, mood, focus, anxiety, stress. It's what Noticed compares food, caffeine and your stack against." });

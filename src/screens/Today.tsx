@@ -73,7 +73,7 @@ export function Today() {
       {shown.length === 0 && <p className="empty-ok">Nothing needs you right now.</p>}
       {shown.map((it) => (
         <div key={it.id} className={`item ${it.kind.startsWith("supp") ? "supp" : it.kind === "caffeine" ? "warn" : it.kind}`}>
-          <span className="ic" aria-hidden="true">{it.kind.startsWith("supp") ? "✓" : it.kind === "caffeine" ? "!" : it.kind === "food" ? "+" : "~"}</span>
+          <span className="ic" aria-hidden="true">{it.kind.startsWith("supp") ? "✓" : it.kind === "caffeine" ? "!" : it.kind === "food" ? "+" : it.kind === "weight" ? "kg" : "~"}</span>
           <div><b>{it.title}</b><p>{it.body}</p></div>
           <div className="acts">
             {(it.kind === "supp-missed" || it.kind === "supp-due") && <>
@@ -84,6 +84,7 @@ export function Today() {
             </>}
             {it.kind === "caffeine" && <button type="button" className="pill-btn" onClick={() => setDismissed((d) => [...d, it.id])}>Got it</button>}
             {it.kind === "food" && <button type="button" className="pill-btn pri" onClick={() => go("log", "food")}>Log food</button>}
+            {it.kind === "weight" && <WeighIn lastKg={it.lastKg} />}
             {it.kind === "feel" && <button type="button" className="pill-btn pri" onClick={() => document.getElementById("feel")?.scrollIntoView({ behavior: "smooth" })}>Rate it</button>}
           </div>
         </div>
@@ -333,6 +334,19 @@ function WorkoutRunning({ now }: { now: number }) {
     <div className="noticed-line running">
       <span><small>Workout running</small>{w.template} · {last ? `last set ${clock(last)}` : `started ${clock(w.startedAt)}, no sets yet`}<small className="sub">{now < ends ? `ends by itself at ${clock(ends)} if you forget` : "ending now"}</small></span>
       <span className="acts"><button type="button" className="pill-btn" onClick={() => go("workout")}>Open</button><button type="button" className="pill-btn pri" onClick={() => (last ? act.endWorkout(w.id, Date.now() - last > 10 * MIN ? last + 2 * MIN : Date.now()) : act.tidyWorkouts(Date.now(), true))}>Finish</button></span>
+    </div>
+  );
+}
+
+/** Weigh in right from Today: yesterday's weight is pre-filled, so it's usually one small edit. */
+function WeighIn({ lastKg }: { lastKg: number | null }) {
+  const [kg, setKg] = useState(lastKg != null ? String(lastKg) : "");
+  const n = Number(kg.replace(",", "."));
+  const ok = n > 20 && n < 400;
+  return (
+    <div className="weighin">
+      <input inputMode="decimal" aria-label="Weight in kg" value={kg} placeholder="kg" onChange={(e) => setKg(e.target.value)} />
+      <button type="button" className="pill-btn pri" disabled={!ok} onClick={() => { const e = act.addEntry({ kind: "weight", at: Date.now(), kg: Math.round(n * 10) / 10 }); offerUndo([e.id], `Logged ${Math.round(n * 10) / 10} kg`); }}>Log kg</button>
     </div>
   );
 }

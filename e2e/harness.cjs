@@ -20,7 +20,11 @@ async function handle(route) {
   const json = (status, body) => route.fulfill({ status, contentType: 'application/json', headers: cors, body: body == null ? '' : JSON.stringify(body) });
   if (m === 'OPTIONS') return route.fulfill({ status: 200, headers: cors });
   if (p === '/auth/v1/token') {
-    const b = req.postDataJSON(); const id = users[b.email];
+    const b = req.postDataJSON();
+    // Token refresh (the app's clock may be moved ahead in a test): hand out a fresh token.
+    const refreshed = url.searchParams.get('grant_type') === 'refresh_token' && b.refresh_token?.startsWith('r-') ? b.refresh_token.slice(2) : null;
+    if (refreshed) { const email = Object.keys(users).find((k) => users[k] === refreshed); return json(200, { access_token: 'tok-' + refreshed, token_type: 'bearer', expires_in: 3600 * 24 * 365, expires_at: Math.floor(Date.now() / 1000) + 3600 * 24 * 365, refresh_token: 'r-' + refreshed, user: { id: refreshed, email, aud: 'authenticated', role: 'authenticated', app_metadata: {}, user_metadata: {}, created_at: '2026-09-29T00:00:00Z' } }); }
+    const id = users[b.email];
     if (!id || b.password !== 'secret123') return json(400, { error: 'invalid_grant', error_description: 'Invalid login credentials', msg: 'Invalid login credentials', code: 'invalid_credentials' });
     return json(200, { access_token: 'tok-' + id, token_type: 'bearer', expires_in: 3600, expires_at: Math.floor(Date.now() / 1000) + 3600, refresh_token: 'r-' + id, user: { id, email: b.email, aud: 'authenticated', role: 'authenticated', app_metadata: {}, user_metadata: {}, created_at: '2026-09-29T00:00:00Z' } });
   }

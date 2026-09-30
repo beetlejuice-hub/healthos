@@ -5,8 +5,9 @@
  * a tap instead of guessed silently.
  */
 
-import type { Food } from "./types";
+import type { Drink, Food } from "./types";
 import { BASIC_FOODS } from "./foods-basic";
+import { DRINKS } from "./drinks";
 import { unitsOf, type Line } from "./units";
 
 const fold = (s: string) => s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[^a-z0-9½¼¾.,]+/g, " ").trim();
@@ -30,7 +31,32 @@ const UNIT_WORDS: Record<string, string[]> = {
 const GRAM_WORDS = new Set(["g", "gr", "gram", "grams", "gramm", "ml"]);
 const FILLER = new Set(["of", "some", "x"]);
 
-export type Parsed = { text: string; line: Line | null; unsure: boolean; alternatives: Food[] };
+/** Drinks typed in the same sentence ("2 eggs, toast, coffee") are logged as drinks — caffeine and alcohol count. */
+export type DrinkLine = { drink: Drink; count: number };
+export type Parsed = { text: string; line: Line | null; drink?: DrinkLine; unsure: boolean; alternatives: Food[] };
+
+/** What people type for the built-in drinks, English and Hungarian (accents folded). */
+const DRINK_WORDS: Record<string, string[]> = {
+  filter: ["coffee", "black coffee", "filter coffee", "kave", "fekete kave", "americano"],
+  espresso: ["espresso", "eszpresszo", "presszo"], double: ["double espresso", "dupla espresso", "dupla eszpresszo", "doppio"],
+  cappuccino: ["cappuccino", "kapucsino"], latte: ["latte", "flat white", "tejeskave"],
+  redbull: ["red bull", "redbull"], "redbull-sf": ["red bull sugarfree", "sugarfree red bull", "red bull zero"], monster: ["monster", "energy drink", "energiaital"],
+  cola: ["coke", "cola", "coca cola", "kola"], "cola-zero": ["coke zero", "cola zero", "pepsi max", "diet coke"],
+  "black-tea": ["tea", "black tea", "tea black"], "green-tea": ["green tea", "zold tea"], preworkout: ["pre workout", "preworkout"],
+  beer: ["beer", "sor", "pint", "korso"], "beer-small": ["small beer", "kis sor"], wine: ["wine", "bor", "red wine", "white wine", "voros bor", "feher bor", "frocs", "spritzer"],
+  shot: ["shot", "palinka", "spirit", "vodka", "whisky", "whiskey", "rum", "gin", "tequila", "unicum"], cider: ["cider"],
+};
+
+/** "coffee", "2 beers", "egy sör", or one of your own drinks by name → a drink; null if it isn't one. */
+export function matchDrink(words: string[], own: Drink[] = []): Drink | null {
+  const q = words.join(" "), qs = words.map(singular).join(" ");
+  for (const d of own) { const n = fold(d.name); if (n === q || n === qs) return d; }
+  let best: { d: Drink; len: number } | null = null;
+  for (const [id, aliases] of Object.entries(DRINK_WORDS)) for (const a of aliases) {
+    if ((a === q || a === qs) && (!best || a.length > best.len)) best = { d: DRINKS.find((x) => x.id === id)!, len: a.length };
+  }
+  return best?.d ?? null;
+}
 
 /** Split on commas, "and", "és", "+", new lines. */
 export const splitMeal = (text: string) => text.split(/,|;|\n|\+|\s+(?:and|és|es|meg|with)\s+/i).map((s) => s.trim()).filter(Boolean);
@@ -77,7 +103,7 @@ function candidates(words: string[], mine: Food[]): { food: Food; score: number 
 const perUnit = (f: Food) => (f.per100.kcal * (unitsOf(f)[0]?.g ?? 100)) / 100;
 
 /** One piece of a meal: "2 slices of toast", "200g rice", "an apple". */
-export function parseItem(text: string, mine: Food[] = []): Parsed {
+export function parseItem(text: string, mine: Food[] = [], drinks: Drink[] = []): Parsed {
   let toks = fold(text).split(" ").filter(Boolean);
   let count: number | null = null, grams: number | null = null, unitWant: string[] | null = null;
   // "200g rice"
@@ -92,6 +118,8 @@ export function parseItem(text: string, mine: Food[] = []): Parsed {
   }
   toks = toks.filter((t) => !FILLER.has(t));
   if (!toks.length) return { text, line: null, unsure: true, alternatives: [] };
+  const drink = grams == null ? matchDrink(toks, drinks) : null;
+  if (drink) return { text, line: null, drink: { drink, count: count ?? 1 }, unsure: false, alternatives: [] };
   const found = candidates(toks, mine);
   if (!found.length) return { text, line: null, unsure: true, alternatives: [] };
   const [best] = found;
@@ -110,4 +138,4 @@ export function parseItem(text: string, mine: Food[] = []): Parsed {
   return { text, line, unsure, alternatives: found.slice(1, 4).map((x) => x.food) };
 }
 
-export const parseMeal = (text: string, mine: Food[] = []) => splitMeal(text).map((t) => parseItem(t, mine));
+export const parseMeal = (text: string, mine: Food[] = [], drinks: Drink[] = []) => splitMeal(text).map((t) => parseItem(t, mine, drinks));

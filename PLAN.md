@@ -177,6 +177,10 @@ email get Dev tools (`#dev`): raw entry editor, generate/remove sample, wipe acc
    rotation shows first ("Up next"). Quick workout with no plan. In a session: add an exercise, swap
    one (before its first set), History (last 5 sessions + est. 1RM), a note ("How did it feel?").
    Each session keeps its own copy of the plan, so today's changes never edit the split.
+10. [x] **Walk-through fixes** (30 Sept): drinks in the food sentence ("2 eggs, toast, coffee" → coffee
+   logged as a drink with its caffeine; EN + HU names, your own drinks); morning weigh-in on Today
+   (5:00–11:00, yesterday's weight pre-filled); Stack tab is a compact list with Edit per row, and
+   "no known link" badges only once About me has something to check against.
    Owner's answers (30 Sept): evening feel card on Today ✓ (+ a reminder notification — needs web
    push, not built); real burn only *suggests* goal changes; not tracking closely yet, so 1–2 bad
    days must not corrupt anything (typo weigh-ins and partial days are dropped ✓); 75% / one line /

@@ -11,8 +11,8 @@ import { alcoholGrams } from "../lib/alcohol";
 import { clock, localDay } from "../lib/time";
 import { readRoute, go } from "../lib/nav";
 import type { Drink, Entry, EntryOf, Food, Macros, Supplement } from "../lib/types";
-import { amountText, approx, gramsOf, macrosOfLine, mealFood, step, unitsOf, type Line } from "../lib/units";
-import { parseMeal } from "../lib/quickadd";
+import { amountText, approx, countText, gramsOf, macrosOfLine, mealFood, step, unitsOf, type Line } from "../lib/units";
+import { parseMeal, type DrinkLine } from "../lib/quickadd";
 
 type Tab = "food" | "drink" | "stack" | "body";
 const TABS: [Tab, string][] = [["food", "Food"], ["drink", "Drink"], ["stack", "Stack"], ["body", "Body"]];
@@ -52,7 +52,9 @@ export function Log() {
 
 /** The basket survives a reload or a tab switch until it's logged (this device only). */
 const BASKET_KEY = "healthos.basket";
-const loadBasket = (): Line[] => { try { return JSON.parse(localStorage.getItem(BASKET_KEY) ?? "[]") as Line[]; } catch { return []; } };
+type Item = (Line & { alts?: Food[] }) | DrinkLine;
+const isDrink = (x: Item): x is DrinkLine => "drink" in x;
+const loadBasket = (): Item[] => { try { return JSON.parse(localStorage.getItem(BASKET_KEY) ?? "[]") as Item[]; } catch { return []; } };
 
 /**
  * Food, the simple way (owner: "type scrambled eggs, choose it, add 2 eggs, add toast, an apple,
@@ -68,8 +70,9 @@ function FoodTab({ done }: { done: (m: string) => void }) {
   const [results, setResults] = useState<Food[]>([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [basket, setBasketRaw] = useState<(Line & { alts?: Food[] })[]>(loadBasket);
-  const setBasket = (b: (Line & { alts?: Food[] })[]) => { setBasketRaw(b); try { localStorage.setItem(BASKET_KEY, JSON.stringify(b.map(({ alts, ...l }) => { void alts; return l; }))); } catch { /* private mode */ } };
+  const drinksMine = useStore((s) => s.drinks);
+  const [basket, setBasketRaw] = useState<Item[]>(loadBasket);
+  const setBasket = (b: Item[]) => { setBasketRaw(b); try { localStorage.setItem(BASKET_KEY, JSON.stringify(b.map((x) => (isDrink(x) ? x : (({ alts, ...l }) => { void alts; return l; })(x))))); } catch { /* private mode */ } };
   const [detail, setDetail] = useState<number | null>(null);
   const [custom, setCustom] = useState(false);
   const ctl = useRef<AbortController | null>(null);
@@ -106,21 +109,22 @@ function FoodTab({ done }: { done: (m: string) => void }) {
   };
   const add = (f: Food) => { setBasket([...basket, usual(f)]); setQ(""); };
   const addTyped = () => {
-    const parsed = parseMeal(typed, saved);
-    setBasket([...basket, ...parsed.filter((p) => p.line).map((p) => ({ ...p.line!, alts: p.unsure ? p.alternatives : undefined }))]);
-    setMissed(parsed.filter((p) => !p.line).map((p) => p.text));
+    const parsed = parseMeal(typed, saved, drinksMine);
+    setBasket([...basket, ...parsed.flatMap((p): Item[] => (p.drink ? [p.drink] : p.line ? [{ ...p.line, alts: p.unsure ? p.alternatives : undefined }] : []))]);
+    setMissed(parsed.filter((p) => !p.line && !p.drink).map((p) => p.text));
     setTyped("");
   };
-  const upd = (i: number, l: Line & { alts?: Food[] }) => setBasket(basket.map((x, j) => (j === i ? l : x)));
+  const upd = (i: number, l: Item) => setBasket(basket.map((x, j) => (j === i ? l : x)));
+  const opened = detail != null ? basket[detail] : undefined;
 
-  if (detail != null && basket[detail]) return <Portion line={basket[detail]} onCancel={() => setDetail(null)} onDone={(l) => { upd(detail, l); setDetail(null); }} />;
+  if (detail != null && opened && !isDrink(opened)) return <Portion line={opened} onCancel={() => setDetail(null)} onDone={(l) => { upd(detail, l); setDetail(null); }} />;
   if (custom) return <CustomFood onCancel={() => setCustom(false)} onDone={(f) => { setCustom(false); act.rememberFood(f); add(f); }} />;
 
   return <>
     <div className="card">
       <label className="field">What did you eat?
         <div className="row-add">
-          <input value={typed} placeholder="2 scrambled eggs, toast, an apple" onChange={(e) => setTyped(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter" && typed.trim()) addTyped(); }} aria-label="Type what you ate" />
+          <input value={typed} placeholder="2 scrambled eggs, toast, an apple, coffee" onChange={(e) => setTyped(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter" && typed.trim()) addTyped(); }} aria-label="Type what you ate" />
           <button type="button" className="pill-btn" disabled={!typed.trim()} onClick={addTyped}>Add</button>
         </div>
       </label>
@@ -156,33 +160,50 @@ function FoodTab({ done }: { done: (m: string) => void }) {
 const amountOf = (l: Line) => (l.unit ? amountText(l.count, l.unit) : `${Math.round(l.grams ?? 100)} g`);
 
 /** The meal being built: − / + per line, ≈ totals, one tap to log, or save it as a meal. */
-function Basket({ lines, onChange, onDetail, onLogged }: { lines: (Line & { alts?: Food[] })[]; onChange: (l: (Line & { alts?: Food[] })[]) => void; onDetail: (i: number) => void; onLogged: (m: string) => void }) {
+function Basket({ lines, onChange, onDetail, onLogged }: { lines: Item[]; onChange: (l: Item[]) => void; onDetail: (i: number) => void; onLogged: (m: string) => void }) {
   const [time, setTime] = useState(nowHHMM);
   const [saving, setSaving] = useState(false);
   const [mealName, setMealName] = useState(""), [pieces, setPieces] = useState("1");
-  const tot = lines.reduce((a, l) => { const m = macrosOfLine(l); return { kcal: a.kcal + m.kcal, p: a.p + m.p }; }, { kcal: 0, p: 0 });
-  const set = (i: number, l: Line & { alts?: Food[] }) => onChange(lines.map((x, j) => (j === i ? l : x)));
+  const tot = lines.reduce((a, l) => { if (isDrink(l)) return { kcal: a.kcal + l.drink.kcal * l.count, p: a.p }; const m = macrosOfLine(l); return { kcal: a.kcal + m.kcal, p: a.p + m.p }; }, { kcal: 0, p: 0 });
+  const foods = lines.filter((l): l is Line & { alts?: Food[] } => !isDrink(l));
+  const set = (i: number, l: Item) => onChange(lines.map((x, j) => (j === i ? l : x)));
   const log = () => {
     const at = timeToday(time);
     const ids = lines.map((l) => {
+      if (isDrink(l)) {
+        const k = l.count, d = l.drink;
+        return act.addEntry({ kind: "drink", at, drinkId: d.id, name: k === 1 ? d.name : `${countText(k)} × ${d.name}`, ml: d.ml * k, caffeineMg: Math.round(d.caffeineMg * k), alcoholG: Math.round(d.alcoholG * k * 10) / 10, kcal: Math.round(d.kcal * k) }).id;
+      }
       act.rememberFood(l.food);
       return act.addEntry({ kind: "food", at, foodId: l.food.id, name: l.food.name, grams: gramsOf(l), macros: macrosOfLine(l), ...(l.unit ? { count: l.count, unit: l.unit } : {}) }).id;
     });
-    const label = lines.length === 1 ? `${amountOf(lines[0])} ${lines[0].food.name}` : `${lines.length} foods, ≈${approx(tot.kcal)} kcal`;
+    const one = lines[0];
+    const label = lines.length === 1 ? (isDrink(one) ? `${countText(one.count)} × ${one.drink.name}` : `${amountOf(one)} ${one.food.name}`) : `${lines.length} ${lines.some(isDrink) ? "items" : "foods"}, ≈${approx(tot.kcal)} kcal`;
     offerUndo(ids, `Logged ${label}`);
     onLogged(`Logged ${label}`);
   };
   const saveMeal = () => {
     const n = Math.max(1, Number(pieces) || 1);
-    const f = mealFood(`custom:${newId()}`, mealName.trim(), lines, n);
+    const f = mealFood(`custom:${newId()}`, mealName.trim(), foods, n);
     act.rememberFood(f);
-    onChange([{ food: f, count: n, unit: "piece" }]);
+    onChange([{ food: f, count: n, unit: "piece" }, ...lines.filter(isDrink)]);
     setSaving(false); setMealName("");
   };
   return (
     <div className="basket">
       <h3>This meal <span>≈ {approx(tot.kcal)} kcal · P {Math.round(tot.p)}</span></h3>
       {lines.map((l, i) => {
+        if (isDrink(l)) return (
+          <div className="bline" key={i}>
+            <span className="bname">{l.drink.name}<small>{[l.drink.caffeineMg ? `${Math.round(l.drink.caffeineMg * l.count)} mg caffeine` : "", l.drink.alcoholG ? `${Math.round(l.drink.alcoholG * l.count)} g alcohol` : "", l.drink.kcal > 5 ? `≈ ${approx(l.drink.kcal * l.count)} kcal` : ""].filter(Boolean).join(" · ") || "drink"}</small></span>
+            <div className="stepper">
+              <button type="button" aria-label={`Less ${l.drink.name}`} onClick={() => set(i, { ...l, count: step(l.count, -1) })}>−</button>
+              <span className="amt">{countText(l.count)} ×</span>
+              <button type="button" aria-label={`More ${l.drink.name}`} onClick={() => set(i, { ...l, count: step(l.count, 1) })}>+</button>
+            </div>
+            <button type="button" className="x" aria-label={`Remove ${l.drink.name}`} onClick={() => onChange(lines.filter((_, j) => j !== i))}>×</button>
+          </div>
+        );
         const units = unitsOf(l.food);
         return (
           <div className="bline" key={i}>
@@ -208,9 +229,9 @@ function Basket({ lines, onChange, onDetail, onLogged }: { lines: (Line & { alts
         <p className="note">Next time type “2 {mealName.trim() || "Arnold's special"}” or pick it from Recent.</p>
       </div> : <div className="row-log">
         <label className="field">Time<input type="time" value={time} onChange={(e) => setTime(e.target.value)} /></label>
-        <button type="button" className="pill-btn pri" onClick={log}>Log {lines.length === 1 ? "it" : `${lines.length} foods`}</button>
+        <button type="button" className="pill-btn pri" onClick={log}>Log {lines.length === 1 ? "it" : `${lines.length} ${lines.some(isDrink) ? "items" : "foods"}`}</button>
       </div>}
-      {!saving && lines.length > 1 && <button type="button" className="linkish" onClick={() => setSaving(true)}>Save as a meal…</button>}
+      {!saving && foods.length > 1 && <button type="button" className="linkish" onClick={() => setSaving(true)}>Save as a meal…</button>}
     </div>
   );
 }
@@ -382,30 +403,42 @@ const hhmm = (m: number) => `${String(Math.floor(m / 60)).padStart(2, "0")}:${St
 
 function StackTab() {
   const list = useStore((s) => s.supplements);
+  const profile = useStore((s) => s.profile);
   const upd = (id: string, patch: Partial<Supplement>) => act.setSupplements(list.map((s) => (s.id === id ? { ...s, ...patch } : s)));
   // Checked live as you type a name, so a clash shows before you start taking something.
   const report = useStackCheck(true);
+  // "No known link" only means something once you've said what to check against.
+  const quiet = !profile.conditions.length && !profile.meds.length;
+  const [editing, setEditing] = useState<string | null>(null);
+  const done = (s: Supplement) => { if (!s.name.trim()) act.setSupplements(list.filter((x) => x.id !== s.id)); setEditing(null); };
+  const slotName = (s: Supplement) => { const x = SLOTS.find((y) => y.id === s.slot)!; return `${x.name} · ${hhmm(x.at)}`; };
   return (
     <div className="card">
       <h3>Your stack <span>ticked daily on Today · checked against <a href="#settings">About me</a></span></h3>
-      {list.map((s) => (
-        <div key={s.id} style={{ display: "grid", gap: 6, paddingBottom: 8, borderBottom: "1px solid #ffffff0d" }}>
-          <div className="row2">
-            <label className="field">Name<input value={s.name} onChange={(e) => upd(s.id, { name: e.target.value })} /></label>
-            <label className="field">Dose<input value={s.dose} onChange={(e) => upd(s.id, { dose: e.target.value })} /></label>
-          </div>
-          <StackBadge name={s.name} report={report} />
-          <div className="row2">
-            <label className="field">When<select value={s.slot} onChange={(e) => upd(s.id, { slot: e.target.value as Supplement["slot"] })}>{SLOTS.map((x) => <option key={x.id} value={x.id}>{x.name} · {hhmm(x.at)}</option>)}</select></label>
-            <div style={{ display: "flex", gap: 6, alignItems: "end" }}>
-              <button type="button" className="pill-btn" onClick={() => upd(s.id, { active: !s.active })}>{s.active ? "Pause" : "Resume"}</button>
-              <button type="button" className="pill-btn" onClick={() => act.setSupplements(list.filter((x) => x.id !== s.id))}>Remove</button>
+      <div className="list">
+        {list.map((s) => editing === s.id ? (
+          <div key={s.id} className="supp-edit">
+            <div className="row2">
+              <label className="field">Name<input autoFocus value={s.name} placeholder="Omega-3, zinc…" onChange={(e) => upd(s.id, { name: e.target.value })} /></label>
+              <label className="field">Dose<input value={s.dose} placeholder="1 capsule" onChange={(e) => upd(s.id, { dose: e.target.value })} /></label>
             </div>
+            <StackBadge name={s.name} report={report} hideNone={quiet} />
+            <label className="field">When<select value={s.slot} onChange={(e) => upd(s.id, { slot: e.target.value as Supplement["slot"] })}>{SLOTS.map((x) => <option key={x.id} value={x.id}>{x.name} · {hhmm(x.at)}</option>)}</select></label>
+            <div className="row3b">
+              <button type="button" className="pill-btn" onClick={() => upd(s.id, { active: !s.active })}>{s.active ? "Pause" : "Resume"}</button>
+              <button type="button" className="pill-btn" onClick={() => { act.setSupplements(list.filter((x) => x.id !== s.id)); setEditing(null); }}>Remove</button>
+              <button type="button" className="pill-btn pri" onClick={() => done(s)}>Done</button>
+            </div>
+            {!s.active && <p className="note">Paused: not shown on Today. Pausing on purpose for a couple of weeks is how Noticed can tell whether it does anything.</p>}
           </div>
-          {!s.active && <p className="note">Paused: not shown on Today. Pausing on purpose for a few weeks is how Insights can tell whether it does anything.</p>}
-        </div>
-      ))}
-      <button type="button" className="pill-btn" onClick={() => act.setSupplements([...list, { id: newId(), name: "New supplement", dose: "", slot: "morning", at: 8 * 60, active: true }])}>+ Add supplement</button>
+        ) : (
+          <div key={s.id} className={`li supp-row${s.active ? "" : " paused"}`}>
+            <span>{s.name}{s.dose ? <em> {s.dose}</em> : null}<small>{s.active ? slotName(s) : "paused"}</small><StackBadge name={s.name} report={report} hideNone={quiet} /></span>
+            <button type="button" className="pill-btn" onClick={() => setEditing(s.id)}>Edit</button>
+          </div>
+        ))}
+      </div>
+      <button type="button" className="pill-btn" onClick={() => { const id = newId(); act.setSupplements([...list, { id, name: "", dose: "", slot: "morning", at: 8 * 60, active: true }]); setEditing(id); }}>+ Add supplement</button>
     </div>
   );
 }
@@ -435,7 +468,7 @@ function BodyTab({ done }: { done: (m: string) => void }) {
 
 const describe = (e: Entry, supps: Supplement[]): [string, string] => {
   switch (e.kind) {
-    case "food": return [e.name, `${e.unit && e.count ? `${amountText(e.count, e.unit)} · ≈ ` : ""}${Math.round(e.macros.kcal)} kcal · P ${Math.round(e.macros.p)}${!e.unit && e.grams ? ` · ${Math.round(e.grams)} g` : ""}`];
+    case "food": return [e.name, `${e.unit && e.count ? `${amountText(e.count, e.unit)} · ≈ ${approx(e.macros.kcal)}` : Math.round(e.macros.kcal)} kcal · P ${Math.round(e.macros.p)}${!e.unit && e.grams ? ` · ${Math.round(e.grams)} g` : ""}`];
     case "drink": return [e.name, [e.caffeineMg ? `${e.caffeineMg} mg caffeine` : "", e.alcoholG ? `${e.alcoholG} g alcohol` : "", e.kcal > 5 ? `${e.kcal} kcal` : ""].filter(Boolean).join(" · ")];
     case "supp": return [supps.find((s) => s.id === e.suppId)?.name ?? "Supplement", e.status];
     case "set": return [e.exercise, `${e.kg} kg × ${e.reps}`];

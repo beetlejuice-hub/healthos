@@ -107,4 +107,11 @@ describe("basic foods", () => {
     expect(nowItems(ctx(at(19, 5), [])).some((i) => i.kind === "feel")).toBe(true);
     expect(nowItems(ctx(at(21), [{ id: "f", kind: "feel", at: at(20), mood: 7 }])).some((i) => i.kind === "feel")).toBe(false);
   });
+
+  it("asks for a morning weigh-in until you've weighed, offering yesterday's weight", () => {
+    const yest: Entry = { id: "w", kind: "weight", at: at(7) - 24 * 3600_000, kg: 80.4 };
+    expect(nowItems(ctx(at(7, 30), [yest])).find((i) => i.kind === "weight")).toMatchObject({ lastKg: 80.4 });
+    expect(nowItems(ctx(at(7, 30), [yest, { id: "w2", kind: "weight", at: at(7), kg: 80.1 }])).some((i) => i.kind === "weight")).toBe(false);
+    expect(nowItems(ctx(at(11, 30), [yest])).some((i) => i.kind === "weight")).toBe(false);
+  });
 });
