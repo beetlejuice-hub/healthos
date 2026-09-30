@@ -107,6 +107,17 @@ a form. Until there's enough data they use sensible defaults, silently.
 - **Macro goals** — fixed for now (owner likes them); later adjusted from weight trend, goal
   (cut/bulk/maintain), training load and lifestyle.
 
+## 6c. Food search, wearable, backlog (owner, 30 Sept)
+
+- **Food search** runs on our Worker (`/api/food`): Open Food Facts (~3M branded products) +
+  USDA FoodData Central (plain foods), merged and cached a day; ~100 built-in everyday foods answer
+  instantly offline. Optional: a free USDA key as the `USDA_KEY` Worker secret (else DEMO_KEY).
+- **Barcode scanner** — wanted, parked for now.
+- **Wearable** — owner leans to Google Fitbit Air; alternatives Amazfit Helio Strap (not sold in
+  Romania), Huawei Watch Fit 4. Criterion: an official API the web app can read (heart rate,
+  sleep stages, HRV, resting HR). Fitbit has one (OAuth web API, intraday data for your own
+  account); Huawei and Zepp/Amazfit are far harder to read from a web app. Check before buying.
+
 ## 7. Status and next
 
 **Built (29 Sept):** Today, Log (food via Open Food Facts + saved foods, drinks, stack, weight),

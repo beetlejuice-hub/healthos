@@ -1,4 +1,12 @@
 -- HealthOS schema. Paste this whole file into Supabase → SQL Editor → Run. Safe to run twice.
+-- Make sure the project picker (top left) says "healthos", not Tempo.
+
+-- Guard: stop if this is Tempo's live database (it has an `items` table with data in it).
+do $$ begin
+  if to_regclass('public.items') is not null and exists (select 1 from public.items limit 1) then
+    raise exception 'This looks like the Tempo database, not HealthOS. Switch the project (top left) to healthos and run again.';
+  end if;
+end $$;
 --
 -- Two tables, both private to the signed-in user (row level security):
 --   entries — everything you log (food, drinks, supplements, sets, weight, feelings), one row each
@@ -26,12 +34,12 @@ create table if not exists public.docs (
 
 -- The server stamps every write, so "what changed since I last looked" never depends on a
 -- phone's clock being right.
-create or replace function public.touch() returns trigger language plpgsql as $$
+create or replace function public.healthos_touch() returns trigger language plpgsql as $$
 begin new.updated_at = now(); return new; end $$;
 drop trigger if exists entries_touch on public.entries;
-create trigger entries_touch before insert or update on public.entries for each row execute function public.touch();
+create trigger entries_touch before insert or update on public.entries for each row execute function public.healthos_touch();
 drop trigger if exists docs_touch on public.docs;
-create trigger docs_touch before insert or update on public.docs for each row execute function public.touch();
+create trigger docs_touch before insert or update on public.docs for each row execute function public.healthos_touch();
 
 alter table public.entries enable row level security;
 alter table public.docs enable row level security;

@@ -65,3 +65,21 @@ export async function searchOff(query: string, signal?: AbortSignal): Promise<Fo
   if (!res.ok) throw new Error(`Open Food Facts answered ${res.status}`);
   return map(((await res.json()) as { products?: OffProduct[] }).products);
 }
+
+/**
+ * The app's food search: our Worker first (both databases, merged and cached), and Open Food Facts
+ * directly if the Worker isn't there (local dev) or fails. Returns which sources answered.
+ */
+export async function searchFood(query: string, signal?: AbortSignal): Promise<{ foods: Food[]; via: "server" | "direct" }> {
+  try {
+    const r = await fetch(`/api/food?q=${encodeURIComponent(query.trim())}`, { signal });
+    if (r.ok && (r.headers.get("content-type") ?? "").includes("application/json")) {
+      const body = (await r.json()) as { foods: Food[]; sources?: { off: string; usda: string } };
+      // Server up but both databases unreachable from it: the phone tries OFF itself.
+      if (body.foods.length || body.sources?.off !== "error") return { foods: body.foods, via: "server" };
+    }
+  } catch (e) {
+    if ((e as Error).name === "AbortError") throw e;
+  }
+  return { foods: await searchOff(query, signal), via: "direct" };
+}

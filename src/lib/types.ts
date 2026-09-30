@@ -14,7 +14,7 @@ export type Food = {
   per100: Macros;
   /** Grams in one usual serving, when known — "1 bar", "1 slice". */
   servingG?: number;
-  source: "off" | "basic" | "custom";
+  source: "off" | "usda" | "basic" | "custom";
   barcode?: string;
 };
 

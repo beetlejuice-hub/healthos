@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { act, newId, offerUndo, useStore } from "../lib/store";
 import { searchBasic } from "../lib/foods-basic";
 import { SLOTS } from "../lib/types";
-import { searchOff } from "../lib/off";
+import { searchFood } from "../lib/off";
 import { DRINKS } from "../lib/drinks";
 import { forGrams } from "../lib/nutrition";
 import { alcoholGrams } from "../lib/alcohol";
@@ -55,7 +55,7 @@ function FoodTab({ done }: { done: (m: string) => void }) {
     const t = setTimeout(async () => {
       ctl.current?.abort(); ctl.current = new AbortController();
       setBusy(true); setError(null);
-      try { setResults(await searchOff(q, ctl.current.signal)); }
+      try { setResults((await searchFood(q, ctl.current.signal)).foods); }
       catch (e) { if ((e as Error).name !== "AbortError") setError("Couldn't reach the food database. Your saved foods still work, or add it yourself."); }
       finally { setBusy(false); }
     }, 350);
