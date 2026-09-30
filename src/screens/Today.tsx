@@ -3,6 +3,7 @@ import { act, offerUndo, useStore } from "../lib/store";
 import { DRINKS } from "../lib/drinks";
 import { nowItems } from "../lib/today";
 import { notice } from "../lib/findings";
+import { StackAlert } from "../components/StackCheck";
 import { caffeineAt } from "../lib/caffeine";
 import { caffeineDoses } from "../lib/insights";
 import { add, byDay, macrosOf, ZERO } from "../lib/nutrition";
@@ -63,6 +64,7 @@ export function Today() {
           : <>No caffeine logged today.</>}
       </p>
 
+      <StackAlert />
       <NoticedLine />
 
       <div className="h"><span>Now</span><span>{shown.length ? `${shown.length} to do` : "all clear"}</span></div>

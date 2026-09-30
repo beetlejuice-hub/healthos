@@ -147,6 +147,13 @@ email get Dev tools (`#dev`): raw entry editor, generate/remove sample, wipe acc
    Noticed section atop Insights, one ✕-able line on Today. Phase 2 started: **caffeine habit**
    (`lib/detectors/caffeine.ts`: mg/day, mg/kg band light/moderate/high = tolerance, usual drink,
    first/last time). Next: late caffeine, supp on/off, alcohol, protein vs strength, load, eating.
+6. [x] **Stack check** (plan: https://claude.ai/code/artifact/67da9d55-42a1-4d3b-81cd-342a76bff245), built
+   30 Sept. Settings → About me (conditions, medications, allergies, notes; synced `profile` doc).
+   `lib/stackcheck/kb.ts`: curated items (EN + HU + brand names) and rules, each with evidence grade,
+   sources, reviewed date, `verified: false` (sandbox saw search summaries only — verify against full
+   sources). `check.ts`: stack + meds + drinks logged in 30 days × conditions/meds/each other.
+   Badges in Log → Stack (live while typing a new one), Insights → Stack check table + "worth asking
+   your doctor about", Today alert for "avoid" only. Unknown names say "not checked yet".
    Owner's answers (30 Sept): evening feel card on Today ✓ (+ a reminder notification — needs web
    push, not built); real burn only *suggests* goal changes; not tracking closely yet, so 1–2 bad
    days must not corrupt anything (typo weigh-ins and partial days are dropped ✓); 75% / one line /

@@ -9,7 +9,7 @@ server=$!
 trap 'kill $server 2>/dev/null' EXIT
 sleep 1
 fail=0
-for suite in e2e/features.cjs e2e/search.cjs e2e/noticed.cjs e2e/sync.cjs; do
+for suite in e2e/features.cjs e2e/search.cjs e2e/noticed.cjs e2e/stackcheck.cjs e2e/sync.cjs; do
   echo "== $suite"
   out=$(node "$suite") || fail=1
   echo "$out"

@@ -4,6 +4,7 @@ import { searchBasic } from "../lib/foods-basic";
 import { SLOTS } from "../lib/types";
 import { searchFood } from "../lib/off";
 import { groupFoods, plausible, type ResultRow } from "../lib/foodgroup";
+import { StackBadge, useStackCheck } from "../components/StackCheck";
 import { DRINKS } from "../lib/drinks";
 import { forGrams } from "../lib/nutrition";
 import { alcoholGrams } from "../lib/alcohol";
@@ -23,6 +24,12 @@ export function Log() {
   // Every log offers itself back as "Undo" (the toast in App), so there's nothing else to show here.
   const setToast = (_: string) => { void _; };
   const pick = (t: Tab) => { setTab(t); go("log", t); };
+  // Follow links to another tab while already on Log (#log/drink → #log/stack).
+  useEffect(() => {
+    const on = () => { const sub = readRoute()[1] as Tab | undefined; if (sub && TABS.some(([t]) => t === sub)) setTab(sub); };
+    window.addEventListener("hashchange", on);
+    return () => window.removeEventListener("hashchange", on);
+  }, []);
 
   return (
     <div className="calm">
@@ -277,15 +284,18 @@ const hhmm = (m: number) => `${String(Math.floor(m / 60)).padStart(2, "0")}:${St
 function StackTab() {
   const list = useStore((s) => s.supplements);
   const upd = (id: string, patch: Partial<Supplement>) => act.setSupplements(list.map((s) => (s.id === id ? { ...s, ...patch } : s)));
+  // Checked live as you type a name, so a clash shows before you start taking something.
+  const report = useStackCheck(true);
   return (
     <div className="card">
-      <h3>Your stack <span>ticked daily on Today</span></h3>
+      <h3>Your stack <span>ticked daily on Today · checked against <a href="#settings">About me</a></span></h3>
       {list.map((s) => (
         <div key={s.id} style={{ display: "grid", gap: 6, paddingBottom: 8, borderBottom: "1px solid #ffffff0d" }}>
           <div className="row2">
             <label className="field">Name<input value={s.name} onChange={(e) => upd(s.id, { name: e.target.value })} /></label>
             <label className="field">Dose<input value={s.dose} onChange={(e) => upd(s.id, { dose: e.target.value })} /></label>
           </div>
+          <StackBadge name={s.name} report={report} />
           <div className="row2">
             <label className="field">When<select value={s.slot} onChange={(e) => upd(s.id, { slot: e.target.value as Supplement["slot"] })}>{SLOTS.map((x) => <option key={x.id} value={x.id}>{x.name} · {hhmm(x.at)}</option>)}</select></label>
             <div style={{ display: "flex", gap: 6, alignItems: "end" }}>

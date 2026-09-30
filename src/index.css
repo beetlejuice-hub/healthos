@@ -269,3 +269,31 @@ a { color: inherit; }
 .noticed-line { display: grid; grid-template-columns: 1fr auto; gap: 8px; align-items: center; margin: 0 2px; padding: 10px 14px; border-radius: 14px; background: var(--c-card); color: var(--c-ink); text-decoration: none; font-size: 14px; }
 .noticed-line small { display: block; color: var(--c-dim); font-size: 11px; letter-spacing: .1em; text-transform: uppercase; }
 .noticed-line button { background: none; border: 0; color: var(--c-dim); font-size: 16px; padding: 4px 6px; }
+
+/* Stack check */
+.vchip { display: inline-block; font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 999px; white-space: nowrap; border: 1px solid transparent; }
+.v-avoid { color: var(--hr); background: color-mix(in srgb, var(--hr) 16%, transparent); }
+.v-caution { color: var(--warn); background: color-mix(in srgb, var(--warn) 16%, transparent); }
+.v-timing { color: var(--mood); background: color-mix(in srgb, var(--mood) 16%, transparent); }
+.v-mixed { color: var(--supp); background: color-mix(in srgb, var(--supp) 14%, transparent); }
+.v-may-help { color: var(--ok); background: color-mix(in srgb, var(--ok) 16%, transparent); }
+.v-none { color: var(--c-dim); border-color: #ffffff1a; }
+.v-unknown { color: var(--c-dim); border: 1px dashed #ffffff2a; }
+.sbadge { display: grid; gap: 6px; }
+.sbadge .linkish { text-decoration: none; display: inline-flex; gap: 4px; align-items: center; font-size: 12px; }
+.sbadge .linkish:disabled { cursor: default; }
+.flag { display: grid; gap: 4px; padding: 8px 10px; border-radius: 12px; background: var(--c-card-2); font-size: 13px; }
+.flag p { margin: 0; color: var(--c-ink-2); }
+.flag small { color: var(--c-dim); font-size: 11.5px; }
+.flag a, .p td.src a { color: inherit; }
+.tags { display: grid; gap: 6px; }
+.tags .tl { font-size: 12px; color: var(--c-dim); }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip { display: inline-flex; align-items: center; gap: 2px; padding: 4px 4px 4px 10px; border-radius: 999px; background: var(--c-card-2); font-size: 13px; }
+.chip i { color: var(--warn); font-style: normal; }
+.chip button { background: none; border: 0; color: var(--c-dim); padding: 0 6px; }
+.row-add { display: grid; grid-template-columns: 1fr auto; gap: 8px; }
+.row-add input, .field textarea { background: var(--c-card-2); border: 1px solid #ffffff14; border-radius: 12px; color: var(--c-ink); padding: 10px 12px; font: inherit; font-size: 16px; min-width: 0; width: 100%; }
+.p td.src { font-size: 11px; color: var(--i-dim); max-width: 260px; }
+.p td.src a { display: block; }
+.noticed-line.alert { border: 1px solid color-mix(in srgb, var(--hr) 45%, transparent); }

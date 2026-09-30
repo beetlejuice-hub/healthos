@@ -37,7 +37,12 @@ export type State = {
   workouts: Workout[];
   goals: Goals;
   settings: Settings;
+  /** About you: what the stack check (and later the AI) takes into account. */
+  profile: Profile;
 };
+
+export type Profile = { conditions: string[]; meds: string[]; allergies: string[]; notes: string };
+export const EMPTY_PROFILE: Profile = { conditions: [], meds: [], allergies: [], notes: "" };
 
 export const DEFAULT_SETTINGS: Settings = { halfLifeMin: 300, bedMinute: 23 * 60, caffeineTargetMg: 50, coffeeMg: 95, bodyKg: 78, usualDrink: null };
 
@@ -71,7 +76,7 @@ const DEFAULT_TEMPLATES: Template[] = [
 
 const EMPTY: State = {
   entries: [], foods: [], drinks: [], supplements: DEFAULT_STACK, templates: DEFAULT_TEMPLATES, workouts: [],
-  goals: DEFAULT_GOALS, settings: DEFAULT_SETTINGS,
+  goals: DEFAULT_GOALS, settings: DEFAULT_SETTINGS, profile: EMPTY_PROFILE,
 };
 
 /** The save slot. Per account once signed in, so a tester and a personal account never mix. */
@@ -83,7 +88,7 @@ function load(): State {
     const raw = localStorage.getItem(KEY);
     if (!raw) return EMPTY;
     const s = JSON.parse(raw) as Partial<State>;
-    return { ...EMPTY, ...s, supplements: normalizeStack(s.supplements ?? EMPTY.supplements), settings: { ...DEFAULT_SETTINGS, ...s.settings }, goals: { ...DEFAULT_GOALS, ...s.goals } };
+    return { ...EMPTY, ...s, supplements: normalizeStack(s.supplements ?? EMPTY.supplements), settings: { ...DEFAULT_SETTINGS, ...s.settings }, goals: { ...DEFAULT_GOALS, ...s.goals }, profile: { ...EMPTY_PROFILE, ...s.profile } };
   } catch {
     return EMPTY;
   }
@@ -172,6 +177,7 @@ export const act = {
   setSupplements(list: Supplement[]) { commit({ ...state, supplements: normalizeStack(list) }); },
   setTemplates(list: Template[]) { commit({ ...state, templates: list }); },
   setGoals(goals: Goals) { commit({ ...state, goals }); },
+  setProfile(profile: Profile) { commit({ ...state, profile }); },
   setSettings(patch: Partial<Settings>) { commit({ ...state, settings: { ...state.settings, ...patch } }); },
   startWorkout(template: string, at = Date.now()): Workout {
     const w: Workout = { id: newId(), template, startedAt: at, endedAt: null };

@@ -10,6 +10,7 @@ import { addDays, dayLabel, localDay, DAY } from "../lib/time";
 import type { EntryOf } from "../lib/types";
 import { useNow } from "./Today";
 import { notice, WINDOW_DAYS, type Report } from "../lib/findings";
+import { StackCheckPanel } from "../components/StackCheck";
 
 const f0 = (v: number) => Math.round(v).toLocaleString("en-GB");
 const f1 = (v: number) => v.toFixed(1);
@@ -72,6 +73,7 @@ export function Insights() {
         {has.supps && <Supplements facts={facts} today={today} />}
         {has.effects && <SuppEffects facts={facts} />}
         {has.pairs && <WhatMovesWhat facts={facts} />}
+        <StackCheckPanel />
         {locked.length > 0 && (
           <section className="p w12">
             <h2>Unlocks as you log <span>{locked.length} more sections</span></h2>
