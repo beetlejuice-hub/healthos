@@ -141,5 +141,7 @@ email get Dev tools (`#dev`): raw entry editor, generate/remove sample, wipe acc
 3. [ ] Owner sets real goals (Settings) and uses it for a few days.
 4. [ ] Wearable: pick the device, then import heart rate, sleep, HRV into the master graph.
 5. [ ] **Noticed** (findings engine; plan: https://claude.ai/code/artifact/f8d98b61-fc4a-421b-b7d7-ddbe1276e725).
-   Phase 1 **claimed 30 Sept (Claude)**: findings engine, real burn (TDEE), weight trend, test bench,
-   Insights panel + Today line. Phase 2 other detectors · 3 AI layer · 4 experiments.
+   Phase 1 **built 30 Sept**: `lib/findings.ts` (cards + "still checking"), `lib/tdee.ts` (real burn
+   from intake − weight trend × 7,700; 95% trend range, 0.15 kg/wk smallest claim), `lib/bench.ts`
+   (planted-effect worlds; burn inside its 90% range ~90% of seeds, <10% false weight alarms),
+   Noticed section atop Insights, one ✕-able line on Today. Next: phase 2 detectors · 3 AI · 4 experiments.

@@ -71,8 +71,10 @@ function FoodTab({ done }: { done: (m: string) => void }) {
   const basic = useMemo(() => searchBasic(q).filter((f) => !mine.some((m) => m.id === f.id)), [q, mine]);
   // Near-identical products collapse into one "typical" row; see lib/foodgroup.ts.
   const rows = useMemo(() => groupFoods(results, q), [results, q]);
-  const [showAll, setShowAll] = useState(false);
-  useEffect(() => setShowAll(false), [q]);
+  // "Show all" applies to the search it was pressed on; a new search starts short again.
+  const [allFor, setAllFor] = useState<string | null>(null);
+  const showAll = allFor === q;
+  const setShowAll = () => setAllFor(q);
 
   if (chosen) return <Portion food={chosen} onCancel={() => setChosen(null)} onDone={(m) => { setChosen(null); setQ(""); done(m); }} />;
   if (custom) return <CustomFood onCancel={() => setCustom(false)} onDone={(f) => { setCustom(false); setChosen(f); }} />;
@@ -96,7 +98,7 @@ function FoodTab({ done }: { done: (m: string) => void }) {
             ? <FoodRow key={r.food.id} f={r.food} suspect={r.suspect} thumb onPick={() => setChosen(r.food)} />
             : <GroupRow key={r.key} r={r} onPick={setChosen} />)}
         </div>
-        {!showAll && rows.length > 8 && <button type="button" className="pill-btn" onClick={() => setShowAll(true)}>Show all {rows.length}</button>}
+        {!showAll && rows.length > 8 && <button type="button" className="pill-btn" onClick={setShowAll}>Show all {rows.length}</button>}
       </>}
       <button type="button" className="pill-btn" onClick={() => setCustom(true)}>+ Add your own food</button>
       <p className="note">Everyday foods are built in; the database is Open Food Facts (3M+ products) and USDA. The same food from many brands shows as one typical row (the median); tap “products” to pick your brand. Anything you log — and any values you correct — shows up first next time.</p>

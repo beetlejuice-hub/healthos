@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { act, offerUndo, useStore } from "../lib/store";
 import { DRINKS } from "../lib/drinks";
 import { nowItems } from "../lib/today";
+import { notice } from "../lib/findings";
 import { caffeineAt } from "../lib/caffeine";
 import { caffeineDoses } from "../lib/insights";
 import { add, byDay, macrosOf, ZERO } from "../lib/nutrition";
@@ -61,6 +62,8 @@ export function Today() {
           ? <>There's <em>{cafNow} mg</em> of caffeine in you, falling to {cafBed} mg by {clock(bed)}.</>
           : <>No caffeine logged today.</>}
       </p>
+
+      <NoticedLine />
 
       <div className="h"><span>Now</span><span>{shown.length ? `${shown.length} to do` : "all clear"}</span></div>
       {shown.length === 0 && <p className="empty-ok">Nothing needs you right now.</p>}
@@ -272,5 +275,26 @@ function Feel({ now, todays }: { now: number; todays: Entry[] }) {
         </div>
       ))}
     </div>
+  );
+}
+
+/**
+ * One line from Noticed: the top finding, until you ✕ it. It comes back only when the finding
+ * itself changes (a new number), so Today stays calm.
+ */
+function NoticedLine() {
+  const now = useNow(10 * 60_000);
+  const entries = useStore((x) => x.entries);
+  const goals = useStore((x) => x.goals);
+  const top = useMemo(() => notice(entries, goals, now).found[0], [entries, goals, now]);
+  const key = top ? `${top.id}:${top.value}` : "";
+  const [hidden, setHidden] = useState(() => { try { return localStorage.getItem("healthos.noticed.hidden") ?? ""; } catch { return ""; } });
+  if (!top || hidden === key) return null;
+  const hide = (e: React.MouseEvent) => { e.preventDefault(); setHidden(key); try { localStorage.setItem("healthos.noticed.hidden", key); } catch { /* private mode */ } };
+  return (
+    <a className="noticed-line" href={`#insights`} onClick={() => setTimeout(() => document.getElementById(`n-${top.id}`)?.scrollIntoView({ behavior: "smooth" }), 150)}>
+      <span><small>Noticed</small>{top.title}.</span>
+      <button type="button" aria-label="Hide this" onClick={hide}>✕</button>
+    </a>
   );
 }

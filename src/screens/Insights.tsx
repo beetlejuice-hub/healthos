@@ -9,6 +9,7 @@ import { mean, median, slope, strength, type Range } from "../lib/stats";
 import { addDays, dayLabel, localDay, DAY } from "../lib/time";
 import type { EntryOf } from "../lib/types";
 import { useNow } from "./Today";
+import { notice, WINDOW_DAYS, type Report } from "../lib/findings";
 
 const f0 = (v: number) => Math.round(v).toLocaleString("en-GB");
 const f1 = (v: number) => v.toFixed(1);
@@ -22,6 +23,7 @@ export function Insights() {
   const data = useMemo(() => lanes(s.entries, s.workouts, s.supplements, s.settings, now), [s.entries, s.workouts, s.supplements, s.settings, now]);
   const facts = useMemo(() => dailyFacts(s.entries, s.workouts, s.settings, addDays(today, -89), today), [s.entries, s.workouts, s.settings, today]);
   const sample = s.entries.some((e) => e.id.startsWith("sample:"));
+  const report = useMemo(() => notice(s.entries, s.goals, now), [s.entries, s.goals, now]);
   // Show a section only once there's something in it; list the rest in one line each, so a new
   // account sees a short page instead of ten empty panels (owner: "looks really complex").
   const has = useMemo(() => {
@@ -59,6 +61,7 @@ export function Insights() {
         {sample && <span className="badge">INCLUDES SAMPLE DATA · remove it in Settings</span>}
       </header>
       {nothing && <div className="needs">Nothing logged yet. Log food, drinks and supplements for a few days and this fills in — or load sample data in Settings to see what it will look like.</div>}
+      {!nothing && <Noticed report={report} today={today} />}
       {!nothing && <Kpis facts={facts} today={today} now={now} />}
       {!nothing && <MasterGraph data={data} supplements={s.supplements} />}
       <div className="pgrid">
@@ -77,6 +80,46 @@ export function Insights() {
         )}
       </div>
     </div>
+  );
+}
+
+/* ------------------------------------------------------------------ Noticed */
+
+/** What the findings engine has to say: cards with their evidence, then what it's still checking. */
+function Noticed({ report, today }: { report: Report; today: string }) {
+  if (!report.found.length && !report.checking.length) return null;
+  const first = addDays(today, -(WINDOW_DAYS - 1));
+  return (
+    <section className="noticed" id="noticed" aria-label="Noticed">
+      <h2>Noticed <span>from your last {WINDOW_DAYS} days · numbers computed, never guessed</span></h2>
+      {report.found.length > 0 && <div className="ncards">
+        {report.found.map((f) => (
+          <article className="ncard" key={f.id} id={`n-${f.id}`}>
+            <div className="k">{f.area} · {f.sure}</div>
+            <h3>{f.title}</h3>
+            <div className="v">{f.value}<small>{f.unit}</small></div>
+            <p>{f.detail}</p>
+            {f.chart && (() => {
+              const ys = f.chart.pts.map((p) => p[1]);
+              const lo = Math.floor(Math.min(...ys) - 0.3), hi = Math.ceil(Math.max(...ys) + 0.3);
+              return <LineChart label={f.title} h={120} lo={lo} hi={hi} xs={[0, WINDOW_DAYS - 1]} yfmt={(v) => v.toFixed(1)}
+                xlabels={[[0, first.slice(5)], [WINDOW_DAYS - 1, "today"]]}
+                series={[{ pts: f.chart.pts, color: "var(--wt)", dots: true, line: false, dotOpacity: 0.8 }, { pts: f.chart.fit, color: "var(--i-ink)", width: 1.5, end: true }]} />;
+            })()}
+            <p className="ev">{f.evidence}</p>
+          </article>
+        ))}
+      </div>}
+      {report.checking.length > 0 && <div className="checking">
+        <h3>Still checking</h3>
+        {report.checking.map((c) => (
+          <div className="chk" key={c.id}>
+            <span>{c.question}<small>needs {c.missing}</small></span>
+            <span className="bar" aria-label={`${Math.round(c.progress * 100)}% of the data needed`}><i style={{ width: `${Math.round(c.progress * 100)}%` }} /></span>
+          </div>
+        ))}
+      </div>}
+    </section>
   );
 }
 
