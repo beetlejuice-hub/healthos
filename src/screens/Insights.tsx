@@ -164,12 +164,12 @@ function CaffeineAlcohol({ facts }: { facts: DayFacts[] }) {
     <section className="p">
       <h2>Caffeine and alcohol <span>last 30 days</span></h2>
       {has ? <>
-        <div className="sub"><h3>Caffeine left at bedtime, per night · target {target} mg</h3>
-          <Bars label="Caffeine left at bedtime each night" pts={last30.map((d, i) => [i, d.caffeineAtBed])} lo={0} hi={Math.max(target * 2, ...last30.map((d) => d.caffeineAtBed))} xs={[0, last30.length - 1]} color="var(--caf)" targets={[[target, `target ${target}`]]} />
+        <div className="sub"><h3>Caffeine left at planned bedtime, per night · {target} mg reference line</h3>
+          <Bars label="Caffeine left at bedtime each night" pts={last30.map((d, i) => [i, d.caffeineAtBed])} lo={0} hi={Math.max(target * 2, ...last30.map((d) => d.caffeineAtBed))} xs={[0, last30.length - 1]} color="var(--caf)" targets={[[target, `${target} mg`]]} />
         </div>
         <ul className="notes">
           <li>Average <b>{f0(mean(last30.map((d) => d.caffeineMg)))} mg</b> a day; median last caffeine at <b>{lastCoffee.length ? hm(median(lastCoffee)) : "—"}</b>.</li>
-          <li>Over your bedtime target on <b>{over} of {last30.length}</b> nights. Median left at bedtime: <b>{f0(median(last30.map((d) => d.caffeineAtBed)))} mg</b>.</li>
+          <li>Over {target} mg at bedtime on <b>{over} of {last30.length}</b> nights. Median left at bedtime: <b>{f0(median(last30.map((d) => d.caffeineAtBed)))} mg</b>.</li>
           <li>Alcohol per week, last 4 weeks (newest first): <b>{alcWeeks.map((g) => `${f0(g)} g`).join(" · ")}</b>. One drink ≈ 14 g.</li>
         </ul>
       </> : <div className="needs">Log drinks for a few days to see your caffeine pattern and how much is left at bedtime.</div>}
@@ -258,8 +258,8 @@ function Supplements({ facts, today }: { facts: DayFacts[]; today: string }) {
           </div>
         </div>
         <div className="tw"><table><tbody>
-          <tr><th>Supplement</th><th className="n">Taken</th><th className="n">Usual time</th><th className="n">Spread</th></tr>
-          {a.map((x) => { const s = supps.find((y) => y.id === x.suppId)!; return <tr key={x.suppId}><td>{s.name} {s.dose}</td><td className="n">{x.taken}/{x.due} days</td><td className="n">{x.usualMin == null ? "—" : hm(x.usualMin)}</td><td className="n">{x.spreadMin == null ? "—" : `±${x.spreadMin} min`}</td></tr>; })}
+          <tr><th>Supplement</th><th>When</th><th className="n">Taken</th><th className="n">Rate</th></tr>
+          {a.map((x) => { const s = supps.find((y) => y.id === x.suppId)!; return <tr key={x.suppId}><td>{s.name} {s.dose}</td><td>{s.slot}</td><td className="n">{x.taken}/{x.due} days</td><td className="n">{Math.round((x.taken / Math.max(1, x.due)) * 100)}%</td></tr>; })}
         </tbody></table></div>
       </> : <div className="needs">Add your stack in Log → Stack.</div>}
     </section>

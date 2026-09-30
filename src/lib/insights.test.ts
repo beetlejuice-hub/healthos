@@ -8,8 +8,8 @@ import { addDays, localDay } from "./time";
 const NOW = new Date(2026, 8, 29, 14, 20).getTime();
 const today = localDay(NOW);
 const stack: Supplement[] = [
-  { id: "creatine", name: "Creatine", dose: "5 g", at: 495, active: true },
-  { id: "mag", name: "Magnesium", dose: "400 mg", at: 1350, active: true },
+  { id: "creatine", name: "Creatine", dose: "5 g", slot: "morning", at: 495, active: true },
+  { id: "mag", name: "Magnesium", dose: "400 mg", slot: "morning", at: 1350, active: true },
 ];
 const at = (d: number, h: number, m = 0) => new Date(2026, 8, d, h, m).getTime();
 

@@ -27,7 +27,7 @@ export function Settings({ tester, email }: { tester: boolean; email: string }) 
         <h3>Account <span>{tester ? "tester" : "personal"}</span></h3>
         <div className="stack-row"><span>{email}<small>Sync: {sync.state === "idle" ? (sync.lastSync ? `up to date · ${clock(sync.lastSync)}` : "waiting") : sync.state}{sync.pending ? ` · ${sync.pending} waiting to upload` : ""}</small></span>
           <button type="button" className="pill-btn" onClick={() => void currentSyncer()?.sync()}>Sync</button></div>
-        {sync.message && sync.state !== "idle" && <p className="err">{sync.message}</p>}
+        {sync.message && sync.state !== "idle" && <p className="err">{/schema cache|does not exist|relation/i.test(sync.message) ? "The database isn't set up yet: run supabase/migrations/0001_init.sql in the Supabase SQL editor, then tap Sync." : sync.message}</p>}
         <div className="row2">
           {tester && <a className="pill-btn" href="#dev" style={{ textAlign: "center", textDecoration: "none" }}>Dev tools</a>}
           <button type="button" className="pill-btn" onClick={() => void signOut()}>Sign out</button>
@@ -45,15 +45,12 @@ export function Settings({ tester, email }: { tester: boolean; email: string }) 
       </div>
 
       <div className="card">
-        <h3>Caffeine and sleep</h3>
+        <h3>Sleep and body</h3>
         <div className="row2">
-          <label className="field">Bedtime<input type="time" value={hhmm(st.bedMinute)} onChange={(e) => { const [h, m] = e.target.value.split(":").map(Number); act.setSettings({ bedMinute: h * 60 + m }); }} /></label>
-          <label className="field">Most caffeine at bedtime (mg)<input inputMode="numeric" value={st.caffeineTargetMg} onChange={(e) => act.setSettings({ caffeineTargetMg: num(e.target.value) })} /></label>
-          <label className="field">Caffeine half-life (hours)<input inputMode="decimal" value={st.halfLifeMin / 60} onChange={(e) => act.setSettings({ halfLifeMin: Math.max(60, num(e.target.value) * 60) })} /></label>
-          <label className="field">Your usual coffee (mg)<input inputMode="numeric" value={st.coffeeMg} onChange={(e) => act.setSettings({ coffeeMg: num(e.target.value) })} /></label>
+          <label className="field">Planned bedtime<input type="time" value={hhmm(st.bedMinute)} onChange={(e) => { const [h, m] = e.target.value.split(":").map(Number); act.setSettings({ bedMinute: h * 60 + m }); }} /></label>
+          <label className="field">Body weight (kg)<input inputMode="decimal" value={st.bodyKg} onChange={(e) => act.setSettings({ bodyKg: num(e.target.value) })} /></label>
         </div>
-        <p className="note">Half-life is about 5 hours for most adults, anywhere from 3 to 7. Body weight sets how fast alcohol clears.</p>
-        <label className="field">Body weight (kg)<input inputMode="decimal" value={st.bodyKg} onChange={(e) => act.setSettings({ bodyKg: num(e.target.value) })} /></label>
+        <p className="note">Planned bedtime is what caffeine is measured against for now; your real bedtime will come from the wearable. Body weight sets how fast alcohol clears. How fast you clear caffeine and how much bothers your sleep aren't settings: they'll be learned from your own data.</p>
       </div>
 
       <div className="card">

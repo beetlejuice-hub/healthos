@@ -1,12 +1,14 @@
 import { useEffect, useMemo, useState } from "react";
-import { act, useStore } from "../lib/store";
+import { act, offerUndo, useStore } from "../lib/store";
+import { DRINKS } from "../lib/drinks";
 import { nowItems } from "../lib/today";
 import { caffeineAt } from "../lib/caffeine";
 import { caffeineDoses } from "../lib/insights";
 import { add, byDay, macrosOf, ZERO } from "../lib/nutrition";
 import { atMinute, clock, dayLabel, localDay, MIN } from "../lib/time";
 import { go } from "../lib/nav";
-import type { Entry, EntryOf } from "../lib/types";
+import type { Drink, Entry, EntryOf } from "../lib/types";
+import { SLOTS } from "../lib/types";
 
 /**
  * The current time, re-read on every render and re-rendered every `ms` while open. Read fresh
@@ -27,7 +29,9 @@ export function Today() {
   const day = localDay(now);
   const [dismissed, setDismissed] = useState<string[]>([]);
 
-  const items = useMemo(() => nowItems({ now, entries: s.entries, supplements: s.supplements, goals: s.goals, ...s.settings }), [now, s.entries, s.supplements, s.goals, s.settings]);
+  // The cut-off is phrased around the drink you'd actually have next: your usual one if chosen.
+  const coffeeMg = s.settings.usualDrink?.caffeineMg || s.settings.coffeeMg;
+  const items = useMemo(() => nowItems({ now, entries: s.entries, supplements: s.supplements, goals: s.goals, ...s.settings, coffeeMg }), [now, s.entries, s.supplements, s.goals, s.settings, coffeeMg]);
   const shown = items.filter((i) => !dismissed.includes(i.id));
   const todays = s.entries.filter((e) => localDay(e.at) === day);
   const totals = todays.reduce((a, e) => { const m = macrosOf(e); return m ? add(a, m) : a; }, ZERO);
@@ -40,7 +44,10 @@ export function Today() {
     return d.length ? d.reduce((a, x) => a + x.totals.kcal, 0) / d.length : null;
   })();
 
-  const answer = (suppIds: string[], status: "taken" | "skipped") => suppIds.forEach((suppId) => act.addEntry({ kind: "supp", at: Date.now(), suppId, status }));
+  const answer = (suppIds: string[], status: "taken" | "skipped") => {
+    const ids = suppIds.map((suppId) => act.addEntry({ kind: "supp", at: Date.now(), suppId, status }).id);
+    offerUndo(ids, `${status === "taken" ? "Ticked" : "Skipped"} ${suppIds.length} supplement${suppIds.length > 1 ? "s" : ""}`);
+  };
 
   return (
     <div className="calm">
@@ -111,38 +118,94 @@ function Fuel({ totals, goals }: { totals: { kcal: number; p: number; c: number;
 function CaffeineCard({ doses, now, bed, halfLife, cafNow, cafBed }: { doses: { at: number; mg: number }[]; now: number; bed: number; halfLife: number; cafNow: number; cafBed: number }) {
   const d0 = new Date(now); d0.setHours(6, 0, 0, 0);
   const t0 = d0.getTime(), t1 = t0 + 18 * 60 * MIN;
-  const W = 320, H = 96, pl = 26, pr = 6, pt = 8, pb = 16, max = Math.max(200, Math.ceil(Math.max(...Array.from({ length: 37 }, (_, i) => caffeineAt(doses, t0 + i * 30 * MIN, halfLife))) / 100) * 100);
+  const W = 320, H = 110, pl = 26, pr = 6, pt = 18, pb = 16;
+  const peak = Math.max(...Array.from({ length: 37 }, (_, i) => caffeineAt(doses, t0 + i * 30 * MIN, halfLife)));
+  const max = Math.max(200, Math.ceil(peak / 100) * 100);
   const x = (t: number) => pl + ((t - t0) / (t1 - t0)) * (W - pl - pr), y = (mg: number) => pt + (1 - mg / max) * (H - pt - pb);
   // Always end exactly on `b`, so the solid past meets the "now" dot instead of stopping up to 5 min short.
   const pts = (a: number, b: number) => { const p: string[] = []; const push = (t: number) => p.push(`${x(t).toFixed(1)},${y(caffeineAt(doses, t, halfLife)).toFixed(1)}`); for (let t = a; t < b; t += 5 * MIN) push(t); push(b); return p.join(" "); };
   const cut = Math.min(Math.max(now, t0), t1);
+  // Touch or hover anywhere on the curve to read it: "14:20 · 119 mg".
+  const [probe, setProbe] = useState<number | null>(null);
+  const onMove = (e: React.PointerEvent<SVGSVGElement>) => {
+    const r = e.currentTarget.getBoundingClientRect();
+    const vx = ((e.clientX - r.left) / r.width) * W;
+    const t = t0 + ((vx - pl) / (W - pl - pr)) * (t1 - t0);
+    setProbe(Math.round(Math.max(t0, Math.min(t1, t)) / (5 * MIN)) * 5 * MIN);
+  };
+  const pmg = probe != null ? Math.round(caffeineAt(doses, probe, halfLife)) : 0;
+  const px = probe != null ? x(probe) : 0;
   return (
     <div className="card">
       <h3>Caffeine <span>{cafNow} mg now · {cafBed} mg at {clock(bed)}</span></h3>
-      <svg viewBox={`0 0 ${W} ${H}`} width="100%" role="img" aria-label={`Caffeine in your body today: ${cafNow} mg now, ${cafBed} mg at bedtime`}>
+      <svg viewBox={`0 0 ${W} ${H}`} width="100%" role="img" aria-label={`Caffeine in your body today: ${cafNow} mg now, ${cafBed} mg at your planned bedtime`}
+        style={{ touchAction: "pan-y", cursor: "crosshair" }} onPointerMove={onMove} onPointerDown={onMove} onPointerLeave={() => setProbe(null)}>
         {[0, max / 2, max].map((v) => <g key={v}><line x1={pl} x2={W - pr} y1={y(v)} y2={y(v)} stroke="var(--c-track)" /><text x={pl - 4} y={y(v) + 3} textAnchor="end" fontSize="9" fill="var(--c-dim)">{v}</text></g>)}
         {[6, 12, 18, 24].map((h) => <text key={h} x={x(t0 + (h - 6) * 60 * MIN)} y={H - 3} textAnchor="middle" fontSize="9" fill="var(--c-dim)">{String(h % 24).padStart(2, "0")}</text>)}
         <polygon points={`${x(t0)},${y(0)} ${pts(t0, cut)} ${x(cut)},${y(0)}`} fill="var(--caf)" fillOpacity=".18" />
         <polyline points={pts(t0, cut)} fill="none" stroke="var(--caf)" strokeWidth="2.2" />
         <polyline points={pts(cut, t1)} fill="none" stroke="var(--caf)" strokeWidth="2" strokeDasharray="3 3" strokeOpacity=".7" />
+        {doses.filter((d) => d.at >= t0 && d.at <= t1).map((d) => <line key={d.at} x1={x(d.at)} x2={x(d.at)} y1={y(0)} y2={y(0) + 4} stroke="var(--caf)" strokeWidth="2" />)}
         {now >= t0 && now <= t1 && <circle cx={x(now)} cy={y(cafNow)} r="3.5" fill="var(--caf)" />}
         {bed <= t1 && <circle cx={x(bed)} cy={y(cafBed)} r="3" fill="none" stroke="var(--caf)" strokeWidth="1.5" />}
+        {probe != null && <g pointerEvents="none">
+          <line x1={px} x2={px} y1={pt - 4} y2={y(0)} stroke="var(--c-ink)" strokeOpacity=".45" />
+          <circle cx={px} cy={y(pmg)} r="3.5" fill="var(--c-bg)" stroke="var(--caf)" strokeWidth="2" />
+          <text x={Math.min(W - pr, Math.max(pl + 30, px))} y={10} textAnchor="middle" fontSize="10.5" fontWeight="600" fill="var(--c-ink)">{clock(probe)} · {pmg} mg{probe > now ? " (forecast)" : ""}</text>
+        </g>}
       </svg>
-      <div className="row2">
-        <button type="button" className="pill-btn" onClick={() => go("log", "drink")}>+ Drink</button>
-        <button type="button" className="pill-btn" onClick={() => act.addEntry({ kind: "drink", at: Date.now(), name: "Filter coffee", ml: 250, caffeineMg: 95, alcoholG: 0, kcal: 2 })}>+ Usual coffee</button>
-      </div>
+      <UsualDrink />
     </div>
   );
 }
 
+/**
+ * One tap for the drink you have most. Empty at first; tapping it lets you pick (or make) your
+ * usual, which stays until you ✕ it. Owner: "keep the button, but at first it's clear".
+ */
+function UsualDrink() {
+  const usual = useStore((s) => s.settings.usualDrink);
+  const custom = useStore((s) => s.drinks);
+  const [picking, setPicking] = useState(false);
+  const log = (d: Drink) => {
+    const e = act.addEntry({ kind: "drink", at: Date.now(), drinkId: d.id, name: d.name, ml: d.ml, caffeineMg: d.caffeineMg, alcoholG: d.alcoholG, kcal: d.kcal });
+    offerUndo([e.id], `Logged ${d.name}`);
+  };
+  if (picking) return (
+    <div className="card" style={{ background: "var(--c-card-2)", padding: 12 }}>
+      <h3>Choose your usual drink <span>stays until you ✕ it</span></h3>
+      <div className="drinks">
+        {[...custom, ...DRINKS].filter((d) => d.caffeineMg > 0).map((d) => (
+          <button key={d.id} type="button" style={{ background: "var(--c-card)" }} onClick={() => { act.setSettings({ usualDrink: d }); setPicking(false); }}>
+            <b>{d.name}</b><span>{d.caffeineMg} mg caffeine</span>
+          </button>
+        ))}
+      </div>
+      <div className="row2">
+        <button type="button" className="pill-btn" onClick={() => setPicking(false)}>Cancel</button>
+        <button type="button" className="pill-btn" onClick={() => go("log", "drink")}>Make your own…</button>
+      </div>
+    </div>
+  );
+  return (
+    <div className="row2">
+      <button type="button" className="pill-btn" onClick={() => go("log", "drink")}>+ Drink</button>
+      {usual
+        ? <div style={{ display: "flex", gap: 4 }}>
+            <button type="button" className="pill-btn pri" style={{ flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} onClick={() => log(usual)}>+ {usual.name}</button>
+            <button type="button" className="pill-btn" aria-label={`Clear usual drink (${usual.name})`} onClick={() => act.setSettings({ usualDrink: null })}>✕</button>
+          </div>
+        : <button type="button" className="pill-btn" onClick={() => setPicking(true)}>☆ Set usual drink</button>}
+    </div>
+  );
+}
+
+/** The daily stack as three short lists — morning, midday, evening — each ✓ took / ✗ skipped. */
 function Stack({ now }: { now: number }) {
-  // Select the stored array itself; filtering inside the selector would hand React a new array
-  // on every read and loop forever.
   const all = useStore((s) => s.supplements);
-  const supps = all.filter((x) => x.active);
   const entries = useStore((s) => s.entries);
   const day = localDay(now);
+  const supps = all.filter((x) => x.active);
   const answers = new Map(entries.filter((e): e is EntryOf<"supp"> => e.kind === "supp" && localDay(e.at) === day).map((e) => [e.suppId, e]));
   const set = (id: string, status: "taken" | "skipped") => {
     const cur = answers.get(id);
@@ -150,19 +213,32 @@ function Stack({ now }: { now: number }) {
     else if (cur) act.updateEntry(cur.id, { status } as Partial<Entry>);
     else act.addEntry({ kind: "supp", at: Date.now(), suppId: id, status });
   };
-  const taken = [...answers.values()].filter((a) => a.status === "taken").length;
+  const taken = supps.filter((s) => answers.get(s.id)?.status === "taken").length;
   return (
     <div className="card" id="stack">
       <h3>Stack <span>{taken} of {supps.length} taken</span></h3>
-      {supps.map((s) => {
-        const a = answers.get(s.id);
+      {SLOTS.map((slot) => {
+        const list = supps.filter((s) => s.slot === slot.id);
+        if (!list.length) return null;
+        const open = list.filter((s) => !answers.has(s.id));
         return (
-          <div className="stack-row" key={s.id}>
-            <span>{s.name} {s.dose}<small>{`${String(Math.floor(s.at / 60)).padStart(2, "0")}:${String(s.at % 60).padStart(2, "0")}`}{a ? ` · ${a.status} ${clock(a.at)}` : ""}</small></span>
-            <div className="tick">
-              <button type="button" className="yes" aria-pressed={a?.status === "taken"} aria-label={`Took ${s.name}`} onClick={() => set(s.id, "taken")}>✓</button>
-              <button type="button" className="no" aria-pressed={a?.status === "skipped"} aria-label={`Skipped ${s.name}`} onClick={() => set(s.id, "skipped")}>✗</button>
+          <div key={slot.id} style={{ display: "grid", gap: 8 }}>
+            <div className="h" style={{ padding: 0 }}>
+              <span>{slot.name} · {clock(atMinute(day, slot.at))}</span>
+              {open.length > 1 && <button type="button" className="pill-btn" style={{ padding: "3px 10px", fontSize: 11 }} onClick={() => { const ids = open.map((s) => act.addEntry({ kind: "supp", at: Date.now(), suppId: s.id, status: "taken" }).id); offerUndo(ids, `Ticked ${ids.length} supplements`); }}>Took all</button>}
             </div>
+            {list.map((s) => {
+              const a = answers.get(s.id);
+              return (
+                <div className="stack-row" key={s.id}>
+                  <span style={{ opacity: a ? 0.6 : 1 }}>{s.name} <span style={{ color: "var(--c-dim)", fontSize: 12.5 }}>{s.dose}</span></span>
+                  <div className="tick">
+                    <button type="button" className="yes" aria-pressed={a?.status === "taken"} aria-label={`Took ${s.name}`} onClick={() => set(s.id, "taken")}>✓</button>
+                    <button type="button" className="no" aria-pressed={a?.status === "skipped"} aria-label={`Skipped ${s.name}`} onClick={() => set(s.id, "skipped")}>✗</button>
+                  </div>
+                </div>
+              );
+            })}
           </div>
         );
       })}

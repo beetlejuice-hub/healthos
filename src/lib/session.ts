@@ -33,16 +33,37 @@ function stop() {
   syncer = null;
 }
 
-export type Auth = { session: Session | null; ready: boolean; recovering: boolean; tester: boolean };
+export type Auth = { session: Session | null; ready: boolean; recovering: boolean; tester: boolean; notice: string | null };
+
+/**
+ * What an email link carried in the URL fragment, read once and then wiped from the address bar.
+ * Returns the tokens only for a password reset.
+ */
+export function readEmailLink(hash: string): { kind: "recovery"; access_token: string; refresh_token: string } | { kind: "notice"; text: string } | null {
+  if (!/access_token=|error_description=/.test(hash)) return null;
+  const p = new URLSearchParams(hash.replace(/^#/, ""));
+  if (p.get("error_description")) return { kind: "notice", text: p.get("error_description")!.replace(/\+/g, " ") };
+  if (p.get("type") === "recovery" && p.get("access_token") && p.get("refresh_token")) {
+    return { kind: "recovery", access_token: p.get("access_token")!, refresh_token: p.get("refresh_token")! };
+  }
+  return { kind: "notice", text: "Email confirmed. Sign in below." };
+}
 
 export function useAuth(): Auth & { doneRecovering: () => void } {
   const [session, setSession] = useState<Session | null>(null);
   const [ready, setReady] = useState(false);
   const [recovering, setRecovering] = useState(false);
+  const [notice, setNotice] = useState<string | null>(null);
 
   useEffect(() => {
     let live = true;
-    supabase.auth.getSession().then(({ data }) => {
+    const link = readEmailLink(location.hash);
+    if (link) history.replaceState(null, "", location.pathname + "#today");
+    const boot = link?.kind === "recovery"
+      ? supabase.auth.setSession({ access_token: link.access_token, refresh_token: link.refresh_token }).then(() => { if (live) setRecovering(true); })
+      : Promise.resolve();
+    if (link?.kind === "notice") setNotice(link.text);
+    void boot.then(() => supabase.auth.getSession()).then(({ data }) => {
       if (!live) return;
       if (data.session) start(data.session.user.id);
       setSession(data.session); setReady(true);
@@ -60,12 +81,13 @@ export function useAuth(): Auth & { doneRecovering: () => void } {
     return () => { live = false; sub.subscription.unsubscribe(); window.removeEventListener("online", kick); document.removeEventListener("visibilitychange", kick); clearInterval(t); };
   }, []);
 
-  return { session, ready, recovering, tester: isTester(session?.user.email), doneRecovering: () => setRecovering(false) };
+  return { session, ready, recovering, notice, tester: isTester(session?.user.email), doneRecovering: () => setRecovering(false) };
 }
 
 export async function signOut() {
   await syncer?.sync().catch(() => {});
-  await supabase.auth.signOut();
+  // Only this device. The default ("global") would also sign the account out on your other devices.
+  await supabase.auth.signOut({ scope: "local" });
   location.hash = "today";
   location.reload();
 }

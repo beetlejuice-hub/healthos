@@ -4,12 +4,12 @@ import { supabase } from "../lib/supabase";
 type Mode = "in" | "up" | "reset";
 
 /** Email + password. One sign-in per device, then it stays signed in. */
-export function Auth() {
+export function Auth({ notice }: { notice?: string | null }) {
   const [mode, setMode] = useState<Mode>("in");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
-  const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(notice ? { ok: true, text: notice } : null);
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();

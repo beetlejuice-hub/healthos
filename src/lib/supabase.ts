@@ -14,6 +14,10 @@ export const supabase = createClient(SUPABASE_URL, KEY, {
     autoRefreshToken: true,
     // A reset link must work on whatever device opens the email (Tempo learned this the hard way).
     flowType: "implicit",
+    // Links from emails are handled by hand (session.ts): a confirmation link must NOT sign the
+    // browser that opens it into that account — that's how a tester login replaced the personal
+    // one in another browser. Only a password-reset link signs in, because it has to.
+    detectSessionInUrl: false,
   },
 });
 

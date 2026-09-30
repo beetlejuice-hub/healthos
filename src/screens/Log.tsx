@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { act, newId, useStore } from "../lib/store";
+import { act, newId, offerUndo, useStore } from "../lib/store";
+import { searchBasic } from "../lib/foods-basic";
+import { SLOTS } from "../lib/types";
 import { searchOff } from "../lib/off";
 import { DRINKS } from "../lib/drinks";
 import { forGrams } from "../lib/nutrition";
@@ -17,8 +19,8 @@ const nowHHMM = () => clock(Date.now());
 
 export function Log() {
   const [tab, setTab] = useState<Tab>(() => { const s = readRoute()[1] as Tab | undefined; return s && TABS.some(([t]) => t === s) ? s : "food"; });
-  const [toast, setToast] = useState<string | null>(null);
-  useEffect(() => { if (!toast) return; const t = setTimeout(() => setToast(null), 1800); return () => clearTimeout(t); }, [toast]);
+  // Every log offers itself back as "Undo" (the toast in App), so there's nothing else to show here.
+  const setToast = (_: string) => { void _; };
   const pick = (t: Tab) => { setTab(t); go("log", t); };
 
   return (
@@ -32,7 +34,6 @@ export function Log() {
       {tab === "stack" && <StackTab />}
       {tab === "body" && <BodyTab done={setToast} />}
       <TodayLog />
-      {toast && <div className="toast" role="status">{toast}</div>}
     </div>
   );
 }
@@ -65,6 +66,8 @@ function FoodTab({ done }: { done: (m: string) => void }) {
     const needle = q.trim().toLowerCase();
     return (needle ? saved.filter((f) => `${f.name} ${f.brand ?? ""}`.toLowerCase().includes(needle)) : saved).slice(0, needle ? 8 : 12);
   }, [q, saved]);
+  // Built-in everyday foods: instant and offline, shown before the database answers.
+  const basic = useMemo(() => searchBasic(q).filter((f) => !mine.some((m) => m.id === f.id)), [q, mine]);
 
   if (chosen) return <Portion food={chosen} onCancel={() => setChosen(null)} onDone={(m) => { setChosen(null); setQ(""); done(m); }} />;
   if (custom) return <CustomFood onCancel={() => setCustom(false)} onDone={(f) => { setCustom(false); setChosen(f); }} />;
@@ -76,13 +79,17 @@ function FoodTab({ done }: { done: (m: string) => void }) {
         <h3>{q ? "Your foods" : "Recent"}</h3>
         <div className="list">{mine.map((f) => <FoodRow key={f.id} f={f} onPick={() => setChosen(f)} />)}</div>
       </>}
+      {basic.length > 0 && <>
+        <h3>Everyday foods <span>typical values</span></h3>
+        <div className="list">{basic.map((f) => <FoodRow key={f.id} f={f} onPick={() => setChosen(f)} />)}</div>
+      </>}
       {q.trim().length >= 2 && <>
         <h3>Food database <span>{busy ? "searching…" : `${results.length} found`}</span></h3>
         {error && <p className="err">{error}</p>}
         <div className="list">{results.map((f) => <FoodRow key={f.id} f={f} onPick={() => setChosen(f)} />)}</div>
       </>}
       <button type="button" className="pill-btn" onClick={() => setCustom(true)}>+ Add your own food</button>
-      <p className="note">Data from Open Food Facts. Anything you log is saved and shows up here next time.</p>
+      <p className="note">Everyday foods are built in; brands come from Open Food Facts (3M+ products). Anything you log is saved and shows up first next time.</p>
     </div>
   );
 }
@@ -102,8 +109,9 @@ function Portion({ food, onCancel, onDone }: { food: Food; onCancel: () => void;
   const g = Number(grams) || 0, m = forGrams(food.per100, g);
   const save = () => {
     if (g <= 0) return;
-    act.addEntry({ kind: "food", at: timeToday(time), foodId: food.id, name: food.name, grams: g, macros: m });
+    const e = act.addEntry({ kind: "food", at: timeToday(time), foodId: food.id, name: food.name, grams: g, macros: m });
     act.rememberFood(food);
+    offerUndo([e.id], `Logged ${food.name}`);
     onDone(`Logged ${food.name}`);
   };
   return (
@@ -158,7 +166,8 @@ function DrinkTab({ done }: { done: (m: string) => void }) {
   const [time, setTime] = useState(nowHHMM);
   const [making, setMaking] = useState(false);
   const log = (d: Drink) => {
-    act.addEntry({ kind: "drink", at: timeToday(time), drinkId: d.id, name: d.name, ml: d.ml, caffeineMg: d.caffeineMg, alcoholG: d.alcoholG, kcal: d.kcal });
+    const e = act.addEntry({ kind: "drink", at: timeToday(time), drinkId: d.id, name: d.name, ml: d.ml, caffeineMg: d.caffeineMg, alcoholG: d.alcoholG, kcal: d.kcal });
+    offerUndo([e.id], `Logged ${d.name}`);
     done(`Logged ${d.name}`);
   };
   if (making) return <CustomDrink onCancel={() => setMaking(false)} onDone={(d) => { act.saveDrink(d); setMaking(false); log(d); }} />;
@@ -217,7 +226,7 @@ function StackTab() {
             <label className="field">Dose<input value={s.dose} onChange={(e) => upd(s.id, { dose: e.target.value })} /></label>
           </div>
           <div className="row2">
-            <label className="field">Usual time<input type="time" value={hhmm(s.at)} onChange={(e) => { const [h, m] = e.target.value.split(":").map(Number); upd(s.id, { at: h * 60 + m }); }} /></label>
+            <label className="field">When<select value={s.slot} onChange={(e) => upd(s.id, { slot: e.target.value as Supplement["slot"] })}>{SLOTS.map((x) => <option key={x.id} value={x.id}>{x.name} · {hhmm(x.at)}</option>)}</select></label>
             <div style={{ display: "flex", gap: 6, alignItems: "end" }}>
               <button type="button" className="pill-btn" onClick={() => upd(s.id, { active: !s.active })}>{s.active ? "Pause" : "Resume"}</button>
               <button type="button" className="pill-btn" onClick={() => act.setSupplements(list.filter((x) => x.id !== s.id))}>Remove</button>
@@ -226,7 +235,7 @@ function StackTab() {
           {!s.active && <p className="note">Paused: not shown on Today. Pausing on purpose for a few weeks is how Insights can tell whether it does anything.</p>}
         </div>
       ))}
-      <button type="button" className="pill-btn" onClick={() => act.setSupplements([...list, { id: newId(), name: "New supplement", dose: "", at: 8 * 60, active: true }])}>+ Add supplement</button>
+      <button type="button" className="pill-btn" onClick={() => act.setSupplements([...list, { id: newId(), name: "New supplement", dose: "", slot: "morning", at: 8 * 60, active: true }])}>+ Add supplement</button>
     </div>
   );
 }
@@ -244,7 +253,7 @@ function BodyTab({ done }: { done: (m: string) => void }) {
       <div className="row2">
         <label className="field">kg<input inputMode="decimal" value={kg} onChange={(e) => setKg(e.target.value)} /></label>
         <div style={{ display: "flex", alignItems: "end" }}>
-          <button type="button" className="pill-btn pri" disabled={!(n > 20 && n < 400)} onClick={() => { act.addEntry({ kind: "weight", at: Date.now(), kg: Math.round(n * 10) / 10 }); done(`Logged ${n} kg`); }}>Log weight</button>
+          <button type="button" className="pill-btn pri" disabled={!(n > 20 && n < 400)} onClick={() => { const e = act.addEntry({ kind: "weight", at: Date.now(), kg: Math.round(n * 10) / 10 }); offerUndo([e.id], `Logged ${n} kg`); done(`Logged ${n} kg`); }}>Log weight</button>
         </div>
       </div>
       <div className="list">{weights.map((w) => w.kind === "weight" && <div className="li" key={w.id}><span>{w.kg} kg<small>{localDay(w.at)} {clock(w.at)}</small></span><button type="button" className="x" aria-label="Delete" onClick={() => act.removeEntry(w.id)}>×</button></div>)}</div>

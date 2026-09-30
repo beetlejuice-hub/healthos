@@ -113,7 +113,9 @@ a { color: inherit; }
 .drinks button span { font-size: 12px; color: var(--c-ink-2); }
 .note { font-size: 12.5px; color: var(--c-dim); margin: 0; }
 .err { font-size: 12.5px; color: #e0a4a4; margin: 0; }
-.toast { position: fixed; left: 50%; bottom: calc(80px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); background: var(--c-ink); color: var(--c-bg); padding: 9px 16px; border-radius: 999px; font-size: 13px; font-weight: 600; z-index: 20; }
+.toast { position: fixed; left: 50%; bottom: calc(80px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); background: var(--c-ink); color: var(--c-bg); padding: 6px 6px 6px 16px; border-radius: 999px; font-size: 13px; font-weight: 600; z-index: 20; display: flex; align-items: center; gap: 10px; max-width: calc(100vw - 32px); font-family: var(--f-sans); box-shadow: 0 8px 30px -10px #000; }
+.toast span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.toast button { border: 0; border-radius: 999px; background: var(--c-bg); color: var(--c-ink); padding: 7px 14px; font-weight: 700; font-size: 13px; }
 
 /* ---------------- cockpit: Workout */
 .cockpit { max-width: 520px; margin: 0 auto; padding: 16px 10px 24px; display: grid; gap: 10px; }

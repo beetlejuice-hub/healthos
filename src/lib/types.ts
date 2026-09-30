@@ -14,7 +14,7 @@ export type Food = {
   per100: Macros;
   /** Grams in one usual serving, when known — "1 bar", "1 slice". */
   servingG?: number;
-  source: "off" | "custom";
+  source: "off" | "basic" | "custom";
   barcode?: string;
 };
 
@@ -29,12 +29,26 @@ export type Drink = {
   kcal: number;
 };
 
-/** A supplement in your stack, taken on a schedule. */
+/**
+ * When in the day a supplement belongs. Owner: "morning, midday and evening categorized, each
+ * arrives at a set time — not sure it's worth tracking exact time for supps."
+ */
+export type Slot = "morning" | "midday" | "evening";
+export const SLOTS: { id: Slot; name: string; at: number }[] = [
+  { id: "morning", name: "Morning", at: 8 * 60 },
+  { id: "midday", name: "Midday", at: 13 * 60 },
+  { id: "evening", name: "Evening", at: 21 * 60 + 30 },
+];
+export const slotOf = (at: number): Slot => (at < 11 * 60 ? "morning" : at < 17 * 60 ? "midday" : "evening");
+export const slotTime = (slot: Slot) => SLOTS.find((s) => s.id === slot)!.at;
+
+/** A supplement in your stack. `at` is always its slot's time (kept so older data still reads). */
 export type Supplement = {
   id: string;
   name: string;
   dose: string;
-  /** Usual time, minutes from midnight. */
+  slot: Slot;
+  /** Minutes from midnight — the slot's time. */
   at: number;
   active: boolean;
 };

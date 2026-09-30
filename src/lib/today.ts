@@ -6,6 +6,7 @@
  */
 
 import type { Entry, Goals, Supplement } from "./types";
+import { SLOTS, slotOf } from "./types";
 import { caffeineAt, latestDoseFor, type Dose } from "./caffeine";
 import { atMinute, clock, localDay, minuteOfDay } from "./time";
 
@@ -42,7 +43,8 @@ export function nowItems(c: NowContext): NowItem[] {
   for (const at of slots) {
     const group = open.filter((s) => s.at === at);
     const names = group.map((s) => s.name).join(", ");
-    const title = group.length === 1 ? `${group[0].name} ${group[0].dose}`.trim() : `${at < 12 * 60 ? "Morning" : at < 18 * 60 ? "Afternoon" : "Evening"} stack: ${names}`;
+    const slotName = SLOTS.find((x) => x.id === slotOf(at))!.name;
+    const title = group.length === 1 ? `${group[0].name} ${group[0].dose}`.trim() : `${slotName} stack: ${names}`;
     if (nowMin > at + MISSED_AFTER_MIN) out.push({ id: `supp:${at}`, kind: "supp-missed", suppIds: group.map((s) => s.id), title, body: `Not ticked yet — usually ${clockOf(at)}.` });
     else if (nowMin >= at - DUE_WITHIN_MIN) out.push({ id: `supp:${at}`, kind: "supp-due", suppIds: group.map((s) => s.id), title, body: `Due at ${clockOf(at)}.` });
   }
@@ -57,11 +59,11 @@ export function nowItems(c: NowContext): NowItem[] {
     const latest = latestDoseFor(doses, bed, c.coffeeMg, c.caffeineTargetMg, c.halfLifeMin);
     const withOne = Math.round(caffeineAt([...doses, { at: c.now, mg: c.coffeeMg }], bed, c.halfLifeMin));
     if (latest === null) {
-      out.push({ id: "caffeine", kind: "caffeine", title: "Over your caffeine target for tonight", body: `About ${Math.round(atBed)} mg will still be in you at ${clockOf(c.bedMinute)} (target ${c.caffeineTargetMg} mg). Another coffee would make it ${withOne} mg.` });
+      out.push({ id: "caffeine", kind: "caffeine", title: `About ${Math.round(atBed)} mg still in you at bedtime`, body: `That's by your planned bedtime, ${clockOf(c.bedMinute)}. Another one would make it ${withOne} mg.` });
     } else if (latest < c.now) {
-      out.push({ id: "caffeine", kind: "caffeine", title: `Coffee cut-off was ${clock(latest)}`, body: `A ${c.coffeeMg} mg coffee now leaves about ${withOne} mg at ${clockOf(c.bedMinute)}, over your ${c.caffeineTargetMg} mg target.` });
+      out.push({ id: "caffeine", kind: "caffeine", title: `Coffee cut-off was ${clock(latest)}`, body: `Another one now (${c.coffeeMg} mg) leaves about ${withOne} mg in you at your planned bedtime, ${clockOf(c.bedMinute)}.` });
     } else if (latest - c.now < 90 * 60_000) {
-      out.push({ id: "caffeine", kind: "caffeine", title: `Last coffee by ${clock(latest)}`, body: `After that, a ${c.coffeeMg} mg coffee puts you over ${c.caffeineTargetMg} mg at ${clockOf(c.bedMinute)}.` });
+      out.push({ id: "caffeine", kind: "caffeine", title: `Last coffee by ${clock(latest)}`, body: `After that, another one (${c.coffeeMg} mg) leaves over ${c.caffeineTargetMg} mg in you at your planned bedtime, ${clockOf(c.bedMinute)}.` });
     }
   }
 

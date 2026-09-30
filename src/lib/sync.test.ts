@@ -121,3 +121,13 @@ describe("Syncer end to end against a fake server", () => {
     expect(phone.s.status.pending).toBe(0);
   });
 });
+
+describe("email links", () => {
+  it("signs in only for a password reset; a confirmation link just says confirmed", async () => {
+    const { readEmailLink } = await import("./session");
+    expect(readEmailLink("#today")).toBeNull();
+    expect(readEmailLink("#access_token=a&refresh_token=r&type=signup")).toEqual({ kind: "notice", text: "Email confirmed. Sign in below." });
+    expect(readEmailLink("#access_token=a&refresh_token=r&type=recovery")).toEqual({ kind: "recovery", access_token: "a", refresh_token: "r" });
+    expect(readEmailLink("#error=access_denied&error_description=Email+link+is+invalid+or+has+expired")).toEqual({ kind: "notice", text: "Email link is invalid or has expired" });
+  });
+});

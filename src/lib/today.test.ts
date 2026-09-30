@@ -6,10 +6,10 @@ import { DEFAULT_GOALS } from "./types";
 
 const at = (h: number, m = 0) => new Date(2026, 8, 29, h, m).getTime();
 const stack: Supplement[] = [
-  { id: "cre", name: "Creatine", dose: "5 g", at: 8 * 60 + 15, active: true },
-  { id: "cumin", name: "Black cumin oil", dose: "1 tsp", at: 8 * 60 + 18, active: true },
-  { id: "mag", name: "Magnesium", dose: "400 mg", at: 22 * 60 + 30, active: true },
-  { id: "old", name: "Zinc", dose: "", at: 9 * 60, active: false },
+  { id: "cre", name: "Creatine", dose: "5 g", slot: "morning", at: 8 * 60 + 15, active: true },
+  { id: "cumin", name: "Black cumin oil", dose: "1 tsp", slot: "morning", at: 8 * 60 + 18, active: true },
+  { id: "mag", name: "Magnesium", dose: "400 mg", slot: "morning", at: 22 * 60 + 30, active: true },
+  { id: "old", name: "Zinc", dose: "", slot: "morning", at: 9 * 60, active: false },
 ];
 const coffee = (h: number, m = 0): Entry => ({ id: `c${h}${m}`, kind: "drink", at: at(h, m), name: "Filter coffee", ml: 250, caffeineMg: 95, alcoholG: 0, kcal: 2 });
 const ctx = (now: number, entries: Entry[]): NowContext => ({ now, entries, supplements: stack, goals: DEFAULT_GOALS, bedMinute: 23 * 60, caffeineTargetMg: 50, halfLifeMin: 300, coffeeMg: 95 });
@@ -35,7 +35,7 @@ describe("nowItems", () => {
   it("warns the coffee cut-off has passed, with the numbers from the prototype", () => {
     const item = nowItems(ctx(at(14, 20), [coffee(8, 10), coffee(13)])).find((i) => i.kind === "caffeine")!;
     expect(item.title).toMatch(/^Coffee cut-off was \d\d:\d\d$/);
-    expect(item.body).toContain("64 mg at 23:00");
+    expect(item.body).toContain("about 64 mg in you at your planned bedtime, 23:00");
   });
 
   it("gives advance notice when the cut-off is under 90 minutes away", () => {
@@ -77,5 +77,28 @@ describe("fromOff", () => {
     expect(fromOff({ product_name: "X", nutriments: { energy_100g: 1674 } })!.per100.kcal).toBe(400);
     expect(fromOff({ product_name: "X", nutriments: {} })).toBeNull();
     expect(fromOff({ nutriments: { "energy-kcal_100g": 100 } })).toBeNull();
+  });
+});
+
+describe("basic foods", () => {
+  it("finds everyday foods in English or Hungarian, with or without accents", async () => {
+    const { searchBasic } = await import("./foods-basic");
+    expect(searchBasic("chicken breast").map((f) => f.name)).toContain("Chicken breast, cooked");
+    expect(searchBasic("turo")[0].name).toBe("Túró (quark), half-fat");
+    expect(searchBasic("csirkemell").length).toBeGreaterThan(0);
+    expect(searchBasic("")).toEqual([]);
+  });
+
+  it("has sane numbers: macros add up to roughly the calories", async () => {
+    const { BASIC_FOODS } = await import("./foods-basic");
+    for (const f of BASIC_FOODS) {
+      const est = f.per100.p * 4 + f.per100.c * 4 + f.per100.f * 9;
+      // Fibre and alcohol-free rounding: within 20% or 25 kcal.
+      expect(Math.abs(est - f.per100.kcal), f.name).toBeLessThanOrEqual(Math.max(25, f.per100.kcal * 0.2));
+    }
+  });
+
+  it("maps brands given as an array by the newer search", () => {
+    expect(fromOff({ product_name: "X", brands: ["Brand B"], nutriments: { "energy-kcal_100g": 100 } })!.brand).toBe("Brand B");
   });
 });

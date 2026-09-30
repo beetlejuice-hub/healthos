@@ -42,3 +42,6 @@ create policy "own entries" on public.entries for all
 drop policy if exists "own docs" on public.docs;
 create policy "own docs" on public.docs for all
   using (user_id = auth.uid()) with check (user_id = auth.uid());
+
+-- Make the new tables visible to the API immediately (fixes "Could not find the table … in the schema cache").
+notify pgrst, 'reload schema';

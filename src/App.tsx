@@ -8,6 +8,7 @@ import { readRoute, type Route } from "./lib/nav";
 import { Dev } from "./screens/Dev";
 import { Auth, NewPassword } from "./components/Auth";
 import { useAuth } from "./lib/session";
+import { UndoToast } from "./components/UndoToast";
 
 /**
  * Four screens, one job each (owner, 29 Sept): Today = what needs you now; Log = add things;
@@ -25,7 +26,7 @@ export function App() {
 
   if (!auth.ready) return <div className="app r-today" />;
   if (auth.recovering) return <div className="app r-today"><NewPassword done={auth.doneRecovering} /></div>;
-  if (!auth.session) return <div className="app r-today"><Auth /></div>;
+  if (!auth.session) return <div className="app r-today"><Auth notice={auth.notice} /></div>;
 
   return (
     <div className={`app r-${route === "dev" ? "settings" : route}`}>
@@ -37,6 +38,7 @@ export function App() {
         {route === "settings" && <Settings tester={auth.tester} email={auth.session.user.email ?? ""} />}
         {route === "dev" && (auth.tester ? <Dev /> : <Settings tester={false} email={auth.session.user.email ?? ""} />)}
       </main>
+      <UndoToast />
       <nav className="tabs" aria-label="Screens">
         {(["today", "log", "workout", "insights"] as const).map((r) => (
           <a key={r} href={`#${r}`} className={route === r ? "on" : ""} aria-current={route === r ? "page" : undefined}>

@@ -8,14 +8,24 @@
 
 import { useSyncExternalStore } from "react";
 import type { Drink, Entry, Food, Goals, Supplement, Template, Workout } from "./types";
-import { DEFAULT_GOALS } from "./types";
+import { DEFAULT_GOALS, slotOf, slotTime } from "./types";
 
+/**
+ * What the calculations need. Only `bedMinute` (planned bedtime) and `usualDrink` are asked of you;
+ * the rest are sensible defaults for now and will be learned from your data (owner: half-life and
+ * the bedtime caffeine level "should come from AI/knowledge or my data", not a form).
+ */
 export type Settings = {
   halfLifeMin: number;
+  /** Planned bedtime. Actual bedtime comes from the wearable later. */
   bedMinute: number;
+  /** Reference level for "a lot left at bedtime". Not a user setting; learned later. */
   caffeineTargetMg: number;
+  /** Fallback caffeine for "a coffee" when no usual drink is chosen. */
   coffeeMg: number;
   bodyKg: number;
+  /** The drink the one-tap button logs. Chosen on Today; ✕ clears it. */
+  usualDrink: Drink | null;
 };
 
 export type State = {
@@ -29,16 +39,20 @@ export type State = {
   settings: Settings;
 };
 
-export const DEFAULT_SETTINGS: Settings = { halfLifeMin: 300, bedMinute: 23 * 60, caffeineTargetMg: 50, coffeeMg: 95, bodyKg: 78 };
+export const DEFAULT_SETTINGS: Settings = { halfLifeMin: 300, bedMinute: 23 * 60, caffeineTargetMg: 50, coffeeMg: 95, bodyKg: 78, usualDrink: null };
 
 /** Your stack from the discovery answers; times are editable. */
 const DEFAULT_STACK: Supplement[] = [
-  { id: "creatine", name: "Creatine", dose: "5 g", at: 8 * 60 + 15, active: true },
-  { id: "vitd", name: "Vitamin D3", dose: "2000 IU", at: 8 * 60 + 15, active: true },
-  { id: "cumin", name: "Black cumin seed oil", dose: "1 tsp", at: 8 * 60 + 15, active: true },
-  { id: "mag", name: "Magnesium", dose: "400 mg", at: 22 * 60 + 30, active: true },
-  { id: "saffron", name: "Saffron", dose: "30 mg", at: 22 * 60 + 30, active: true },
+  { id: "creatine", name: "Creatine", dose: "5 g", slot: "morning", at: 8 * 60, active: true },
+  { id: "vitd", name: "Vitamin D3", dose: "2000 IU", slot: "morning", at: 8 * 60, active: true },
+  { id: "cumin", name: "Black cumin seed oil", dose: "1 tsp", slot: "morning", at: 8 * 60, active: true },
+  { id: "mag", name: "Magnesium", dose: "400 mg", slot: "evening", at: 21 * 60 + 30, active: true },
+  { id: "saffron", name: "Saffron", dose: "30 mg", slot: "evening", at: 21 * 60 + 30, active: true },
 ];
+
+/** Older saves had a free time per supplement; snap each to its slot. */
+export const normalizeStack = (list: Supplement[]): Supplement[] =>
+  list.map((s) => { const slot = s.slot ?? slotOf(s.at); return { ...s, slot, at: slotTime(slot) }; });
 
 const DEFAULT_TEMPLATES: Template[] = [
   { id: "upper-a", name: "Upper A", exercises: [
@@ -69,7 +83,7 @@ function load(): State {
     const raw = localStorage.getItem(KEY);
     if (!raw) return EMPTY;
     const s = JSON.parse(raw) as Partial<State>;
-    return { ...EMPTY, ...s, settings: { ...DEFAULT_SETTINGS, ...s.settings }, goals: { ...DEFAULT_GOALS, ...s.goals } };
+    return { ...EMPTY, ...s, supplements: normalizeStack(s.supplements ?? EMPTY.supplements), settings: { ...DEFAULT_SETTINGS, ...s.settings }, goals: { ...DEFAULT_GOALS, ...s.goals } };
   } catch {
     return EMPTY;
   }
@@ -155,7 +169,7 @@ export const act = {
   saveDrink(d: Drink) {
     commit({ ...state, drinks: [d, ...state.drinks.filter((x) => x.id !== d.id)] });
   },
-  setSupplements(list: Supplement[]) { commit({ ...state, supplements: list }); },
+  setSupplements(list: Supplement[]) { commit({ ...state, supplements: normalizeStack(list) }); },
   setTemplates(list: Template[]) { commit({ ...state, templates: list }); },
   setGoals(goals: Goals) { commit({ ...state, goals }); },
   setSettings(patch: Partial<Settings>) { commit({ ...state, settings: { ...state.settings, ...patch } }); },
@@ -176,6 +190,30 @@ export const act = {
     commit({ ...state, entries: state.entries.filter((e) => !e.id.startsWith("sample:")), workouts: state.workouts.filter((w) => !w.id.startsWith("sample:")) });
   },
 };
+
+/* ------------------------------------------------------------------ undo */
+
+/**
+ * The last thing you logged, offered back for a few seconds as "Undo" (owner: "I log something and
+ * can't undo if it was an accident"). Separate from the state so undoing doesn't itself need undo.
+ */
+export type Undo = { ids: string[]; label: string; at: number };
+let undo: Undo | null = null;
+const undoListeners = new Set<() => void>();
+const emitUndo = () => undoListeners.forEach((l) => l());
+export const offerUndo = (ids: string[], label: string) => { undo = { ids, label, at: Date.now() }; emitUndo(); };
+export const clearUndo = () => { undo = null; emitUndo(); };
+export const runUndo = () => { if (!undo) return; const ids = new Set(undo.ids); commit({ ...state, entries: state.entries.filter((e) => !ids.has(e.id)) }); clearUndo(); };
+export function useUndo(): Undo | null {
+  return useSyncExternalStore((l) => { undoListeners.add(l); return () => { undoListeners.delete(l); }; }, () => undo, () => undo);
+}
+
+/** Log something and offer it back as an undo in one go. */
+export function logWithUndo(e: NewEntry, label: string): Entry {
+  const full = act.addEntry(e);
+  offerUndo([full.id], label);
+  return full;
+}
 
 /** For tests: reset to a known state without touching storage. */
 export const __setState = (s: State) => { state = s; listeners.forEach((l) => l()); };

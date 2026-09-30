@@ -93,6 +93,20 @@ Vite + React + TypeScript · Supabase (own project, same account as Tempo) · Cl
 not required. Cloud storage OK. A test account for agents like Tempo's: maybe. Running cost
 ~€20/month is fine. Private repo `healthos`.
 
+## 6b. Learned, not configured (owner, 30 Sept)
+
+Numbers that describe *you* are learned from your data (and general knowledge), never typed into
+a form. Until there's enough data they use sensible defaults, silently.
+- **Caffeine half-life** — default 5 h; later fitted from caffeine vs heart rate / sleep.
+- **Caffeine at bedtime** — no user "limit". The app watches caffeine-at-bedtime against sleep
+  score, time to fall asleep and night heart rate, and *tells you what it notices*: "on nights with
+  100+ mg left your sleep score averaged 12 lower (n=14)" — or "you sleep fine with 150 mg; you may
+  clear it fast or be less sensitive". It never quietly raises a threshold; it says what it saw.
+- **Usual drink** — picked on Today (☆), not a mg setting.
+- **Bedtime** — the planned bedtime is the only input; real bedtime comes from the wearable.
+- **Macro goals** — fixed for now (owner likes them); later adjusted from weight trend, goal
+  (cut/bulk/maintain), training load and lifestyle.
+
 ## 7. Status and next
 
 **Built (29 Sept):** Today, Log (food via Open Food Facts + saved foods, drinks, stack, weight),
