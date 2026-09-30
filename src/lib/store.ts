@@ -9,6 +9,7 @@
 import { useSyncExternalStore } from "react";
 import type { Drink, Entry, Food, Goals, Supplement, Template, Workout } from "./types";
 import { DEFAULT_GOALS, slotOf, slotTime } from "./types";
+import { tidyWorkouts } from "./training";
 
 /**
  * What the calculations need. Only `bedMinute` (planned bedtime) and `usualDrink` are asked of you;
@@ -179,7 +180,15 @@ export const act = {
   setGoals(goals: Goals) { commit({ ...state, goals }); },
   setProfile(profile: Profile) { commit({ ...state, profile }); },
   setSettings(patch: Partial<Settings>) { commit({ ...state, settings: { ...state.settings, ...patch } }); },
+  /** Close forgotten workouts (lib/training tidyWorkouts). `force` closes any open one now. */
+  tidyWorkouts(now = Date.now(), force = false) {
+    const t = tidyWorkouts(state.workouts, state.entries.filter((e) => e.kind === "set").map((e) => ({ workoutId: (e as Extract<Entry, { kind: "set" }>).workoutId, at: e.at })), now, force);
+    if (!t.end.length && !t.drop.length) return;
+    const ends = new Map(t.end.map((x) => [x.id, x.at]));
+    commit({ ...state, workouts: state.workouts.filter((w) => !t.drop.includes(w.id)).map((w) => (ends.has(w.id) ? { ...w, endedAt: ends.get(w.id)! } : w)) });
+  },
   startWorkout(template: string, at = Date.now()): Workout {
+    act.tidyWorkouts(at, true);
     const w: Workout = { id: newId(), template, startedAt: at, endedAt: null };
     commit({ ...state, workouts: [...state.workouts, w] });
     return w;

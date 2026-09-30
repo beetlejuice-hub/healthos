@@ -10,7 +10,9 @@ import { forGrams } from "../lib/nutrition";
 import { alcoholGrams } from "../lib/alcohol";
 import { clock, localDay } from "../lib/time";
 import { readRoute, go } from "../lib/nav";
-import type { Drink, Entry, Food, Macros, Supplement } from "../lib/types";
+import type { Drink, Entry, EntryOf, Food, Macros, Supplement } from "../lib/types";
+import { amountText, approx, gramsOf, macrosOfLine, mealFood, step, unitsOf, type Line } from "../lib/units";
+import { parseMeal } from "../lib/quickadd";
 
 type Tab = "food" | "drink" | "stack" | "body";
 const TABS: [Tab, string][] = [["food", "Food"], ["drink", "Drink"], ["stack", "Stack"], ["body", "Body"]];
@@ -48,13 +50,27 @@ export function Log() {
 
 /* ------------------------------------------------------------------ food */
 
+/** The basket survives a reload or a tab switch until it's logged (this device only). */
+const BASKET_KEY = "healthos.basket";
+const loadBasket = (): Line[] => { try { return JSON.parse(localStorage.getItem(BASKET_KEY) ?? "[]") as Line[]; } catch { return []; } };
+
+/**
+ * Food, the simple way (owner: "type scrambled eggs, choose it, add 2 eggs, add toast, an apple,
+ * and that's it"): everything you pick or type lands in a meal basket, counted in eggs, slices,
+ * apples; one tap logs the lot. Grams and exact values are one tap deeper for when they matter.
+ */
 function FoodTab({ done }: { done: (m: string) => void }) {
   const saved = useStore((s) => s.foods);
+  const entries = useStore((s) => s.entries);
   const [q, setQ] = useState("");
+  const [typed, setTyped] = useState("");
+  const [missed, setMissed] = useState<string[]>([]);
   const [results, setResults] = useState<Food[]>([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [chosen, setChosen] = useState<Food | null>(null);
+  const [basket, setBasketRaw] = useState<(Line & { alts?: Food[] })[]>(loadBasket);
+  const setBasket = (b: (Line & { alts?: Food[] })[]) => { setBasketRaw(b); try { localStorage.setItem(BASKET_KEY, JSON.stringify(b.map(({ alts, ...l }) => { void alts; return l; }))); } catch { /* private mode */ } };
+  const [detail, setDetail] = useState<number | null>(null);
   const [custom, setCustom] = useState(false);
   const ctl = useRef<AbortController | null>(null);
 
@@ -74,41 +90,127 @@ function FoodTab({ done }: { done: (m: string) => void }) {
     const needle = q.trim().toLowerCase();
     return (needle ? saved.filter((f) => `${f.name} ${f.brand ?? ""}`.toLowerCase().includes(needle)) : saved).slice(0, needle ? 8 : 12);
   }, [q, saved]);
-  // Built-in everyday foods: instant and offline, shown before the database answers.
   const basic = useMemo(() => searchBasic(q).filter((f) => !mine.some((m) => m.id === f.id)), [q, mine]);
-  // Near-identical products collapse into one "typical" row; see lib/foodgroup.ts.
   const rows = useMemo(() => groupFoods(results, q), [results, q]);
-  // "Show all" applies to the search it was pressed on; a new search starts short again.
   const [allFor, setAllFor] = useState<string | null>(null);
   const showAll = allFor === q;
   const setShowAll = () => setAllFor(q);
 
-  if (chosen) return <Portion food={chosen} onCancel={() => setChosen(null)} onDone={(m) => { setChosen(null); setQ(""); done(m); }} />;
-  if (custom) return <CustomFood onCancel={() => setCustom(false)} onDone={(f) => { setCustom(false); setChosen(f); }} />;
+  /** How you usually have a food: the amount you logged it with last time, else its first unit. */
+  const usual = (f: Food): Line => {
+    const last = [...entries].reverse().find((e): e is EntryOf<"food"> => e.kind === "food" && e.foodId === f.id);
+    const units = unitsOf(f);
+    if (last?.unit && units.some((u) => u.name === last.unit)) return { food: f, count: last.count ?? 1, unit: last.unit };
+    if (units.length) return { food: f, count: 1, unit: units[0].name };
+    return { food: f, count: 1, unit: null, grams: last?.grams ?? 100 };
+  };
+  const add = (f: Food) => { setBasket([...basket, usual(f)]); setQ(""); };
+  const addTyped = () => {
+    const parsed = parseMeal(typed, saved);
+    setBasket([...basket, ...parsed.filter((p) => p.line).map((p) => ({ ...p.line!, alts: p.unsure ? p.alternatives : undefined }))]);
+    setMissed(parsed.filter((p) => !p.line).map((p) => p.text));
+    setTyped("");
+  };
+  const upd = (i: number, l: Line & { alts?: Food[] }) => setBasket(basket.map((x, j) => (j === i ? l : x)));
 
-  return (
+  if (detail != null && basket[detail]) return <Portion line={basket[detail]} onCancel={() => setDetail(null)} onDone={(l) => { upd(detail, l); setDetail(null); }} />;
+  if (custom) return <CustomFood onCancel={() => setCustom(false)} onDone={(f) => { setCustom(false); act.rememberFood(f); add(f); }} />;
+
+  return <>
     <div className="card">
-      <input className="search" type="search" inputMode="search" placeholder="Search food: zabpehely, chicken breast…" value={q} onChange={(e) => setQ(e.target.value)} aria-label="Search food" />
+      <label className="field">What did you eat?
+        <div className="row-add">
+          <input value={typed} placeholder="2 scrambled eggs, toast, an apple" onChange={(e) => setTyped(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter" && typed.trim()) addTyped(); }} aria-label="Type what you ate" />
+          <button type="button" className="pill-btn" disabled={!typed.trim()} onClick={addTyped}>Add</button>
+        </div>
+      </label>
+      {missed.length > 0 && <p className="err">Couldn't find {missed.map((m) => `“${m}”`).join(", ")} — search it below or add it yourself.</p>}
+      {basket.length > 0 && <Basket lines={basket} onChange={setBasket} onDetail={setDetail} onLogged={(m) => { setBasket([]); setMissed([]); done(m); }} />}
+    </div>
+    <div className="card">
+      <input className="search" type="search" inputMode="search" placeholder="Or search: zabpehely, chicken breast…" value={q} onChange={(e) => setQ(e.target.value)} aria-label="Search food" />
       {mine.length > 0 && <>
-        <h3>{q ? "Your foods" : "Recent"}</h3>
-        <div className="list">{mine.map((f) => <FoodRow key={f.id} f={f} onPick={() => setChosen(f)} />)}</div>
+        <h3>{q ? "Your foods" : "Recent"} <span>tap to add</span></h3>
+        <div className="list">{mine.map((f) => <FoodRow key={f.id} f={f} amount={amountOf(usual(f))} onPick={() => add(f)} />)}</div>
       </>}
       {basic.length > 0 && <>
         <h3>Everyday foods <span>typical values</span></h3>
-        <div className="list">{basic.map((f) => <FoodRow key={f.id} f={f} onPick={() => setChosen(f)} />)}</div>
+        <div className="list">{basic.map((f) => <FoodRow key={f.id} f={f} amount={amountOf(usual(f))} onPick={() => add(f)} />)}</div>
       </>}
       {q.trim().length >= 2 && <>
         <h3>Food database <span>{busy ? "searching…" : `${results.length} products`}</span></h3>
         {error && <p className="err">{error}</p>}
         <div className="list">
           {(showAll ? rows : rows.slice(0, 8)).map((r) => r.kind === "one"
-            ? <FoodRow key={r.food.id} f={r.food} suspect={r.suspect} thumb onPick={() => setChosen(r.food)} />
-            : <GroupRow key={r.key} r={r} onPick={setChosen} />)}
+            ? <FoodRow key={r.food.id} f={r.food} suspect={r.suspect} thumb onPick={() => add(r.food)} />
+            : <GroupRow key={r.key} r={r} onPick={add} />)}
         </div>
         {!showAll && rows.length > 8 && <button type="button" className="pill-btn" onClick={setShowAll}>Show all {rows.length}</button>}
       </>}
       <button type="button" className="pill-btn" onClick={() => setCustom(true)}>+ Add your own food</button>
-      <p className="note">Everyday foods are built in; the database is Open Food Facts (3M+ products) and USDA. The same food from many brands shows as one typical row (the median); tap “products” to pick your brand. Anything you log — and any values you correct — shows up first next time.</p>
+      <p className="note">Count it, don't weigh it: “2 eggs” is close enough, and the weekly numbers even out. The same food from many brands shows as one typical row; anything you log comes back first, with the amount you had.</p>
+    </div>
+  </>;
+}
+
+const amountOf = (l: Line) => (l.unit ? amountText(l.count, l.unit) : `${Math.round(l.grams ?? 100)} g`);
+
+/** The meal being built: − / + per line, ≈ totals, one tap to log, or save it as a meal. */
+function Basket({ lines, onChange, onDetail, onLogged }: { lines: (Line & { alts?: Food[] })[]; onChange: (l: (Line & { alts?: Food[] })[]) => void; onDetail: (i: number) => void; onLogged: (m: string) => void }) {
+  const [time, setTime] = useState(nowHHMM);
+  const [saving, setSaving] = useState(false);
+  const [mealName, setMealName] = useState(""), [pieces, setPieces] = useState("1");
+  const tot = lines.reduce((a, l) => { const m = macrosOfLine(l); return { kcal: a.kcal + m.kcal, p: a.p + m.p }; }, { kcal: 0, p: 0 });
+  const set = (i: number, l: Line & { alts?: Food[] }) => onChange(lines.map((x, j) => (j === i ? l : x)));
+  const log = () => {
+    const at = timeToday(time);
+    const ids = lines.map((l) => {
+      act.rememberFood(l.food);
+      return act.addEntry({ kind: "food", at, foodId: l.food.id, name: l.food.name, grams: gramsOf(l), macros: macrosOfLine(l), ...(l.unit ? { count: l.count, unit: l.unit } : {}) }).id;
+    });
+    const label = lines.length === 1 ? `${amountOf(lines[0])} ${lines[0].food.name}` : `${lines.length} foods, ≈${approx(tot.kcal)} kcal`;
+    offerUndo(ids, `Logged ${label}`);
+    onLogged(`Logged ${label}`);
+  };
+  const saveMeal = () => {
+    const n = Math.max(1, Number(pieces) || 1);
+    const f = mealFood(`custom:${newId()}`, mealName.trim(), lines, n);
+    act.rememberFood(f);
+    onChange([{ food: f, count: n, unit: "piece" }]);
+    setSaving(false); setMealName("");
+  };
+  return (
+    <div className="basket">
+      <h3>This meal <span>≈ {approx(tot.kcal)} kcal · P {Math.round(tot.p)}</span></h3>
+      {lines.map((l, i) => {
+        const units = unitsOf(l.food);
+        return (
+          <div className="bline" key={i}>
+            <button type="button" className="bname" onClick={() => onDetail(i)}>{l.food.name}<small>≈ {approx(macrosOfLine(l).kcal)} kcal{l.unit ? "" : " · exact"}</small></button>
+            <div className="stepper">
+              {l.unit ? <>
+                <button type="button" aria-label={`Less ${l.food.name}`} onClick={() => set(i, { ...l, count: step(l.count, -1) })}>−</button>
+                <button type="button" className="amt" disabled={units.length < 2} title={units.length > 1 ? "Change unit" : undefined}
+                  onClick={() => { const k = units.findIndex((u) => u.name === l.unit); set(i, { ...l, unit: units[(k + 1) % units.length].name }); }}>{amountText(l.count, l.unit)}</button>
+                <button type="button" aria-label={`More ${l.food.name}`} onClick={() => set(i, { ...l, count: step(l.count, 1) })}>+</button>
+              </> : <button type="button" className="amt" onClick={() => onDetail(i)}>{Math.round(l.grams ?? 100)} g</button>}
+            </div>
+            <button type="button" className="x" aria-label={`Remove ${l.food.name}`} onClick={() => onChange(lines.filter((_, j) => j !== i))}>×</button>
+            {l.alts && l.alts.length > 0 && <div className="alts"><small>Did you mean</small>{l.alts.map((f) => <button type="button" key={f.id} className="pill-btn" onClick={() => { const u = unitsOf(f); set(i, u.length ? { food: f, count: l.count, unit: u[0].name } : { food: f, count: 1, unit: null, grams: 100 }); }}>{f.name}</button>)}
+              <button type="button" className="pill-btn" onClick={() => set(i, { ...l, alts: undefined })}>✓ it's right</button></div>}
+          </div>
+        );
+      })}
+      {saving ? <div className="save-meal">
+        <label className="field">Meal name<input value={mealName} placeholder="Arnold's special" onChange={(e) => setMealName(e.target.value)} /></label>
+        <label className="field">Makes how many pieces?<input inputMode="numeric" value={pieces} onChange={(e) => setPieces(e.target.value)} /></label>
+        <div className="row2"><button type="button" className="pill-btn" onClick={() => setSaving(false)}>Cancel</button><button type="button" className="pill-btn pri" disabled={!mealName.trim()} onClick={saveMeal}>Save meal</button></div>
+        <p className="note">Next time type “2 {mealName.trim() || "Arnold's special"}” or pick it from Recent.</p>
+      </div> : <div className="row-log">
+        <label className="field">Time<input type="time" value={time} onChange={(e) => setTime(e.target.value)} /></label>
+        <button type="button" className="pill-btn pri" onClick={log}>Log {lines.length === 1 ? "it" : `${lines.length} foods`}</button>
+      </div>}
+      {!saving && lines.length > 1 && <button type="button" className="linkish" onClick={() => setSaving(true)}>Save as a meal…</button>}
     </div>
   );
 }
@@ -125,12 +227,12 @@ function Thumb({ src, label }: { src?: string; label?: string }) {
   return <span className="thumb" aria-hidden="true">{src && !broken ? <img src={src} alt="" loading="lazy" referrerPolicy="no-referrer" onError={() => setBroken(true)} /> : label}</span>;
 }
 
-function FoodRow({ f, onPick, thumb, suspect }: { f: Food; onPick: () => void; thumb?: boolean; suspect?: boolean }) {
+function FoodRow({ f, onPick, thumb, suspect, amount }: { f: Food; onPick: () => void; thumb?: boolean; suspect?: boolean; amount?: string }) {
   return (
     <div className={`li tap${thumb ? " food" : ""}`} role="button" tabIndex={0} onClick={onPick} onKeyDown={(e) => e.key === "Enter" && onPick()}>
       {thumb && <Thumb src={f.img} label={f.source === "usda" ? "USDA" : ""} />}
       <span>{f.name}<small>{sub(f)}</small>{suspect && <small className="warn">label doesn't add up — check before logging</small>}</span>
-      <span className="r">+</span>
+      <span className="r">{amount ? `+ ${amount}` : "+"}</span>
     </div>
   );
 }
@@ -154,22 +256,22 @@ function GroupRow({ r, onPick }: { r: Extract<ResultRow, { kind: "group" }>; onP
 const MACRO_FIELDS: [keyof Macros, string][] = [["kcal", "kcal"], ["p", "Protein"], ["c", "Carbs"], ["f", "Fat"]];
 const numIn = (v: string) => Number(v.replace(",", "."));
 
-function Portion({ food, onCancel, onDone }: { food: Food; onCancel: () => void; onDone: (m: string) => void }) {
-  const [grams, setGrams] = useState(String(food.servingG ?? 100));
-  const [time, setTime] = useState(nowHHMM);
+/** One basket line in detail: exact grams instead of a count, and the food's values, editable. */
+function Portion({ line, onCancel, onDone }: { line: Line; onCancel: () => void; onDone: (l: Line) => void }) {
+  const food = line.food;
+  const [grams, setGrams] = useState(String(Math.round(gramsOf(line))));
   // Values per 100 g, editable: a database label can be wrong, or your version differs.
   const [editing, setEditing] = useState(false);
   const [vals, setVals] = useState(() => Object.fromEntries(MACRO_FIELDS.map(([k]) => [k, String(Math.round(food.per100[k] * 10) / 10)])) as Record<keyof Macros, string>);
   const per100: Macros = editing ? { kcal: numIn(vals.kcal) || 0, p: numIn(vals.p) || 0, c: numIn(vals.c) || 0, f: numIn(vals.f) || 0 } : food.per100;
   const changed = editing && MACRO_FIELDS.some(([k]) => Math.abs(per100[k] - food.per100[k]) > 0.05);
   const g = Number(grams) || 0, m = forGrams(per100, g);
+  const gramsChanged = Math.abs(g - gramsOf(line)) > 0.5;
   const save = () => {
     if (g <= 0) return;
     const used: Food = changed ? { ...food, per100, edited: true } : food;
-    const e = act.addEntry({ kind: "food", at: timeToday(time), foodId: used.id, name: used.name, grams: g, macros: m });
-    act.rememberFood(used);
-    offerUndo([e.id], `Logged ${used.name}`);
-    onDone(`Logged ${used.name}`);
+    if (changed) act.rememberFood(used);
+    onDone(gramsChanged ? { food: used, count: 1, unit: null, grams: g } : { ...line, food: used });
   };
   return (
     <div className="card">
@@ -177,11 +279,8 @@ function Portion({ food, onCancel, onDone }: { food: Food; onCancel: () => void;
         {food.img && <Thumb src={food.img} />}
         <h3>{food.name} <span>{origin(food)}</span></h3>
       </div>
-      <div className="row2">
-        <label className="field">Grams<input inputMode="decimal" value={grams} onChange={(e) => setGrams(e.target.value)} /></label>
-        <label className="field">Time<input type="time" value={time} onChange={(e) => setTime(e.target.value)} /></label>
-      </div>
-      {food.servingG && <div className="row2">{[0.5, 1, 1.5, 2].map((k) => <button key={k} type="button" className="pill-btn" onClick={() => setGrams(String(Math.round(food.servingG! * k)))}>{k} serving{k === 1 ? "" : "s"}</button>).slice(0, 4)}</div>}
+      <label className="field">Grams (exact)<input inputMode="decimal" value={grams} onChange={(e) => setGrams(e.target.value)} /></label>
+      {unitsOf(food).length > 0 && <div className="chips">{unitsOf(food).map((u) => <button key={u.name} type="button" className="pill-btn" onClick={() => setGrams(String(u.g))}>1 {u.name} = {u.g} g</button>)}</div>}
       {editing ? <>
         <h3>Values <span>per 100 g, as on the label</span></h3>
         <div className="row4">
@@ -194,7 +293,7 @@ function Portion({ food, onCancel, onDone }: { food: Food; onCancel: () => void;
       </div>
       <div className="row2">
         <button type="button" className="pill-btn" onClick={onCancel}>Back</button>
-        <button type="button" className="pill-btn pri" disabled={g <= 0 || per100.kcal < 0} onClick={save}>Log it</button>
+        <button type="button" className="pill-btn pri" disabled={g <= 0 || per100.kcal < 0} onClick={save}>Done</button>
       </div>
       {!editing && <button type="button" className="linkish" onClick={() => setEditing(true)}>Edit values</button>}
     </div>
@@ -336,7 +435,7 @@ function BodyTab({ done }: { done: (m: string) => void }) {
 
 const describe = (e: Entry, supps: Supplement[]): [string, string] => {
   switch (e.kind) {
-    case "food": return [e.name, `${Math.round(e.macros.kcal)} kcal · P ${Math.round(e.macros.p)}${e.grams ? ` · ${e.grams} g` : ""}`];
+    case "food": return [e.name, `${e.unit && e.count ? `${amountText(e.count, e.unit)} · ≈ ` : ""}${Math.round(e.macros.kcal)} kcal · P ${Math.round(e.macros.p)}${!e.unit && e.grams ? ` · ${Math.round(e.grams)} g` : ""}`];
     case "drink": return [e.name, [e.caffeineMg ? `${e.caffeineMg} mg caffeine` : "", e.alcoholG ? `${e.alcoholG} g alcohol` : "", e.kcal > 5 ? `${e.kcal} kcal` : ""].filter(Boolean).join(" · ")];
     case "supp": return [supps.find((s) => s.id === e.suppId)?.name ?? "Supplement", e.status];
     case "set": return [e.exercise, `${e.kg} kg × ${e.reps}`];

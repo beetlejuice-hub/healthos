@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
-import { act, offerUndo, useStore } from "../lib/store";
+import { act, getState, offerUndo, useStore } from "../lib/store";
 import { DRINKS } from "../lib/drinks";
 import { nowItems } from "../lib/today";
 import { notice } from "../lib/findings";
+import { FEEL_KEYS, feelChange, feelState, latestFeel, type FeelKey } from "../lib/feel";
 import { StackAlert } from "../components/StackCheck";
 import { caffeineAt } from "../lib/caffeine";
 import { caffeineDoses } from "../lib/insights";
@@ -64,6 +65,7 @@ export function Today() {
           : <>No caffeine logged today.</>}
       </p>
 
+      <WorkoutRunning now={now} />
       <StackAlert />
       <NoticedLine />
 
@@ -90,7 +92,7 @@ export function Today() {
       <Fuel totals={totals} goals={s.goals} />
       <CaffeineCard doses={doses} now={now} bed={bed} halfLife={s.settings.halfLifeMin} cafNow={cafNow} cafBed={cafBed} />
       <Stack now={now} />
-      <Feel now={now} todays={todays} />
+      <Feel now={now} />
     </div>
   );
 }
@@ -259,24 +261,38 @@ const WORDS: Record<string, string[]> = {
 };
 
 /** One rating per ~2 hours: moving a slider updates the latest rating if it's recent, otherwise starts a new one. */
-function Feel({ now, todays }: { now: number; todays: Entry[] }) {
-  const last = [...todays].reverse().find((e): e is EntryOf<"feel"> => e.kind === "feel");
-  const recent = last && now - last.at < 2 * 60 * MIN ? last : undefined;
-  const val = (k: "energy" | "mood" | "focus" | "stress") => recent?.[k] ?? (k === "stress" ? 4 : 6);
-  const set = (k: "energy" | "mood" | "focus" | "stress", v: number) => {
-    if (recent) act.updateEntry(recent.id, { [k]: v } as Partial<Entry>);
-    else act.addEntry({ kind: "feel", at: Date.now(), energy: val("energy"), mood: val("mood"), focus: val("focus"), stress: val("stress"), [k]: v });
+function Feel({ now }: { now: number }) {
+  const entries = useStore((x) => x.entries);
+  const st = feelState(entries, now);
+  // While a finger is on a slider its value lives here; it's logged when the finger lifts, so a
+  // tap on the value it already shows still counts as "logged 7" (owner: "I should at least touch it").
+  const [drag, setDrag] = useState<Partial<Record<FeelKey, number>>>({});
+  const record = (k: FeelKey, v: number) => {
+    const c = feelChange(getState().entries, Date.now(), k, v);
+    if (c.op === "update") act.updateEntry(c.id, c.patch as Partial<Entry>); else act.addEntry(c.entry);
+    setDrag((d) => ({ ...d, [k]: undefined }));
   };
+  const lastAt = latestFeel(entries)?.at;
   return (
     <div className="card" id="feel">
-      <h3>How do you feel? <span>{last ? `last rated ${clock(last.at)}` : "not rated today"}</span></h3>
-      {(["energy", "mood", "focus", "stress"] as const).map((k) => (
-        <div className="feel" key={k}>
-          <span>{k[0].toUpperCase() + k.slice(1)}</span>
-          <input type="range" min={1} max={10} value={val(k)} aria-label={k} onChange={(e) => set(k, +e.target.value)} />
-          <em>{val(k)} · {WORDS[k][Math.min(4, Math.floor((val(k) - 1) / 2))]}</em>
-        </div>
-      ))}
+      <h3>How do you feel? <span>{lastAt ? `last rated ${clock(lastAt)}` : "tap the ones you want to log"}</span></h3>
+      {FEEL_KEYS.map((k) => {
+        const unset = drag[k] == null && st[k].now == null;
+        const v = drag[k] ?? st[k].now ?? st[k].last?.v ?? 5;
+        const word = WORDS[k][Math.min(4, Math.floor((v - 1) / 2))];
+        return (
+          <div className="feel" key={k}>
+            <span>{k[0].toUpperCase() + k.slice(1)}</span>
+            <input type="range" min={1} max={10} value={v} aria-label={k} className={unset ? "unset" : ""}
+              onChange={(e) => setDrag((d) => ({ ...d, [k]: +e.target.value }))}
+              onPointerUp={(e) => record(k, +e.currentTarget.value)}
+              onTouchEnd={(e) => record(k, +e.currentTarget.value)}
+              onKeyUp={(e) => { if (/Arrow|Home|End|Page/.test(e.key)) record(k, +e.currentTarget.value); }} />
+            <em>{unset ? (st[k].last ? `was ${st[k].last!.v}` : "tap") : `${v} · ${word}`}</em>
+          </div>
+        );
+      })}
+      <p className="note">Only the ones you touch are logged — a tap on the same number logs it too.</p>
     </div>
   );
 }
@@ -300,5 +316,20 @@ function NoticedLine() {
       <span><small>Noticed</small>{top.title}.</span>
       <button type="button" aria-label="Hide this" onClick={hide}>✕</button>
     </a>
+  );
+}
+
+/** A workout left open shows here too, so it isn't only visible from the Workout tab. */
+function WorkoutRunning({ now }: { now: number }) {
+  const w = useStore((x) => x.workouts.find((v) => v.endedAt === null));
+  const entries = useStore((x) => x.entries);
+  if (!w) return null;
+  const last = entries.reduce((m, e) => (e.kind === "set" && e.workoutId === w.id ? Math.max(m, e.at) : m), 0);
+  const ends = last ? last + 60 * MIN : w.startedAt + 30 * MIN;
+  return (
+    <div className="noticed-line running">
+      <span><small>Workout running</small>{w.template} · {last ? `last set ${clock(last)}` : `started ${clock(w.startedAt)}, no sets yet`}<small className="sub">{now < ends ? `ends by itself at ${clock(ends)} if you forget` : "ending now"}</small></span>
+      <span className="acts"><button type="button" className="pill-btn" onClick={() => go("workout")}>Open</button><button type="button" className="pill-btn pri" onClick={() => (last ? act.endWorkout(w.id, Date.now() - last > 10 * MIN ? last + 2 * MIN : Date.now()) : act.tidyWorkouts(Date.now(), true))}>Finish</button></span>
+    </div>
   );
 }

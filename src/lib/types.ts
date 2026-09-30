@@ -14,6 +14,8 @@ export type Food = {
   per100: Macros;
   /** Grams in one usual serving, when known — "1 bar", "1 slice". */
   servingG?: number;
+  /** Everyday amounts to count in ("egg" = 50 g, "slice" = 35 g); the first is the default. */
+  units?: Unit[];
   /** "typical" = the median of several near-identical products (see foodgroup.ts). */
   source: "off" | "usda" | "basic" | "custom" | "typical";
   barcode?: string;
@@ -24,6 +26,8 @@ export type Food = {
   /** You changed the values; your version is what's saved and offered again. */
   edited?: boolean;
 };
+
+export type Unit = { name: string; g: number };
 
 /** A drink's active contents, per serving. Coffee, energy drinks, beer, wine. */
 export type Drink = {
@@ -61,7 +65,7 @@ export type Supplement = {
 };
 
 export type Entry =
-  | { id: string; kind: "food"; at: number; foodId?: string; name: string; grams: number; macros: Macros }
+  | { id: string; kind: "food"; at: number; foodId?: string; name: string; grams: number; macros: Macros; /** As you counted it: 2 × "egg". */ count?: number; unit?: string }
   | { id: string; kind: "drink"; at: number; drinkId?: string; name: string; ml: number; caffeineMg: number; alcoholG: number; kcal: number }
   | { id: string; kind: "supp"; at: number; suppId: string; status: "taken" | "skipped" }
   | { id: string; kind: "set"; at: number; workoutId: string; exercise: string; kg: number; reps: number }

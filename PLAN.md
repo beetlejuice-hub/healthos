@@ -154,6 +154,15 @@ email get Dev tools (`#dev`): raw entry editor, generate/remove sample, wipe acc
    sources). `check.ts`: stack + meds + drinks logged in 30 days × conditions/meds/each other.
    Badges in Log → Stack (live while typing a new one), Insights → Stack check table + "worth asking
    your doctor about", Today alert for "avoid" only. Unknown names say "not checked yet".
+   The in-app AI (later) owns keeping this knowledge current: verifying, web search, new items.
+7. [x] **Simple logging** (plan: https://claude.ai/code/artifact/e89e63f5-473f-48c3-ac7f-88310365d99e), built
+   30 Sept. Food is counted, not weighed: every everyday food has units (egg, slice, apple, bowl…),
+   `lib/units.ts`; a meal basket with − / +, ≈ totals rounded to 10, one log + one undo; "type what
+   you ate" (`lib/quickadd.ts`, EN + HU, asks "did you mean" only when calories would differ >25%);
+   "Save as a meal" → counted in pieces ("3 Arnold's special"). Feelings log only the sliders you
+   touch (`lib/feel.ts`). Workouts end 60 min after the last set, dated to it; empty ones drop after
+   30 min; Today shows a running workout (`tidyWorkouts` in lib/training.ts).
+8. [ ] **Mind:** 3-minute reaction test (PVT-B) + Noticed detectors — recommended next.
    Owner's answers (30 Sept): evening feel card on Today ✓ (+ a reminder notification — needs web
    push, not built); real burn only *suggests* goal changes; not tracking closely yet, so 1–2 bad
    days must not corrupt anything (typo weigh-ins and partial days are dropped ✓); 75% / one line /

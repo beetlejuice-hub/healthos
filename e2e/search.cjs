@@ -36,15 +36,18 @@ const HITS = [
   check('product photos load', await pg.locator('.sublist img').count() === 4);
   await pg.screenshot({ path: out + 's-open.png', fullPage: true });
 
-  // Pick the typical row, correct the values, log.
+  // Pick the typical row: it lands in the meal; open it to correct the values and weigh it.
   await rows.first().locator('span').first().click();
-  check('portion shows typical source', await pg.getByText('typical of 8').count() >= 1);
+  check('typical spaghetti lands in the meal', /Spagetti/.test(await pg.locator('.basket').innerText()));
+  await pg.locator('.bname').first().click();
+  check('detail shows typical source', await pg.getByText('typical of 8').count() >= 1);
   await pg.getByRole('button', { name: 'Edit values' }).click();
   await pg.getByLabel('kcal', { exact: true }).fill('350'); await pg.getByLabel('Protein', { exact: true }).fill('12');
-  await pg.fill('input[inputmode=decimal] >> nth=0', '200');
+  await pg.getByLabel('Grams (exact)').fill('200');
   check('totals use edited values', /700\s*kcal/.test(await pg.locator('.row4.num').innerText()));
   await pg.screenshot({ path: out + 's-edit.png', fullPage: true });
-  await pg.getByRole('button', { name: 'Log it' }).click(); await pg.waitForTimeout(200);
+  await pg.getByRole('button', { name: 'Done' }).click();
+  await pg.locator('.basket').getByRole('button', { name: 'Log it' }).click(); await pg.waitForTimeout(200);
   check('logged with edited kcal', /700 kcal/.test(await pg.locator('text=Logged today').locator('..').innerText()));
   await pg.fill('input[type=search]', 'spag'); await pg.waitForTimeout(300);
   check('your corrected version comes back first', /your values · 350 kcal/.test(await pg.locator('h3:has-text("Your foods") + .list').innerText()));

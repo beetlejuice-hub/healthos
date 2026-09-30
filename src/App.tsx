@@ -9,6 +9,7 @@ import { Dev } from "./screens/Dev";
 import { Auth, NewPassword } from "./components/Auth";
 import { useAuth } from "./lib/session";
 import { UndoToast } from "./components/UndoToast";
+import { act } from "./lib/store";
 
 /**
  * Four screens, one job each (owner, 29 Sept): Today = what needs you now; Log = add things;
@@ -23,6 +24,15 @@ export function App() {
     window.addEventListener("hashchange", on);
     return () => window.removeEventListener("hashchange", on);
   }, []);
+
+  // Forgotten workouts close themselves: on open, when the app comes back, and every few minutes.
+  useEffect(() => {
+    const tidy = () => act.tidyWorkouts();
+    tidy();
+    const t = setInterval(tidy, 5 * 60_000);
+    document.addEventListener("visibilitychange", tidy);
+    return () => { clearInterval(t); document.removeEventListener("visibilitychange", tidy); };
+  }, [auth.session?.user.id]);
 
   if (!auth.ready) return <div className="app r-today" />;
   if (auth.recovering) return <div className="app r-today"><NewPassword done={auth.doneRecovering} /></div>;

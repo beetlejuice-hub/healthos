@@ -70,3 +70,26 @@ export function setsPerMuscle(sets: { exercise: string }[]): Record<string, numb
 }
 
 export const volume = (sets: { kg: number; reps: number }[]) => sets.reduce((a, s) => a + s.kg * s.reps, 0);
+
+/**
+ * Workouts that end themselves (owner: "sessions could easily get forgotten to end"). An open
+ * workout with no set for an hour ends at its last set (+2 min), so its duration stays true; one
+ * that never got a set is dropped after 30 minutes. `force` closes every open one now (starting a
+ * new workout closes the old one the same way).
+ */
+export const AUTO_END = { afterLastSetMin: 60, emptyAfterMin: 30, coolDownMin: 2 };
+export type Tidy = { end: { id: string; at: number }[]; drop: string[] };
+
+export function tidyWorkouts(workouts: { id: string; startedAt: number; endedAt: number | null }[], sets: { workoutId: string; at: number }[], now: number, force = false): Tidy {
+  const out: Tidy = { end: [], drop: [] };
+  const open = workouts.filter((w) => w.endedAt === null).sort((a, b) => a.startedAt - b.startedAt);
+  open.forEach((w, i) => {
+    const newest = i === open.length - 1;
+    const last = sets.filter((s) => s.workoutId === w.id).reduce((m, s) => Math.max(m, s.at), -Infinity);
+    const closeAll = force || !newest; // only one workout can be open
+    if (Number.isFinite(last)) {
+      if (closeAll || now - last > AUTO_END.afterLastSetMin * 60_000) out.end.push({ id: w.id, at: Math.min(now, last + AUTO_END.coolDownMin * 60_000) });
+    } else if (closeAll || now - w.startedAt > AUTO_END.emptyAfterMin * 60_000) out.drop.push(w.id);
+  });
+  return out;
+}

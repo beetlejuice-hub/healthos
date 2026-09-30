@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { e1rm, e1rmHistory, setsPerMuscle, suggestNext, volume } from "./training";
+import { tidyWorkouts, e1rm, e1rmHistory, setsPerMuscle, suggestNext, volume } from "./training";
 
 describe("e1rm — Epley", () => {
   it("estimates a one-rep max", () => {
@@ -54,5 +54,27 @@ describe("setsPerMuscle and volume", () => {
 
   it("sums kg × reps", () => {
     expect(volume([{ kg: 80, reps: 6 }, { kg: 70, reps: 8 }])).toBe(1040);
+  });
+});
+
+describe("workouts that end themselves", () => {
+  const T = 1_800_000_000_000, M = 60_000;
+  const w = (id: string, start: number, endedAt: number | null = null) => ({ id, startedAt: start, endedAt });
+  it("ends an hour after the last set, dated to the last set + 2 min", () => {
+    const sets = [{ workoutId: "a", at: T + 10 * M }, { workoutId: "a", at: T + 55 * M }];
+    expect(tidyWorkouts([w("a", T)], sets, T + 110 * M)).toEqual({ end: [], drop: [] });
+    expect(tidyWorkouts([w("a", T)], sets, T + 116 * M)).toEqual({ end: [{ id: "a", at: T + 57 * M }], drop: [] });
+  });
+  it("drops a workout that never got a set", () => {
+    expect(tidyWorkouts([w("a", T)], [], T + 20 * M).drop).toEqual([]);
+    expect(tidyWorkouts([w("a", T)], [], T + 31 * M).drop).toEqual(["a"]);
+  });
+  it("starting a new one closes the old one the same way", () => {
+    const r = tidyWorkouts([w("a", T), w("b", T + 5 * M)], [{ workoutId: "a", at: T + 3 * M }], T + 6 * M);
+    expect(r).toEqual({ end: [{ id: "a", at: T + 5 * M }], drop: [] });
+    expect(tidyWorkouts([w("a", T)], [], T + M, true).drop).toEqual(["a"]);
+  });
+  it("leaves finished workouts alone", () => {
+    expect(tidyWorkouts([w("a", T, T + 60 * M)], [], T + 500 * M)).toEqual({ end: [], drop: [] });
   });
 });

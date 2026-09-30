@@ -55,8 +55,8 @@ const { chromium, APP, OUT, handle } = require('./harness.cjs');
   check('everyday foods answer in Hungarian', await pg.getByText('Chicken breast, cooked').count() === 1);
   await pg.fill('input[type=search]', 'zabpehely'); await pg.waitForTimeout(900);
   check('database results appear', await pg.getByText('Zabpehely Brand').count() === 1);
-  await pg.getByText('Oats (zabpehely)').click(); await pg.getByRole('button', { name: 'Log it' }).click(); await pg.waitForTimeout(200);
-  check('logged food offers undo', await pg.getByRole('status').filter({ hasText: 'Logged Oats' }).count() === 1);
+  await pg.getByText('Oats (zabpehely)').click(); await pg.locator('.basket').getByRole('button', { name: 'Log it' }).click(); await pg.waitForTimeout(200);
+  check('logged food offers undo', await pg.getByRole('status').filter({ hasText: /Logged 1 bowl Oats/ }).count() === 1);
   await pg.screenshot({ path: out + 'f-log.png', fullPage: true });
 
   // Settings: no caffeine target / half-life / usual mg fields; planned bedtime is there.
