@@ -317,3 +317,12 @@ a { color: inherit; }
 .alts .pill-btn { padding: 5px 10px; font-size: 12px; }
 .row-log { display: grid; grid-template-columns: 1fr auto; gap: 10px; align-items: end; }
 .save-meal { display: grid; gap: 8px; }
+.cmp { display: grid; gap: 6px; }
+.cmp-row { display: grid; grid-template-columns: 60px 1fr 36px 52px; gap: 8px; align-items: center; font-size: 12px; color: var(--i-ink-2); }
+.cmp-row b { font-family: var(--f-mono); color: var(--i-ink); text-align: right; font-weight: 500; }
+.cmp-row small { font-family: var(--f-mono); color: var(--i-dim); font-size: 11px; }
+.cmp-bar { height: 8px; background: var(--i-line); border-radius: 4px; overflow: hidden; }
+.cmp-bar i { display: block; height: 100%; background: var(--i-ink); }
+.cmp-bar i.off { background: var(--i-ink-2); opacity: .55; }
+.checking.none summary { cursor: pointer; font-size: 12px; font-weight: 600; color: var(--i-ink-2); }
+.checking.none summary span { font-family: var(--f-mono); color: var(--i-dim); margin-left: 6px; }

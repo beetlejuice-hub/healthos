@@ -7,10 +7,14 @@
  *  - numbers come from here (tested), never from AI.
  */
 
-import type { Entry, Goals } from "./types";
+import type { Entry, Goals, Supplement, Workout } from "./types";
 import { bodyDays, realBurn, weightTrend, BURN_MIN, KCAL_PER_KG, TREND_MIN, type BodyDay } from "./tdee";
 import { addDays, localDay } from "./time";
 import { caffeineFindings } from "./detectors/caffeine";
+import { effectFindings } from "./detectors/effects";
+import { baseline, proteinPerKg, strengthTrends } from "./detectors/more";
+import { dailyFacts } from "./insights";
+import type { Settings } from "./store";
 
 export type Area = "body" | "food" | "caffeine" | "stack" | "training";
 
@@ -29,11 +33,18 @@ export type Finding = {
   sure: string;
   /** Ranking: higher shows first. */
   weight: number;
-  chart?: { kind: "trend"; pts: [number, number][]; fit: [[number, number], [number, number]]; unit: string; firstDay: string };
+  /** Effect cards: every question × outcome this one card answers. */
+  covers?: string[];
+  chart?:
+    | { kind: "trend"; pts: [number, number][]; fit: [[number, number], [number, number]]; unit: string; firstDay: string; /** Days on the x axis (default: the 28-day window). */ days?: number }
+    | { kind: "compare"; labels: [string, string]; values: [number, number]; ns: [number, number]; unit: string };
 };
 
+/** A question answered "no": enough data, and any effect is too small to matter. */
+export type Quiet = { id: string; text: string };
+
 export type Checking = { id: string; area: Area; question: string; progress: number; missing: string };
-export type Report = { found: Finding[]; checking: Checking[] };
+export type Report = { found: Finding[]; checking: Checking[]; none: Quiet[] };
 
 const f0 = (v: number) => Math.round(v).toLocaleString("en-GB");
 const kgwk = (v: number) => `${v >= 0 ? "+" : "−"}${Math.abs(v).toFixed(2)}`;
@@ -42,7 +53,7 @@ const kgwk = (v: number) => `${v >= 0 ? "+" : "−"}${Math.abs(v).toFixed(2)}`;
 const TREND_WORTH = 0.15, STEADY_BAND = 0.25;
 
 /** Weight trend and real burn, from the last 28 days. */
-export function bodyFindings(days: BodyDay[], goals: Goals): Report {
+export function bodyFindings(days: BodyDay[], goals: Goals): Omit<Report, "none"> {
   const found: Finding[] = [], checking: Checking[] = [];
   const trend = weightTrend(days);
   const weighIns = days.filter((d) => d.kg != null).length;
@@ -108,16 +119,31 @@ export function bodyFindings(days: BodyDay[], goals: Goals): Report {
 
 export const WINDOW_DAYS = 28;
 
-/** Everything Noticed has to say today. Today's food is left out (the day isn't over). */
-export function notice(entries: Entry[], goals: Goals, now: number, bodyKg = 78): Report {
+/** What the effect engine and the other detectors need besides your entries. */
+export type NoticeContext = { workouts: Workout[]; supplements: Supplement[]; settings: Settings };
+
+/** Everything Noticed has to say today. Today is left out of food and feelings (the day isn't over). */
+export function notice(entries: Entry[], goals: Goals, now: number, bodyKg = 78, ctx?: NoticeContext): Report {
   const today = localDay(now);
   const days = bodyDays(entries, addDays(today, -(WINDOW_DAYS - 1)), today);
   days[days.length - 1] = { ...days[days.length - 1], kcal: null };
   // Your trend weight when there is one, else the weight in Settings.
   const kg = weightTrend(days)?.nowKg ?? bodyKg;
-  const parts = [bodyFindings(days, goals), caffeineFindings(entries, today, kg, WINDOW_DAYS)];
+  const parts: Omit<Report, "none">[] = [bodyFindings(days, goals), caffeineFindings(entries, today, kg, WINDOW_DAYS)];
+  let none: Quiet[] = [];
+  if (ctx) {
+    const facts = dailyFacts(entries, ctx.workouts, ctx.settings, addDays(today, -EFFECT_DAYS), addDays(today, -1));
+    const fx = effectFindings(facts, ctx.supplements);
+    const b = baseline(facts), pr = proteinPerKg(facts, kg);
+    parts.push({ found: [...(b ? [b] : []), ...(pr ? [pr] : []), ...strengthTrends(entries, now), ...fx.found], checking: fx.checking });
+    none = fx.none;
+  }
   return {
     found: parts.flatMap((p) => p.found).sort((a, b) => b.weight - a.weight),
     checking: parts.flatMap((p) => p.checking).sort((a, b) => b.progress - a.progress),
+    none,
   };
 }
+
+/** How far back the effect engine looks: long enough for "off" days, short enough to be you now. */
+export const EFFECT_DAYS = 90;

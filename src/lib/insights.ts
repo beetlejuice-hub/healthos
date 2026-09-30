@@ -80,7 +80,20 @@ export type DayFacts = {
   focus: number | null;
   stress: number | null;
   taken: Set<string>;
+  /** Anything eaten or drunk was logged that day — so "no caffeine" means none, not unknown. */
+  logged: boolean;
+  /** At least one supplement was ticked or skipped — so an unticked one was really not taken. */
+  stackAnswered: boolean;
+  lateCaffeineMg: number;
+  /** Food logged at or after 21:00. */
+  lateEat: boolean;
+  /** kg × reps summed over the day's sets. */
+  volumeKg: number;
+  weekend: boolean;
 };
+
+/** Caffeine at or after this minute counts as "late". */
+export const LATE_CAFFEINE_MIN = 14 * 60;
 
 /** One row per day from `fromDay` to `toDay` inclusive. Days with no food logged get `kcal: null`. */
 export function dailyFacts(entries: Entry[], workouts: Workout[], settings: Settings, fromDay: string, toDay: string): DayFacts[] {
@@ -109,6 +122,12 @@ export function dailyFacts(entries: Entry[], workouts: Workout[], settings: Sett
       proteinG: foods.length ? foods.reduce((a, f) => a + f.macros.p, 0) : null,
       energy: avg("energy"), mood: avg("mood"), focus: avg("focus"), stress: avg("stress"),
       taken: new Set(of(es, "supp").filter((s) => s.status === "taken").map((s) => s.suppId)),
+      logged: foods.length > 0 || of(es, "drink").length > 0,
+      stackAnswered: of(es, "supp").length > 0,
+      lateCaffeineMg: caf.filter((d) => minuteOfDay(d.at) >= LATE_CAFFEINE_MIN).reduce((a, d) => a + d.caffeineMg, 0),
+      lateEat: foods.some((f) => minuteOfDay(f.at) >= 21 * 60),
+      volumeKg: of(es, "set").reduce((a, x) => a + x.kg * x.reps, 0),
+      weekend: [0, 6].includes(new Date(atMinute(day, 12 * 60)).getDay()),
     });
   }
   return out;

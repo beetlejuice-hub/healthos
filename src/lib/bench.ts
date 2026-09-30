@@ -5,6 +5,7 @@
  */
 
 import type { Entry } from "./types";
+import type { DayFacts } from "./insights";
 import { addDays, atMinute } from "./time";
 
 export function rng(seed: number) {
@@ -42,6 +43,52 @@ export function bodyWorld(w: BodyWorld): Entry[] {
       out.push({ id: `b:f${i}`, kind: "food", at: atMinute(day, 13 * 60), name: "Day's food", grams: 100, macros: { kcal: logged, p: logged * 0.05, c: logged * 0.12, f: logged * 0.035 } });
     }
     kg += (eaten - w.tdee) / 7700; // weighed in the morning, before that day's food counts
+  }
+  return out;
+}
+
+
+export type FeelWorld = {
+  seed: number; days?: number;
+  /** Share of evenings rated. */
+  rateRate?: number;
+  /** Planted effects (points on the 1–10 scale). */
+  lateCafEnergy?: number; alcoholMood?: number; weekendMood?: number; gymKcal?: number;
+  /** Mood rising by this much over the whole period. */
+  drift?: number;
+  /** Saffron taken only from this day on (else ~70% of days at random). */
+  saffronFrom?: number;
+  /** Drinks only on Friday and Saturday evenings. */
+  weekendDrinking?: boolean;
+};
+
+/** A day table for a fake person with known effects — the effect engine's test bench. Day 0 is a Monday. */
+export function feelWorld(w: FeelWorld): DayFacts[] {
+  const { r, g } = rng(w.seed);
+  const n = w.days ?? 60, out: DayFacts[] = [];
+  let prev: DayFacts | null = null, eA = 0, mA = 0;
+  for (let i = 0; i < n; i++) {
+    const dow = i % 7, weekend = dow >= 5;
+    const late = r() < 0.4 ? 80 + Math.round(r() * 80) : 0;
+    const alc = w.weekendDrinking ? ((dow === 4 || dow === 5) && r() < 0.8 ? 42 : 0) : r() < 0.2 ? 42 : 0;
+    const trained = [0, 2, 4].includes(dow) && r() < 0.9;
+    const kcal = r() < 0.9 ? Math.round(2500 + g() * 300 + (trained ? w.gymKcal ?? 0 : 0)) : null;
+    const saffron = w.saffronFrom != null ? i >= w.saffronFrom : r() < 0.7;
+    // Feelings: a person-level wobble (yesterday carries over) + planted effects of yesterday.
+    eA = 0.4 * eA + g(); mA = 0.4 * mA + g();
+    let energy = 6 + eA, mood = 6.2 + mA + (weekend ? w.weekendMood ?? 0 : 0) + (w.drift ?? 0) * (i / n);
+    if (prev && prev.lateCaffeineMg > 0) energy += w.lateCafEnergy ?? 0;
+    if (prev && prev.alcoholG >= 28) mood += w.alcoholMood ?? 0;
+    const rated = r() < (w.rateRate ?? 0.85);
+    const clamp = (v: number) => Math.max(1, Math.min(10, Math.round(v)));
+    const day: DayFacts = {
+      day: `d${i}`, caffeineMg: 190 + late, lastCaffeineMin: late ? 15 * 60 : 9 * 60, caffeineAtBed: late * 0.5 + 20, alcoholG: alc, alcoholAtBed: alc ? 10 : 0,
+      trained, kcal, proteinG: kcal == null ? null : Math.round(130 + g() * 25),
+      energy: rated ? clamp(energy) : null, mood: rated ? clamp(mood) : null, focus: rated ? clamp(6 + g()) : null, stress: rated ? clamp(4 + g()) : null,
+      taken: new Set(saffron ? ["saffron", "creatine"] : ["creatine"]), logged: true, stackAnswered: r() < 0.9, lateCaffeineMg: late,
+      lateEat: r() < 0.3, volumeKg: trained ? 8000 + Math.round(g() * 1500) : 0, weekend,
+    };
+    out.push(day); prev = day;
   }
   return out;
 }

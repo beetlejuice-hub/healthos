@@ -305,8 +305,11 @@ function NoticedLine() {
   const now = useNow(10 * 60_000);
   const entries = useStore((x) => x.entries);
   const goals = useStore((x) => x.goals);
-  const bodyKg = useStore((x) => x.settings.bodyKg);
-  const top = useMemo(() => notice(entries, goals, now, bodyKg).found[0], [entries, goals, now, bodyKg]);
+  const settings = useStore((x) => x.settings);
+  const workouts = useStore((x) => x.workouts);
+  const supplements = useStore((x) => x.supplements);
+  // Today shows one line: the strongest finding that isn't just a description of you.
+  const top = useMemo(() => notice(entries, goals, now, settings.bodyKg, { workouts, supplements, settings }).found.find((f) => f.id !== "baseline"), [entries, goals, now, settings, workouts, supplements]);
   const key = top ? `${top.id}:${top.value}` : "";
   const [hidden, setHidden] = useState(() => { try { return localStorage.getItem("healthos.noticed.hidden") ?? ""; } catch { return ""; } });
   if (!top || hidden === key) return null;

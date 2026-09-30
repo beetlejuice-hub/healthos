@@ -162,7 +162,17 @@ email get Dev tools (`#dev`): raw entry editor, generate/remove sample, wipe acc
    "Save as a meal" → counted in pieces ("3 Arnold's special"). Feelings log only the sliders you
    touch (`lib/feel.ts`). Workouts end 60 min after the last set, dated to it; empty ones drop after
    30 min; Today shows a running workout (`tidyWorkouts` in lib/training.ts).
-8. [ ] **Mind:** 3-minute reaction test (PVT-B) + Noticed detectors — recommended next.
+8. [x] **Noticed phase 2** (plan: https://claude.ai/code/artifact/0ecb4b53-51c6-44dd-86cb-24db258920f0), built
+   30 Sept. `lib/detectors/effects.ts`: ~60 questions (late caffeine, caffeine at bedtime, alcohol,
+   each supplement, gym, volume, late eating, protein, calories vs usual × energy/mood/focus/stress;
+   gym/weekend × calories), each an OLS with weekend + yesterday + drift (`lib/regress.ts`), BH 10%
+   across all, split-half replication, min effect 0.5 pt / 150 kcal; answers found / no effect /
+   still checking (supplements taken daily → "N days without it"). One card per cause. Also
+   baseline, strength trend per lift, protein g/kg vs 1.6 (Morton 2018). Bench (`feelWorld`): a
+   1-point effect found in 83% of fake people by 90 days (62% by 60), false alarms ≤10%, not fooled
+   by weekends or drift. Reaction test: owner said no.
+   AI food (later): unreadable text → ask AI once → saved as your food → free next time.
+9. [ ] **Workouts: your own split** — template editor etc. (claimed 30 Sept, Claude).
    Owner's answers (30 Sept): evening feel card on Today ✓ (+ a reminder notification — needs web
    push, not built); real burn only *suggests* goal changes; not tracking closely yet, so 1–2 bad
    days must not corrupt anything (typo weigh-ins and partial days are dropped ✓); 75% / one line /

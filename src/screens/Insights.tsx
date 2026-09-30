@@ -24,7 +24,7 @@ export function Insights() {
   const data = useMemo(() => lanes(s.entries, s.workouts, s.supplements, s.settings, now), [s.entries, s.workouts, s.supplements, s.settings, now]);
   const facts = useMemo(() => dailyFacts(s.entries, s.workouts, s.settings, addDays(today, -89), today), [s.entries, s.workouts, s.settings, today]);
   const sample = s.entries.some((e) => e.id.startsWith("sample:"));
-  const report = useMemo(() => notice(s.entries, s.goals, now, s.settings.bodyKg), [s.entries, s.goals, now, s.settings.bodyKg]);
+  const report = useMemo(() => notice(s.entries, s.goals, now, s.settings.bodyKg, { workouts: s.workouts, supplements: s.supplements, settings: s.settings }), [s.entries, s.goals, now, s.settings, s.workouts, s.supplements]);
   // Show a section only once there's something in it; list the rest in one line each, so a new
   // account sees a short page instead of ten empty panels (owner: "looks really complex").
   const has = useMemo(() => {
@@ -62,7 +62,7 @@ export function Insights() {
         {sample && <span className="badge">INCLUDES SAMPLE DATA · remove it in Settings</span>}
       </header>
       {nothing && <div className="needs">Nothing logged yet. Log food, drinks and supplements for a few days and this fills in — or load sample data in Settings to see what it will look like.</div>}
-      {!nothing && <Noticed report={report} today={today} />}
+      {!nothing && <Noticed report={report} />}
       {!nothing && <Kpis facts={facts} today={today} now={now} />}
       {!nothing && <MasterGraph data={data} supplements={s.supplements} />}
       <div className="pgrid">
@@ -88,12 +88,11 @@ export function Insights() {
 /* ------------------------------------------------------------------ Noticed */
 
 /** What the findings engine has to say: cards with their evidence, then what it's still checking. */
-function Noticed({ report, today }: { report: Report; today: string }) {
-  if (!report.found.length && !report.checking.length) return null;
-  const first = addDays(today, -(WINDOW_DAYS - 1));
+function Noticed({ report }: { report: Report }) {
+  if (!report.found.length && !report.checking.length && !report.none.length) return null;
   return (
     <section className="noticed" id="noticed" aria-label="Noticed">
-      <h2>Noticed <span>from your last {WINDOW_DAYS} days · numbers computed, never guessed</span></h2>
+      <h2>Noticed <span>computed from your own days · compared fairly · silent until sure</span></h2>
       {report.found.length > 0 && <div className="ncards">
         {report.found.map((f) => (
           <article className="ncard" key={f.id} id={`n-${f.id}`}>
@@ -101,13 +100,15 @@ function Noticed({ report, today }: { report: Report; today: string }) {
             <h3>{f.title}</h3>
             <div className="v">{f.value}<small>{f.unit}</small></div>
             <p>{f.detail}</p>
-            {f.chart && (() => {
-              const ys = f.chart.pts.map((p) => p[1]);
+            {f.chart?.kind === "trend" && (() => {
+              const c = f.chart, days = c.days ?? WINDOW_DAYS;
+              const ys = c.pts.map((p) => p[1]);
               const lo = Math.floor(Math.min(...ys) - 0.3), hi = Math.ceil(Math.max(...ys) + 0.3);
-              return <LineChart label={f.title} h={120} lo={lo} hi={hi} xs={[0, WINDOW_DAYS - 1]} yfmt={(v) => v.toFixed(1)}
-                xlabels={[[0, first.slice(5)], [WINDOW_DAYS - 1, "today"]]}
-                series={[{ pts: f.chart.pts, color: "var(--wt)", dots: true, line: false, dotOpacity: 0.8 }, { pts: f.chart.fit, color: "var(--i-ink)", width: 1.5, end: true }]} />;
+              return <LineChart label={f.title} h={120} lo={lo} hi={hi} xs={[0, days - 1]} yfmt={(v) => v.toFixed(1)}
+                xlabels={[[0, c.firstDay.slice(5)], [days - 1, "today"]]}
+                series={[{ pts: c.pts, color: "var(--wt)", dots: true, line: false, dotOpacity: 0.8 }, { pts: c.fit, color: "var(--i-ink)", width: 1.5, end: true }]} />;
             })()}
+            {f.chart?.kind === "compare" && <CompareBars c={f.chart} />}
             <p className="ev">{f.evidence}</p>
           </article>
         ))}
@@ -121,7 +122,28 @@ function Noticed({ report, today }: { report: Report; today: string }) {
           </div>
         ))}
       </div>}
+      {report.none.length > 0 && <details className="checking none">
+        <summary>Checked — no effect <span>{report.none.length}</span></summary>
+        <ul className="notes">{report.none.map((q) => <li key={q.id}>{q.text}</li>)}</ul>
+      </details>}
     </section>
+  );
+}
+
+/** Two averages side by side: days with the thing vs without, on the outcome's own scale. */
+function CompareBars({ c }: { c: Extract<NonNullable<Report["found"][number]["chart"]>, { kind: "compare" }> }) {
+  const max = c.unit === "points" ? 10 : Math.max(...c.values) * 1.1;
+  const fmt = (v: number) => (c.unit === "points" ? v.toFixed(1) : Math.round(v).toLocaleString("en-GB"));
+  return (
+    <div className="cmp" role="img" aria-label={`${c.labels[0]} ${fmt(c.values[0])}, ${c.labels[1]} ${fmt(c.values[1])}`}>
+      {c.values.map((v, i) => (
+        <div className="cmp-row" key={i}>
+          <span>{c.labels[i]}</span>
+          <span className="cmp-bar"><i className={i ? "off" : "on"} style={{ width: `${Math.max(2, (v / max) * 100)}%` }} /></span>
+          <b>{fmt(v)}</b><small>{c.ns[i]} days</small>
+        </div>
+      ))}
+    </div>
   );
 }
 
