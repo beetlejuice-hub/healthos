@@ -10,7 +10,8 @@
     "test": "vitest run",
     "typecheck": "tsc -b",
     "preview": "bun run build && wrangler dev",
-    "deploy": "bun run build && wrangler deploy"
+    "deploy": "bun run build && wrangler deploy",
+    "e2e": "e2e/run.sh"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.116.0",
