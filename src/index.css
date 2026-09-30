@@ -106,6 +106,15 @@ a { color: inherit; }
 .li .r { font-variant-numeric: tabular-nums; color: var(--c-ink-2); font-size: 13px; text-align: right; }
 .li button.x { background: none; border: 0; color: var(--c-dim); font-size: 18px; padding: 4px 8px; }
 .li.tap { cursor: pointer; }
+.li.food { grid-template-columns: 40px 1fr auto; }
+.li small.warn { color: var(--warn); }
+.thumb { width: 40px; height: 40px; border-radius: 9px; background: #ffffff0c; display: grid; place-items: center; overflow: hidden; font-size: 11px; color: var(--c-dim); font-variant-numeric: tabular-nums; }
+.thumb img { width: 100%; height: 100%; object-fit: contain; background: #fff; }
+.li button.more { background: var(--c-card-2); border: 0; border-radius: 999px; color: var(--c-ink-2); font-size: 12px; padding: 6px 10px; white-space: nowrap; }
+.sublist { margin: 0 0 6px 20px; padding-left: 10px; border-left: 2px solid #ffffff12; }
+.portion-head { display: flex; gap: 10px; align-items: center; }
+.portion-head .thumb { width: 52px; height: 52px; flex: none; }
+.linkish { background: none; border: 0; color: var(--c-dim); font-size: 13px; text-decoration: underline; padding: 4px 0; justify-self: start; }
 .li.tap:hover { background: #ffffff06; }
 .drinks { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 8px; }
 .drinks button { background: var(--c-card-2); border: 0; border-radius: 14px; padding: 10px 12px; text-align: left; display: grid; gap: 2px; }

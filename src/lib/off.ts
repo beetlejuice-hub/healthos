@@ -14,6 +14,8 @@ type OffProduct = {
   /** A comma-separated string from the classic API, an array from the newer search. */
   brands?: string | string[];
   serving_quantity?: number | string;
+  image_front_small_url?: string;
+  image_small_url?: string;
   nutriments?: Record<string, number | string | undefined>;
 };
 
@@ -30,6 +32,7 @@ export function fromOff(p: OffProduct): Food | null {
   if (kcal === null) { const kj = num(n["energy_100g"]); if (kj !== null) kcal = kj / 4.184; }
   if (!name || kcal === null) return null;
   const serving = num(p.serving_quantity);
+  const img = p.image_front_small_url || p.image_small_url;
   return {
     id: `off:${p.code ?? name}`,
     name,
@@ -38,10 +41,11 @@ export function fromOff(p: OffProduct): Food | null {
     servingG: serving && serving > 0 ? serving : undefined,
     source: "off",
     barcode: p.code,
+    img: img && /^https:\/\/[a-z0-9.-]*openfoodfacts\.(org|net)\//.test(img) ? img : undefined,
   };
 }
 
-const FIELDS = "code,product_name,product_name_en,product_name_hu,brands,serving_quantity,nutriments";
+export const OFF_FIELDS = "code,product_name,product_name_en,product_name_hu,brands,serving_quantity,image_front_small_url,image_small_url,nutriments";
 
 /**
  * Search Open Food Facts. Tries their newer search service first (fast, relevance-ranked), and
@@ -53,7 +57,7 @@ export async function searchOff(query: string, signal?: AbortSignal): Promise<Fo
   if (q.length < 2) return [];
   const map = (list: OffProduct[] | undefined) => (list ?? []).map(fromOff).filter((f): f is Food => f !== null);
   try {
-    const res = await fetch(`https://search.openfoodfacts.org/search?q=${encodeURIComponent(q)}&page_size=25&fields=${FIELDS}`, { signal });
+    const res = await fetch(`https://search.openfoodfacts.org/search?q=${encodeURIComponent(q)}&page_size=40&fields=${OFF_FIELDS}`, { signal });
     if (res.ok) {
       const found = map(((await res.json()) as { hits?: OffProduct[] }).hits);
       if (found.length) return found;
@@ -61,7 +65,7 @@ export async function searchOff(query: string, signal?: AbortSignal): Promise<Fo
   } catch (e) {
     if ((e as Error).name === "AbortError") throw e;
   }
-  const res = await fetch(`https://world.openfoodfacts.org/cgi/search.pl?search_terms=${encodeURIComponent(q)}&search_simple=1&action=process&json=1&page_size=25&fields=${FIELDS}`, { signal });
+  const res = await fetch(`https://world.openfoodfacts.org/cgi/search.pl?search_terms=${encodeURIComponent(q)}&search_simple=1&action=process&json=1&page_size=40&fields=${OFF_FIELDS}`, { signal });
   if (!res.ok) throw new Error(`Open Food Facts answered ${res.status}`);
   return map(((await res.json()) as { products?: OffProduct[] }).products);
 }

@@ -14,8 +14,15 @@ export type Food = {
   per100: Macros;
   /** Grams in one usual serving, when known — "1 bar", "1 slice". */
   servingG?: number;
-  source: "off" | "usda" | "basic" | "custom";
+  /** "typical" = the median of several near-identical products (see foodgroup.ts). */
+  source: "off" | "usda" | "basic" | "custom" | "typical";
   barcode?: string;
+  /** Small product photo (Open Food Facts), https only. */
+  img?: string;
+  /** For a typical food: how many products it's the median of. */
+  basis?: number;
+  /** You changed the values; your version is what's saved and offered again. */
+  edited?: boolean;
 };
 
 /** A drink's active contents, per serving. Coffee, energy drinks, beer, wine. */

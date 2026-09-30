@@ -8,7 +8,7 @@
  */
 
 import type { Food } from "./types";
-import { fromOff } from "./off";
+import { fromOff, OFF_FIELDS } from "./off";
 
 type UsdaNutrient = { nutrientId?: number; nutrientNumber?: string; value?: number };
 export type UsdaFood = { fdcId: number; description?: string; dataType?: string; brandOwner?: string; foodNutrients?: UsdaNutrient[] };
@@ -39,7 +39,7 @@ export function fromUsda(f: UsdaFood): Food | null {
  * Merge both lists: plain USDA foods first when the query looks generic, branded products first
  * otherwise; duplicates by name dropped. Capped so the list stays scannable on a phone.
  */
-export function mergeFoods(off: Food[], usda: Food[], query: string, limit = 30): Food[] {
+export function mergeFoods(off: Food[], usda: Food[], query: string, limit = 60): Food[] {
   const words = query.trim().toLowerCase().split(/\s+/).filter(Boolean);
   const genericFirst = words.length <= 3 && !/\d/.test(query);
   const seen = new Set<string>();
@@ -56,18 +56,16 @@ export function mergeFoods(off: Food[], usda: Food[], query: string, limit = 30)
 
 export type SearchResult = { foods: Food[]; sources: { off: "ok" | "error"; usda: "ok" | "error" | "off" } };
 
-const OFF_FIELDS = "code,product_name,product_name_en,product_name_hu,brands,serving_quantity,nutriments";
-
 /** The server-side search. `fetcher` is injectable for tests. */
 export async function searchAll(query: string, usdaKey: string | undefined, fetcher: typeof fetch = fetch): Promise<SearchResult> {
   const q = encodeURIComponent(query.trim());
   const offP = (async () => {
     const map = (list: unknown[] | undefined) => (list ?? []).map((p) => fromOff(p as never)).filter((f): f is Food => f !== null);
     try {
-      const r = await fetcher(`https://search.openfoodfacts.org/search?q=${q}&page_size=25&fields=${OFF_FIELDS}`, { headers: { "User-Agent": "HealthOS/1.0 (personal app)" } });
+      const r = await fetcher(`https://search.openfoodfacts.org/search?q=${q}&page_size=40&fields=${OFF_FIELDS}`, { headers: { "User-Agent": "HealthOS/1.0 (personal app)" } });
       if (r.ok) { const found = map(((await r.json()) as { hits?: unknown[] }).hits); if (found.length) return found; }
     } catch { /* try the classic endpoint */ }
-    const r = await fetcher(`https://world.openfoodfacts.org/cgi/search.pl?search_terms=${q}&search_simple=1&action=process&json=1&page_size=25&fields=${OFF_FIELDS}`, { headers: { "User-Agent": "HealthOS/1.0 (personal app)" } });
+    const r = await fetcher(`https://world.openfoodfacts.org/cgi/search.pl?search_terms=${q}&search_simple=1&action=process&json=1&page_size=40&fields=${OFF_FIELDS}`, { headers: { "User-Agent": "HealthOS/1.0 (personal app)" } });
     if (!r.ok) throw new Error(`OFF ${r.status}`);
     return map(((await r.json()) as { products?: unknown[] }).products);
   })();

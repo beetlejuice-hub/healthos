@@ -3,12 +3,13 @@ import { act, newId, offerUndo, useStore } from "../lib/store";
 import { searchBasic } from "../lib/foods-basic";
 import { SLOTS } from "../lib/types";
 import { searchFood } from "../lib/off";
+import { groupFoods, plausible, type ResultRow } from "../lib/foodgroup";
 import { DRINKS } from "../lib/drinks";
 import { forGrams } from "../lib/nutrition";
 import { alcoholGrams } from "../lib/alcohol";
 import { clock, localDay } from "../lib/time";
 import { readRoute, go } from "../lib/nav";
-import type { Drink, Entry, Food, Supplement } from "../lib/types";
+import type { Drink, Entry, Food, Macros, Supplement } from "../lib/types";
 
 type Tab = "food" | "drink" | "stack" | "body";
 const TABS: [Tab, string][] = [["food", "Food"], ["drink", "Drink"], ["stack", "Stack"], ["body", "Body"]];
@@ -68,6 +69,10 @@ function FoodTab({ done }: { done: (m: string) => void }) {
   }, [q, saved]);
   // Built-in everyday foods: instant and offline, shown before the database answers.
   const basic = useMemo(() => searchBasic(q).filter((f) => !mine.some((m) => m.id === f.id)), [q, mine]);
+  // Near-identical products collapse into one "typical" row; see lib/foodgroup.ts.
+  const rows = useMemo(() => groupFoods(results, q), [results, q]);
+  const [showAll, setShowAll] = useState(false);
+  useEffect(() => setShowAll(false), [q]);
 
   if (chosen) return <Portion food={chosen} onCancel={() => setChosen(null)} onDone={(m) => { setChosen(null); setQ(""); done(m); }} />;
   if (custom) return <CustomFood onCancel={() => setCustom(false)} onDone={(f) => { setCustom(false); setChosen(f); }} />;
@@ -84,51 +89,105 @@ function FoodTab({ done }: { done: (m: string) => void }) {
         <div className="list">{basic.map((f) => <FoodRow key={f.id} f={f} onPick={() => setChosen(f)} />)}</div>
       </>}
       {q.trim().length >= 2 && <>
-        <h3>Food database <span>{busy ? "searching…" : `${results.length} found`}</span></h3>
+        <h3>Food database <span>{busy ? "searching…" : `${results.length} products`}</span></h3>
         {error && <p className="err">{error}</p>}
-        <div className="list">{results.map((f) => <FoodRow key={f.id} f={f} onPick={() => setChosen(f)} />)}</div>
+        <div className="list">
+          {(showAll ? rows : rows.slice(0, 8)).map((r) => r.kind === "one"
+            ? <FoodRow key={r.food.id} f={r.food} suspect={r.suspect} thumb onPick={() => setChosen(r.food)} />
+            : <GroupRow key={r.key} r={r} onPick={setChosen} />)}
+        </div>
+        {!showAll && rows.length > 8 && <button type="button" className="pill-btn" onClick={() => setShowAll(true)}>Show all {rows.length}</button>}
       </>}
       <button type="button" className="pill-btn" onClick={() => setCustom(true)}>+ Add your own food</button>
-      <p className="note">Everyday foods are built in; brands come from Open Food Facts (3M+ products). Anything you log is saved and shows up first next time.</p>
+      <p className="note">Everyday foods are built in; the database is Open Food Facts (3M+ products) and USDA. The same food from many brands shows as one typical row (the median); tap “products” to pick your brand. Anything you log — and any values you correct — shows up first next time.</p>
     </div>
   );
 }
 
-function FoodRow({ f, onPick }: { f: Food; onPick: () => void }) {
+/** Where a food's numbers come from: "Colavita", "typical of 12", "USDA reference", "your values". */
+const origin = (f: Food) => [
+  f.source === "typical" ? `typical of ${f.basis}` : f.source === "usda" ? "USDA reference" : f.brand,
+  f.edited ? "your values" : "",
+].filter(Boolean).join(" · ");
+const sub = (f: Food) => [origin(f), `${Math.round(f.per100.kcal)} kcal · P ${Math.round(f.per100.p)} / 100 g`].filter(Boolean).join(" · ");
+
+function Thumb({ src, label }: { src?: string; label?: string }) {
+  const [broken, setBroken] = useState(false);
+  return <span className="thumb" aria-hidden="true">{src && !broken ? <img src={src} alt="" loading="lazy" referrerPolicy="no-referrer" onError={() => setBroken(true)} /> : label}</span>;
+}
+
+function FoodRow({ f, onPick, thumb, suspect }: { f: Food; onPick: () => void; thumb?: boolean; suspect?: boolean }) {
   return (
-    <div className="li tap" role="button" tabIndex={0} onClick={onPick} onKeyDown={(e) => e.key === "Enter" && onPick()}>
-      <span>{f.name}<small>{[f.brand, `${f.per100.kcal} kcal · P ${Math.round(f.per100.p)} / 100 g`].filter(Boolean).join(" · ")}</small></span>
+    <div className={`li tap${thumb ? " food" : ""}`} role="button" tabIndex={0} onClick={onPick} onKeyDown={(e) => e.key === "Enter" && onPick()}>
+      {thumb && <Thumb src={f.img} label={f.source === "usda" ? "USDA" : ""} />}
+      <span>{f.name}<small>{sub(f)}</small>{suspect && <small className="warn">label doesn't add up — check before logging</small>}</span>
       <span className="r">+</span>
     </div>
   );
 }
 
+/** One food, many brands: tap the row for the typical values, or open the brands. */
+function GroupRow({ r, onPick }: { r: Extract<ResultRow, { kind: "group" }>; onPick: (f: Food) => void }) {
+  const [open, setOpen] = useState(false);
+  const [lo, hi] = r.kcalRange;
+  return <>
+    <div className="li tap food" role="button" tabIndex={0} onClick={() => onPick(r.typical)} onKeyDown={(e) => e.key === "Enter" && onPick(r.typical)}>
+      <Thumb label={`×${r.items.length}`} />
+      <span>{r.typical.name}<small>typical · {r.typical.per100.kcal} kcal · P {Math.round(r.typical.per100.p)} / 100 g{hi > lo ? ` · brands ${lo}–${hi}` : ""}</small>
+        {r.varies && <small className="warn">brands differ a lot (dry vs cooked?) — pick yours</small>}</span>
+      <button type="button" className="more" aria-expanded={open} onClick={(e) => { e.stopPropagation(); setOpen(!open); }}>{r.items.length} products {open ? "▴" : "▾"}</button>
+    </div>
+    {open && <div className="sublist">{[...r.items].sort((a, b) => Number(plausible(b.per100)) - Number(plausible(a.per100))).map((f) =>
+      <FoodRow key={f.id} f={f} thumb suspect={!plausible(f.per100)} onPick={() => onPick(f)} />)}</div>}
+  </>;
+}
+
+const MACRO_FIELDS: [keyof Macros, string][] = [["kcal", "kcal"], ["p", "Protein"], ["c", "Carbs"], ["f", "Fat"]];
+const numIn = (v: string) => Number(v.replace(",", "."));
+
 function Portion({ food, onCancel, onDone }: { food: Food; onCancel: () => void; onDone: (m: string) => void }) {
   const [grams, setGrams] = useState(String(food.servingG ?? 100));
   const [time, setTime] = useState(nowHHMM);
-  const g = Number(grams) || 0, m = forGrams(food.per100, g);
+  // Values per 100 g, editable: a database label can be wrong, or your version differs.
+  const [editing, setEditing] = useState(false);
+  const [vals, setVals] = useState(() => Object.fromEntries(MACRO_FIELDS.map(([k]) => [k, String(Math.round(food.per100[k] * 10) / 10)])) as Record<keyof Macros, string>);
+  const per100: Macros = editing ? { kcal: numIn(vals.kcal) || 0, p: numIn(vals.p) || 0, c: numIn(vals.c) || 0, f: numIn(vals.f) || 0 } : food.per100;
+  const changed = editing && MACRO_FIELDS.some(([k]) => Math.abs(per100[k] - food.per100[k]) > 0.05);
+  const g = Number(grams) || 0, m = forGrams(per100, g);
   const save = () => {
     if (g <= 0) return;
-    const e = act.addEntry({ kind: "food", at: timeToday(time), foodId: food.id, name: food.name, grams: g, macros: m });
-    act.rememberFood(food);
-    offerUndo([e.id], `Logged ${food.name}`);
-    onDone(`Logged ${food.name}`);
+    const used: Food = changed ? { ...food, per100, edited: true } : food;
+    const e = act.addEntry({ kind: "food", at: timeToday(time), foodId: used.id, name: used.name, grams: g, macros: m });
+    act.rememberFood(used);
+    offerUndo([e.id], `Logged ${used.name}`);
+    onDone(`Logged ${used.name}`);
   };
   return (
     <div className="card">
-      <h3>{food.name} <span>{food.brand}</span></h3>
+      <div className="portion-head">
+        {food.img && <Thumb src={food.img} />}
+        <h3>{food.name} <span>{origin(food)}</span></h3>
+      </div>
       <div className="row2">
         <label className="field">Grams<input inputMode="decimal" value={grams} onChange={(e) => setGrams(e.target.value)} /></label>
         <label className="field">Time<input type="time" value={time} onChange={(e) => setTime(e.target.value)} /></label>
       </div>
       {food.servingG && <div className="row2">{[0.5, 1, 1.5, 2].map((k) => <button key={k} type="button" className="pill-btn" onClick={() => setGrams(String(Math.round(food.servingG! * k)))}>{k} serving{k === 1 ? "" : "s"}</button>).slice(0, 4)}</div>}
+      {editing ? <>
+        <h3>Values <span>per 100 g, as on the label</span></h3>
+        <div className="row4">
+          {MACRO_FIELDS.map(([k, label]) => <label key={k} className="field">{label}<input inputMode="decimal" value={vals[k]} onChange={(e) => setVals({ ...vals, [k]: e.target.value })} /></label>)}
+        </div>
+        <p className="note">{changed ? "Your values are saved with this food and used next time." : "Change any number; the totals below follow."}</p>
+      </> : null}
       <div className="row4 num" style={{ fontSize: 13 }}>
         <span><b>{Math.round(m.kcal)}</b> kcal</span><span>P <b>{Math.round(m.p)}</b></span><span>C <b>{Math.round(m.c)}</b></span><span>F <b>{Math.round(m.f)}</b></span>
       </div>
       <div className="row2">
         <button type="button" className="pill-btn" onClick={onCancel}>Back</button>
-        <button type="button" className="pill-btn pri" disabled={g <= 0} onClick={save}>Log it</button>
+        <button type="button" className="pill-btn pri" disabled={g <= 0 || per100.kcal < 0} onClick={save}>Log it</button>
       </div>
+      {!editing && <button type="button" className="linkish" onClick={() => setEditing(true)}>Edit values</button>}
     </div>
   );
 }

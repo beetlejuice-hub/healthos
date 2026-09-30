@@ -22,7 +22,7 @@ export async function handleFood(req: Request, env: Env, ctx?: Ctx): Promise<Res
   const q = (new URL(req.url).searchParams.get("q") ?? "").trim();
   if (q.length < 2) return json({ foods: [], sources: { off: "ok", usda: "ok" } });
   const cache = typeof caches !== "undefined" ? caches.default : null;
-  const key = new Request(`https://cache.healthos/food?q=${encodeURIComponent(q.toLowerCase())}`);
+  const key = new Request(`https://cache.healthos/food/v2?q=${encodeURIComponent(q.toLowerCase())}`);
   const hit = await cache?.match(key);
   if (hit) return hit;
   const result = await searchAll(q, env.USDA_KEY);

@@ -112,9 +112,17 @@ a form. Until there's enough data they use sensible defaults, silently.
 - **Food search** runs on our Worker (`/api/food`): Open Food Facts (~3M branded products) +
   USDA FoodData Central (plain foods), merged and cached a day; ~100 built-in everyday foods answer
   instantly offline. Optional: a free USDA key as the `USDA_KEY` Worker secret (else DEMO_KEY).
+- **Search results** (lib/foodgroup.ts): the same food from many brands collapses into one
+  *typical* row — the median of their labels, with the brand spread shown and the products one tap
+  away. Labels that don't add up (kcal vs 4P+4C+9F, >900 kcal) are flagged and left out of the
+  median. A brand you type stays its own row, at the top. Small product photos from OFF.
+- **Your values win:** any food's numbers can be edited before logging; the corrected version is
+  saved and offered first next time.
+- **Search ideas not built yet:** rank by what you actually log (your brands float up); dry vs
+  cooked hint for pasta/rice/meat; English USDA lookup for Hungarian words (spagetti → spaghetti);
+  AI "2 eggs, toast, 300 g pörkölt" parsing.
 - **Barcode scanner** — wanted, parked for now.
-- **Wearable** — owner leans to Google Fitbit Air; alternatives Amazfit Helio Strap (not sold in
-  Romania), Huawei Watch Fit 4. Criterion: an official API the web app can read (heart rate,
+- **Wearable** — **Fitbit Charge 6** (owner, 30 Sept; not bought yet, so parked). Criterion: an official API the web app can read (heart rate,
   sleep stages, HRV, resting HR). Fitbit has one (OAuth web API, intraday data for your own
   account); Huawei and Zepp/Amazfit are far harder to read from a web app. Check before buying.
 
