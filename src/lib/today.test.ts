@@ -101,4 +101,10 @@ describe("basic foods", () => {
   it("maps brands given as an array by the newer search", () => {
     expect(fromOff({ product_name: "X", brands: ["Brand B"], nutriments: { "energy-kcal_100g": 100 } })!.brand).toBe("Brand B");
   });
+
+  it("asks how the day was in the evening, until you've rated it", () => {
+    expect(nowItems(ctx(at(18, 50), [])).some((i) => i.kind === "feel")).toBe(false);
+    expect(nowItems(ctx(at(19, 5), [])).some((i) => i.kind === "feel")).toBe(true);
+    expect(nowItems(ctx(at(21), [{ id: "f", kind: "feel", at: at(20), mood: 7 }])).some((i) => i.kind === "feel")).toBe(false);
+  });
 });

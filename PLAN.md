@@ -145,3 +145,8 @@ email get Dev tools (`#dev`): raw entry editor, generate/remove sample, wipe acc
    from intake − weight trend × 7,700; 95% trend range, 0.15 kg/wk smallest claim), `lib/bench.ts`
    (planted-effect worlds; burn inside its 90% range ~90% of seeds, <10% false weight alarms),
    Noticed section atop Insights, one ✕-able line on Today. Next: phase 2 detectors · 3 AI · 4 experiments.
+   Owner's answers (30 Sept): evening feel card on Today ✓ (+ a reminder notification — needs web
+   push, not built); real burn only *suggests* goal changes; not tracking closely yet, so 1–2 bad
+   days must not corrupt anything (typo weigh-ins and partial days are dropped ✓); 75% / one line /
+   words-first defaults stand; AI key and first experiment: later. Has psoriasis — wants an
+   "about me" fact list and AI memory (to discuss); flare tracking is an obvious detector.

@@ -60,7 +60,8 @@ export function bodyFindings(days: BodyDay[], goals: Goals): Report {
     const wk = trend.perDay * 7, half = 1.96 * trend.se * 7;
     const lo = wk - half, hi = wk + half;
     const chart = { kind: "trend" as const, pts: trend.pts, fit: trend.fit, unit: "kg", firstDay };
-    const evidence = `${trend.n} weigh-ins over ${trend.spanDays} days · 95% range ${kgwk(lo)} to ${kgwk(hi)} kg/week`;
+    const odd = trend.dropped.length ? ` · ${trend.dropped.length} odd weigh-in${trend.dropped.length > 1 ? "s" : ""} left out (${trend.dropped.map((p) => p[1]).join(", ")} kg)` : "";
+    const evidence = `${trend.n} weigh-ins over ${trend.spanDays} days · 95% range ${kgwk(lo)} to ${kgwk(hi)} kg/week${odd}`;
     if ((lo > 0 || hi < 0) && Math.abs(wk) >= TREND_WORTH) {
       found.push({
         id: "weight-trend", area: "body",

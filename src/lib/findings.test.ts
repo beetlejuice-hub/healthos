@@ -55,6 +55,24 @@ describe("weight trend (test bench)", () => {
     expect(alarms / 300).toBeLessThan(0.1);
   });
 
+  it("a typo or a one-off weigh-in can't bend the trend", () => {
+    const clean = world({ seed: 11, intakeMean: 3050 });
+    const typo = clean.map((e) => (e.id === "b:w20" && e.kind === "weight" ? { ...e, kg: e.kg / 10 } : e.id === "b:w10" && e.kind === "weight" ? { ...e, kg: e.kg + 3 } : e));
+    const d = (es: typeof clean) => weightTrend(bodyDays(es, addDays(LAST, -27), LAST))!;
+    expect(d(typo).dropped).toHaveLength(2);
+    // Same line as if those two mornings had never been weighed.
+    const without = clean.filter((e) => e.id !== "b:w20" && e.id !== "b:w10");
+    expect(d(typo).perDay).toBeCloseTo(d(without).perDay, 9);
+    expect(notice(typo, DEFAULT_GOALS, NOW).found.find((f) => f.id === "weight-trend")!.evidence).toMatch(/2 odd weigh-ins left out/);
+  });
+
+  it("two missed days of logging don't move the burn much", () => {
+    const full = world({ seed: 12, logRate: 1, partialRate: 0 });
+    const gaps = full.filter((e) => e.id !== "b:f20" && e.id !== "b:f21");
+    const b = (es: typeof full) => realBurn(bodyDays(es, addDays(LAST, -27), LAST))!.kcal;
+    expect(Math.abs(b(gaps) - b(full))).toBeLessThan(60);
+  });
+
   it("needs 8 weigh-ins over 14 days", () => {
     expect(weightTrend(days({ weighRate: 0.1 }))).toBeNull();
   });

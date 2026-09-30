@@ -37,27 +37,41 @@ export type Trend = {
   n: number; spanDays: number;
   /** The trend line's value on the last day — "trend weight today". */
   nowKg: number;
-  /** [day index, kg] of each weigh-in, and the two ends of the fitted line. */
+  /** [day index, kg] of each weigh-in used, and the two ends of the fitted line. */
   pts: [number, number][]; fit: [[number, number], [number, number]];
+  /** Weigh-ins left out as typos or one-offs ("8.0" for "80", weighed in clothes). */
+  dropped: [number, number][];
 };
 
 export const TREND_MIN = { weighIns: 8, spanDays: 14 };
 
-/** Least-squares line through the weigh-ins. Null until there are enough, spread out enough. */
+const fitLine = (pts: [number, number][]) => {
+  const mx = mean(pts.map((p) => p[0])), my = mean(pts.map((p) => p[1]));
+  let sxy = 0, sxx = 0;
+  for (const [x, y] of pts) { sxy += (x - mx) * (y - my); sxx += (x - mx) ** 2; }
+  const b = sxy / sxx;
+  return { a: my - b * mx, b, sxx };
+};
+
+/**
+ * Least-squares line through the weigh-ins. Null until there are enough, spread out enough.
+ * A bad weigh-in can't bend it: anything more than 5 kg from the window's median is a typo, and
+ * anything more than 2 kg off the first fitted line is a one-off; both are left out and counted.
+ */
 export function weightTrend(days: BodyDay[]): Trend | null {
-  const pts: [number, number][] = days.flatMap((d, i) => (d.kg == null ? [] : [[i, d.kg] as [number, number]]));
+  const all: [number, number][] = days.flatMap((d, i) => (d.kg == null ? [] : [[i, d.kg] as [number, number]]));
+  const mid = median(all.map((p) => p[1]));
+  let pts = all.filter((p) => Math.abs(p[1] - mid) <= 5);
+  if (pts.length >= 3) { const l = fitLine(pts); pts = pts.filter(([x, y]) => Math.abs(y - l.a - l.b * x) <= 2); }
   const n = pts.length;
   if (n < TREND_MIN.weighIns) return null;
   const span = pts[n - 1][0] - pts[0][0];
   if (span < TREND_MIN.spanDays - 1) return null;
-  const mx = mean(pts.map((p) => p[0])), my = mean(pts.map((p) => p[1]));
-  let sxy = 0, sxx = 0;
-  for (const [x, y] of pts) { sxy += (x - mx) * (y - my); sxx += (x - mx) ** 2; }
-  const b = sxy / sxx, a = my - b * mx;
+  const { a, b, sxx } = fitLine(pts);
   const rss = pts.reduce((s, [x, y]) => s + (y - a - b * x) ** 2, 0);
   const se = Math.sqrt(rss / (n - 2) / sxx);
   const last = days.length - 1;
-  return { perDay: b, se, n, spanDays: span + 1, nowKg: a + b * last, pts, fit: [[pts[0][0], a + b * pts[0][0]], [last, a + b * last]] };
+  return { perDay: b, se, n, spanDays: span + 1, nowKg: a + b * last, pts, fit: [[pts[0][0], a + b * pts[0][0]], [last, a + b * last]], dropped: all.filter((p) => !pts.includes(p)) };
 }
 
 export type Burn = {

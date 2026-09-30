@@ -13,7 +13,8 @@ import { atMinute, clock, localDay, minuteOfDay } from "./time";
 export type NowItem =
   | { id: string; kind: "supp-missed" | "supp-due"; suppIds: string[]; title: string; body: string }
   | { id: string; kind: "caffeine"; title: string; body: string }
-  | { id: string; kind: "food"; title: string; body: string };
+  | { id: string; kind: "food"; title: string; body: string }
+  | { id: string; kind: "feel"; title: string; body: string };
 
 export type NowContext = {
   now: number;
@@ -71,7 +72,12 @@ export function nowItems(c: NowContext): NowItem[] {
   const foods = todays.filter((e) => e.kind === "food");
   if (!foods.length && nowMin >= 11 * 60) out.push({ id: "food", kind: "food", title: "Nothing eaten logged yet", body: "Log what you've had so today's totals mean something." });
 
+  // Evening check-in (owner: "a card on the main page"): the outcome Noticed compares everything with.
+  if (nowMin >= FEEL_FROM_MIN && !todays.some((e) => e.kind === "feel")) out.push({ id: "feel", kind: "feel", title: "How was today?", body: "10 seconds: energy, mood, focus, anxiety, stress. It's what Noticed compares food, caffeine and your stack against." });
+
   return out;
 }
+
+export const FEEL_FROM_MIN = 19 * 60;
 
 const clockOf = (minute: number) => `${String(Math.floor(minute / 60)).padStart(2, "0")}:${String(minute % 60).padStart(2, "0")}`;
