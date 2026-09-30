@@ -67,6 +67,7 @@ export function Settings({ tester, email }: { tester: boolean; email: string }) 
         <p className="note">Everything you log is saved on this device first and synced to your account, so it's on your phone and laptop. Export gives you all of it as one file.</p>
         <button type="button" className="pill-btn" onClick={exportJson}>Export JSON</button>
       </div>
+      <p className="note" style={{ textAlign: "center" }}>Version {__BUILD__.commit} · built {new Date(__BUILD__.at).toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}</p>
     </div>
   );
 }

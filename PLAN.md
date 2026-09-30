@@ -140,4 +140,6 @@ email get Dev tools (`#dev`): raw entry editor, generate/remove sample, wipe acc
    deploy command is enough.
 3. [ ] Owner sets real goals (Settings) and uses it for a few days.
 4. [ ] Wearable: pick the device, then import heart rate, sleep, HRV into the master graph.
-5. [ ] AI layer on top of the computed stats (weekly summary, experiment suggestions).
+5. [ ] **Noticed** (findings engine; plan: https://claude.ai/code/artifact/f8d98b61-fc4a-421b-b7d7-ddbe1276e725).
+   Phase 1 **claimed 30 Sept (Claude)**: findings engine, real burn (TDEE), weight trend, test bench,
+   Insights panel + Today line. Phase 2 other detectors · 3 AI layer · 4 experiments.
