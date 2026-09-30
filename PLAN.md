@@ -144,7 +144,9 @@ email get Dev tools (`#dev`): raw entry editor, generate/remove sample, wipe acc
    Phase 1 **built 30 Sept**: `lib/findings.ts` (cards + "still checking"), `lib/tdee.ts` (real burn
    from intake − weight trend × 7,700; 95% trend range, 0.15 kg/wk smallest claim), `lib/bench.ts`
    (planted-effect worlds; burn inside its 90% range ~90% of seeds, <10% false weight alarms),
-   Noticed section atop Insights, one ✕-able line on Today. Next: phase 2 detectors · 3 AI · 4 experiments.
+   Noticed section atop Insights, one ✕-able line on Today. Phase 2 started: **caffeine habit**
+   (`lib/detectors/caffeine.ts`: mg/day, mg/kg band light/moderate/high = tolerance, usual drink,
+   first/last time). Next: late caffeine, supp on/off, alcohol, protein vs strength, load, eating.
    Owner's answers (30 Sept): evening feel card on Today ✓ (+ a reminder notification — needs web
    push, not built); real burn only *suggests* goal changes; not tracking closely yet, so 1–2 bad
    days must not corrupt anything (typo weigh-ins and partial days are dropped ✓); 75% / one line /

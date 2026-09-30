@@ -23,7 +23,7 @@ export function Insights() {
   const data = useMemo(() => lanes(s.entries, s.workouts, s.supplements, s.settings, now), [s.entries, s.workouts, s.supplements, s.settings, now]);
   const facts = useMemo(() => dailyFacts(s.entries, s.workouts, s.settings, addDays(today, -89), today), [s.entries, s.workouts, s.settings, today]);
   const sample = s.entries.some((e) => e.id.startsWith("sample:"));
-  const report = useMemo(() => notice(s.entries, s.goals, now), [s.entries, s.goals, now]);
+  const report = useMemo(() => notice(s.entries, s.goals, now, s.settings.bodyKg), [s.entries, s.goals, now, s.settings.bodyKg]);
   // Show a section only once there's something in it; list the rest in one line each, so a new
   // account sees a short page instead of ten empty panels (owner: "looks really complex").
   const has = useMemo(() => {

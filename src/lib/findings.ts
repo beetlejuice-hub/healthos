@@ -10,6 +10,7 @@
 import type { Entry, Goals } from "./types";
 import { bodyDays, realBurn, weightTrend, BURN_MIN, KCAL_PER_KG, TREND_MIN, type BodyDay } from "./tdee";
 import { addDays, localDay } from "./time";
+import { caffeineFindings } from "./detectors/caffeine";
 
 export type Area = "body" | "food" | "caffeine" | "stack" | "training";
 
@@ -108,11 +109,13 @@ export function bodyFindings(days: BodyDay[], goals: Goals): Report {
 export const WINDOW_DAYS = 28;
 
 /** Everything Noticed has to say today. Today's food is left out (the day isn't over). */
-export function notice(entries: Entry[], goals: Goals, now: number): Report {
+export function notice(entries: Entry[], goals: Goals, now: number, bodyKg = 78): Report {
   const today = localDay(now);
   const days = bodyDays(entries, addDays(today, -(WINDOW_DAYS - 1)), today);
   days[days.length - 1] = { ...days[days.length - 1], kcal: null };
-  const parts = [bodyFindings(days, goals)];
+  // Your trend weight when there is one, else the weight in Settings.
+  const kg = weightTrend(days)?.nowKg ?? bodyKg;
+  const parts = [bodyFindings(days, goals), caffeineFindings(entries, today, kg, WINDOW_DAYS)];
   return {
     found: parts.flatMap((p) => p.found).sort((a, b) => b.weight - a.weight),
     checking: parts.flatMap((p) => p.checking).sort((a, b) => b.progress - a.progress),

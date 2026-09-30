@@ -287,7 +287,8 @@ function NoticedLine() {
   const now = useNow(10 * 60_000);
   const entries = useStore((x) => x.entries);
   const goals = useStore((x) => x.goals);
-  const top = useMemo(() => notice(entries, goals, now).found[0], [entries, goals, now]);
+  const bodyKg = useStore((x) => x.settings.bodyKg);
+  const top = useMemo(() => notice(entries, goals, now, bodyKg).found[0], [entries, goals, now, bodyKg]);
   const key = top ? `${top.id}:${top.value}` : "";
   const [hidden, setHidden] = useState(() => { try { return localStorage.getItem("healthos.noticed.hidden") ?? ""; } catch { return ""; } });
   if (!top || hidden === key) return null;
