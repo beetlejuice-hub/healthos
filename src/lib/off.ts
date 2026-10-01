@@ -32,6 +32,8 @@ export function fromOff(p: OffProduct): Food | null {
   if (kcal === null) { const kj = num(n["energy_100g"]); if (kj !== null) kcal = kj / 4.184; }
   if (!name || kcal === null) return null;
   const serving = num(p.serving_quantity);
+  // Caffeine comes in g per 100 g; over 0.4 g (an espresso is ~0.2) is a unit mix-up, not a drink.
+  const caf = num(n["caffeine_100g"]), abv = num(n["alcohol_100g"]);
   const img = p.image_front_small_url || p.image_small_url;
   return {
     id: `off:${p.code ?? name}`,
@@ -42,6 +44,8 @@ export function fromOff(p: OffProduct): Food | null {
     source: "off",
     barcode: p.code,
     img: img && /^https:\/\/[a-z0-9.-]*openfoodfacts\.(org|net)\//.test(img) ? img : undefined,
+    caffeine100: caf != null && caf > 0 && caf <= 0.4 ? Math.round(caf * 1000 * 10) / 10 : undefined,
+    alcohol100: abv != null && abv > 0 && abv <= 80 ? abv : undefined,
   };
 }
 

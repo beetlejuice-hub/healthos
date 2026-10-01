@@ -6,7 +6,7 @@
 import type { Entry, EntryOf, Supplement, Workout } from "./types";
 import type { Point } from "./series";
 import type { Settings } from "./store";
-import { caffeineAt, type Dose } from "./caffeine";
+import { caffeineAt, cleared, type Dose } from "./caffeine";
 import { alcoholCurve, type AlcoholDose } from "./alcohol";
 import { atMinute, localDay, minuteOfDay, addDays, startOfDay, DAY, MIN } from "./time";
 import { correlation, difference, mean, median, sd, type Range } from "./stats";
@@ -47,7 +47,7 @@ export function lanes(entries: Entry[], workouts: Workout[], supplements: Supple
     while (lo < doses.length && doses[lo].at < t - 48 * 60 * MIN) lo++;
     let mg = 0;
     for (let i = lo; i < doses.length && doses[i].at <= t; i++) mg += doses[i].mg * Math.pow(0.5, (t - doses[i].at) / MIN / settings.halfLifeMin);
-    caffeine.push([t, mg]);
+    caffeine.push([t, cleared(mg)]);
   }
   const alcohol = alcoholCurve(alcoholDoses(entries), from, now, { bodyKg: settings.bodyKg, stepMin: 10 });
   const rows = new Map(supplements.map((s, i) => [s.id, i]));

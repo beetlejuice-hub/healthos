@@ -22,7 +22,7 @@ export const forGrams = (per100: Macros, grams: number): Macros => {
 /** What one entry contributes. Drinks count their calories (beer, juice), nothing else. */
 export function macrosOf(e: Entry): Macros | null {
   if (e.kind === "food") return e.macros;
-  if (e.kind === "drink") return e.kcal > 0 ? { kcal: e.kcal, p: 0, c: 0, f: 0 } : null;
+  if (e.kind === "drink") return e.kcal > 0 ? { kcal: e.kcal, p: e.p ?? 0, c: e.c ?? 0, f: e.f ?? 0 } : null;
   return null;
 }
 

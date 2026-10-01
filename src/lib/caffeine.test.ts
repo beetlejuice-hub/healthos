@@ -20,6 +20,13 @@ describe("caffeineAt — halves every 5 hours", () => {
     expect(Math.round(caffeineAt(day, at(23)))).toBe(36);
   });
 
+  it("ends: under 10 mg counts as none, so a day-old coffee is 0, not 'a trace'", () => {
+    const one = [{ at: at(8), mg: 95 }];
+    expect(caffeineAt(one, at(8) + 24 * 3600e3)).toBe(0); // 95 × 0.5^(24/5) ≈ 3.4 mg
+    expect(caffeineAt(one, at(8) + 15 * 3600e3)).toBeGreaterThan(10); // ≈ 11.9 mg, still counts
+    expect(caffeineAt([{ at: at(8), mg: 3 }], at(8))).toBe(0); // a decaf is no caffeine
+  });
+
   it("respects a personal half-life", () => {
     expect(caffeineAt([{ at: at(8), mg: 100 }], at(12), 240)).toBeCloseTo(50, 6);
   });

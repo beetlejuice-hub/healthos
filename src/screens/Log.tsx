@@ -19,6 +19,11 @@ import type { Drink, Entry, EntryOf, Food, Macros, Supplement } from "../lib/typ
 import { amountText, approx, countText, gramsOf, macrosOfLine, mealFood, step, unitsOf, type Line } from "../lib/units";
 import { extractTime, matchDrink, parseMeal, readAmount, tokens, type DrinkLine } from "../lib/quickadd";
 import { fromDatabase } from "../lib/fillin";
+import { caffeinePer100, drinkFromFood, sizesFor } from "../lib/drinkdb";
+
+const fold = (t: string) => t.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+/** A drink matches what you typed by its name or any other name it goes by ("sprite" → soft drink). */
+const drinkMatch = (d: Drink, needle: string) => { const n = fold(needle.trim()); return !n || fold(`${d.name} ${d.aka ?? ""}`).includes(n); };
 
 type Tab = "food" | "drink" | "stack" | "body";
 const TABS: [Tab, string][] = [["food", "Food"], ["drink", "Drink"], ["stack", "Stack"], ["body", "Body"]];
@@ -152,7 +157,7 @@ function FoodTab({ done }: { done: (m: string) => void }) {
     if (needle.length < 2) return [];
     const all = [...drinksMine, ...DRINKS];
     const byWord = matchDrink(needle.normalize("NFD").replace(/[\u0300-\u036f]/g, "").split(/\s+/), drinksMine);
-    return all.filter((d) => d.name.toLowerCase().includes(needle) || d === byWord).slice(0, 6);
+    return all.filter((d) => drinkMatch(d, needle) || d === byWord).slice(0, 6);
   }, [q, drinksMine]);
   const rows = useMemo(() => groupFoods(results, q), [results, q]);
   const [allFor, setAllFor] = useState<string | null>(null);
@@ -280,7 +285,8 @@ function Basket({ lines, time, setTime, crafting, onChange, onDetail, onLogged }
     const ids = lines.map((l) => {
       if (isDrink(l)) {
         const k = l.count, d = l.drink;
-        return act.addEntry({ kind: "drink", at, drinkId: d.id, name: k === 1 ? d.name : `${countText(k)} × ${d.name}`, ml: d.ml * k, caffeineMg: Math.round(d.caffeineMg * k), alcoholG: Math.round(d.alcoholG * k * 10) / 10, kcal: Math.round(d.kcal * k) }).id;
+        const g = (v?: number) => (v ? Math.round(v * k * 10) / 10 : undefined);
+        return act.addEntry({ kind: "drink", at, drinkId: d.id, name: k === 1 ? d.name : `${countText(k)} × ${d.name}`, ml: d.ml * k, caffeineMg: Math.round(d.caffeineMg * k), alcoholG: Math.round(d.alcoholG * k * 10) / 10, kcal: Math.round(d.kcal * k), p: g(d.p), c: g(d.c), f: g(d.f) }).id;
       }
       act.rememberFood(l.food);
       return act.addEntry({ kind: "food", at, foodId: l.food.id, name: l.food.name, grams: gramsOf(l), macros: macrosOfLine(l), ...(l.unit ? { count: l.count, unit: l.unit } : {}) }).id;
@@ -459,6 +465,17 @@ function CustomFood({ onCancel, onDone }: { onCancel: () => void; onDone: (f: Fo
 
 function DrinkTab({ done }: { done: (m: string) => void }) {
   const custom = useStore((s) => s.drinks);
+  const entries = useStore((s) => s.entries);
+  // Your last 4 different drinks, newest first: the one-tap re-log.
+  const recent = useMemo(() => {
+    const out: Drink[] = [];
+    for (let i = entries.length - 1; i >= 0 && out.length < 4; i--) {
+      const e = entries[i];
+      if (e.kind !== "drink" || out.some((d) => d.id === (e.drinkId ?? e.name))) continue;
+      out.push([...custom, ...DRINKS].find((d) => d.id === e.drinkId) ?? { id: e.drinkId ?? e.name, name: e.name, ml: e.ml, caffeineMg: e.caffeineMg, alcoholG: e.alcoholG, kcal: e.kcal, p: e.p, c: e.c, f: e.f });
+    }
+    return out;
+  }, [entries, custom]);
   const [time, setTime] = useState(nowHHMM);
   const [making, setMaking] = useState(false);
   const [dq, setDq] = useState("");
@@ -477,7 +494,7 @@ function DrinkTab({ done }: { done: (m: string) => void }) {
     if (g.drinks.length) { setAiText(""); setDq(""); }
   };
   const log = (d: Drink) => {
-    const e = act.addEntry({ kind: "drink", at: timeToday(time), drinkId: d.id, name: d.name, ml: d.ml, caffeineMg: d.caffeineMg, alcoholG: d.alcoholG, kcal: d.kcal });
+    const e = act.addEntry({ kind: "drink", at: timeToday(time), drinkId: d.id, name: d.name, ml: d.ml, caffeineMg: d.caffeineMg, alcoholG: d.alcoholG, kcal: d.kcal, p: d.p, c: d.c, f: d.f });
     offerUndo([e.id], `Logged ${d.name}`);
     done(`Logged ${d.name}`);
   };
@@ -485,15 +502,27 @@ function DrinkTab({ done }: { done: (m: string) => void }) {
   return (
     <div className="card">
       <WhenChips time={time} setTime={setTime} />
-      <input className="search" type="search" placeholder="Find a drink: espresso, beer, monster…" value={dq} onChange={(e) => setDq(e.target.value)} aria-label="Find a drink" />
-      <div className="drinks">
-        {[...custom, ...DRINKS].filter((d) => !dq.trim() || d.name.toLowerCase().includes(dq.trim().toLowerCase()) || d === matchDrink(dq.trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").split(/\s+/), custom)).map((d) => (
-          <button key={d.id} type="button" onClick={() => log(d)}>
-            <b>{d.name}</b>
-            <span>{[d.caffeineMg ? `${d.caffeineMg} mg caffeine` : "", d.alcoholG ? `${d.alcoholG} g alcohol` : "", d.kcal > 5 ? `${d.kcal} kcal` : ""].filter(Boolean).join(" · ") || "no caffeine"}</span>
-          </button>
-        ))}
-      </div>
+      <input className="search" type="search" placeholder="Search drinks: sprite, espresso, dreher…" value={dq} onChange={(e) => setDq(e.target.value)} aria-label="Find a drink" />
+      {(() => {
+        // Empty search: only what you drank lately, so the screen isn't a wall of options.
+        // Typing: your drinks and the everyday ones that match (a few), then the online database.
+        const shown = dq.trim()
+          ? [...custom, ...DRINKS].filter((d) => drinkMatch(d, dq) || d === matchDrink(fold(dq.trim()).split(/\s+/), custom)).slice(0, 4)
+          : recent;
+        if (!shown.length) return null;
+        return <>
+          <h3>{dq.trim() ? "Yours and everyday" : "Recent"}</h3>
+          <div className="drinks">
+            {shown.map((d) => (
+              <button key={d.id} type="button" onClick={() => log(d)}>
+                <b>{d.name}</b>
+                <span>{[d.caffeineMg ? `${d.caffeineMg} mg caffeine` : "", d.alcoholG ? `${d.alcoholG} g alcohol` : "", d.kcal > 5 ? `${d.kcal} kcal` : ""].filter(Boolean).join(" · ") || "no caffeine"}</span>
+              </button>
+            ))}
+          </div>
+        </>;
+      })()}
+      <DrinkDatabase q={dq} onLog={(d) => { act.saveDrink(d); log(d); setDq(""); }} />
       {aiOn && <div className="ai-drink">
         <label className="field">Not here? Describe it or snap it
           <div className="row-add">
@@ -513,6 +542,51 @@ function DrinkTab({ done }: { done: (m: string) => void }) {
       </div>}
       <button type="button" className="pill-btn" onClick={() => setMaking(true)}>+ Your own drink</button>
       <p className="note">One tap logs it at the time above. Values are typical label numbers{aiOn ? "; ones the AI made say so" : ""}.</p>
+    </div>
+  );
+}
+
+/**
+ * Drinks from the food database (Open Food Facts + USDA), for anything the built-in list doesn't have.
+ * Pick a product, pick a size; it's logged and saved to your drinks, so next time it's in the list.
+ */
+function DrinkDatabase({ q, onLog }: { q: string; onLog: (d: Drink) => void }) {
+  const [found, setFound] = useState<{ q: string; foods: Food[] } | null>(null);
+  const [failed, setFailed] = useState<string | null>(null);
+  const [open, setOpen] = useState<string | null>(null);
+  const needle = q.trim();
+  useEffect(() => {
+    if (needle.length < 2) return;
+    const ctl = new AbortController();
+    const t = setTimeout(() => {
+      searchFood(needle, ctl.signal)
+        .then((r) => { setFound({ q: needle, foods: r.foods.filter((f) => plausible(f.per100)).slice(0, 8) }); setFailed(null); })
+        .catch((e: Error) => { if (e.name !== "AbortError") setFailed(needle); });
+    }, 350);
+    return () => { clearTimeout(t); ctl.abort(); };
+  }, [needle]);
+  if (needle.length < 2) return null;
+  const list = found?.q === needle ? found.foods : null;
+  return (
+    <div className="drinkdb">
+      <h3>Food database <span>labels from Open Food Facts</span></h3>
+      {failed === needle ? <p className="err">The food database didn't answer. Check the connection and type again.</p>
+        : !list ? <p className="note">Searching…</p>
+        : !list.length ? <p className="note">Nothing called "{needle}" there. Add it as your own drink below.</p>
+        : <div className="list">{list.map((f) => {
+          const caf = caffeinePer100(f), sizes = sizesFor(f), on = open === f.id;
+          return <div key={f.id} className={`li dbdrink${on ? " on" : ""}`}>
+            <button type="button" className="dbrow" aria-expanded={on} onClick={() => setOpen(on ? null : f.id)}>
+              {f.img && <img src={f.img} alt="" loading="lazy" />}
+              <span>{f.name}{f.brand && !f.name.toLowerCase().includes(f.brand.toLowerCase()) ? <i> · {f.brand}</i> : null}
+                <small>{f.per100.kcal} kcal / 100 ml{caf.mg ? ` · ${Math.round(caf.mg)} mg caffeine / 100 ml${caf.typical ? " (typical)" : ""}` : ""}{f.alcohol100 ? ` · ${f.alcohol100}% alcohol` : ""}</small></span>
+              <span className="r">{on ? "–" : "+"}</span>
+            </button>
+            {on && <div className="sizes" role="group" aria-label={`Size of ${f.name}`}>
+              {sizes.map((ml) => { const d = drinkFromFood(f, ml); return <button key={ml} type="button" className="pill-btn" onClick={() => onLog(d)}>{ml >= 1000 ? `${ml / 1000} l` : `${ml} ml`}<small>{d.kcal} kcal{d.caffeineMg ? ` · ${d.caffeineMg} mg` : ""}</small></button>; })}
+            </div>}
+          </div>;
+        })}</div>}
     </div>
   );
 }

@@ -29,6 +29,9 @@ export type Food = {
   basis?: number;
   /** You changed the values; your version is what's saved and offered again. */
   edited?: boolean;
+  /** Drinks from the database: caffeine in mg per 100 ml and alcohol in % vol, when the label has them. */
+  caffeine100?: number;
+  alcohol100?: number;
 };
 
 export type Unit = { name: string; g: number };
@@ -42,7 +45,9 @@ export type Drink = {
   /** Grams of pure alcohol. 0 for anything non-alcoholic. */
   alcoholG: number;
   kcal: number;
-  /** AI estimate: what you typed, and what it assumed. */
+  /** Protein, carbs, fat in grams per serving, when known (drinks from the food database). */
+  p?: number; c?: number; f?: number;
+  /** AI estimate: what you typed, and what it assumed. Built-ins: other names to search by. */
   aka?: string;
   note?: string;
 };
@@ -75,7 +80,7 @@ export type Supplement = {
 
 export type Entry =
   | { id: string; kind: "food"; at: number; foodId?: string; name: string; grams: number; macros: Macros; /** As you counted it: 2 × "egg". */ count?: number; unit?: string }
-  | { id: string; kind: "drink"; at: number; drinkId?: string; name: string; ml: number; caffeineMg: number; alcoholG: number; kcal: number }
+  | { id: string; kind: "drink"; at: number; drinkId?: string; name: string; ml: number; caffeineMg: number; alcoholG: number; kcal: number; p?: number; c?: number; f?: number }
   | { id: string; kind: "supp"; at: number; suppId: string; status: "taken" | "skipped" }
   | { id: string; kind: "set"; at: number; workoutId: string; exercise: string; kg: number; reps: number }
   | { id: string; kind: "weight"; at: number; kg: number }

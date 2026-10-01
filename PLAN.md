@@ -202,7 +202,7 @@ email get Dev tools (`#dev`): raw entry editor, generate/remove sample, wipe acc
    saved as your food in portions. Supplements: Taking / Running low / Ran out / Stopped (+ Delete);
    Today asks to restock; engines keep stopped ones for history. Master graph: weight on, supps off
    (no separate supplement-effect graph — owner's call). Body tab weight chart with trend. Caffeine
-   under 10 mg reads "a trace" (a 24 h-old coffee really is ~5 mg at a 5 h half-life — negligible).
+   under 10 mg counts as none (1 Oct, owner: it should become zero), so the curve ends.
    ADHD-friendly nudges: Today's five chips (Food, Drinks, Stack, Weight, Rating — "N taps to
    complete today") and the next answer the engine is closest to, with a progress bar.
    AI half (chat that can write first, photo → saved food/drink, supplement research on add,
@@ -232,3 +232,9 @@ email get Dev tools (`#dev`): raw entry editor, generate/remove sample, wipe acc
    (answers; tdee.ts can't). Loses: steady month (89 vs 76) and a burn drop 2–3 weeks old (116 vs 63);
    messy logger 129 vs 101 but tdee.ts answers only 28/60. Says how many days of logging until ±100.
    Open: owner decides whether any of it replaces or joins `tdee.ts`.
+16. [x] **Drinks from the online database** (1 Oct). Owner: *"I NEED THE ONLINE SEARCHABLE DATABASE LIKE
+   FOR FOODS… DO NOT FILL THE SCREEN W THE OPTIONS"*. Drink tab is search-first: empty shows only your
+   last 4 drinks; typing shows a few matching built-ins, then Open Food Facts/USDA products
+   (`lib/drinkdb.ts`): pick a size (label size first), logged with label kcal + macros, caffeine from
+   the label or typical for its kind (marked), alcohol from % vol; saved to your drinks. Don't grow the
+   built-in list for this.

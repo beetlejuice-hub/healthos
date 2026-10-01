@@ -5,11 +5,19 @@
  * wide personal range — it's a setting, not a constant). Absorption is treated as instant; it
  * peaks ~45 min after drinking, which moves the curve's peak but not what's left at bedtime,
  * the number the app actually acts on.
+ *
+ * **It ends.** Exponential decay never reaches zero on paper, but under 10 mg (a sip of decaf) is
+ * nothing your body notices, so the total counts as 0 from there. Owner, 1 Oct: it *"should
+ * disappear or become eventually zero under x mg"*.
  */
 
 import { MIN } from "./time";
 
 export const DEFAULT_HALF_LIFE_MIN = 300;
+
+/** Below this much in your body it counts as none. */
+export const CLEAR_MG = 10;
+export const cleared = (mg: number) => (mg < CLEAR_MG ? 0 : mg);
 
 export type Dose = { at: number; mg: number };
 
@@ -20,7 +28,7 @@ export function caffeineAt(doses: Dose[], t: number, halfLifeMin = DEFAULT_HALF_
     if (d.at > t || d.mg <= 0) continue;
     mg += d.mg * Math.pow(0.5, (t - d.at) / MIN / halfLifeMin);
   }
-  return mg;
+  return cleared(mg);
 }
 
 /** The curve from `from` to `to`, one point every `stepMin`. */

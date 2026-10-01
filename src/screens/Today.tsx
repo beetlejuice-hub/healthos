@@ -28,9 +28,8 @@ export function useNow(ms = 30_000) {
 
 const fmt = (n: number) => Math.round(n).toLocaleString("en-GB");
 
-/** Under 10 mg is a rounding error of a coffee — a sip of decaf — so it's called a trace. */
-const TRACE_MG = 10;
-const mgText = (mg: number) => (mg > 0 && mg < TRACE_MG ? "a trace" : `${mg} mg`);
+/** caffeineAt already counts under 10 mg as none (CLEAR_MG), so 0 means cleared. */
+const mgText = (mg: number) => (mg === 0 ? "none" : `${mg} mg`);
 
 export function Today() {
   const now = useNow();
@@ -67,7 +66,7 @@ export function Today() {
       <p className="sum">
         {todays.some((e) => e.kind === "food") ? <>{fmt(totals.kcal)} kcal in{usual ? `, usual day ${fmt(usual)}` : ""}. </> : <>Nothing eaten logged yet. </>}
         {doses.some((d) => d.at > now - 24 * 60 * MIN)
-          ? cafNow < TRACE_MG ? <>Only a trace of caffeine left in you.</> : <>There's <em>{cafNow} mg</em> of caffeine in you, falling to {mgText(cafBed)} by {clock(bed)}.</>
+          ? cafNow === 0 ? <>Today's caffeine has cleared out.</> : <>There's <em>{cafNow} mg</em> of caffeine in you, falling to {mgText(cafBed)} by {clock(bed)}.</>
           : <>No caffeine logged today.</>}
       </p>
 

@@ -29,7 +29,7 @@ const { chromium, APP, OUT, handle } = require('./harness.cjs');
   const cafBefore = await pg.locator('.card h3', { hasText: 'Caffeine' }).innerText();
   check(`caffeine card counts the drink (${cafBefore.replace(/\s+/g, ' ')})`, /\b8\d mg now/.test(cafBefore) || /\b[6-8]\d mg now/.test(cafBefore));
   await pg.getByRole('button', { name: 'Undo' }).click(); await pg.waitForTimeout(200);
-  check('undo removes it', /0 mg now/.test(await pg.locator('.card h3', { hasText: 'Caffeine' }).innerText()));
+  check('undo removes it', /none now/.test(await pg.locator('.card h3', { hasText: 'Caffeine' }).innerText()));
   await pg.getByRole('button', { name: /Clear usual drink/ }).click();
   check('✕ clears the usual drink', await pg.getByRole('button', { name: '☆ Set usual drink' }).count() === 1);
 

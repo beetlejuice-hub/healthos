@@ -426,3 +426,15 @@ a { color: inherit; }
 .steps { margin: 0; padding-left: 18px; display: grid; gap: 6px; font-size: 13.5px; color: var(--c-ink-2); }
 .mem { display: flex; flex-wrap: wrap; gap: 6px; }
 .exp small { display: block; }
+/* drinks from the food database */
+.drinkdb { display: grid; gap: 6px; }
+.drinkdb h3 { margin: 6px 0 0; }
+.list .li.dbdrink { display: grid; grid-template-columns: minmax(0, 1fr); gap: 0; padding: 0; align-items: stretch; }
+.dbrow { display: flex; align-items: center; gap: 10px; width: 100%; background: none; border: 0; padding: 10px 0; text-align: left; color: inherit; }
+.dbrow img { width: 32px; height: 32px; object-fit: cover; border-radius: 8px; flex: none; background: var(--c-card-2); }
+.dbrow > span:not(.r) { flex: 1; min-width: 0; display: grid; gap: 2px; }
+.dbrow i { font-style: normal; color: var(--c-ink-2); }
+.dbrow small { color: var(--c-dim); font-size: 12px; }
+.sizes { display: flex; flex-wrap: wrap; gap: 6px; padding-bottom: 10px; }
+.sizes .pill-btn { display: grid; justify-items: center; gap: 1px; min-width: 76px; }
+.sizes .pill-btn small { font-size: 11px; font-weight: 500; opacity: .75; }

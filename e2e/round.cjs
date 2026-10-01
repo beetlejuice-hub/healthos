@@ -29,7 +29,7 @@ const { chromium, APP, OUT, handle } = require('./harness.cjs');
   // Drink tab: one tap for "1 h ago".
   await pg.goto(APP + '#log/drink'); await pg.getByRole('button', { name: '1 h ago' }).click();
   check('"1 h ago" sets 14:00', await pg.locator('input[type=time]').first().inputValue() === '14:00');
-  await pg.getByPlaceholder(/Find a drink/).fill('espr');
+  await pg.getByLabel('Find a drink').fill('espr');
   check('drinks are searchable', await pg.locator('.drinks button').count() === 2);
   // Drinks in the food search.
   await pg.goto(APP + '#log/food'); await pg.getByLabel('Search food').fill('beer'); await pg.waitForTimeout(500);
@@ -60,9 +60,10 @@ const { chromium, APP, OUT, handle } = require('./harness.cjs');
   check('Body tab draws the weight chart', await pg.locator('.wchart svg').count() === 1 && /trend line appears after 8 weigh-ins/.test(await pg.locator('.wchart').innerText()));
   await pg.screenshot({ path: OUT + 'round-body.png', fullPage: true });
 
-  // The next day: yesterday's coffee is a trace, not "5 mg".
+  // The next day: yesterday's coffee is gone (under 10 mg counts as none), not "5 mg" or "a trace".
   await pg.goto(APP + '#today'); await pg.waitForTimeout(200);
-  check('a day-old coffee reads as a trace', /trace/i.test(await pg.locator('.card').filter({ hasText: 'Caffeine' }).first().innerText()));
+  const cafCard = await pg.locator('.card').filter({ hasText: 'Caffeine' }).first().innerText();
+  check('a day-old coffee reads as none', /none now/i.test(cafCard) && !/trace|\b[1-9] mg now/i.test(cafCard));
   await pg.screenshot({ path: OUT + 'round-today.png', fullPage: true });
   console.log('errors:', JSON.stringify(errs));
   await b.close();

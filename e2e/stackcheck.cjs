@@ -26,7 +26,7 @@ const { chromium, APP, OUT, handle } = require('./harness.cjs');
   await pg.locator('#about').screenshot({ path: OUT + 'sc-about.png' });
 
   // Log a beer so alcohol is checked.
-  await pg.goto(APP + '#log/drink'); await pg.getByRole('button', { name: /Beer/ }).first().click(); await pg.waitForTimeout(150);
+  await pg.goto(APP + '#log/drink'); await pg.getByLabel('Find a drink').fill('beer'); await pg.getByRole('button', { name: /Beer/ }).first().click(); await pg.waitForTimeout(150);
 
   // Stack badges.
   await pg.goto(APP + '#log/stack'); await pg.waitForTimeout(200);
