@@ -121,7 +121,7 @@ a form. Until there's enough data they use sensible defaults, silently.
 - **Search ideas not built yet:** rank by what you actually log (your brands float up); dry vs
   cooked hint for pasta/rice/meat; English USDA lookup for Hungarian words (spagetti → spaghetti);
   AI "2 eggs, toast, 300 g pörkölt" parsing.
-- **Barcode scanner** — wanted, parked for now.
+- **Barcode scanner** — wanted, parked for now. *(claimed: agent "balance", 1 Oct — owner said "keep going" on it: `lib/barcode.ts`, `components/Scanner.tsx`, Food + Drink search, `/api/food?barcode=`)*
 - **Wearable** — **Fitbit Charge 6** (owner, 30 Sept; not bought yet, so parked). Criterion: an official API the web app can read (heart rate,
   sleep stages, HRV, resting HR). Fitbit has one (OAuth web API, intraday data for your own
   account); Huawei and Zepp/Amazfit are far harder to read from a web app. Check before buying.
