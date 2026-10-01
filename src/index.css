@@ -460,3 +460,8 @@ a { color: inherit; }
 .scanner .pill-btn.pri { background: var(--c-ink); color: var(--c-bg); }
 .scan-type { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; }
 .scan-type input { background: #ffffff1a; border: 1px solid #ffffff33; border-radius: 12px; padding: 10px 12px; font-size: 18px; letter-spacing: .06em; color: #fff; min-width: 0; }
+/* Settings → Start over */
+.pill-btn.danger { background: #6b2a2a; color: #ffe9e6; }
+.pill-btn.danger:disabled { opacity: .45; }
+.card.reset { border: 1px solid #6b2a2a55; }
+.ok-note { color: var(--ok); }

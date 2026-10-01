@@ -151,6 +151,19 @@ function commit(next: State, fromServer = false) {
 /** Apply the server's copy without queuing it to be sent back. */
 export const applyFromServer = (next: State) => commit(next, true);
 
+/** Kept on the device outside the state (a half-built meal, a dismissed card). A reset clears them too. */
+export const DEVICE_KEYS = ["healthos.basket", "healthos.noticed.hidden"];
+
+/** This device back to a brand-new account: every entry, saved food, setting and learned memo gone. */
+export function resetLocal() {
+  for (const k of DEVICE_KEYS) { try { localStorage.removeItem(k); } catch { /* blocked storage */ } }
+  commit({ ...EMPTY }, true);
+  clearUndo(); // an "Undo" for something that no longer exists
+  // Written now, not on the usual short delay: closing the app right after a reset mustn't bring it back.
+  if (saveTimer) { clearTimeout(saveTimer); saveTimer = null; }
+  save();
+}
+
 /**
  * Switch to an account's save slot. The first time an account opens on a device that has data
  * from before sign-in (the unscoped slot), that data moves into the account so nothing is lost;

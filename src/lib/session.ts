@@ -6,7 +6,7 @@
 import { useEffect, useState, useSyncExternalStore } from "react";
 import type { Session } from "@supabase/supabase-js";
 import { supabase, isTester } from "./supabase";
-import { applyFromServer, getState, openStore, setRemote, storageKey } from "./store";
+import { applyFromServer, getState, openStore, resetLocal, setRemote, storageKey } from "./store";
 import { Syncer, type SyncStatus } from "./sync";
 
 let syncer: Syncer | null = null;
@@ -21,7 +21,7 @@ export function useSyncStatus(): SyncStatus {
 function start(userId: string) {
   if (syncer) return;
   const adopted = openStore(userId);
-  syncer = new Syncer(supabase, userId, getState, applyFromServer, `${storageKey()}:sync`);
+  syncer = new Syncer(supabase, userId, getState, applyFromServer, `${storageKey()}:sync`, resetLocal);
   syncer.onStatus((s) => { status = s; subs.forEach((l) => l()); });
   if (adopted) syncer.adoptLocal(getState());
   setRemote(syncer);

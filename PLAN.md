@@ -236,3 +236,8 @@ email get Dev tools (`#dev`): raw entry editor, generate/remove sample, wipe acc
    meal as a drink at its label size (caffeine counts), anything else as a food; Drink tab: opens with
    its sizes. Unknown codes say so. **Owner to check on the iPhone:** camera permission from the
    Home Screen app, and how fast it reads a real can in normal light.
+18. [x] **Reset all data** (1 Oct). Settings → Start over: Export first, then type RESET. Deletes every
+   entry and doc on the server (keeps sign-in and the `ai_usage` cost record), writes a `reset` doc, and
+   wipes this device (state, unsent queue, basket, dismissed card, Undo) — saved at once. Every other
+   device checks the `reset` doc before it sends anything, so an offline phone's stale data and unsent
+   edits can't come back (`Syncer.resetAll` / `checkReset`). Dev tools' wipe uses the same path.

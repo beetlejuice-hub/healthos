@@ -85,6 +85,17 @@ export function rowsFor(ops: Op[], state: State, userId: string) {
 /* ------------------------------------------------------------------ the network part */
 
 type Client = typeof import("./supabase").supabase;
+
+/**
+ * "This account was reset" — a doc every device checks before it sends anything. A device that
+ * hasn't seen this reset yet drops its local copy and its unsent changes, so old data can't come
+ * back from a phone that was offline or a laptop that was closed. (Owner, 1 Oct: a reset must
+ * *"actually reset from calculations etc"*.)
+ */
+export const RESET_DOC = "reset";
+/** Kept through a reset: what the AI cost, which also enforces its daily cap. Not health data. */
+export const KEEP_DOCS = ["ai_usage"];
+const EPOCH = "1970-01-01T00:00:00Z";
 export type SyncStatus = { state: "idle" | "syncing" | "offline" | "error"; pending: number; lastSync: number | null; message?: string };
 
 export class Syncer {
@@ -100,12 +111,17 @@ export class Syncer {
   private getState: () => State;
   private apply: (s: State) => void;
   private storageKey: string;
+  private wipeLocal: () => void;
+  /** The last reset this device has acted on. */
+  private resetSeen: string | null;
 
-  constructor(client: Client, userId: string, getState: () => State, apply: (s: State) => void, storageKey: string) {
+  constructor(client: Client, userId: string, getState: () => State, apply: (s: State) => void, storageKey: string, wipeLocal?: () => void) {
     this.client = client; this.userId = userId; this.getState = getState; this.apply = apply; this.storageKey = storageKey;
-    const saved = readJson<{ queue: Op[]; cursor: string; lastSync: number | null }>(storageKey);
+    this.wipeLocal = wipeLocal ?? (() => {});
+    const saved = readJson<{ queue: Op[]; cursor: string; lastSync: number | null; resetSeen?: string | null }>(storageKey);
     this.queue = saved?.queue ?? [];
-    this.cursor = saved?.cursor ?? "1970-01-01T00:00:00Z";
+    this.cursor = saved?.cursor ?? EPOCH;
+    this.resetSeen = saved?.resetSeen ?? null;
     this.status = { state: "idle", pending: this.queue.length, lastSync: saved?.lastSync ?? null };
   }
 
@@ -113,7 +129,7 @@ export class Syncer {
   private set(s: Partial<SyncStatus>) {
     this.status = { ...this.status, ...s, pending: this.queue.length };
     this.listeners.forEach((l) => l(this.status));
-    writeJson(this.storageKey, { queue: this.queue, cursor: this.cursor, lastSync: this.status.lastSync });
+    writeJson(this.storageKey, { queue: this.queue, cursor: this.cursor, lastSync: this.status.lastSync, resetSeen: this.resetSeen });
   }
 
   /** Called by the store on every change. */
@@ -126,7 +142,41 @@ export class Syncer {
   }
 
   /** Forget the queue and pull everything again next time — after a wipe. */
-  reset() { this.queue = []; this.cursor = "1970-01-01T00:00:00Z"; this.set({}); }
+  reset() { this.queue = []; this.cursor = EPOCH; this.set({}); }
+
+  /**
+   * Delete everything this account has — on the server, here, and (via the reset doc) on every other
+   * device the next time it syncs. Server first: if that fails, nothing here is touched.
+   */
+  async resetAll(): Promise<void> {
+    while (this.busy) await new Promise((r) => setTimeout(r, 50));
+    this.busy = true;
+    try {
+      const id = `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+      const a = await this.client.from("entries").delete().eq("user_id", this.userId);
+      if (a.error) throw new Error(a.error.message);
+      const b = await this.client.from("docs").delete().eq("user_id", this.userId).not("key", "in", `(${KEEP_DOCS.join(",")})`);
+      if (b.error) throw new Error(b.error.message);
+      const c = await this.client.from("docs").upsert([{ user_id: this.userId, key: RESET_DOC, value: { id, at: new Date().toISOString() } }], { onConflict: "user_id,key" });
+      if (c.error) throw new Error(c.error.message);
+      this.queue = []; this.cursor = EPOCH; this.resetSeen = id;
+      this.wipeLocal();
+      this.set({ state: "idle", lastSync: Date.now(), message: undefined });
+    } finally {
+      this.busy = false;
+    }
+  }
+
+  /** Before sending anything: was the account reset since this device last looked? Then drop what's here. */
+  private async checkReset() {
+    const { data, error } = await this.client.from("docs").select("key,value,updated_at").eq("key", RESET_DOC);
+    if (error) throw new Error(error.message);
+    const id = ((data ?? []) as DocRow[])[0]?.value as { id?: string } | undefined;
+    if (!id?.id || id.id === this.resetSeen) return;
+    this.queue = []; this.cursor = EPOCH; this.resetSeen = id.id;
+    this.wipeLocal();
+    this.set({});
+  }
 
   /** Queue everything local as if new — the first sign-in on a device that already has data. */
   adoptLocal(state: State) {
@@ -143,6 +193,7 @@ export class Syncer {
     this.busy = true;
     this.set({ state: "syncing" });
     try {
+      await this.checkReset();
       await this.flush();
       await this.pull();
       this.set({ state: "idle", lastSync: Date.now(), message: undefined });

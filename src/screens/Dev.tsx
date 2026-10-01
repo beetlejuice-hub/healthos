@@ -1,8 +1,7 @@
 import { useMemo, useState } from "react";
-import { act, EMPTY_STATE, getState, applyFromServer, useStore, newId, type State } from "../lib/store";
+import { act, getState, applyFromServer, useStore, newId, type State } from "../lib/store";
 import { makeSample } from "../lib/sample";
 import { currentSyncer, useSyncStatus } from "../lib/session";
-import { supabase } from "../lib/supabase";
 import { DOC_KEYS, type DocKey } from "../lib/sync";
 import type { Entry } from "../lib/types";
 import { clock, localDay } from "../lib/time";
@@ -47,16 +46,9 @@ export function Dev() {
     setEditing("new"); setText(JSON.stringify(t[k], null, 2));
   };
 
+  // Same path as Settings → Start over, so the tester wipe exercises the real reset.
   const wipe = async () => {
-    const uid = (await supabase.auth.getUser()).data.user?.id;
-    if (!uid) return;
-    const r1 = await supabase.from("entries").delete().eq("user_id", uid);
-    const r2 = await supabase.from("docs").delete().eq("user_id", uid);
-    if (r1.error || r2.error) { setErr((r1.error ?? r2.error)!.message); return; }
-    // Server is empty; start this device fresh too, with nothing queued to re-upload.
-    currentSyncer()?.reset();
-    applyFromServer({ ...EMPTY_STATE });
-    setConfirmWipe(false);
+    try { await currentSyncer()?.resetAll(); setConfirmWipe(false); } catch (e) { setErr((e as Error).message); }
   };
 
   return (

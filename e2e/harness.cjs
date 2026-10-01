@@ -36,7 +36,7 @@ async function handle(route) {
     const keyCols = tm[1] === 'entries' ? ['user_id', 'id'] : ['user_id', 'key'];
     if (m === 'POST') { for (const r of req.postDataJSON()) { if (r.user_id !== uid) return json(403, { message: 'RLS violation' }); t.set(keyCols.map(k => r[k]).join('|'), { ...r, updated_at: stamp() }); } return json(201, null); }
     let rows = [...t.values()].filter(r => r.user_id === uid);
-    for (const [k, v] of url.searchParams) { if (v.startsWith('gt.')) rows = rows.filter(r => r[k] > v.slice(3)); if (v.startsWith('eq.')) rows = rows.filter(r => String(r[k]) === v.slice(3)); }
+    for (const [k, v] of url.searchParams) { if (v.startsWith('gt.')) rows = rows.filter(r => r[k] > v.slice(3)); if (v.startsWith('eq.')) rows = rows.filter(r => String(r[k]) === v.slice(3)); if (v.startsWith('not.in.(')) { const l = v.slice(8, -1).split(','); rows = rows.filter(r => !l.includes(String(r[k]))); } }
     if (m === 'DELETE') { for (const r of rows) t.delete(keyCols.map(k => r[k]).join('|')); return json(204, null); }
     rows.sort((a, b) => a.updated_at < b.updated_at ? -1 : 1);
     const off = +(url.searchParams.get('offset') || 0), lim = +(url.searchParams.get('limit') || 1e9);
