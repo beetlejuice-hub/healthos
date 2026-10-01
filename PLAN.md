@@ -223,3 +223,7 @@ email get Dev tools (`#dev`): raw entry editor, generate/remove sample, wipe acc
    10:00, daily ones repeat free. Chat tab that writes first (dot), friend tone, remembers lines
    (Settings → delete; "What the AI sees" shows the exact context). Push notifications to the
    iPhone: next (needs web push + a server-side schedule).
+14. [ ] **Prototype: a rival real-burn engine** *(claimed: agent "balance", 1 Oct — new files only:
+   `src/lib/balance/`, `prototypes/balance.html`)*. Owner asked for one part of the app redone with a
+   different engine and design, at least as capable. A day-by-day state model (weight, water, burn)
+   raced against `tdee.ts` on planted-truth fake people. Not wired into the app.
