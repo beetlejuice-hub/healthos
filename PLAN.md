@@ -232,11 +232,3 @@ email get Dev tools (`#dev`): raw entry editor, generate/remove sample, wipe acc
    (answers; tdee.ts can't). Loses: steady month (89 vs 76) and a burn drop 2–3 weeks old (116 vs 63);
    messy logger 129 vs 101 but tdee.ts answers only 28/60. Says how many days of logging until ±100.
    Open: owner decides whether any of it replaces or joins `tdee.ts`.
-15. [x] **Prototype: Caffeine Clock** (1 Oct; `src/lib/caffclock/`, page `prototypes/caffeine.html`,
-   rebuild with `bun prototypes/caffeine/build.ts`). Owner: *"pick just ONE feature… super impressive
-   design and engine w graph"*. A 24 h dial: caffeine in the blood rises out from the inner ring per
-   drink, hotter the higher; night wedge; drag the hand to any time, the moon to bedtime. Engine vs
-   `caffeine.ts`: real absorption (Bateman; shot/mug/can, food, sipping over minutes), a half-life
-   band (3.5–7 h) instead of one guess, "until HH:MM" per drink that protects the first 3 h of sleep,
-   not just lights-out. 16 tests against known answers (peak time, AUC = dose/ke, mass balance,
-   sipping = sum of sips). Not wired into the app; owner decides.
