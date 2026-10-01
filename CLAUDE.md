@@ -1,8 +1,8 @@
 # HealthOS — notes for agents
 
 Personal health app for one owner (Arnold). Read `PLAN.md` first: what exists, what's next, the
-owner's decisions. Vite + React 19 + TypeScript, Supabase (auth + sync), Cloudflare Worker
-(`worker/index.ts`: static app + `/api/food`). Pushing to `main` deploys.
+owner's decisions (new here? `HANDOFF.md` first). Vite + React 19 + TypeScript, Supabase (auth +
+sync), Cloudflare Worker (`worker/`: static app, `/api/food`, `/api/ai`). Pushing to `main` deploys.
 
 ## How to work here
 
