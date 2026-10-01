@@ -98,3 +98,47 @@ describe("logging for earlier", () => {
     expect(extractTime("2 eggs, toast")).toEqual({ text: "2 eggs, toast", minute: null });
   });
 });
+
+describe("the owner's real sentences (1 Oct)", () => {
+  it("size words, words after the name, 'w butter', words no food knows", () => {
+    const lineText = (p: ReturnType<typeof parseItem>) => (p.line ? `${p.line.food.name} · ${amountText(p.line.count, p.line.unit!)}${p.unsure ? " ?" : ""}` : "—");
+    expect(parseMeal("one small apple, 3 eggs scrambled, 2 pieces of bacon cooked, 2 normal toast w butter").map(lineText)).toEqual([
+      "Apple · 1 small apple", "Scrambled eggs · 3 eggs", "Bacon, cooked · 2 rashers", "Toast (white) · 2 slices", "Butter · 2 thin spreads",
+    ]);
+    const meal = parseMeal("2 normal toast w butter");
+    expect(meal.map((p) => p.line && amountText(p.line.count, p.line.unit!))).toEqual(["2 slices", "2 thin spreads"]);
+  });
+  it("a side is a small amount: coffee with milk is a splash", () => {
+    expect(parseMeal("coffee with milk").map((p) => (p.drink ? p.drink.drink.name : `${p.line?.food.name} ${p.line?.unit}`))).toEqual(["Filter coffee", "Milk 1.5% splash"]);
+  });
+  it("size scales the count when the food has no sized unit", () => {
+    expect(short("a big banana")).toBe("Banana · 1¼ bananas"); // rounded to a quarter
+    expect(parseItem("a large latte").drink?.count).toBe(1.25);
+  });
+  it("grams after the name", () => {
+    expect(short("chicken breast 200g")).toMatch(/Chicken breast.* · 200 g/);
+    expect(short("rice 150 g")).toMatch(/rice.* · 150 g/i);
+  });
+  it("a dish no single food matches is split into its parts", () => {
+    expect(parseMeal("bolognese spaghetti").map((p) => p.line?.food.name)).toEqual(["Bolognese sauce", "Pasta, cooked"]);
+  });
+});
+
+describe("more drinks", () => {
+  const name = (t: string) => parseItem(t).drink?.drink.name ?? "—";
+  it("Hell, long coffee, fröccs, and sized drink names", () => {
+    expect([name("hell energy drink"), name("2 hell"), name("hell zero"), name("hosszú kávé"), name("a long coffee"), name("fröccs"), name("small beer"), name("kis sör"), name("big coke")]).toEqual([
+      "Hell Energy 250 ml", "Hell Energy 250 ml", "Hell Zero 250 ml", "Long coffee (hosszú kávé)", "Long coffee (hosszú kávé)", "Fröccs (spritzer) 200 ml", "Beer 330 ml, 5%", "Beer 330 ml, 5%", "Coca-Cola 500 ml",
+    ]);
+  });
+});
+
+describe("unknown words", () => {
+  it("dropped only when most of the item is known, and then marked for a check", () => {
+    expect(parseItem("fresh homemade toast").line).toBeNull(); // 1 of 3 known: not guessed
+    const p = parseItem("homemade toast");
+    expect(p.line?.food.name).toBe("Toast (white)");
+    expect(p.unsure).toBe(true);
+    expect(parseItem("zzz mystery stew").line).toBeNull();
+  });
+});

@@ -58,7 +58,7 @@ const { chromium, APP, OUT, handle } = require('./harness.cjs');
   // Remove the risky one: alert disappears.
   await pg.goto(APP + '#log/stack'); await pg.waitForTimeout(200);
   await pg.locator('.supp-row').filter({ hasText: "St John's wort" }).getByRole('button', { name: 'Edit' }).click();
-  await pg.getByRole('button', { name: 'Remove' }).click();
+  pg.once('dialog', (d) => d.accept()); await pg.locator('.supp-edit').getByRole('button', { name: 'Delete' }).click();
   await pg.goto(APP + '#today'); await pg.waitForTimeout(300);
   check('removing it clears the alert', await pg.locator('.noticed-line.alert').count() === 0);
   console.log('errors:', JSON.stringify(errs));

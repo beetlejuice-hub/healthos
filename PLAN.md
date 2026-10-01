@@ -207,3 +207,19 @@ email get Dev tools (`#dev`): raw entry editor, generate/remove sample, wipe acc
    complete today") and the next answer the engine is closest to, with a progress bar.
    AI half (chat that can write first, photo → saved food/drink, supplement research on add,
    recommendations): proposal + questions in Docs, to discuss.
+13. [x] **The in-app AI** (1 Oct; owner's answers in the AI doc). Worker `POST /api/ai` (worker/ai.ts):
+   signed-in session checked with Supabase, hard cap 50 calls/day, cost per call at list price
+   written to the account's `ai_usage` doc, server-side fallbacks, answers checked before use
+   (labels must add up, caffeine ≤ 600 mg, facts/studies need a real link). Contract:
+   `lib/ai/tasks.ts`. Model per tier in Settings (everyday / research), default Opus 5.5, with a
+   monthly estimate per choice; usage today/month shown. Food: sentence → built-in (now reads
+   "small", "normal", "w butter", "200g" after the name, splits "bolognese spaghetti") → food
+   database **median** of matching products + rough unit weight → AI, saved as your food with what
+   you typed (free next time); 📷 photo. Drinks: Hell, long coffee, 3in1, fröccs… + "describe it /
+   snap it" → saved, "Make it my usual". Stack: a new supplement is researched (web search; dose,
+   timing, evidence, clashes with About me, sources). Morning read (written after 20:00 for the next
+   day, or on first open): pattern + study/fact with source + a protocol → "Try it" starts an
+   experiment judged before vs during (weekends accounted, 95% interval). Quick questions from
+   10:00, daily ones repeat free. Chat tab that writes first (dot), friend tone, remembers lines
+   (Settings → delete; "What the AI sees" shows the exact context). Push notifications to the
+   iPhone: next (needs web push + a server-side schedule).

@@ -44,7 +44,8 @@ const { chromium, APP, OUT, handle } = require('./harness.cjs');
   await pg.getByLabel('Type what you ate').fill('milk'); await pg.getByRole('button', { name: 'Add', exact: true }).click();
   check('unsure match asks "did you mean"', /Did you mean/.test(await basket()));
   await pg.getByLabel('Type what you ate').fill('zzqx'); await pg.getByRole('button', { name: 'Add', exact: true }).click();
-  check('unknown food is said', await pg.getByText(/Couldn't find “zzqx”/).count() === 1);
+  await pg.getByText(/Couldn't find “zzqx”/).waitFor({ timeout: 4000 }).catch(() => {});
+  check('unknown food is said (after the database had no match)', await pg.getByText(/Couldn't find “zzqx”/).count() === 1);
   await pg.reload(); await pg.waitForTimeout(400);
   check('basket survives a reload', /Milk/.test(await basket()));
 

@@ -11,6 +11,32 @@ import type { Drink, Entry, Food, Goals, Supplement, Template, Workout } from ".
 import { DEFAULT_GOALS, slotOf, slotTime } from "./types";
 import { tidyWorkouts } from "./training";
 import type { ScoutMemo } from "./scout";
+import type { DigestItem, ModelChoice, Question, SupplementAnswer } from "./ai/tasks";
+
+/** Everything the in-app AI keeps for you, synced like the rest (doc "ai"). */
+export type AiState = {
+  /** Which model answers: everyday (food, chat, questions) and research (supplements, morning read). */
+  models: { everyday: ModelChoice; research: ModelChoice };
+  /** "What the AI knows about me": lines it added (you can delete any). */
+  memory: { id: string; text: string; at: number }[];
+  chat: { role: "user" | "assistant"; text: string; at: number; unprompted?: boolean }[];
+  /** The morning read, for the day it's for. */
+  digest: { day: string; greeting: string; items: DigestItem[]; read?: boolean } | null;
+  /** Titles already shown, so the morning read doesn't repeat itself. */
+  shown: string[];
+  /** Today's questions; daily ones are asked again every day without a new AI call. */
+  questions: { day: string; list: Question[] } | null;
+  daily: Question[];
+  asked: string[];
+  /** Supplement look-ups, by supplement id. */
+  research: Record<string, SupplementAnswer & { at: number; /** The name you typed when it was looked up. */ asked: string }>;
+  /** Protocols you chose to try: the app compares before and during. */
+  experiments: Experiment[];
+  /** When you last opened the AI tab: newer unprompted messages show a dot. */
+  seenAt: number;
+};
+export type Experiment = { id: string; name: string; how: string; days: number; measure: string; start: string; ended?: string };
+export const EMPTY_AI: AiState = { models: { everyday: "opus", research: "opus" }, memory: [], chat: [], digest: null, shown: [], questions: null, daily: [], asked: [], research: {}, experiments: [], seenAt: 0 };
 
 /**
  * What the calculations need. Only `bedMinute` (planned bedtime) and `usualDrink` are asked of you;
@@ -43,6 +69,7 @@ export type State = {
   profile: Profile;
   /** Patterns the scout has shown you: when first flagged, and whether you dismissed them. */
   scout: Record<string, ScoutMemo>;
+  ai: AiState;
 };
 
 export type Profile = { conditions: string[]; meds: string[]; allergies: string[]; notes: string };
@@ -80,7 +107,7 @@ const DEFAULT_TEMPLATES: Template[] = [
 
 const EMPTY: State = {
   entries: [], foods: [], drinks: [], supplements: DEFAULT_STACK, templates: DEFAULT_TEMPLATES, workouts: [],
-  goals: DEFAULT_GOALS, settings: DEFAULT_SETTINGS, profile: EMPTY_PROFILE, scout: {},
+  goals: DEFAULT_GOALS, settings: DEFAULT_SETTINGS, profile: EMPTY_PROFILE, scout: {}, ai: EMPTY_AI,
 };
 
 /** The save slot. Per account once signed in, so a tester and a personal account never mix. */
@@ -92,7 +119,7 @@ function load(): State {
     const raw = localStorage.getItem(KEY);
     if (!raw) return EMPTY;
     const s = JSON.parse(raw) as Partial<State>;
-    return { ...EMPTY, ...s, supplements: normalizeStack(s.supplements ?? EMPTY.supplements), settings: { ...DEFAULT_SETTINGS, ...s.settings }, goals: { ...DEFAULT_GOALS, ...s.goals }, profile: { ...EMPTY_PROFILE, ...s.profile }, scout: s.scout ?? {} };
+    return { ...EMPTY, ...s, supplements: normalizeStack(s.supplements ?? EMPTY.supplements), settings: { ...DEFAULT_SETTINGS, ...s.settings }, goals: { ...DEFAULT_GOALS, ...s.goals }, profile: { ...EMPTY_PROFILE, ...s.profile }, scout: s.scout ?? {}, ai: { ...EMPTY_AI, ...s.ai } };
   } catch {
     return EMPTY;
   }
@@ -190,6 +217,7 @@ export const act = {
   setGoals(goals: Goals) { commit({ ...state, goals }); },
   setProfile(profile: Profile) { commit({ ...state, profile }); },
   setScout(scout: Record<string, ScoutMemo>) { commit({ ...state, scout }); },
+  setAi(patch: Partial<AiState> | ((ai: AiState) => Partial<AiState>)) { const p = typeof patch === "function" ? patch(state.ai) : patch; commit({ ...state, ai: { ...state.ai, ...p } }); },
   setSettings(patch: Partial<Settings>) { commit({ ...state, settings: { ...state.settings, ...patch } }); },
   /** Close forgotten workouts (lib/training tidyWorkouts). `force` closes any open one now. */
   tidyWorkouts(now = Date.now(), force = false) {

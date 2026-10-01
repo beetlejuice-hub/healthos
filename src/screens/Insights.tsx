@@ -12,6 +12,7 @@ import { useNow } from "./Today";
 import { notice, WINDOW_DAYS, type Report } from "../lib/findings";
 import { StackCheckPanel } from "../components/StackCheck";
 import { useScout, WorthALook } from "../components/Scout";
+import { Experiments } from "../components/Ai";
 import type { GraphFocus } from "../components/MasterGraph";
 
 const f0 = (v: number) => Math.round(v).toLocaleString("en-GB");
@@ -79,6 +80,7 @@ export function Insights() {
         {has.supps && <Supplements facts={facts} today={today} />}
         {has.effects && <SuppEffects facts={facts} />}
         {has.pairs && <WhatMovesWhat facts={facts} />}
+        <Experiments />
         <StackCheckPanel />
         {locked.length > 0 && (
           <section className="p w12">

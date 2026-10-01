@@ -6,6 +6,7 @@ import { notice } from "../lib/findings";
 import { FEEL_KEYS, feelChange, feelState, latestFeel, type FeelKey } from "../lib/feel";
 import { StackAlert } from "../components/StackCheck";
 import { ScoutLine } from "../components/Scout";
+import { AiQuestions, MorningRead } from "../components/Ai";
 import { caffeineAt } from "../lib/caffeine";
 import { caffeineDoses } from "../lib/insights";
 import { add, byDay, macrosOf, ZERO } from "../lib/nutrition";
@@ -70,7 +71,9 @@ export function Today() {
           : <>No caffeine logged today.</>}
       </p>
 
+      <MorningRead />
       <DayChips now={now} />
+      <AiQuestions />
       <NextAnswer />
       <WorkoutRunning now={now} />
       <StackAlert />

@@ -3,6 +3,7 @@ import { makeSample } from "../lib/sample";
 import { signOut, useSyncStatus, currentSyncer } from "../lib/session";
 import { clock } from "../lib/time";
 import { AboutMe } from "../components/StackCheck";
+import { AiSettings } from "../components/Ai";
 
 const hhmm = (m: number) => `${String(Math.floor(m / 60)).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}`;
 
@@ -46,6 +47,7 @@ export function Settings({ tester, email }: { tester: boolean; email: string }) 
       </div>
 
       <AboutMe />
+      <AiSettings />
 
       <div className="card">
         <h3>Sleep and body</h3>

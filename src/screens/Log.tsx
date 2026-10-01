@@ -5,6 +5,9 @@ import { SLOTS } from "../lib/types";
 import { searchFood } from "../lib/off";
 import { groupFoods, plausible, type ResultRow } from "../lib/foodgroup";
 import { StackBadge, useStackCheck } from "../components/StackCheck";
+import { SuppResearch, researchSupplement } from "../components/Ai";
+import { askAi, shrinkImage, useAiStatus } from "../lib/ai/client";
+import { fromDescribed } from "../lib/ai/apply";
 import { DRINKS } from "../lib/drinks";
 import { forGrams } from "../lib/nutrition";
 import { alcoholGrams } from "../lib/alcohol";
@@ -14,7 +17,8 @@ import { bodyDays, weightTrend } from "../lib/tdee";
 import { LineChart } from "../components/Charts";
 import type { Drink, Entry, EntryOf, Food, Macros, Supplement } from "../lib/types";
 import { amountText, approx, countText, gramsOf, macrosOfLine, mealFood, step, unitsOf, type Line } from "../lib/units";
-import { extractTime, matchDrink, parseMeal, type DrinkLine } from "../lib/quickadd";
+import { extractTime, matchDrink, parseMeal, readAmount, tokens, type DrinkLine } from "../lib/quickadd";
+import { fromDatabase } from "../lib/fillin";
 
 type Tab = "food" | "drink" | "stack" | "body";
 const TABS: [Tab, string][] = [["food", "Food"], ["drink", "Drink"], ["stack", "Stack"], ["body", "Body"]];
@@ -63,11 +67,42 @@ export function Log() {
   );
 }
 
+/* ------------------------------------------------------------------ the AI, for what the parser and the database don't know */
+
+/**
+ * Ask the AI what a description or photo is; every item comes back saved as your own food or drink
+ * (marked "AI estimate"), so typing the same words next time is free. One item → it also
+ * remembers exactly what you typed.
+ */
+async function aiDescribe(text: string | undefined, image?: File): Promise<{ items: Item[]; drinks: Drink[]; message?: string }> {
+  const img = image ? await shrinkImage(image) : undefined;
+  const r = await askAi({ task: "describe", ...(text ? { text } : {}), ...(img ? { image: img } : {}) });
+  if (!r.ok) return { items: [], drinks: [], message: r.message };
+  const items: Item[] = [], drinks: Drink[] = [];
+  for (const it of r.answer.items) {
+    const made = fromDescribed(it, `${it.kind === "drink" ? "drink" : "custom"}:ai-${newId()}`, r.answer.items.length === 1 ? text : undefined);
+    if ("food" in made) { act.rememberFood(made.food); items.push({ ...made.line, est: `AI estimate${it.note ? ` · ${it.note}` : ""}` }); }
+    else { act.saveDrink(made.drink); drinks.push(made.drink); items.push(made.line); }
+  }
+  const dropped = r.answer.dropped.length ? `Left out ${r.answer.dropped.join(", ")} — the numbers didn't add up.` : undefined;
+  return { items, drinks, message: dropped };
+}
+
+/** The camera / photo button: iPhone offers "Take photo" or the library. */
+function PhotoButton({ onPick, label = "📷 Photo", disabled }: { onPick: (f: File) => void; label?: string; disabled?: boolean }) {
+  const ref = useRef<HTMLInputElement | null>(null);
+  return <>
+    <button type="button" className="pill-btn" disabled={disabled} onClick={() => ref.current?.click()}>{label}</button>
+    <input ref={ref} type="file" accept="image/*" hidden aria-label="Photo of food or drink" onChange={(e) => { const f = e.target.files?.[0]; if (f) onPick(f); e.target.value = ""; }} />
+  </>;
+}
+
 /* ------------------------------------------------------------------ food */
 
 /** The basket survives a reload or a tab switch until it's logged (this device only). */
 const BASKET_KEY = "healthos.basket";
-type Item = (Line & { alts?: Food[] }) | DrinkLine;
+/** `est`: how a line was estimated, shown under it ("median of 12 products", "AI estimate"). */
+type Item = (Line & { alts?: Food[]; est?: string }) | DrinkLine;
 const isDrink = (x: Item): x is DrinkLine => "drink" in x;
 const loadBasket = (): Item[] => { try { return JSON.parse(localStorage.getItem(BASKET_KEY) ?? "[]") as Item[]; } catch { return []; } };
 
@@ -133,14 +168,47 @@ function FoodTab({ done }: { done: (m: string) => void }) {
     return { food: f, count: 1, unit: null, grams: last?.grams ?? 100 };
   };
   const add = (f: Food) => { setBasket([...basket, usual(f)]); setQ(""); };
-  const addTyped = () => {
+  const [looking, setLooking] = useState(false);
+  const [asking, setAsking] = useState<string[]>([]);
+  const [aiNote, setAiNote] = useState<string | null>(null);
+  const { on: aiOn } = useAiStatus();
+  const addTyped = async () => {
     // "coffee at 11" → the whole meal is logged for 11:00.
     const { text, minute } = extractTime(typed);
     if (minute != null) setTime(hhmmOf(minute));
     const parsed = parseMeal(text, saved, drinksMine);
-    setBasket([...basket, ...parsed.flatMap((p): Item[] => (p.drink ? [p.drink] : p.line ? [{ ...p.line, alts: p.unsure ? p.alternatives : undefined }] : []))]);
-    setMissed(parsed.filter((p) => !p.line && !p.drink).map((p) => p.text));
+    const found = parsed.flatMap((p): Item[] => (p.drink ? [p.drink] : p.line ? [{ ...p.line, alts: p.unsure ? p.alternatives : undefined }] : []));
+    const missing = parsed.filter((p) => !p.line && !p.drink).map((p) => p.text);
+    setBasket([...basket, ...found]);
     setTyped("");
+    setMissed(missing);
+    if (!missing.length) return;
+    // Not one of yours or the everyday foods: the food database's median, marked as an estimate.
+    setLooking(true);
+    const fromDb = await Promise.all(missing.map(async (m) => {
+      try { return fromDatabase(m, (await searchFood(readAmount(tokens(m)).words.join(" "))).foods); } catch { return null; }
+    }));
+    setLooking(false);
+    const extra: Item[] = fromDb.flatMap((e) => (e ? [{ ...e.line, est: `${e.basis > 1 ? `median of ${e.basis} products` : "1 product"} · ${e.how}` }] : []));
+    setBasketRaw((b) => { const next = [...b, ...extra]; try { localStorage.setItem(BASKET_KEY, JSON.stringify(next.map((x) => (isDrink(x) ? x : (({ alts, ...l }) => { void alts; return l; })(x))))); } catch { /* private mode */ } return next; });
+    const still = missing.filter((_, i) => !fromDb[i]);
+    setMissed(still);
+    if (!still.length || !aiOn) return;
+    // Neither yours, the everyday foods, nor the database: the AI, once — saved, so it's free next time.
+    setAsking(still);
+    const got = await Promise.all(still.map((m) => aiDescribe(m)));
+    setAsking([]);
+    setBasketRaw((b) => { const next = [...b, ...got.flatMap((g) => g.items)]; try { localStorage.setItem(BASKET_KEY, JSON.stringify(next.map((x) => (isDrink(x) ? x : (({ alts, ...l }) => { void alts; return l; })(x))))); } catch { /* private mode */ } return next; });
+    setMissed(still.filter((_, i) => !got[i].items.length));
+    setAiNote(got.map((g) => g.message).filter(Boolean).join(" ") || null);
+  };
+  const photo = async (f: File) => {
+    setAsking(["your photo"]); setAiNote(null);
+    const g = await aiDescribe(typed.trim() || undefined, f);
+    setAsking([]);
+    setBasket([...basket, ...g.items]);
+    setTyped("");
+    setAiNote(g.message ?? (g.items.length ? null : "The AI couldn't make out food in that photo."));
   };
   const upd = (i: number, l: Item) => setBasket(basket.map((x, j) => (j === i ? l : x)));
   const opened = detail != null ? basket[detail] : undefined;
@@ -154,9 +222,13 @@ function FoodTab({ done }: { done: (m: string) => void }) {
         <div className="row-add">
           <input value={typed} placeholder="2 scrambled eggs, toast, an apple, coffee" onChange={(e) => setTyped(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter" && typed.trim()) addTyped(); }} aria-label="Type what you ate" />
           <button type="button" className="pill-btn" disabled={!typed.trim()} onClick={addTyped}>Add</button>
+          {aiOn && <PhotoButton onPick={(f) => void photo(f)} disabled={asking.length > 0} />}
         </div>
       </label>
-      {missed.length > 0 && <p className="err">Couldn't find {missed.map((m) => `“${m}”`).join(", ")} — search it below or add it yourself.</p>}
+      {asking.length > 0 && <p className="note">Asking the AI about {asking.map((m) => `“${m}”`).join(", ")}… it's saved after, so next time it's instant.</p>}
+      {aiNote && <p className="err">{aiNote}</p>}
+      {looking && <p className="note">Looking up {missed.map((m) => `“${m}”`).join(", ")} in the food database…</p>}
+      {!looking && !asking.length && missed.length > 0 && <p className="err">Couldn't find {missed.map((m) => `“${m}”`).join(", ")} — search it below or add it yourself.</p>}
       {crafting && <p className="note">Making your own food: type what's in it, roughly — “200 g chicken, 1 bowl rice, 1 tbsp oil, salad” — then <b>Save as a meal</b> and say how many portions it makes.</p>}
       {basket.length > 0 && <Basket lines={basket} time={time} setTime={setTime} crafting={crafting} onChange={setBasket} onDetail={setDetail} onLogged={(m) => { setBasket([]); setMissed([]); setCrafting(false); done(m); }} />}
     </div>
@@ -243,7 +315,7 @@ function Basket({ lines, time, setTime, crafting, onChange, onDetail, onLogged }
         const units = unitsOf(l.food);
         return (
           <div className="bline" key={i}>
-            <button type="button" className="bname" onClick={() => onDetail(i)}>{l.food.name}<small>≈ {approx(macrosOfLine(l).kcal)} kcal{l.unit ? "" : " · exact"}</small></button>
+            <button type="button" className="bname" onClick={() => onDetail(i)}>{l.food.name}<small>≈ {approx(macrosOfLine(l).kcal)} kcal{l.est ? ` · ${l.est}` : l.unit ? "" : " · exact"}</small></button>
             <div className="stepper">
               {l.unit ? <>
                 <button type="button" aria-label={`Less ${l.food.name}`} onClick={() => set(i, { ...l, count: step(l.count, -1) })}>−</button>
@@ -390,6 +462,20 @@ function DrinkTab({ done }: { done: (m: string) => void }) {
   const [time, setTime] = useState(nowHHMM);
   const [making, setMaking] = useState(false);
   const [dq, setDq] = useState("");
+  const { on: aiOn } = useAiStatus();
+  const usual = useStore((s) => s.settings.usualDrink);
+  const [aiText, setAiText] = useState("");
+  const [aiBusy, setAiBusy] = useState(false);
+  const [made, setMade] = useState<Drink[]>([]);
+  const [aiMsg, setAiMsg] = useState<string | null>(null);
+  const ask = async (f?: File) => {
+    setAiBusy(true); setAiMsg(null);
+    const g = await aiDescribe(aiText.trim() || dq.trim() || undefined, f);
+    setAiBusy(false);
+    setMade(g.drinks);
+    setAiMsg(g.message ?? (g.drinks.length ? null : "That didn't come back as a drink — try describing it."));
+    if (g.drinks.length) { setAiText(""); setDq(""); }
+  };
   const log = (d: Drink) => {
     const e = act.addEntry({ kind: "drink", at: timeToday(time), drinkId: d.id, name: d.name, ml: d.ml, caffeineMg: d.caffeineMg, alcoholG: d.alcoholG, kcal: d.kcal });
     offerUndo([e.id], `Logged ${d.name}`);
@@ -408,8 +494,25 @@ function DrinkTab({ done }: { done: (m: string) => void }) {
           </button>
         ))}
       </div>
+      {aiOn && <div className="ai-drink">
+        <label className="field">Not here? Describe it or snap it
+          <div className="row-add">
+            <input value={aiText} placeholder="my usual: a long coffee, big cup" onChange={(e) => setAiText(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter" && aiText.trim()) void ask(); }} aria-label="Describe a drink to the AI" />
+            <button type="button" className="pill-btn" disabled={aiBusy || !(aiText.trim() || dq.trim())} onClick={() => void ask()}>{aiBusy ? "…" : "Ask AI"}</button>
+            <PhotoButton onPick={(f) => void ask(f)} disabled={aiBusy} />
+          </div>
+        </label>
+        {aiMsg && <p className="err">{aiMsg}</p>}
+        {made.map((d) => <div key={d.id} className="made">
+          <span><b>{d.name}</b><small>{d.caffeineMg} mg caffeine{d.alcoholG ? ` · ${d.alcoholG} g alcohol` : ""}{d.kcal > 5 ? ` · ${d.kcal} kcal` : ""} · AI estimate{d.note ? ` — ${d.note}` : ""}. Saved to your drinks.</small></span>
+          <div className="row2">
+            <button type="button" className="pill-btn" disabled={usual?.id === d.id} onClick={() => act.setSettings({ usualDrink: d })}>{usual?.id === d.id ? "✓ Your usual" : "Make it my usual"}</button>
+            <button type="button" className="pill-btn pri" onClick={() => log(d)}>Log it</button>
+          </div>
+        </div>)}
+      </div>}
       <button type="button" className="pill-btn" onClick={() => setMaking(true)}>+ Your own drink</button>
-      <p className="note">One tap logs it at the time above. Values are typical label numbers.</p>
+      <p className="note">One tap logs it at the time above. Values are typical label numbers{aiOn ? "; ones the AI made say so" : ""}.</p>
     </div>
   );
 }
@@ -461,7 +564,14 @@ function StackTab() {
   // "No known link" only means something once you've said what to check against.
   const quiet = !profile.conditions.length && !profile.meds.length;
   const [editing, setEditing] = useState<string | null>(null);
-  const done = (s: Supplement) => { if (!s.name.trim()) act.setSupplements(list.filter((x) => x.id !== s.id)); setEditing(null); };
+  const research = useStore((st) => st.ai.research);
+  const { on } = useAiStatus();
+  // A new supplement gets looked up by the AI: what it is, the dose, and clashes with your About me.
+  const done = (s: Supplement) => {
+    if (!s.name.trim()) act.setSupplements(list.filter((x) => x.id !== s.id));
+    else if (on && (!research[s.id] || research[s.id].asked.toLowerCase() !== s.name.trim().toLowerCase())) void researchSupplement(s);
+    setEditing(null);
+  };
   const slotName = (s: Supplement) => { const x = SLOTS.find((y) => y.id === s.slot)!; return `${x.name} · ${hhmm(x.at)}`; };
   return (
     <div className="card">
@@ -486,7 +596,7 @@ function StackTab() {
           </div>
         ) : (
           <div key={s.id} className={`li supp-row${s.active ? "" : " paused"}`}>
-            <span>{s.name}{s.dose ? <em> {s.dose}</em> : null}<small>{s.active ? `${slotName(s)}${s.status === "low" ? " · running low" : ""}` : s.status === "out" ? "ran out — back when you restock" : s.status === "stopped" ? "stopped" : "paused"}</small><StackBadge name={s.name} report={report} hideNone={quiet} /></span>
+            <span>{s.name}{s.dose ? <em> {s.dose}</em> : null}<small>{s.active ? `${slotName(s)}${s.status === "low" ? " · running low" : ""}` : s.status === "out" ? "ran out — back when you restock" : s.status === "stopped" ? "stopped" : "paused"}</small><StackBadge name={s.name} report={report} hideNone={quiet} /><SuppResearch s={s} /></span>
             <button type="button" className="pill-btn" onClick={() => setEditing(s.id)}>Edit</button>
           </div>
         ))}
@@ -540,6 +650,7 @@ const describe = (e: Entry, supps: Supplement[]): [string, string] => {
     case "set": return [e.exercise, `${e.kg} kg × ${e.reps}`];
     case "weight": return ["Weight", `${e.kg} kg`];
     case "feel": return ["Feeling", `energy ${e.energy ?? "–"} · mood ${e.mood ?? "–"} · focus ${e.focus ?? "–"}`];
+    case "answer": return [e.question, e.answer];
   }
 };
 

@@ -11,15 +11,18 @@ import { useAuth } from "./lib/session";
 import { UndoToast } from "./components/UndoToast";
 import { act } from "./lib/store";
 import { useScoutUnseen } from "./components/Scout";
+import { AiScreen, useAiAuto, useAiUnread } from "./components/Ai";
 
 /**
  * Four screens, one job each (owner, 29 Sept): Today = what needs you now; Log = add things;
- * Workout = bold logging at the gym; Insights = every metric (built for the laptop). Settings
+ * Workout = bold logging at the gym; Insights = every metric (built for the laptop); AI = the chat, which can also write first. Settings
  * hangs off Today. Hash routes so the back button and home-screen shortcuts just work.
  */
 export function App() {
   const auth = useAuth();
   const unseen = useScoutUnseen();
+  const aiUnread = useAiUnread();
+  useAiAuto(auth.session?.user.id);
   const [route, setRoute] = useState<Route>(() => readRoute()[0]);
   useEffect(() => {
     const on = () => { setRoute(readRoute()[0]); window.scrollTo(0, 0); };
@@ -47,16 +50,18 @@ export function App() {
         {route === "log" && <Log />}
         {route === "workout" && <WorkoutScreen />}
         {route === "insights" && <Insights />}
+        {route === "ai" && <AiScreen />}
         {route === "settings" && <Settings tester={auth.tester} email={auth.session.user.email ?? ""} />}
         {route === "dev" && (auth.tester ? <Dev /> : <Settings tester={false} email={auth.session.user.email ?? ""} />)}
       </main>
       <UndoToast />
       <nav className="tabs" aria-label="Screens">
-        {(["today", "log", "workout", "insights"] as const).map((r) => (
+        {(["today", "log", "workout", "insights", "ai"] as const).map((r) => (
           <a key={r} href={`#${r}`} className={route === r ? "on" : ""} aria-current={route === r ? "page" : undefined}>
             <i />
-            {r[0].toUpperCase() + r.slice(1)}
+            {r === "ai" ? "AI" : r[0].toUpperCase() + r.slice(1)}
             {r === "insights" && unseen > 0 && route !== "insights" && <b className="tabdot" aria-label={`${unseen} new pattern${unseen > 1 ? "s" : ""}`} />}
+            {r === "ai" && aiUnread > 0 && route !== "ai" && <b className="tabdot" aria-label={`${aiUnread} new message${aiUnread > 1 ? "s" : ""} from the AI`} />}
           </a>
         ))}
       </nav>

@@ -17,7 +17,11 @@ export type Food = {
   /** Everyday amounts to count in ("egg" = 50 g, "slice" = 35 g); the first is the default. */
   units?: Unit[];
   /** "typical" = the median of several near-identical products (see foodgroup.ts). */
-  source: "off" | "usda" | "basic" | "custom" | "typical";
+  source: "off" | "usda" | "basic" | "custom" | "typical" | "ai";
+  /** What you typed when the AI made it ("bolognese spaghetti w mayo") — matched next time, free. */
+  aka?: string;
+  /** For an AI estimate: what it assumed ("a 300 ml cup, double shot"). */
+  note?: string;
   barcode?: string;
   /** Small product photo (Open Food Facts), https only. */
   img?: string;
@@ -38,6 +42,9 @@ export type Drink = {
   /** Grams of pure alcohol. 0 for anything non-alcoholic. */
   alcoholG: number;
   kcal: number;
+  /** AI estimate: what you typed, and what it assumed. */
+  aka?: string;
+  note?: string;
 };
 
 /**
@@ -72,7 +79,9 @@ export type Entry =
   | { id: string; kind: "supp"; at: number; suppId: string; status: "taken" | "skipped" }
   | { id: string; kind: "set"; at: number; workoutId: string; exercise: string; kg: number; reps: number }
   | { id: string; kind: "weight"; at: number; kg: number }
-  | { id: string; kind: "feel"; at: number; energy?: number; mood?: number; focus?: number; anxiety?: number; stress?: number; note?: string };
+  | { id: string; kind: "feel"; at: number; energy?: number; mood?: number; focus?: number; anxiety?: number; stress?: number; note?: string }
+  /** An answer to one of the AI's questions; repeated ones (same key) become a daily signal. */
+  | { id: string; kind: "answer"; at: number; key: string; question: string; answer: string };
 
 export type EntryKind = Entry["kind"];
 export type EntryOf<K extends EntryKind> = Extract<Entry, { kind: K }>;
