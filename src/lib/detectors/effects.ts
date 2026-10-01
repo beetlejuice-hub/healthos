@@ -58,7 +58,8 @@ export function questions(supplements: Supplement[], usualKcal: number | null): 
     { id: "weekend", group: "weekend", area: "food", kind: "binary", lag: 0, thing: "Weekend", phrase: "On weekends", x: (d) => (d.weekend ? 1 : 0), outcomes: [KCAL], adjustWeekend: false },
   ];
   if (usualKcal) qs.push({ id: "kcal-dev", group: "kcal-dev", area: "food", kind: "dose", lag: 1, thing: "Calories vs your usual", phrase: "500 kcal above your usual", x: (d) => (d.kcal == null ? null : (d.kcal - usualKcal) / 500), outcomes: FEEL });
-  for (const s of supplements.filter((x) => x.active)) {
+  // Every supplement, paused or out included: out-of-stock days are exactly the "off" days that answer the question.
+  for (const s of supplements) {
     qs.push({ id: `supp-${s.id}`, group: `supp-${s.id}`, area: "stack", kind: "binary", lag: 1, thing: s.name, phrase: `The day after taking ${s.name}`, x: (d) => (!d.stackAnswered ? null : d.taken.has(s.id) ? 1 : 0), outcomes: FEEL, more: [`days taking ${s.name}`, `days skipping ${s.name}`] });
   }
   return qs;

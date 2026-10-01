@@ -53,7 +53,7 @@ export function signals(supplements: Supplement[]): Signal[] {
     { id: "focus", family: "feel", name: "focus", get: (d) => d.focus, lane: "focus" },
     { id: "stress", family: "feel", name: "stress", get: (d) => d.stress, lane: "stress" },
   ];
-  for (const x of supplements.filter((v) => v.active)) {
+  for (const x of supplements) {
     s.push({ id: `supp-${x.id}`, family: `supp-${x.id}`, name: x.name, yes: `a ${x.name} day`, get: (d) => (!d.stackAnswered ? null : d.taken.has(x.id) ? 1 : 0), lane: "supps" });
   }
   return s;

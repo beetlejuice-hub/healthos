@@ -47,7 +47,7 @@ export function MasterGraph({ data, supplements, focus }: { data: Lanes; supplem
     ];
   }, [data, supplements.length, C]);
 
-  const [on, setOn] = useState<Record<string, boolean>>({ caf: true, alc: true, meals: true, gym: true, supps: true, wt: false, energy: true, mood: false, focus: false, stress: false, kcal: false });
+  const [on, setOn] = useState<Record<string, boolean>>({ caf: true, alc: true, meals: true, gym: true, supps: false, wt: true, energy: true, mood: false, focus: false, stress: false, kcal: false });
   const [over, setOver] = useState<Record<string, boolean>>({ energy: false });
   const [view, setView] = useState({ t1: data.to + 90 * MIN, span: 3 * DAY });
   const [hover, setHover] = useState<number | null>(null);

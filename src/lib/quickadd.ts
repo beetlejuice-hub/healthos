@@ -139,3 +139,26 @@ export function parseItem(text: string, mine: Food[] = [], drinks: Drink[] = [])
 }
 
 export const parseMeal = (text: string, mine: Food[] = [], drinks: Drink[] = []) => splitMeal(text).map((t) => parseItem(t, mine, drinks));
+
+/**
+ * "coffee at 11", "2 eggs 8:30", "beer 9pm" → the clock time (minutes from midnight) and the text
+ * without it, so a whole meal can be logged for earlier in the day. Null when there's no time.
+ */
+export function extractTime(text: string): { text: string; minute: number | null } {
+  const pats: RegExp[] = [
+    /\b(?:at|@)\s*(\d{1,2})(?:[:.](\d{2}))?\s*(am|pm)?\b/i,
+    /\b(\d{1,2})(?:[:.](\d{2}))?\s*(am|pm)\b/i,
+    /\b(\d{1,2})(?:[:.](\d{2}))?\s*-?kor\b()/i,
+    /\b(\d{1,2})[:.](\d{2})\b()/,
+  ];
+  for (const re of pats) {
+    const m = text.match(re);
+    if (!m) continue;
+    let h = Number(m[1]); const min = Number(m[2] ?? 0), ap = (m[3] ?? "").toLowerCase();
+    if (ap === "pm" && h < 12) h += 12;
+    if (ap === "am" && h === 12) h = 0;
+    if (h > 23 || min > 59) continue;
+    return { text: (text.slice(0, m.index) + text.slice(m.index! + m[0].length)).replace(/\s{2,}/g, " ").replace(/\s+,/g, ",").trim().replace(/,$/, ""), minute: h * 60 + min };
+  }
+  return { text, minute: null };
+}

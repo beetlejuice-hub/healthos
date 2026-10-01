@@ -62,6 +62,8 @@ export type Supplement = {
   /** Minutes from midnight — the slot's time. */
   at: number;
   active: boolean;
+  /** "low": still taking, buy more soon. "out": ran out (paused until restocked). "stopped": not taking any more. */
+  status?: "low" | "out" | "stopped";
 };
 
 export type Entry =

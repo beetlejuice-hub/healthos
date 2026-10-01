@@ -196,3 +196,14 @@ email get Dev tools (`#dev`): raw entry editor, generate/remove sample, wipe acc
    days must not corrupt anything (typo weigh-ins and partial days are dropped ✓); 75% / one line /
    words-first defaults stand; AI key and first experiment: later. Has psoriasis — wants an
    "about me" fact list and AI memory (to discuss); flare tracking is an obvious detector.
+12. [x] **Owner's 1 Oct list** (no-AI half). Log for earlier: "coffee at 11" / "8:30" / "9pm" /
+   "11kor" sets the time, plus Now · 30 min · 1–3 h ago chips on the basket and Drink tab. Drinks are
+   searchable (Drink tab and inside food search). "+ Make your own food": list roughly what's in it,
+   saved as your food in portions. Supplements: Taking / Running low / Ran out / Stopped (+ Delete);
+   Today asks to restock; engines keep stopped ones for history. Master graph: weight on, supps off
+   (no separate supplement-effect graph — owner's call). Body tab weight chart with trend. Caffeine
+   under 10 mg reads "a trace" (a 24 h-old coffee really is ~5 mg at a 5 h half-life — negligible).
+   ADHD-friendly nudges: Today's five chips (Food, Drinks, Stack, Weight, Rating — "N taps to
+   complete today") and the next answer the engine is closest to, with a progress bar.
+   AI half (chat that can write first, photo → saved food/drink, supplement research on add,
+   recommendations): proposal + questions in Docs, to discuss.

@@ -15,7 +15,8 @@ export type NowItem =
   | { id: string; kind: "caffeine"; title: string; body: string }
   | { id: string; kind: "food"; title: string; body: string }
   | { id: string; kind: "feel"; title: string; body: string }
-  | { id: string; kind: "weight"; title: string; body: string; lastKg: number | null };
+  | { id: string; kind: "weight"; title: string; body: string; lastKg: number | null }
+  | { id: string; kind: "restock"; title: string; body: string; low: string[]; out: string[] };
 
 export type NowContext = {
   now: number;
@@ -72,6 +73,13 @@ export function nowItems(c: NowContext): NowItem[] {
   // Food: nothing logged by late morning is worth a nudge; otherwise say where you stand after lunch.
   const foods = todays.filter((e) => e.kind === "food");
   if (!foods.length && nowMin >= 11 * 60) out.push({ id: "food", kind: "food", title: "Nothing eaten logged yet", body: "Log what you've had so today's totals mean something." });
+
+  // Running low / ran out: a gentle shopping reminder, and a way to say it's back.
+  const low = c.supplements.filter((x) => x.active && x.status === "low");
+  const gone = c.supplements.filter((x) => !x.active && x.status === "out");
+  const names = (l: Supplement[]) => l.map((x) => x.name).join(", ");
+  if (gone.length) out.push({ id: "restock", kind: "restock", title: `Out of ${names(gone)}${low.length ? ` · low on ${names(low)}` : ""}`, body: "Restocked? Tap it and it's back on Today. The days without it are useful: they show what it does.", low: low.map((x) => x.id), out: gone.map((x) => x.id) });
+  else if (low.length) out.push({ id: "restock", kind: "restock", title: `Running low: ${names(low)}`, body: "Buy more soon. If it runs out, tap Out — the days off are useful too.", low: low.map((x) => x.id), out: [] });
 
   // Morning weigh-in: the real-burn and weight-trend cards are built from these.
   if (nowMin >= 5 * 60 && nowMin < 11 * 60 && !todays.some((e) => e.kind === "weight")) {

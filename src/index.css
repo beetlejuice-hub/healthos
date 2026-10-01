@@ -375,3 +375,19 @@ a { color: inherit; }
 .tabs a { position: relative; }
 .tabdot { position: absolute; top: 6px; right: calc(50% - 26px); width: 7px; height: 7px; border-radius: 50%; background: var(--mood); }
 .noticed-line .r { color: var(--c-dim); }
+.when { display: grid; gap: 6px; }
+.when .chips .pill-btn { padding: 6px 10px; font-size: 12px; }
+.row-log { grid-template-columns: 1fr; }
+.sstatus button { font-size: 12px; padding: 8px 2px; }
+.wchart { --i-line: #ffffff12; --i-dim: var(--c-dim); --i-ink: var(--c-ink); --i-ink-2: var(--c-ink-2); }
+
+/* Today at a glance */
+.daychips { display: flex; flex-wrap: wrap; gap: 6px; padding: 0 2px; align-items: center; }
+.daychips button { border: 1px dashed #ffffff26; background: transparent; color: var(--c-ink-2); border-radius: 999px; padding: 6px 11px; font-size: 12.5px; font-weight: 600; }
+.daychips button.ok { border: 1px solid transparent; background: var(--c-card-2); color: var(--c-ink); }
+.dc-sum { flex-basis: 100%; font-size: 11.5px; color: var(--c-dim); padding: 2px 4px 0; }
+.nextanswer { display: grid; grid-template-columns: 1fr 90px; gap: 12px; align-items: center; margin: 0 2px; padding: 10px 14px; border-radius: 14px; background: var(--c-card); color: var(--c-ink); text-decoration: none; font-size: 13.5px; }
+.nextanswer small { display: block; color: var(--c-dim); font-size: 11px; letter-spacing: .1em; text-transform: uppercase; }
+.nextanswer em { display: block; font-style: normal; color: var(--c-ink-2); font-size: 12px; margin-top: 2px; }
+.nextanswer .bar { height: 5px; border-radius: 3px; background: #ffffff12; overflow: hidden; }
+.nextanswer .bar i { display: block; height: 100%; background: var(--mood); }

@@ -27,6 +27,10 @@ export function useNow(ms = 30_000) {
 
 const fmt = (n: number) => Math.round(n).toLocaleString("en-GB");
 
+/** Under 10 mg is a rounding error of a coffee — a sip of decaf — so it's called a trace. */
+const TRACE_MG = 10;
+const mgText = (mg: number) => (mg > 0 && mg < TRACE_MG ? "a trace" : `${mg} mg`);
+
 export function Today() {
   const now = useNow();
   const s = useStore((x) => x);
@@ -62,10 +66,12 @@ export function Today() {
       <p className="sum">
         {todays.some((e) => e.kind === "food") ? <>{fmt(totals.kcal)} kcal in{usual ? `, usual day ${fmt(usual)}` : ""}. </> : <>Nothing eaten logged yet. </>}
         {doses.some((d) => d.at > now - 24 * 60 * MIN)
-          ? <>There's <em>{cafNow} mg</em> of caffeine in you, falling to {cafBed} mg by {clock(bed)}.</>
+          ? cafNow < TRACE_MG ? <>Only a trace of caffeine left in you.</> : <>There's <em>{cafNow} mg</em> of caffeine in you, falling to {mgText(cafBed)} by {clock(bed)}.</>
           : <>No caffeine logged today.</>}
       </p>
 
+      <DayChips now={now} />
+      <NextAnswer />
       <WorkoutRunning now={now} />
       <StackAlert />
       <NoticedLine />
@@ -74,8 +80,8 @@ export function Today() {
       <div className="h"><span>Now</span><span>{shown.length ? `${shown.length} to do` : "all clear"}</span></div>
       {shown.length === 0 && <p className="empty-ok">Nothing needs you right now.</p>}
       {shown.map((it) => (
-        <div key={it.id} className={`item ${it.kind.startsWith("supp") ? "supp" : it.kind === "caffeine" ? "warn" : it.kind}`}>
-          <span className="ic" aria-hidden="true">{it.kind.startsWith("supp") ? "✓" : it.kind === "caffeine" ? "!" : it.kind === "food" ? "+" : it.kind === "weight" ? "kg" : "~"}</span>
+        <div key={it.id} className={`item ${it.kind.startsWith("supp") || it.kind === "restock" ? "supp" : it.kind === "caffeine" ? "warn" : it.kind}`}>
+          <span className="ic" aria-hidden="true">{it.kind.startsWith("supp") ? "✓" : it.kind === "caffeine" ? "!" : it.kind === "food" ? "+" : it.kind === "weight" ? "kg" : it.kind === "restock" ? "↻" : "~"}</span>
           <div><b>{it.title}</b><p>{it.body}</p></div>
           <div className="acts">
             {(it.kind === "supp-missed" || it.kind === "supp-due") && <>
@@ -87,6 +93,11 @@ export function Today() {
             {it.kind === "caffeine" && <button type="button" className="pill-btn" onClick={() => setDismissed((d) => [...d, it.id])}>Got it</button>}
             {it.kind === "food" && <button type="button" className="pill-btn pri" onClick={() => go("log", "food")}>Log food</button>}
             {it.kind === "weight" && <WeighIn lastKg={it.lastKg} />}
+            {it.kind === "restock" && <>
+              {it.out.length > 0 && <button type="button" className="pill-btn pri" onClick={() => act.setSupplements(s.supplements.map((x) => (it.out.includes(x.id) || it.low.includes(x.id) ? { ...x, active: true, status: undefined } : x)))}>Restocked</button>}
+              {it.out.length === 0 && <button type="button" className="pill-btn" onClick={() => act.setSupplements(s.supplements.map((x) => (it.low.includes(x.id) ? { ...x, active: true, status: undefined } : x)))}>Bought more</button>}
+              {it.out.length === 0 && <button type="button" className="pill-btn" onClick={() => act.setSupplements(s.supplements.map((x) => (it.low.includes(x.id) ? { ...x, active: false, status: "out" } : x)))}>It's out</button>}
+            </>}
             {it.kind === "feel" && <button type="button" className="pill-btn pri" onClick={() => document.getElementById("feel")?.scrollIntoView({ behavior: "smooth" })}>Rate it</button>}
           </div>
         </div>
@@ -148,7 +159,7 @@ function CaffeineCard({ doses, now, bed, halfLife, cafNow, cafBed }: { doses: { 
   const px = probe != null ? x(probe) : 0;
   return (
     <div className="card">
-      <h3>Caffeine <span>{cafNow} mg now · {cafBed} mg at {clock(bed)}</span></h3>
+      <h3>Caffeine <span>{mgText(cafNow)} now · {mgText(cafBed)} at {clock(bed)}</span></h3>
       <svg viewBox={`0 0 ${W} ${H}`} width="100%" role="img" aria-label={`Caffeine in your body today: ${cafNow} mg now, ${cafBed} mg at your planned bedtime`}
         style={{ touchAction: "pan-y", cursor: "crosshair" }} onPointerMove={onMove} onPointerDown={onMove} onPointerLeave={() => setProbe(null)}>
         {[0, max / 2, max].map((v) => <g key={v}><line x1={pl} x2={W - pr} y1={y(v)} y2={y(v)} stroke="var(--c-track)" /><text x={pl - 4} y={y(v) + 3} textAnchor="end" fontSize="9" fill="var(--c-dim)">{v}</text></g>)}
@@ -350,5 +361,55 @@ function WeighIn({ lastKg }: { lastKg: number | null }) {
       <input inputMode="decimal" aria-label="Weight in kg" value={kg} placeholder="kg" onChange={(e) => setKg(e.target.value)} />
       <button type="button" className="pill-btn pri" disabled={!ok} onClick={() => { const e = act.addEntry({ kind: "weight", at: Date.now(), kg: Math.round(n * 10) / 10 }); offerUndo([e.id], `Logged ${Math.round(n * 10) / 10} kg`); }}>Log kg</button>
     </div>
+  );
+}
+
+/**
+ * Today at a glance, five chips: what's in, what's missing — one tap to fill a gap. No streaks,
+ * no guilt: a missing chip is just a shortcut (owner: "hard to be consistent … the app should make
+ * me want to do it").
+ */
+function DayChips({ now }: { now: number }) {
+  const entries = useStore((x) => x.entries);
+  const supplements = useStore((x) => x.supplements);
+  const day = localDay(now);
+  const todays = entries.filter((e) => localDay(e.at) === day);
+  const kcal = todays.reduce((a, e) => a + (e.kind === "food" ? e.macros.kcal : 0), 0);
+  const drinks = todays.filter((e) => e.kind === "drink").length;
+  const active = supplements.filter((x) => x.active);
+  const ticked = new Set(todays.filter((e) => e.kind === "supp").map((e) => e.kind === "supp" ? e.suppId : "")).size;
+  const weighed = todays.some((e) => e.kind === "weight"), rated = todays.some((e) => e.kind === "feel");
+  const scrollTo = (id: string) => document.getElementById(id)?.scrollIntoView({ behavior: "smooth" });
+  const chips: [string, boolean, () => void][] = [
+    [kcal ? `Food ${fmt(kcal)} kcal` : "Food", kcal > 0, () => go("log", "food")],
+    [drinks ? `Drinks ${drinks}` : "Drinks", drinks > 0, () => go("log", "drink")],
+    [`Stack ${Math.min(ticked, active.length)}/${active.length}`, active.length > 0 && ticked >= active.length, () => scrollTo("stack")],
+    [weighed ? "Weighed" : "Weight", weighed, () => go("log", "body")],
+    [rated ? "Rated" : "Rating", rated, () => scrollTo("feel")],
+  ];
+  const doneN = chips.filter((c) => c[1]).length;
+  return (
+    <div className="daychips" aria-label="Today at a glance">
+      {chips.map(([label, ok, onTap]) => <button key={label} type="button" className={ok ? "ok" : ""} onClick={onTap}>{ok ? "✓ " : "+ "}{label}</button>)}
+      <span className="dc-sum">{doneN === 5 ? "Today's picture is complete." : `${5 - doneN} tap${5 - doneN > 1 ? "s" : ""} to complete today's picture`}</span>
+    </div>
+  );
+}
+
+/** The nearest answer Noticed is working towards, and what it still needs — progress you can see. */
+function NextAnswer() {
+  const now = useNow(10 * 60_000);
+  const entries = useStore((x) => x.entries);
+  const goals = useStore((x) => x.goals);
+  const settings = useStore((x) => x.settings);
+  const workouts = useStore((x) => x.workouts);
+  const supplements = useStore((x) => x.supplements);
+  const next = useMemo(() => notice(entries, goals, now, settings.bodyKg, { workouts, supplements, settings }).checking[0], [entries, goals, now, settings, workouts, supplements]);
+  if (!next) return null;
+  return (
+    <a className="nextanswer" href="#insights">
+      <span><small>Next answer</small>{next.question}<em>needs {next.missing}</em></span>
+      <span className="bar" aria-label={`${Math.round(next.progress * 100)}% there`}><i style={{ width: `${Math.round(next.progress * 100)}%` }} /></span>
+    </a>
   );
 }

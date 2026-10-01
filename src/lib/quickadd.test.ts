@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parseItem, parseMeal } from "./quickadd";
+import { extractTime, parseItem, parseMeal } from "./quickadd";
 import { amountText, approx, gramsOf, macrosOfLine, mealFood, plural, step, unitsOf } from "./units";
 import { BASIC_FOODS } from "./foods-basic";
 
@@ -86,5 +86,15 @@ describe("drinks in the same sentence", () => {
   it("your own drinks by name", () => {
     const office = { id: "drink:o", name: "Office coffee", ml: 200, caffeineMg: 120, alcoholG: 0, kcal: 5 };
     expect(parseItem("2 office coffee", [], [office]).drink).toEqual({ drink: office, count: 2 });
+  });
+});
+
+describe("logging for earlier", () => {
+  it("reads a time in the sentence and takes it out", () => {
+    expect(extractTime("coffee at 11")).toEqual({ text: "coffee", minute: 660 });
+    expect(extractTime("2 eggs, toast at 8:30")).toEqual({ text: "2 eggs, toast", minute: 510 });
+    expect(extractTime("beer 9pm")).toEqual({ text: "beer", minute: 1260 });
+    expect(extractTime("kávé 11kor")).toEqual({ text: "kávé", minute: 660 });
+    expect(extractTime("2 eggs, toast")).toEqual({ text: "2 eggs, toast", minute: null });
   });
 });

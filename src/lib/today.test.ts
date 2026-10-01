@@ -114,4 +114,12 @@ describe("basic foods", () => {
     expect(nowItems(ctx(at(7, 30), [yest, { id: "w2", kind: "weight", at: at(7), kg: 80.1 }])).some((i) => i.kind === "weight")).toBe(false);
     expect(nowItems(ctx(at(11, 30), [yest])).some((i) => i.kind === "weight")).toBe(false);
   });
+
+  it("reminds about supplements running low or out", () => {
+    const low = { ...ctx(at(10), []), supplements: [{ ...stack[0], status: "low" as const }, { ...stack[1], active: false, status: "out" as const }] };
+    expect(nowItems(low).find((i) => i.kind === "restock")).toMatchObject({ title: "Out of Black cumin oil · low on Creatine", out: ["cumin"], low: ["cre"] });
+    const justLow = { ...ctx(at(10), []), supplements: [{ ...stack[0], status: "low" as const }] };
+    expect(nowItems(justLow).find((i) => i.kind === "restock")?.title).toBe("Running low: Creatine");
+    expect(nowItems(ctx(at(10), [])).some((i) => i.kind === "restock")).toBe(false);
+  });
 });
