@@ -181,6 +181,16 @@ email get Dev tools (`#dev`): raw entry editor, generate/remove sample, wipe acc
    logged as a drink with its caffeine; EN + HU names, your own drinks); morning weigh-in on Today
    (5:00–11:00, yesterday's weight pre-filled); Stack tab is a compact list with Edit per row, and
    "no known link" badges only once About me has something to check against.
+11. [x] **Scout — "worth a look"** (1 Oct), `lib/scout.ts`. Every cross-family pair of daily signals
+   (food, biggest meal, protein, late eating, caffeine, late caffeine, alcohol, gym, volume, each
+   supplement, energy/mood/focus/stress; wearable signals plug in the same way), same day and next
+   day: ranks with weekends/weekdays centred separately, |r| ≥ 0.35, p < 0.005, 14+ days, one per
+   family pair, top 5. Each says how often it held ("13 of 14"), is labelled "could be chance", and
+   is re-checked on days after it was flagged (memo synced per account): ≥75% of 5+ new days →
+   "holding up", <50% → fades. Measured: ~0.9 chance flags per made-up person at 30–60 days, 0.3
+   at 90. Today line + Insights tab dot for unseen patterns; "Show on graph" sets the master graph
+   to the two lanes (overlaid where possible) and shades the days; "Not interesting" dismisses.
+   Master graph gained Focus, Stress and Calories-per-day lanes. Push notifications: later.
    Owner's answers (30 Sept): evening feel card on Today ✓ (+ a reminder notification — needs web
    push, not built); real burn only *suggests* goal changes; not tracking closely yet, so 1–2 bad
    days must not corrupt anything (typo weigh-ins and partial days are dropped ✓); 75% / one line /

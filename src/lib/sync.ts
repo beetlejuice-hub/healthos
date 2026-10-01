@@ -13,7 +13,7 @@
 import type { Entry } from "./types";
 import type { State } from "./store";
 
-export const DOC_KEYS = ["foods", "drinks", "supplements", "templates", "workouts", "goals", "settings", "profile"] as const;
+export const DOC_KEYS = ["foods", "drinks", "supplements", "templates", "workouts", "goals", "settings", "profile", "scout"] as const;
 export type DocKey = (typeof DOC_KEYS)[number];
 
 export type Op =
@@ -66,7 +66,7 @@ export function mergePull(state: State, entries: EntryRow[], docs: DocRow[], pen
   for (const d of docs) {
     if (!(DOC_KEYS as readonly string[]).includes(d.key) || pendingDoc.has(d.key as DocKey)) continue;
     const key = d.key as DocKey;
-    next = { ...next, [key]: key === "goals" || key === "settings" || key === "profile" ? { ...(next[key] as object), ...(d.value as object) } : d.value } as State;
+    next = { ...next, [key]: key === "goals" || key === "settings" || key === "profile" || key === "scout" ? { ...(next[key] as object), ...(d.value as object) } : d.value } as State;
   }
   return next;
 }

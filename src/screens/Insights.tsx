@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useStore } from "../lib/store";
 import { adherence, dailyFacts, lanes, pairs, suppEffects, type DayFacts, type Pair } from "../lib/insights";
 import { MasterGraph } from "../components/MasterGraph";
@@ -11,6 +11,8 @@ import type { EntryOf } from "../lib/types";
 import { useNow } from "./Today";
 import { notice, WINDOW_DAYS, type Report } from "../lib/findings";
 import { StackCheckPanel } from "../components/StackCheck";
+import { useScout, WorthALook } from "../components/Scout";
+import type { GraphFocus } from "../components/MasterGraph";
 
 const f0 = (v: number) => Math.round(v).toLocaleString("en-GB");
 const f1 = (v: number) => v.toFixed(1);
@@ -24,6 +26,9 @@ export function Insights() {
   const data = useMemo(() => lanes(s.entries, s.workouts, s.supplements, s.settings, now), [s.entries, s.workouts, s.supplements, s.settings, now]);
   const facts = useMemo(() => dailyFacts(s.entries, s.workouts, s.settings, addDays(today, -89), today), [s.entries, s.workouts, s.settings, today]);
   const sample = s.entries.some((e) => e.id.startsWith("sample:"));
+  const scouted = useScout();
+  const [focus, setFocus] = useState<GraphFocus | null>(null);
+  const showOnGraph = (f: GraphFocus) => { setFocus(f); setTimeout(() => document.querySelector(".master")?.scrollIntoView({ behavior: "smooth" }), 50); };
   const report = useMemo(() => notice(s.entries, s.goals, now, s.settings.bodyKg, { workouts: s.workouts, supplements: s.supplements, settings: s.settings }), [s.entries, s.goals, now, s.settings, s.workouts, s.supplements]);
   // Show a section only once there's something in it; list the rest in one line each, so a new
   // account sees a short page instead of ten empty panels (owner: "looks really complex").
@@ -63,8 +68,9 @@ export function Insights() {
       </header>
       {nothing && <div className="needs">Nothing logged yet. Log food, drinks and supplements for a few days and this fills in — or load sample data in Settings to see what it will look like.</div>}
       {!nothing && <Noticed report={report} />}
+      {!nothing && <WorthALook items={scouted} onShow={showOnGraph} />}
       {!nothing && <Kpis facts={facts} today={today} now={now} />}
-      {!nothing && <MasterGraph data={data} supplements={s.supplements} />}
+      {!nothing && <MasterGraph data={data} supplements={s.supplements} focus={focus} />}
       <div className="pgrid">
         {has.food && <Nutrition now={now} />}
         {has.caffeine && <CaffeineAlcohol facts={facts} />}

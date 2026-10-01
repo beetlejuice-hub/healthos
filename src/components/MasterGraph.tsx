@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { Lanes } from "../lib/insights";
 import { buckets, valueAt, type Point } from "../lib/series";
-import { clock, dayLabel, DAY, HOUR, MIN } from "../lib/time";
+import { atMinute, clock, dayLabel, DAY, HOUR, MIN } from "../lib/time";
 import type { Supplement } from "../lib/types";
 
 /**
@@ -17,7 +17,10 @@ type Lane = { id: string; name: string; unit: string; color: string; h: number; 
 const cssVar = (v: string) => getComputedStyle(document.documentElement).getPropertyValue(v).trim() || "#888";
 const LEFT = 104, RIGHT = 46, TOP = 22, GAP = 7;
 
-export function MasterGraph({ data, supplements }: { data: Lanes; supplements: Supplement[] }) {
+/** "Show on graph" from a scout pattern: these lanes, on top of each other, these days highlighted. */
+export type GraphFocus = { key: string; lanes: string[]; days: string[] };
+
+export function MasterGraph({ data, supplements, focus }: { data: Lanes; supplements: Supplement[]; focus?: GraphFocus | null }) {
   const C = useMemo(() => ({ caf: cssVar("--caf"), alc: cssVar("--alc"), kcal: cssVar("--kcal"), gym: cssVar("--gym"), supp: cssVar("--supp"), wt: cssVar("--wt"), mood: cssVar("--mood"), hr: cssVar("--hr"), line: cssVar("--i-line"), ink: cssVar("--i-ink"), ink2: cssVar("--i-ink-2"), dim: cssVar("--i-dim") }), []);
   const lanes: Lane[] = useMemo(() => {
     const range = (pts: Point[], pad: number, floor?: [number, number]): [number, number] => {
@@ -38,16 +41,32 @@ export function MasterGraph({ data, supplements }: { data: Lanes; supplements: S
       { id: "wt", name: "Weight", unit: "kg", color: C.wt, h: 36, kind: "daily", pts: data.weight, lo: wLo, hi: wHi, overlay: true },
       { id: "energy", name: "Energy (you)", unit: "/10", color: C.mood, h: 32, kind: "daily", pts: data.energy, lo: 0, hi: 10, overlay: true },
       { id: "mood", name: "Mood (you)", unit: "/10", color: C.ink2, h: 32, kind: "daily", pts: data.mood, lo: 0, hi: 10, overlay: true },
+      { id: "focus", name: "Focus (you)", unit: "/10", color: C.supp, h: 32, kind: "daily", pts: data.focus, lo: 0, hi: 10, overlay: true },
+      { id: "stress", name: "Stress (you)", unit: "/10", color: C.hr, h: 32, kind: "daily", pts: data.stress, lo: 0, hi: 10, overlay: true },
+      { id: "kcal", name: "Calories per day", unit: "kcal", color: C.kcal, h: 36, kind: "daily", pts: data.kcalDay, lo: 0, hi: Math.max(3000, Math.ceil(Math.max(0, ...data.kcalDay.map((p) => p[1])) / 500) * 500), overlay: true },
     ];
   }, [data, supplements.length, C]);
 
-  const [on, setOn] = useState<Record<string, boolean>>({ caf: true, alc: true, meals: true, gym: true, supps: true, wt: false, energy: true, mood: false });
+  const [on, setOn] = useState<Record<string, boolean>>({ caf: true, alc: true, meals: true, gym: true, supps: true, wt: false, energy: true, mood: false, focus: false, stress: false, kcal: false });
   const [over, setOver] = useState<Record<string, boolean>>({ energy: false });
   const [view, setView] = useState({ t1: data.to + 90 * MIN, span: 3 * DAY });
   const [hover, setHover] = useState<number | null>(null);
   const cv = useRef<HTMLCanvasElement>(null);
   const drag = useRef<{ x: number; t1: number } | null>(null);
   const [w, setW] = useState(900);
+
+  // A pattern asked to be shown: only its lanes, the second drawn over the first where it can be,
+  // and the view widened to cover the days that show it.
+  useEffect(() => {
+    if (!focus) return;
+    const want = new Set(focus.lanes);
+    setOn(Object.fromEntries(lanes.map((l) => [l.id, want.has(l.id)])));
+    const series = focus.lanes.find((id) => lanes.find((l) => l.id === id)?.kind === "series");
+    setOver(series ? Object.fromEntries(focus.lanes.filter((id) => id !== series && lanes.find((l) => l.id === id)?.overlay).map((id) => [id, true])) : {});
+    const firstDay = focus.days.length ? atMinute([...focus.days].sort()[0], 0) : data.to - 14 * DAY;
+    setView(clampView(data.to + 90 * MIN, Math.max(7 * DAY, data.to - firstDay + 2 * DAY)));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [focus?.key]);
 
   const minT = data.from, maxT = data.to + 90 * MIN;
   const clampView = (t1: number, span: number) => {
@@ -87,6 +106,9 @@ export function MasterGraph({ data, supplements }: { data: Lanes; supplements: S
       const midnight = new Date(t).getHours() === 0 && new Date(t).getMinutes() === 0;
       ctx.fillText(st >= DAY || midnight ? dayLabel(t) : clock(t), x, 10);
     }
+
+    // Days a pattern rests on, shaded behind every lane.
+    if (focus) for (const d of focus.days) { const a = X(atMinute(d, 0)), b = X(atMinute(d, 24 * 60)); if (b < LEFT || a > w - RIGHT) continue; ctx.fillStyle = C.ink; ctx.globalAlpha = .07; ctx.fillRect(Math.max(LEFT, a), TOP - 4, Math.min(w - RIGHT, b) - Math.max(LEFT, a), H - TOP); ctx.globalAlpha = 1; }
 
     const yOf = (top: number, h: number, lo: number, hi: number, v: number) => top + h - ((Math.max(lo, Math.min(hi, v)) - lo) / (hi - lo || 1)) * h;
     const drawSeries = (l: Lane, top: number, h: number, asOverlay: boolean) => {

@@ -10,6 +10,7 @@ import { useSyncExternalStore } from "react";
 import type { Drink, Entry, Food, Goals, Supplement, Template, Workout } from "./types";
 import { DEFAULT_GOALS, slotOf, slotTime } from "./types";
 import { tidyWorkouts } from "./training";
+import type { ScoutMemo } from "./scout";
 
 /**
  * What the calculations need. Only `bedMinute` (planned bedtime) and `usualDrink` are asked of you;
@@ -40,6 +41,8 @@ export type State = {
   settings: Settings;
   /** About you: what the stack check (and later the AI) takes into account. */
   profile: Profile;
+  /** Patterns the scout has shown you: when first flagged, and whether you dismissed them. */
+  scout: Record<string, ScoutMemo>;
 };
 
 export type Profile = { conditions: string[]; meds: string[]; allergies: string[]; notes: string };
@@ -77,7 +80,7 @@ const DEFAULT_TEMPLATES: Template[] = [
 
 const EMPTY: State = {
   entries: [], foods: [], drinks: [], supplements: DEFAULT_STACK, templates: DEFAULT_TEMPLATES, workouts: [],
-  goals: DEFAULT_GOALS, settings: DEFAULT_SETTINGS, profile: EMPTY_PROFILE,
+  goals: DEFAULT_GOALS, settings: DEFAULT_SETTINGS, profile: EMPTY_PROFILE, scout: {},
 };
 
 /** The save slot. Per account once signed in, so a tester and a personal account never mix. */
@@ -89,7 +92,7 @@ function load(): State {
     const raw = localStorage.getItem(KEY);
     if (!raw) return EMPTY;
     const s = JSON.parse(raw) as Partial<State>;
-    return { ...EMPTY, ...s, supplements: normalizeStack(s.supplements ?? EMPTY.supplements), settings: { ...DEFAULT_SETTINGS, ...s.settings }, goals: { ...DEFAULT_GOALS, ...s.goals }, profile: { ...EMPTY_PROFILE, ...s.profile } };
+    return { ...EMPTY, ...s, supplements: normalizeStack(s.supplements ?? EMPTY.supplements), settings: { ...DEFAULT_SETTINGS, ...s.settings }, goals: { ...DEFAULT_GOALS, ...s.goals }, profile: { ...EMPTY_PROFILE, ...s.profile }, scout: s.scout ?? {} };
   } catch {
     return EMPTY;
   }
@@ -186,6 +189,7 @@ export const act = {
   },
   setGoals(goals: Goals) { commit({ ...state, goals }); },
   setProfile(profile: Profile) { commit({ ...state, profile }); },
+  setScout(scout: Record<string, ScoutMemo>) { commit({ ...state, scout }); },
   setSettings(patch: Partial<Settings>) { commit({ ...state, settings: { ...state.settings, ...patch } }); },
   /** Close forgotten workouts (lib/training tidyWorkouts). `force` closes any open one now. */
   tidyWorkouts(now = Date.now(), force = false) {

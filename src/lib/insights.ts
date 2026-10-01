@@ -29,6 +29,10 @@ export type Lanes = {
   weight: Point[];
   energy: Point[];
   mood: Point[];
+  focus: Point[];
+  stress: Point[];
+  /** Calories per logged day, placed at noon. */
+  kcalDay: Point[];
 };
 
 /** Continuous lanes on a 10-minute grid from the first entry (or 14 days back) to `now`. */
@@ -60,6 +64,9 @@ export function lanes(entries: Entry[], workouts: Workout[], supplements: Supple
     weight: of(entries, "weight").map((w) => [w.at, w.kg]),
     energy: of(entries, "feel").filter((f) => f.energy != null).map((f) => [f.at, f.energy!]),
     mood: of(entries, "feel").filter((f) => f.mood != null).map((f) => [f.at, f.mood!]),
+    focus: of(entries, "feel").filter((f) => f.focus != null).map((f) => [f.at, f.focus!]),
+    stress: of(entries, "feel").filter((f) => f.stress != null).map((f) => [f.at, f.stress!]),
+    kcalDay: (() => { const m = new Map<string, number>(); for (const f of of(entries, "food")) m.set(localDay(f.at), (m.get(localDay(f.at)) ?? 0) + f.macros.kcal); return [...m.entries()].sort().map(([d, k]) => [atMinute(d, 12 * 60), k] as Point); })(),
   };
 }
 
@@ -90,7 +97,18 @@ export type DayFacts = {
   /** kg × reps summed over the day's sets. */
   volumeKg: number;
   weekend: boolean;
+  /** The biggest single meal: food logged within 45 minutes counts as one meal. Null if no food. */
+  bigMealKcal: number | null;
 };
+
+/** Food entries within 45 minutes of each other are one meal; the largest meal's kcal. */
+export function biggestMeal(foods: { at: number; macros: { kcal: number } }[]): number | null {
+  if (!foods.length) return null;
+  const sorted = [...foods].sort((a, b) => a.at - b.at);
+  let best = 0, cur = 0, last = -Infinity;
+  for (const f of sorted) { cur = f.at - last <= 45 * MIN ? cur + f.macros.kcal : f.macros.kcal; last = f.at; best = Math.max(best, cur); }
+  return best;
+}
 
 /** Caffeine at or after this minute counts as "late". */
 export const LATE_CAFFEINE_MIN = 14 * 60;
@@ -126,6 +144,7 @@ export function dailyFacts(entries: Entry[], workouts: Workout[], settings: Sett
       stackAnswered: of(es, "supp").length > 0,
       lateCaffeineMg: caf.filter((d) => minuteOfDay(d.at) >= LATE_CAFFEINE_MIN).reduce((a, d) => a + d.caffeineMg, 0),
       lateEat: foods.some((f) => minuteOfDay(f.at) >= 21 * 60),
+      bigMealKcal: biggestMeal(foods),
       volumeKg: of(es, "set").reduce((a, x) => a + x.kg * x.reps, 0),
       weekend: [0, 6].includes(new Date(atMinute(day, 12 * 60)).getDay()),
     });

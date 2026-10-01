@@ -10,6 +10,7 @@ import { Auth, NewPassword } from "./components/Auth";
 import { useAuth } from "./lib/session";
 import { UndoToast } from "./components/UndoToast";
 import { act } from "./lib/store";
+import { useScoutUnseen } from "./components/Scout";
 
 /**
  * Four screens, one job each (owner, 29 Sept): Today = what needs you now; Log = add things;
@@ -18,6 +19,7 @@ import { act } from "./lib/store";
  */
 export function App() {
   const auth = useAuth();
+  const unseen = useScoutUnseen();
   const [route, setRoute] = useState<Route>(() => readRoute()[0]);
   useEffect(() => {
     const on = () => { setRoute(readRoute()[0]); window.scrollTo(0, 0); };
@@ -54,6 +56,7 @@ export function App() {
           <a key={r} href={`#${r}`} className={route === r ? "on" : ""} aria-current={route === r ? "page" : undefined}>
             <i />
             {r[0].toUpperCase() + r.slice(1)}
+            {r === "insights" && unseen > 0 && route !== "insights" && <b className="tabdot" aria-label={`${unseen} new pattern${unseen > 1 ? "s" : ""}`} />}
           </a>
         ))}
       </nav>

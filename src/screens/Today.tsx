@@ -5,6 +5,7 @@ import { nowItems } from "../lib/today";
 import { notice } from "../lib/findings";
 import { FEEL_KEYS, feelChange, feelState, latestFeel, type FeelKey } from "../lib/feel";
 import { StackAlert } from "../components/StackCheck";
+import { ScoutLine } from "../components/Scout";
 import { caffeineAt } from "../lib/caffeine";
 import { caffeineDoses } from "../lib/insights";
 import { add, byDay, macrosOf, ZERO } from "../lib/nutrition";
@@ -68,6 +69,7 @@ export function Today() {
       <WorkoutRunning now={now} />
       <StackAlert />
       <NoticedLine />
+      <ScoutLine />
 
       <div className="h"><span>Now</span><span>{shown.length ? `${shown.length} to do` : "all clear"}</span></div>
       {shown.length === 0 && <p className="empty-ok">Nothing needs you right now.</p>}

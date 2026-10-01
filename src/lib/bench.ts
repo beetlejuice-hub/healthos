@@ -86,7 +86,7 @@ export function feelWorld(w: FeelWorld): DayFacts[] {
       trained, kcal, proteinG: kcal == null ? null : Math.round(130 + g() * 25),
       energy: rated ? clamp(energy) : null, mood: rated ? clamp(mood) : null, focus: rated ? clamp(6 + g()) : null, stress: rated ? clamp(4 + g()) : null,
       taken: new Set(saffron ? ["saffron", "creatine"] : ["creatine"]), logged: true, stackAnswered: r() < 0.9, lateCaffeineMg: late,
-      lateEat: r() < 0.3, volumeKg: trained ? 8000 + Math.round(g() * 1500) : 0, weekend,
+      lateEat: r() < 0.3, volumeKg: trained ? 8000 + Math.round(g() * 1500) : 0, weekend, bigMealKcal: kcal == null ? null : Math.round(kcal * (0.35 + r() * 0.2)),
     };
     out.push(day); prev = day;
   }
