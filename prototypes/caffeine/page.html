@@ -1,0 +1,171 @@
+<title>Caffeine Clock</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@300;500;700&family=Hanken+Grotesk:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: one 24-hour dial is the page. The day runs clockwise from midnight at the top; caffeine
+   rises outward from the inner ring, hotter in colour the higher it goes. Night is the cool wedge.
+   Deliberately one dark world (a night-time subject), so no light theme. */
+:root {
+  --bg: #0c0908; --bg-2: #15100d; --card: #17110eee; --line: #2b211c; --line-2: #3a2c25;
+  --ink: #f7ede3; --ink-2: #bba999; --dim: #7a6a5e;
+  --crema: #f6cf8f; --roast: #ee8a3c; --ember: #d9473a;
+  --night: #8ea2ff; --night-2: #8ea2ff22;
+  --f-display: "Sora", "Avenir Next", system-ui, sans-serif;
+  --f-body: "Hanken Grotesk", system-ui, sans-serif;
+  --f-mono: "JetBrains Mono", ui-monospace, monospace;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html { background: var(--bg); }
+body { margin: 0; min-height: 100%; color: var(--ink); font: 15px/1.5 var(--f-body);
+  background: radial-gradient(900px 700px at 30% 34%, #2a1a12 0%, #160f0c 45%, var(--bg) 75%) fixed, var(--bg);
+  padding: 22px 16px 56px; -webkit-font-smoothing: antialiased; }
+.wrap { max-width: 1160px; margin: 0 auto; display: grid; gap: 18px; }
+.num { font-variant-numeric: tabular-nums; }
+b { font-weight: 600; color: var(--ink); }
+.eyebrow { margin: 0; font: 500 11px/1 var(--f-mono); letter-spacing: 0.14em; text-transform: uppercase; color: var(--dim); }
+
+header { display: grid; gap: 6px; }
+h1 { margin: 0; font: 300 clamp(30px, 6.5vw, 46px)/1 var(--f-display); letter-spacing: -0.02em; }
+h1 em { font-style: normal; font-weight: 700; background: linear-gradient(90deg, var(--crema), var(--roast) 55%, var(--ember)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+header p.lede { margin: 2px 0 0; color: var(--ink-2); max-width: 58ch; }
+
+.grid { display: grid; gap: 22px; }
+@media (min-width: 980px) { .grid { grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); align-items: start; } .clockcol { position: sticky; top: calc(14px + env(safe-area-inset-top, 0px)); } }
+
+.clockcol { display: grid; gap: 10px; justify-items: center; min-width: 0; }
+.dialwrap { position: relative; width: 100%; max-width: 580px; aspect-ratio: 1; }
+#dial { width: 100%; height: 100%; display: block; touch-action: none; user-select: none; -webkit-user-select: none; cursor: grab; overflow: visible; }
+#dial:active { cursor: grabbing; }
+.center { position: absolute; inset: 0; display: grid; place-content: center; text-align: center; pointer-events: none; gap: 2px; }
+#c-when { font: 500 10.5px/1 var(--f-mono); letter-spacing: 0.12em; text-transform: uppercase; color: var(--ink-2); }
+.bignum { font: 300 clamp(54px, 15vw, 84px)/0.95 var(--f-display); letter-spacing: -0.04em; display: flex; align-items: baseline; justify-content: center; gap: 4px; }
+.bignum small { font: 500 14px var(--f-mono); color: var(--ink-2); letter-spacing: 0; }
+#c-dir { font-size: 13px; color: var(--ink-2); max-width: 15ch; margin: 2px auto 0; line-height: 1.3; }
+#c-gut { font: 500 11px var(--f-mono); color: var(--crema); min-height: 1em; }
+
+/* dial parts */
+.well { fill: #120c0a; stroke: var(--line); stroke-width: 1; }
+.night { fill: var(--night-2); }
+.guard { fill: #8ea2ff14; }
+.base { fill: none; stroke: var(--line-2); stroke-width: 1; }
+.grid { fill: none; stroke: #ffffff0d; stroke-width: 1; }
+.grid.target { stroke: var(--night); stroke-opacity: 0.75; stroke-dasharray: 2 4; stroke-width: 1.2; }
+.tlabel { font: 500 9.5px var(--f-mono); fill: var(--night); text-anchor: middle; dominant-baseline: middle; }
+.band { fill: var(--crema); fill-opacity: 0.09; stroke: var(--crema); stroke-opacity: 0.25; stroke-width: 0.8; stroke-dasharray: 1 3; }
+.layer { stroke: #120c0a; stroke-width: 1.4; stroke-linejoin: round; }
+.glow { fill: var(--roast); opacity: 0.45; }
+.edge { fill: none; stroke: #ffe3bd; stroke-width: 1.4; stroke-opacity: 0.9; stroke-linejoin: round; }
+.ghost { fill: none; stroke: var(--ink); stroke-width: 1.6; stroke-dasharray: 4 3; }
+.tick { stroke: var(--dim); stroke-width: 1; } .tick.big { stroke: var(--ink-2); stroke-width: 1.6; } .tick.fine { stroke: var(--line-2); }
+.hl { font: 500 10.5px var(--f-mono); fill: var(--dim); text-anchor: middle; dominant-baseline: middle; } .hl.big { fill: var(--ink-2); font-size: 12px; }
+.drink circle { fill: #1d1511; stroke: var(--crema); stroke-width: 1.2; }
+.drink text { font: 600 10px var(--f-display); fill: var(--crema); text-anchor: middle; }
+.sip { fill: none; stroke: var(--crema); stroke-width: 2; stroke-linecap: round; opacity: 0.6; }
+.now { stroke: var(--ink); stroke-width: 1; stroke-dasharray: 1 2.5; opacity: 0.55; }
+.hand { stroke: var(--ink); stroke-width: 1.6; stroke-linecap: round; }
+.handle { cursor: grab; outline: none; }
+.handle.scrub circle { fill: var(--ink); stroke: var(--bg); stroke-width: 3; }
+.handle.bed circle { fill: #1a1f3d; stroke: var(--night); stroke-width: 1.6; }
+.handle.bed path { fill: var(--night); }
+.handle:focus-visible circle { stroke: var(--crema); stroke-width: 3; }
+.intro .sweep { stroke-dasharray: 1 1; animation: sweep 1.3s cubic-bezier(.3,.7,.2,1) both; }
+@keyframes sweep { from { stroke-dashoffset: 1; } to { stroke-dashoffset: 0; } }
+
+.under { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; justify-content: center; font-size: 12.5px; color: var(--ink-2); max-width: 580px; }
+.key { display: inline-flex; align-items: center; gap: 6px; }
+.key i { display: inline-block; width: 16px; height: 8px; border-radius: 2px; }
+.key .k-heat { background: linear-gradient(90deg, var(--crema), var(--roast), var(--ember)); }
+.key .k-band { background: #f6cf8f22; border: 1px dotted #f6cf8f88; }
+.key .k-night { background: var(--night-2); border: 1px dashed var(--night); }
+.pill { font: 500 12px var(--f-body); color: var(--ink); background: transparent; border: 1px solid var(--line-2); border-radius: 999px; padding: 6px 12px; cursor: pointer; }
+.pill:hover { border-color: var(--ink-2); }
+#preview-note { margin: 0; min-height: 1.2em; font-size: 12.5px; color: var(--ink-2); text-align: center; max-width: 52ch; }
+
+.side { display: grid; gap: 16px; min-width: 0; }
+.card { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 18px; backdrop-filter: blur(6px); }
+h2 { margin: 0 0 12px; font: 500 15px/1.2 var(--f-display); letter-spacing: 0; }
+h2 span { color: var(--dim); font: 400 12.5px var(--f-body); margin-left: 6px; }
+#tonight { display: grid; gap: 8px; }
+.lead { margin: 2px 0 0; font: 300 22px/1.3 var(--f-display); letter-spacing: -0.01em; text-wrap: balance; }
+.lead .num { font-weight: 700; }
+.lead .hot { color: var(--roast); } .lead .cool { color: var(--crema); }
+.sub { margin: 0; color: var(--ink-2); max-width: 56ch; }
+.stats { margin: 8px 0 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); border-top: 1px solid var(--line); }
+.stats div { padding: 12px 0 0; display: grid; gap: 2px; }
+.stats div + div { padding-left: 14px; border-left: 1px solid var(--line); }
+.stats dt { font: 500 10.5px var(--f-mono); letter-spacing: 0.12em; text-transform: uppercase; color: var(--dim); }
+.stats dd { margin: 0; font: 500 22px/1.1 var(--f-display); }
+.stats dd small { font: 400 12px var(--f-mono); color: var(--ink-2); }
+.stats dd.s { font: 400 12px var(--f-body); color: var(--ink-2); }
+
+#menu { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.drinkbtn { text-align: left; display: grid; grid-template-columns: 28px minmax(0, 1fr); column-gap: 10px; row-gap: 1px; align-items: center; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--line); background: #1b1410; color: var(--ink); cursor: pointer; font: inherit; transition: border-color .15s, background .15s; }
+.drinkbtn:hover { border-color: var(--line-2); }
+.drinkbtn:focus-visible { outline: 2px solid var(--crema); outline-offset: 2px; }
+.drinkbtn.on { border-color: var(--crema); background: #241912; }
+.drinkbtn .g { grid-row: span 3; width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; border: 1.2px solid var(--crema); color: var(--crema); font: 600 12px var(--f-display); }
+.drinkbtn .n { font-weight: 600; font-size: 14px; }
+.drinkbtn .mg { font: 400 11.5px var(--f-mono); color: var(--dim); }
+.drinkbtn .lc { font-size: 12.5px; color: var(--ink-2); }
+.drinkbtn .lc b { color: var(--crema); font-weight: 500; font-family: var(--f-mono); }
+.drinkbtn.late .lc .no { color: var(--ember); }
+.drinkbtn .soon { font: 500 11px var(--f-mono); color: var(--roast); margin-left: 4px; }
+.drinkbtn.late { opacity: 0.8; }
+.drinkbtn .add { grid-column: 1 / -1; margin-top: 8px; text-align: center; padding: 7px; border-radius: 8px; background: var(--crema); color: #1b120c; font-weight: 600; font-size: 13px; }
+
+#log { list-style: none; margin: 0; padding: 0; display: grid; }
+#log li { display: grid; grid-template-columns: 52px minmax(0, 1fr) auto 28px; gap: 10px; align-items: center; padding: 9px 0; border-top: 1px solid var(--line); }
+#log li:first-child { border-top: 0; }
+#log .t { font: 500 13px var(--f-mono); color: var(--crema); }
+#log .n i { font-style: normal; color: var(--dim); font-size: 12.5px; }
+#log .mg { font: 400 12.5px var(--f-mono); color: var(--ink-2); }
+#log button { width: 28px; height: 28px; border-radius: 50%; border: 1px solid var(--line-2); background: transparent; color: var(--ink-2); cursor: pointer; font-size: 15px; line-height: 1; }
+#log button:hover { color: var(--ink); border-color: var(--ink-2); }
+#log .empty { display: block; color: var(--ink-2); }
+.how { color: var(--ink-2); font-size: 13.5px; display: grid; gap: 8px; }
+.how p { margin: 0; max-width: 60ch; }
+@media (max-width: 480px) { .bignum { font-size: 46px; } #c-when { font-size: 9px; letter-spacing: 0.08em; } #c-dir { font-size: 11.5px; max-width: 14ch; } #c-gut { font-size: 10px; } }
+@media (max-width: 420px) { #menu { grid-template-columns: minmax(0, 1fr); } .lead { font-size: 20px; } }
+@media (prefers-reduced-motion: reduce) { .drinkbtn { transition: none; } }
+</style>
+
+<div class="wrap">
+  <header>
+    <p class="eyebrow">HealthOS · prototype · sample day</p>
+    <h1>Caffeine <em>Clock</em></h1>
+    <p class="lede">Your day as a dial. Caffeine rises out from the inner ring as it reaches your blood, glows hotter the higher it gets, and fades into the night wedge. Drag the hand to any time, or the moon to your bedtime.</p>
+  </header>
+  <div class="grid">
+    <div class="clockcol">
+      <div class="dialwrap">
+        <svg id="dial" viewBox="0 0 440 440" role="img" aria-label="24-hour caffeine dial"></svg>
+        <div class="center" aria-live="polite">
+          <span id="c-when"></span>
+          <span class="bignum"><span id="c-mg" class="num"></span><small>mg</small></span>
+          <span id="c-dir"></span>
+          <span id="c-gut"></span>
+        </div>
+      </div>
+      <div class="under">
+        <span class="key"><i class="k-heat"></i>in your blood</span>
+        <span class="key"><i class="k-band"></i>if you clear it faster or slower</span>
+        <span class="key"><i class="k-night"></i>sleep · first 3 h</span>
+        <button type="button" class="pill" id="to-now">Back to now</button>
+      </div>
+      <p id="preview-note"></p>
+    </div>
+    <div class="side">
+      <section class="card" id="tonight" aria-live="polite"></section>
+      <section class="card"><h2>One more?<span>latest time each one still lets you sleep</span></h2><div id="menu"></div></section>
+      <section class="card"><h2>Today<span>sample drinks · tap × to remove</span></h2><ul id="log"></ul></section>
+      <section class="card how"><h2>How it's worked out</h2>
+        <p>Caffeine isn't in you the moment you drink it. It moves from your gut into your blood over 30–60 minutes (faster from a shot, slower with food or when you sip a can), then leaves at a steady half-life.</p>
+        <p>Half-life differs a lot between people, so the faint band shows the range most adults fall in (<span id="hl"></span>). Once the wearable sees how you sleep, it can learn yours and the band narrows.</p>
+        <p>"Until" times keep you at or under 50 mg for the first three hours of sleep, when the deepest sleep happens. That catches a late coffee that's barely absorbed at lights-out but peaks after you fall asleep.</p>
+      </section>
+    </div>
+  </div>
+</div>
+<script>/*BUNDLE*/</script>
