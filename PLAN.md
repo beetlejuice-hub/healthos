@@ -223,15 +223,6 @@ email get Dev tools (`#dev`): raw entry editor, generate/remove sample, wipe acc
    10:00, daily ones repeat free. Chat tab that writes first (dot), friend tone, remembers lines
    (Settings → delete; "What the AI sees" shows the exact context). Push notifications to the
    iPhone: next (needs web push + a server-side schedule).
-14. [x] **Prototype: Balance, a rival real-burn engine** (1 Oct; `src/lib/balance/`, page
-   `prototypes/balance.html`, rebuild with `bun prototypes/balance/build.ts`). Not wired into the app.
-   A Kalman filter + smoother over real weight, water (AR(1)), burn and "what unlogged days add";
-   noise levels and a possible burn step are blended by likelihood, not set. Raced against `tdee.ts`
-   on 60 planted-truth people per case: wins weekend gaps (87 vs 172 kcal off, truth in range 95% vs
-   58%), water swings (163 vs 289; 95% vs 45%), a cut starting mid-month (57 vs 70), first 10 days
-   (answers; tdee.ts can't). Loses: steady month (89 vs 76) and a burn drop 2–3 weeks old (116 vs 63);
-   messy logger 129 vs 101 but tdee.ts answers only 28/60. Says how many days of logging until ±100.
-   Open: owner decides whether any of it replaces or joins `tdee.ts`.
 16. [x] **Drinks from the online database** (1 Oct). Owner: *"I NEED THE ONLINE SEARCHABLE DATABASE LIKE
    FOR FOODS… DO NOT FILL THE SCREEN W THE OPTIONS"*. Drink tab is search-first: empty shows only your
    last 4 drinks; typing shows a few matching built-ins, then Open Food Facts/USDA products
