@@ -438,3 +438,25 @@ a { color: inherit; }
 .sizes { display: flex; flex-wrap: wrap; gap: 6px; padding-bottom: 10px; }
 .sizes .pill-btn { display: grid; justify-items: center; gap: 1px; min-width: 76px; }
 .sizes .pill-btn small { font-size: 11px; font-weight: 500; opacity: .75; }
+/* barcode scanner */
+.searchrow { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; align-items: stretch; }
+.scan-btn { width: 46px; border: 0; border-radius: 12px; background: var(--c-card-2); color: var(--c-ink); display: grid; place-items: center; }
+.scan-btn:active { background: var(--c-track); }
+.scan-note { margin-top: -2px; }
+.scanner { position: fixed; inset: 0; z-index: 50; background: #000; color: #fff; display: grid; grid-template-rows: auto 1fr auto; font-family: var(--f-sans); }
+.scanner video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0; transition: opacity .3s; }
+.scanner video.on { opacity: 1; }
+.scanner .aim { position: absolute; left: 50%; top: 50%; width: min(78vw, 360px); aspect-ratio: 16 / 9; transform: translate(-50%, -50%); box-shadow: 0 0 0 100vmax #0008; border-radius: 14px; }
+.scanner .aim i { position: absolute; width: 26px; height: 26px; border: 3px solid var(--caf); }
+.scanner .aim i:nth-child(1) { left: -2px; top: -2px; border-right: 0; border-bottom: 0; border-top-left-radius: 14px; }
+.scanner .aim i:nth-child(2) { right: -2px; top: -2px; border-left: 0; border-bottom: 0; border-top-right-radius: 14px; }
+.scanner .aim i:nth-child(3) { left: -2px; bottom: -2px; border-right: 0; border-top: 0; border-bottom-left-radius: 14px; }
+.scanner .aim i:nth-child(4) { right: -2px; bottom: -2px; border-left: 0; border-top: 0; border-bottom-right-radius: 14px; }
+.scan-top { position: relative; padding: calc(12px + env(safe-area-inset-top, 0px)) 16px 0; display: flex; justify-content: flex-end; }
+.scan-bottom { position: relative; grid-row: 3; padding: 16px 16px calc(20px + env(safe-area-inset-bottom, 0px)); display: grid; gap: 10px; background: linear-gradient(transparent, #000c 30%); }
+.scan-msg { margin: 0; text-align: center; font-size: 15px; font-weight: 600; text-shadow: 0 1px 6px #000; }
+.scan-msg.err { color: #f3b4a8; font-weight: 500; font-size: 13.5px; }
+.scanner .pill-btn { background: #ffffff22; color: #fff; backdrop-filter: blur(8px); }
+.scanner .pill-btn.pri { background: var(--c-ink); color: var(--c-bg); }
+.scan-type { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; }
+.scan-type input { background: #ffffff1a; border: 1px solid #ffffff33; border-radius: 12px; padding: 10px 12px; font-size: 18px; letter-spacing: .06em; color: #fff; min-width: 0; }

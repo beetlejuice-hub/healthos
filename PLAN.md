@@ -121,7 +121,7 @@ a form. Until there's enough data they use sensible defaults, silently.
 - **Search ideas not built yet:** rank by what you actually log (your brands float up); dry vs
   cooked hint for pasta/rice/meat; English USDA lookup for Hungarian words (spagetti → spaghetti);
   AI "2 eggs, toast, 300 g pörkölt" parsing.
-- **Barcode scanner** — wanted, parked for now. *(claimed: agent "balance", 1 Oct — owner said "keep going" on it: `lib/barcode.ts`, `components/Scanner.tsx`, Food + Drink search, `/api/food?barcode=`)*
+- **Barcode scanner** — built 1 Oct (see item 17).
 - **Wearable** — **Fitbit Charge 6** (owner, 30 Sept; not bought yet, so parked). Criterion: an official API the web app can read (heart rate,
   sleep stages, HRV, resting HR). Fitbit has one (OAuth web API, intraday data for your own
   account); Huawei and Zepp/Amazfit are far harder to read from a web app. Check before buying.
@@ -238,3 +238,10 @@ email get Dev tools (`#dev`): raw entry editor, generate/remove sample, wipe acc
    (`lib/drinkdb.ts`): pick a size (label size first), logged with label kcal + macros, caffeine from
    the label or typical for its kind (marked), alcohol from % vol; saved to your drinks. Don't grow the
    built-in list for this.
+17. [x] **Barcode scanner** (1 Oct). 📷 button at the end of the Food and Drink search boxes: back camera
+   with an aiming frame (decoder: zbar WebAssembly, loaded on first scan from our own site, ~250 KB),
+   or a photo of the barcode, or type the digits (check digit catches misreads). Looked up by code in
+   Open Food Facts via `/api/food?barcode=` (cached; `lib/barcode.ts`). Food tab: a can lands in the
+   meal as a drink at its label size (caffeine counts), anything else as a food; Drink tab: opens with
+   its sizes. Unknown codes say so. **Owner to check on the iPhone:** camera permission from the
+   Home Screen app, and how fast it reads a real can in normal light.

@@ -20,6 +20,8 @@ import { amountText, approx, countText, gramsOf, macrosOfLine, mealFood, step, u
 import { extractTime, matchDrink, parseMeal, readAmount, tokens, type DrinkLine } from "../lib/quickadd";
 import { fromDatabase } from "../lib/fillin";
 import { caffeinePer100, drinkFromFood, sizesFor } from "../lib/drinkdb";
+import { findBarcode, type Lookup } from "../lib/barcode";
+import { ScanButton, Scanner } from "../components/Scanner";
 
 const fold = (t: string) => t.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
 /** A drink matches what you typed by its name or any other name it goes by ("sprite" → soft drink). */
@@ -173,6 +175,11 @@ function FoodTab({ done }: { done: (m: string) => void }) {
     return { food: f, count: 1, unit: null, grams: last?.grams ?? 100 };
   };
   const add = (f: Food) => { setBasket([...basket, usual(f)]); setQ(""); };
+  // A scanned can goes in as a drink at its label size (caffeine counts); anything else as a food.
+  const scan = useScan(({ food, drink, ml }) => {
+    if (drink) { const d = drinkFromFood(food, ml ?? sizesFor(food)[0]); act.saveDrink(d); setBasket([...basket, { drink: d, count: 1 }]); setQ(""); }
+    else { act.rememberFood(food); add(food); }
+  });
   const [looking, setLooking] = useState(false);
   const [asking, setAsking] = useState<string[]>([]);
   const [aiNote, setAiNote] = useState<string | null>(null);
@@ -238,7 +245,11 @@ function FoodTab({ done }: { done: (m: string) => void }) {
       {basket.length > 0 && <Basket lines={basket} time={time} setTime={setTime} crafting={crafting} onChange={setBasket} onDetail={setDetail} onLogged={(m) => { setBasket([]); setMissed([]); setCrafting(false); done(m); }} />}
     </div>
     <div className="card">
-      <input className="search" type="search" inputMode="search" placeholder="Or search: zabpehely, chicken breast…" value={q} onChange={(e) => setQ(e.target.value)} aria-label="Search food" />
+      <div className="searchrow">
+        <input className="search" type="search" inputMode="search" placeholder="Or search: zabpehely, chicken breast…" value={q} onChange={(e) => setQ(e.target.value)} aria-label="Search food" />
+        <ScanButton onClick={scan.start} />
+      </div>
+      {scan.ui}
       {mine.length > 0 && <>
         <h3>{q ? "Your foods" : "Recent"} <span>tap to add</span></h3>
         <div className="list">{mine.map((f) => <FoodRow key={f.id} f={f} amount={amountOf(usual(f))} onPick={() => add(f)} />)}</div>
@@ -479,6 +490,9 @@ function DrinkTab({ done }: { done: (m: string) => void }) {
   const [time, setTime] = useState(nowHHMM);
   const [making, setMaking] = useState(false);
   const [dq, setDq] = useState("");
+  // A scanned product, shown open with its sizes (the label size first).
+  const [scanned, setScanned] = useState<Food | null>(null);
+  const scan = useScan(({ food, ml }) => { setDq(""); setScanned(ml ? { ...food, servingG: ml } : food); });
   const { on: aiOn } = useAiStatus();
   const usual = useStore((s) => s.settings.usualDrink);
   const [aiText, setAiText] = useState("");
@@ -502,7 +516,15 @@ function DrinkTab({ done }: { done: (m: string) => void }) {
   return (
     <div className="card">
       <WhenChips time={time} setTime={setTime} />
-      <input className="search" type="search" placeholder="Search drinks: sprite, espresso, dreher…" value={dq} onChange={(e) => setDq(e.target.value)} aria-label="Find a drink" />
+      <div className="searchrow">
+        <input className="search" type="search" placeholder="Search drinks: sprite, espresso, dreher…" value={dq} onChange={(e) => setDq(e.target.value)} aria-label="Find a drink" />
+        <ScanButton onClick={scan.start} />
+      </div>
+      {scan.ui}
+      {scanned && <div className="drinkdb">
+        <h3>Scanned</h3>
+        <div className="list"><DbDrink f={scanned} open onToggle={() => setScanned(null)} onLog={(d) => { act.saveDrink(d); log(d); setScanned(null); }} /></div>
+      </div>}
       {(() => {
         // Empty search: only what you drank lately, so the screen isn't a wall of options.
         // Typing: your drinks and the everyday ones that match (a few), then the online database.
@@ -546,6 +568,25 @@ function DrinkTab({ done }: { done: (m: string) => void }) {
   );
 }
 
+/** Scanner state for a tab: open it, look the code up, report what happened in words. */
+function useScan(onFound: (s: Extract<Lookup, { status: "found" }>["scanned"]) => void) {
+  const [open, setOpen] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState<string | null>(null);
+  const onCode = async (code: string) => {
+    setBusy(true);
+    const r = await findBarcode(code);
+    setBusy(false); setOpen(false);
+    if (r.status === "found") { setMsg(null); onFound(r.scanned); }
+    else setMsg(r.status === "missing" ? `Barcode ${code} isn't in Open Food Facts yet. Search it by name, or add it as your own.` : "Couldn't reach the food database. Check the connection and scan again.");
+  };
+  const ui = <>
+    {open && <Scanner onCode={(c) => void onCode(c)} onClose={() => setOpen(false)} busy={busy} />}
+    {msg && <p className="err scan-note">{msg}</p>}
+  </>;
+  return { start: () => { setMsg(null); setOpen(true); }, ui };
+}
+
 /**
  * Drinks from the food database (Open Food Facts + USDA), for anything the built-in list doesn't have.
  * Pick a product, pick a size; it's logged and saved to your drinks, so next time it's in the list.
@@ -573,22 +614,25 @@ function DrinkDatabase({ q, onLog }: { q: string; onLog: (d: Drink) => void }) {
       {failed === needle ? <p className="err">The food database didn't answer. Check the connection and type again.</p>
         : !list ? <p className="note">Searching…</p>
         : !list.length ? <p className="note">Nothing called "{needle}" there. Add it as your own drink below.</p>
-        : <div className="list">{list.map((f) => {
-          const caf = caffeinePer100(f), sizes = sizesFor(f), on = open === f.id;
-          return <div key={f.id} className={`li dbdrink${on ? " on" : ""}`}>
-            <button type="button" className="dbrow" aria-expanded={on} onClick={() => setOpen(on ? null : f.id)}>
-              {f.img && <img src={f.img} alt="" loading="lazy" />}
-              <span>{f.name}{f.brand && !f.name.toLowerCase().includes(f.brand.toLowerCase()) ? <i> · {f.brand}</i> : null}
-                <small>{f.per100.kcal} kcal / 100 ml{caf.mg ? ` · ${Math.round(caf.mg)} mg caffeine / 100 ml${caf.typical ? " (typical)" : ""}` : ""}{f.alcohol100 ? ` · ${f.alcohol100}% alcohol` : ""}</small></span>
-              <span className="r">{on ? "–" : "+"}</span>
-            </button>
-            {on && <div className="sizes" role="group" aria-label={`Size of ${f.name}`}>
-              {sizes.map((ml) => { const d = drinkFromFood(f, ml); return <button key={ml} type="button" className="pill-btn" onClick={() => onLog(d)}>{ml >= 1000 ? `${ml / 1000} l` : `${ml} ml`}<small>{d.kcal} kcal{d.caffeineMg ? ` · ${d.caffeineMg} mg` : ""}</small></button>; })}
-            </div>}
-          </div>;
-        })}</div>}
+        : <div className="list">{list.map((f) => <DbDrink key={f.id} f={f} open={open === f.id} onToggle={() => setOpen(open === f.id ? null : f.id)} onLog={onLog} />)}</div>}
     </div>
   );
+}
+
+/** One database product as a drink: tap to open, then a size to log it. */
+function DbDrink({ f, open: on, onToggle, onLog }: { f: Food; open: boolean; onToggle: () => void; onLog: (d: Drink) => void }) {
+  const caf = caffeinePer100(f), sizes = sizesFor(f);
+  return <div className={`li dbdrink${on ? " on" : ""}`}>
+    <button type="button" className="dbrow" aria-expanded={on} onClick={onToggle}>
+      {f.img && <img src={f.img} alt="" loading="lazy" />}
+      <span>{f.name}{f.brand && !f.name.toLowerCase().includes(f.brand.toLowerCase()) ? <i> · {f.brand}</i> : null}
+        <small>{f.per100.kcal} kcal / 100 ml{caf.mg ? ` · ${Math.round(caf.mg)} mg caffeine / 100 ml${caf.typical ? " (typical)" : ""}` : ""}{f.alcohol100 ? ` · ${f.alcohol100}% alcohol` : ""}</small></span>
+      <span className="r">{on ? "–" : "+"}</span>
+    </button>
+    {on && <div className="sizes" role="group" aria-label={`Size of ${f.name}`}>
+      {sizes.map((ml) => { const d = drinkFromFood(f, ml); return <button key={ml} type="button" className="pill-btn" onClick={() => onLog(d)}>{ml >= 1000 ? `${ml / 1000} l` : `${ml} ml`}<small>{d.kcal} kcal{d.caffeineMg ? ` · ${d.caffeineMg} mg` : ""}</small></button>; })}
+    </div>}
+  </div>;
 }
 
 function CustomDrink({ onCancel, onDone }: { onCancel: () => void; onDone: (d: Drink) => void }) {
