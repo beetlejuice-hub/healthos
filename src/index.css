@@ -473,3 +473,22 @@ a { color: inherit; }
 .fatnum b { font-size: 22px; font-weight: 700; }
 .fatnum span { font-size: 12.5px; color: var(--c-ink-2); }
 .weighin .fatin { max-width: 92px; }
+/* How now? — the check-in at the top of Today */
+.hownow { display: grid; gap: 10px; }
+.hownow.calm-line { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 14px; background: var(--c-card); border-radius: 16px; font-size: 13.5px; color: var(--c-ink-2); }
+.hownow.calm-line .pill-btn { flex: none; }
+.hn-row { display: grid; gap: 5px; }
+.hn-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; font-size: 13.5px; }
+.hn-head em { font-style: normal; color: var(--c-ink-2); font-size: 12.5px; }
+.hn-nums { display: grid; grid-template-columns: repeat(10, minmax(0, 1fr)); gap: 4px; }
+.hn-nums button { height: 36px; border: 0; border-radius: 9px; background: var(--c-card-2); color: var(--c-ink-2); font-size: 14px; font-weight: 600; font-variant-numeric: tabular-nums; padding: 0; }
+.hn-nums button.ghost { box-shadow: inset 0 0 0 1.5px #ffffff2e; }
+.hn-nums button[aria-pressed="true"] { background: var(--mood); color: var(--c-bg); }
+.hn-doing { display: grid; gap: 6px; padding-top: 4px; border-top: 1px solid #ffffff0d; }
+.hn-tags { display: flex; flex-wrap: wrap; gap: 6px; }
+.hn-tags button { border: 0; border-radius: 999px; padding: 7px 12px; background: var(--c-card-2); color: var(--c-ink); font-size: 13px; font-weight: 600; }
+.hn-tags button[aria-pressed="true"] { background: var(--c-ink); color: var(--c-bg); }
+.hn-tags .hn-more { background: transparent; color: var(--c-ink-2); box-shadow: inset 0 0 0 1px #ffffff22; }
+.hn-own { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; }
+.hn-own input { background: var(--c-card-2); border: 1px solid transparent; border-radius: 12px; padding: 8px 12px; font-size: 16px; color: var(--c-ink); min-width: 0; }
+.hn-reward { margin: 0; font-size: 13.5px; color: var(--ok); }

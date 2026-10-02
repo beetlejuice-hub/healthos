@@ -32,3 +32,44 @@ describe("feelings: only what you touch", () => {
     expect(s2.energy.now).toBeUndefined();
   });
 });
+
+describe("How now? helpers", async () => {
+  const { tagOf, doingOrder, inferredDoing, sinceLast, DOING } = await import("./feel");
+  const T = (h: number, m = 0) => new Date(2026, 9, 2, h, m).getTime();
+
+  it("your own tag: one word, tidied", () => {
+    expect(tagOf("  Reading ")).toBe("reading");
+    expect(tagOf("deep work")).toBe("deep");
+    expect(tagOf("x")).toBeNull();
+    expect(tagOf("sauna!!")).toBe("sauna");
+    expect(tagOf("úszás")).toBe("úszás");
+  });
+
+  it("tags you use most come first; built-in order otherwise; your own ones join once used", () => {
+    expect(doingOrder([], T(12)).slice(0, 3)).toEqual(DOING.slice(0, 3).map((d) => d.tag));
+    const es = [1, 2, 3].map((i): import("./types").Entry => ({ id: `f${i}`, kind: "feel", at: T(9 + i), mood: 6, doing: ["sauna", "commute"] }));
+    const o = doingOrder(es, T(18));
+    expect(o.slice(0, 2)).toEqual(["commute", "sauna"]); // tie → built-in first, then yours
+    expect(o).toContain("work");
+  });
+
+  it("pre-ticks what the logs already show since the last check-in", () => {
+    const es: import("./types").Entry[] = [
+      { id: "l", kind: "food", at: T(12, 30), name: "Lunch", grams: 400, macros: { kcal: 650, p: 30, c: 70, f: 20 } },
+      { id: "b", kind: "food", at: T(16), name: "Biscuit", grams: 20, macros: { kcal: 90, p: 1, c: 12, f: 4 } },
+    ];
+    expect(inferredDoing(es, [{ startedAt: T(15) }], T(13), T(17))).toEqual(["gym"]); // the biscuit isn't a meal
+    expect(inferredDoing(es, [], T(9), T(13))).toEqual(["eating"]);
+  });
+
+  it("the small reward: changes since the last check-in that day, and what was in between", () => {
+    const prev: import("./types").Entry = { id: "p", kind: "feel", at: T(13), mood: 4, stress: 7 };
+    const open = { id: "o", kind: "feel" as const, at: T(17), mood: 7, stress: 4, doing: ["outside"] };
+    const r = sinceLast([prev, open], open, [{ startedAt: T(15) }])!;
+    expect(r.at).toBe(T(13));
+    expect(r.changes).toEqual([{ k: "mood", d: 3 }, { k: "stress", d: -3 }]);
+    expect(r.between.sort()).toEqual(["gym", "outside"]);
+    // Yesterday's check-in doesn't count.
+    expect(sinceLast([{ ...prev, at: T(13) - 86_400_000 }, open], open, [])).toBeNull();
+  });
+});

@@ -254,3 +254,10 @@ email get Dev tools (`#dev`): raw entry editor, generate/remove sample, wipe acc
    both weigh-ins (`fatPct` on the weight entry). Shown only as a 2-week average (3+ readings, a 5-point
    one-off left out), with the change vs the 2 weeks before as fat kg / lean kg when it's bigger than
    the scale's own swing (`lib/bodyfat.ts`). The scale's other numbers: not tracked (mostly formulas).
+21. [x] **How now? — the check-in** (2 Oct). Replaces the slider card, at the top of Today: one tap per
+   feeling on a 1–10 row (slider detail, no dragging; owner kept 1–10), all optional, joins within 10 min.
+   "What were you up to?" — ~5 tags in your most-used order + "more" + one word of your own; gym and a
+   real meal pre-ticked from logs. Small reward ("Since 13:00: mood +4 · the gym in between") and
+   progress to 8 check-in pairs. One calm line after Done; asks again after 2 h. Tags (`doing` on the
+   feel entry) feed `detectors/between.ts` as activities; bench: a walk effect found, random ticks not.
+   Next phase (with push): a nudge around 13:00 / 17:00 if not rated recently.

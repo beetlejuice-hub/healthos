@@ -51,13 +51,11 @@ const { chromium, APP, OUT, handle } = require('./harness.cjs');
 
   // Feelings: only what you touch.
   await pg.goto(APP + '#today'); await pg.waitForTimeout(200);
-  const stress = pg.getByLabel('stress'); await stress.scrollIntoViewIfNeeded();
-  const box = await stress.boundingBox();
-  await pg.mouse.click(box.x + box.width * 0.75, box.y + box.height / 2);
+  await pg.getByRole('button', { name: 'stress 7', exact: true }).click();
   await pg.waitForTimeout(150);
   const feel = await pg.locator('#feel').innerText();
-  check('touching stress logs stress', /Stress\s*\n?\s*\d+ · /.test(feel));
-  check('energy, mood, focus stay empty', (feel.match(/\ntap\n/g) || []).length === 3);
+  check('tapping stress logs stress', /Stress\s*\n?\s*7 · high/.test(feel));
+  check('energy, mood, focus stay unset', await pg.locator('#feel .hn-nums button[aria-pressed="true"]').count() === 1);
   await pg.goto(APP + '#log/food'); await pg.waitForTimeout(150);
   const logged = await pg.locator('text=Logged today').locator('..').innerText();
   check('the rating has stress only', /Feeling/.test(logged) && !/energy \d/.test(logged));

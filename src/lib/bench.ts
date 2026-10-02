@@ -101,6 +101,10 @@ export type BetweenWorld = {
   gymWhenLow?: boolean;
   /** Share of the four daily check-ins (9, 13, 17, 21) actually logged. */
   logRate?: number;
+  /** Evening walks (40% of days, ticked "outside" at the 21:00 check-in) lift mood this much. */
+  outsideMood?: number;
+  /** Tick "phone" at random check-ins (half of them) — it does nothing. */
+  phoneNoise?: boolean;
 };
 
 /**
@@ -126,10 +130,13 @@ export function betweenWorld(w: BetweenWorld): { entries: Entry[]; workouts: Wor
       if (slot === 3 && r() < 0.9) entries.push({ id: `bm${i}d`, kind: "food", at: atMinute(day, 19 * 60), name: "Dinner", grams: 450, macros: { kcal: 700, p: 40, c: 70, f: 25 } });
       if ((slot === 0 || slot === 2) && r() < 0.7) entries.push({ id: `bc${i}${slot}`, kind: "drink", at: atMinute(day, (h - 1) * 60), name: "Coffee", ml: 250, caffeineMg: 95, alcoholG: 0, kcal: 2 });
       moment = 0.3 * moment + g() * 1.2;
+      const walked = slot === 3 && w.outsideMood != null && r() < 0.4;
+      if (walked) lift += w.outsideMood!;
       const mood = clamp(level + moment + lift);
       lift *= 0.4;
       if (slot === 1) prev13 = mood;
-      if (r() < (w.logRate ?? 0.85)) entries.push({ id: `bf${i}${slot}`, kind: "feel", at: atMinute(day, h * 60 + Math.round(g() * 15)), mood, energy: clamp(6 + g()) });
+      const doing = [...(walked ? ["outside"] : []), ...(w.phoneNoise && r() < 0.5 ? ["phone"] : [])];
+      if (r() < (w.logRate ?? 0.85)) entries.push({ id: `bf${i}${slot}`, kind: "feel", at: atMinute(day, h * 60 + Math.round(g() * 15)), mood, energy: clamp(6 + g()), ...(doing.length ? { doing } : {}) });
     }
   }
   return { entries: entries.sort((a, b) => a.at - b.at), workouts };

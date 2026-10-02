@@ -21,10 +21,8 @@ const { chromium, APP, OUT, handle } = require('./harness.cjs');
 
   // Stress from the feel card shows up in the log line.
   await pg.goto(APP + '#today');
-  const stress = pg.getByLabel('stress', { exact: true });
-  await stress.focus(); await pg.keyboard.press('ArrowRight'); await pg.waitForTimeout(150);
-  const mood = pg.getByLabel('mood', { exact: true });
-  await mood.focus(); await pg.keyboard.press('ArrowRight'); await pg.waitForTimeout(150);
+  await pg.getByRole('button', { name: 'stress 6', exact: true }).click(); await pg.waitForTimeout(150);
+  await pg.getByRole('button', { name: 'mood 6', exact: true }).click(); await pg.waitForTimeout(150);
   await pg.goto(APP + '#log/food'); await pg.waitForTimeout(200);
   const feelLine = await pg.locator('.li', { hasText: 'Feeling' }).first().innerText();
   check(`the log line shows stress (${feelLine.replace(/\s+/g, ' ')})`, /stress \d/.test(feelLine) && /mood \d/.test(feelLine));

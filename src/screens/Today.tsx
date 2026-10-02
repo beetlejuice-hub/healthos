@@ -1,9 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
-import { act, getState, offerUndo, useStore } from "../lib/store";
+import { act, offerUndo, useStore } from "../lib/store";
 import { DRINKS } from "../lib/drinks";
 import { nowItems } from "../lib/today";
 import { notice } from "../lib/findings";
-import { FEEL_KEYS, feelChange, feelState, latestFeel, type FeelKey } from "../lib/feel";
 import { StackAlert } from "../components/StackCheck";
 import { ScoutLine } from "../components/Scout";
 import { AiQuestions, MorningRead } from "../components/Ai";
@@ -15,6 +14,7 @@ import { go } from "../lib/nav";
 import type { Drink, Entry, EntryOf, Slot } from "../lib/types";
 import { answerSlot, SLOTS, slotsOf } from "../lib/types";
 import { parseFat } from "../lib/bodyfat";
+import { HowNow } from "../components/HowNow";
 
 /**
  * The current time, re-read on every render and re-rendered every `ms` while open. Read fresh
@@ -71,6 +71,7 @@ export function Today() {
           : <>No caffeine logged today.</>}
       </p>
 
+      <HowNow now={now} />
       <MorningRead />
       <DayChips now={now} />
       <AiQuestions />
@@ -109,7 +110,6 @@ export function Today() {
       <Fuel totals={totals} goals={s.goals} />
       <CaffeineCard doses={doses} now={now} bed={bed} halfLife={s.settings.halfLifeMin} cafNow={cafNow} cafBed={cafBed} />
       <Stack now={now} />
-      <Feel now={now} />
     </div>
   );
 }
@@ -272,48 +272,6 @@ function Stack({ now }: { now: number }) {
         );
       })}
       {supps.length === 0 && <p className="note">No supplements set up. Add your stack in Log → Stack.</p>}
-    </div>
-  );
-}
-
-const WORDS: Record<string, string[]> = {
-  energy: ["drained", "low", "ok", "steady", "high"], mood: ["low", "flat", "ok", "good", "great"],
-  focus: ["foggy", "scattered", "ok", "sharp", "locked in"], stress: ["calm", "low", "some", "high", "maxed"],
-};
-
-/** One rating per ~2 hours: moving a slider updates the latest rating if it's recent, otherwise starts a new one. */
-function Feel({ now }: { now: number }) {
-  const entries = useStore((x) => x.entries);
-  const st = feelState(entries, now);
-  // While a finger is on a slider its value lives here; it's logged when the finger lifts, so a
-  // tap on the value it already shows still counts as "logged 7" (owner: "I should at least touch it").
-  const [drag, setDrag] = useState<Partial<Record<FeelKey, number>>>({});
-  const record = (k: FeelKey, v: number) => {
-    const c = feelChange(getState().entries, Date.now(), k, v);
-    if (c.op === "update") act.updateEntry(c.id, c.patch as Partial<Entry>); else act.addEntry(c.entry);
-    setDrag((d) => ({ ...d, [k]: undefined }));
-  };
-  const lastAt = latestFeel(entries)?.at;
-  return (
-    <div className="card" id="feel">
-      <h3>How do you feel? <span>{lastAt ? `last rated ${clock(lastAt)}` : "tap the ones you want to log"}</span></h3>
-      {FEEL_KEYS.map((k) => {
-        const unset = drag[k] == null && st[k].now == null;
-        const v = drag[k] ?? st[k].now ?? st[k].last?.v ?? 5;
-        const word = WORDS[k][Math.min(4, Math.floor((v - 1) / 2))];
-        return (
-          <div className="feel" key={k}>
-            <span>{k[0].toUpperCase() + k.slice(1)}</span>
-            <input type="range" min={1} max={10} value={v} aria-label={k} className={unset ? "unset" : ""}
-              onChange={(e) => setDrag((d) => ({ ...d, [k]: +e.target.value }))}
-              onPointerUp={(e) => record(k, +e.currentTarget.value)}
-              onTouchEnd={(e) => record(k, +e.currentTarget.value)}
-              onKeyUp={(e) => { if (/Arrow|Home|End|Page/.test(e.key)) record(k, +e.currentTarget.value); }} />
-            <em>{unset ? (st[k].last ? `was ${st[k].last!.v}` : "tap") : `${v} · ${word}`}</em>
-          </div>
-        );
-      })}
-      <p className="note">Only the ones you touch are logged — a tap on the same number logs it too.</p>
     </div>
   );
 }

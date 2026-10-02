@@ -21,30 +21,37 @@ import type { Entry, Workout } from "../types";
 import { localDay } from "../time";
 import { mean } from "../stats";
 import { bh, ols, tCrit } from "../regress";
-import type { FeelKey } from "../feel";
+import { DOING, phraseOf, type FeelKey } from "../feel";
 import type { Checking, Finding } from "../findings";
 
 export const BETWEEN = { minGapMin: 20, maxGapMin: 10 * 60, minWith: 4, minWithout: 4, minEffect: 1, days: 60 };
 
-export type Activity = { id: string; label: string; did: (from: number, to: number) => boolean };
+export type Activity = { id: string; label: string; did: (g: Gap) => boolean };
 
-/** What can happen between two check-ins, from what you already log. */
+/** What can happen between two check-ins: from what you log, and what you ticked at the check-in. */
 export function activities(entries: Entry[], workouts: Workout[], suppNames: Map<string, string>): Activity[] {
   const of = <K extends Entry["kind"]>(k: K) => entries.filter((e): e is Extract<Entry, { kind: K }> => e.kind === k);
   const foods = of("food"), drinks = of("drink"), supps = of("supp").filter((s) => s.status === "taken");
   const within = (t: number, a: number, b: number) => t > a && t <= b;
+  const ticked = (g: Gap, tag: string) => g.doing.includes(tag);
   const out: Activity[] = [
-    { id: "gym", label: "the gym", did: (a, b) => workouts.some((w) => within(w.startedAt, a, b)) },
-    // A real meal, not a biscuit: 300+ kcal logged in the gap.
-    { id: "meal", label: "a meal", did: (a, b) => foods.filter((f) => within(f.at, a, b)).reduce((s, f) => s + f.macros.kcal, 0) >= 300 },
-    { id: "caffeine", label: "caffeine", did: (a, b) => drinks.some((d) => d.caffeineMg >= 40 && within(d.at, a, b)) },
-    { id: "alcohol", label: "a drink with alcohol", did: (a, b) => drinks.some((d) => d.alcoholG >= 10 && within(d.at, a, b)) },
+    { id: "gym", label: "the gym", did: (g) => ticked(g, "gym") || workouts.some((w) => within(w.startedAt, g.from, g.to)) },
+    // A real meal, not a biscuit: 300+ kcal logged in the gap (or "eating" ticked).
+    { id: "meal", label: "a meal", did: (g) => ticked(g, "eating") || foods.filter((f) => within(f.at, g.from, g.to)).reduce((s, f) => s + f.macros.kcal, 0) >= 300 },
+    { id: "caffeine", label: "caffeine", did: (g) => drinks.some((d) => d.caffeineMg >= 40 && within(d.at, g.from, g.to)) },
+    { id: "alcohol", label: "a drink with alcohol", did: (g) => drinks.some((d) => d.alcoholG >= 10 && within(d.at, g.from, g.to)) },
   ];
-  for (const [id, name] of suppNames) out.push({ id: `supp:${id}`, label: name, did: (a, b) => supps.some((s) => s.suppId === id && within(s.at, a, b)) });
+  for (const [id, name] of suppNames) out.push({ id: `supp:${id}`, label: name, did: (g) => supps.some((s) => s.suppId === id && within(s.at, g.from, g.to)) });
+  // Everything else you tick at a check-in — built-in or your own word — is an activity too.
+  const tags = new Set(entries.flatMap((e) => (e.kind === "feel" ? e.doing ?? [] : [])));
+  for (const t of [...DOING.map((d) => d.tag), ...tags]) {
+    if (t === "gym" || t === "eating" || !tags.has(t) || out.some((a) => a.id === `tag:${t}`)) continue;
+    out.push({ id: `tag:${t}`, label: phraseOf(t), did: (g) => ticked(g, t) });
+  }
   return out;
 }
 
-export type Gap = { from: number; to: number; day: string; before: Partial<Record<FeelKey, number>>; after: Partial<Record<FeelKey, number>> };
+export type Gap = { from: number; to: number; day: string; before: Partial<Record<FeelKey, number>>; after: Partial<Record<FeelKey, number>>; /** Ticked at the later check-in: "since the last one I was…". */ doing: string[] };
 
 /** Consecutive check-ins on the same day, 20 min to 10 h apart. */
 export function gaps(entries: Entry[]): Gap[] {
@@ -54,7 +61,7 @@ export function gaps(entries: Entry[]): Gap[] {
     const a = feels[i - 1], b = feels[i], min = (b.at - a.at) / 60_000;
     if (localDay(a.at) !== localDay(b.at) || min < BETWEEN.minGapMin || min > BETWEEN.maxGapMin) continue;
     const pick = (e: typeof a) => ({ energy: e.energy, mood: e.mood, focus: e.focus, stress: e.stress });
-    out.push({ from: a.at, to: b.at, day: localDay(a.at), before: pick(a), after: pick(b) });
+    out.push({ from: a.at, to: b.at, day: localDay(a.at), before: pick(a), after: pick(b), doing: b.doing ?? [] });
   }
   return out;
 }
@@ -84,7 +91,7 @@ export function between(entries: Entry[], workouts: Workout[], suppNames: Map<st
     const gs = allGaps.filter((g) => g.before[m] != null && g.after[m] != null);
     if (gs.length < BETWEEN.minWith + BETWEEN.minWithout) continue;
     const usual = mean(recent.flatMap((e) => (e.kind === "feel" && e[m] != null ? [e[m]!] : [])));
-    const did = acts.map((a) => gs.map((g) => a.did(g.from, g.to)));
+    const did = acts.map((a) => gs.map((g) => a.did(g)));
     // Only activities with enough gaps on both sides go in; the rest would only add noise.
     const keep = acts.map((_, i) => { const w = did[i].filter(Boolean).length; return w >= BETWEEN.minWith && gs.length - w >= BETWEEN.minWithout; });
     const used = acts.map((a, i) => ({ a, i })).filter(({ i }) => keep[i]);
@@ -145,7 +152,7 @@ export function betweenFindings(entries: Entry[], workouts: Workout[], suppNames
   } else {
     const acts = activities(entries.filter((e) => e.at >= since), workouts, new Map());
     for (const a of acts.filter((x) => x.id === "gym" || x.id === "meal" || x.id === "caffeine")) {
-      const n = gs.filter((g) => a.did(g.from, g.to)).length;
+      const n = gs.filter((g) => a.did(g)).length;
       if (n < BETWEEN.minWith && !found.some((f) => f.id.startsWith(`between:${a.id}:`))) {
         checking.push({ id: `between:${a.id}`, area: "feel", question: `Does ${a.label} change how you feel?`, progress: n / BETWEEN.minWith, missing: `${n} of ${BETWEEN.minWith} times with ${a.label} between two check-ins` });
       }

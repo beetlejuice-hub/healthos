@@ -42,6 +42,27 @@ describe("between check-ins (bench)", () => {
   });
 });
 
+describe("what you ticked at a check-in (bench)", () => {
+  it("finds a planted lift from evening walks ticked 'outside', and never credits a 'phone' tick that does nothing", () => {
+    let outside = 0, phone = 0;
+    for (const seed of seeds(30)) {
+      const rs = run({ seed, outsideMood: 2, phoneNoise: true, days: 42 });
+      if (rs.find((r) => r.activity === "tag:outside" && r.metric === "mood")?.found) outside++;
+      if (rs.some((r) => r.activity === "tag:phone" && r.found)) phone++;
+    }
+    expect(outside).toBeGreaterThanOrEqual(21);
+    expect(phone).toBeLessThanOrEqual(3);
+  });
+
+  it("'gym' ticked counts as the gym even when no workout was logged", () => {
+    const { entries } = betweenWorld({ seed: 2, gymMood: 2.5 });
+    const ws = betweenWorld({ seed: 2, gymMood: 2.5 }).workouts;
+    // Same month, but the gym is only ticked at the next check-in instead of logged as a workout.
+    const ticked = entries.map((e) => (e.kind === "feel" && ws.some((w) => w.startedAt < e.at && e.at - w.startedAt < 3 * 3_600_000) ? { ...e, doing: ["gym"] } : e));
+    expect(gymMood(between(ticked, [], new Map(), NOW))?.found).toBe(true);
+  });
+});
+
 describe("gaps", () => {
   it("pairs check-ins on the same day only, 20 min to 10 h apart", () => {
     const f = (id: string, day: string, min: number, mood: number): Entry => ({ id, kind: "feel", at: atMinute(day, min), mood });
