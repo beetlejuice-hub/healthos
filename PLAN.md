@@ -338,8 +338,12 @@ email get Dev tools (`#dev`): raw entry editor, generate/remove sample, wipe acc
    Premade workouts: Full body A/B, 5×5, PPL, Upper/Lower, Dumbbells, Bodyweight, Glutes — start a day
    once or make a program your split (asks first). "New best" when a set beats every earlier e1RM.
    Next for the workout: rest-over notification with the app closed (push), plate maths, warm-up sets.
-34. [ ] **Supplement dose** (claimed 2 Oct — Log Stack tab, `types.ts` supp entry dose, a detector): change mg;
-   each taken entry keeps its dose; compare how you felt at higher vs lower doses.
+34. [x] **Supplement dose** (2 Oct; `lib/dose.ts`, Log → Stack `DoseField`, Insights "Higher vs lower dose").
+   Changing a dose (Edit → Dose, saved when you leave the field or close the editor) keeps history
+   (`doseLog`), so past days keep the dose they were on. Insights compares days at the two most-used
+   doses (same unit): next day's energy/mood/focus/stress and that night's sleep rating, Welch 95%,
+   5+ days each. Tests: a planted +1.5 sleep effect found in ≥27/30 fake people, no-effect mood
+   flagged ≤10/100. Found while testing: a note appearing on blur moved "Done" under the finger.
 35. [x] **Muscle map** (2 Oct; `components/MuscleMap.tsx`, `training.ts` muscleWeek/WEEKLY_SETS). On Workout, below
    your days: front + back figure, each muscle filled by hard sets in the last 7 days (or a 4-week weekly
    average), full colour at 12 sets/week (Schoenfeld 2017 dose–response: 10+ sets/week clearly better than

@@ -16,6 +16,7 @@ import { Experiments } from "../components/Ai";
 import { Weekly } from "../components/Weekly";
 import type { GraphFocus } from "../components/MasterGraph";
 import { CAF_SLEEP } from "../lib/caffeine-sleep";
+import { DOSE_MIN_DAYS, doseCompare } from "../lib/dose";
 
 const f0 = (v: number) => Math.round(v).toLocaleString("en-GB");
 const f1 = (v: number) => v.toFixed(1);
@@ -82,6 +83,7 @@ export function Insights() {
         {has.sets && <Muscles now={now} />}
         {has.supps && <Supplements facts={facts} today={today} />}
         {has.effects && <SuppEffects facts={facts} />}
+        <DoseEffects />
         {has.pairs && <WhatMovesWhat facts={facts} />}
         <Experiments />
         <StackCheckPanel />
@@ -365,6 +367,37 @@ function SuppEffects({ facts }: { facts: DayFacts[] }) {
             <td className="n">{e.diff ? <span className={`tag ${e.diff.clear ? "s" : "w"}`}>{e.diff.clear ? "clear" : "unclear"}</span> : null}</td></tr>
         ); })}
       </tbody></table></div>
+    </section>
+  );
+}
+
+/** Higher vs lower dose (lib/dose): shown once a supplement has been taken at two doses. */
+function DoseEffects() {
+  const entries = useStore((s) => s.entries);
+  const supps = useStore((s) => s.supplements);
+  const list = useMemo(() => doseCompare(entries, supps), [entries, supps]);
+  if (!list.length) return null;
+  return (
+    <section className="p" id="doses">
+      <h2>Higher vs lower dose <span>next day, and that night's sleep</span></h2>
+      <p className="muted" style={{ margin: 0, fontSize: 12.5 }}>Days on each dose compared, once there are {DOSE_MIN_DAYS}+ of each. A dose change is also a change in time: if something else changed the same week, it shows up here too.</p>
+      {list.map((c) => {
+        const rows = c.rows.filter((r) => r.hi != null || r.lo != null);
+        return (
+          <div key={c.suppId} className="sub">
+            <h3>{c.name} · {c.hi.dose} ({c.hi.days} days) vs {c.lo.dose} ({c.lo.days} days)</h3>
+            {c.need > 0 && <p className="muted" style={{ margin: 0, fontSize: 12.5 }}>Needs {c.need} more day{c.need === 1 ? "" : "s"} on {c.hi.days < c.lo.days ? c.hi.dose : c.lo.dose} before it compares.</p>}
+            {rows.length > 0 && <div className="tw"><table><tbody>
+              <tr><th /><th className="n">{c.hi.dose}</th><th className="n">{c.lo.dose}</th><th className="n">Diff [95%]</th></tr>
+              {rows.map((r) => (
+                <tr key={r.metric}><td>{r.metric === "sleep" ? "sleep" : r.metric}</td>
+                  <td className="n">{r.hi != null ? f1(r.hi) : "—"}</td><td className="n">{r.lo != null ? f1(r.lo) : "—"}</td>
+                  <td className="n">{r.diff ? <><RangeCell r={r.diff} /> <span className={`tag ${r.diff.clear ? "s" : "w"}`}>{r.diff.clear ? (r.diff.value > 0 ? "higher: more" : "higher: less") : "unclear"}</span></> : <span className="dimt">—</span>}</td></tr>
+              ))}
+            </tbody></table></div>}
+          </div>
+        );
+      })}
     </section>
   );
 }

@@ -87,6 +87,8 @@ export type Supplement = {
   /** Minutes from midnight — the slot's time. */
   at: number;
   active: boolean;
+  /** Dose changes over time (lib/dose), so past days keep the dose they were taken at. */
+  doseLog?: { at: number; dose: string }[];
   /** "low": still taking, buy more soon. "out": ran out (paused until restocked). "stopped": not taking any more. */
   status?: "low" | "out" | "stopped";
 };

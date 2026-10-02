@@ -1,5 +1,6 @@
-import { useEffect, useMemo, useRef, useState } from "react";
-import { act, newId, offerUndo, useStore } from "../lib/store";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { act, getState, newId, offerUndo, useStore } from "../lib/store";
+import { changeDose } from "../lib/dose";
 import { searchBasic } from "../lib/foods-basic";
 import { SLOTS, slotsOf, slotTime, type Slot } from "../lib/types";
 import { searchFood } from "../lib/off";
@@ -719,6 +720,31 @@ const STATUS_NOTE: Record<SuppStatus, string> = {
 
 const hhmm = (m: number) => `${String(Math.floor(m / 60)).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}`;
 
+/**
+ * The dose, kept as history when it changes (lib/dose): typing "400 mg" over "200 mg" and leaving
+ * the field records the change, so Insights can compare days on each dose. Not saved per keystroke.
+ */
+function DoseField({ s }: { s: Supplement }) {
+  const [text, setText] = useState(s.dose);
+  const latest = useRef(text);
+  latest.current = text;
+  // Read the stored supplement, not this render's copy: it may have changed since (name, slots).
+  const save = useCallback(() => {
+    const cur = getState().supplements.find((x) => x.id === s.id);
+    const p = cur && changeDose(cur, latest.current, Date.now());
+    if (p) act.setSupplements(getState().supplements.map((x) => (x.id === s.id ? { ...x, ...p } : x)));
+  }, [s.id]);
+  // Tapping Done closes the editor; iPhone doesn't always blur the field first, so save on close too.
+  useEffect(() => save, [save]);
+  // As it was when the editor opened: a note appearing on blur would shift "Done" under your finger.
+  const [log] = useState(() => (s.doseLog ?? []).filter((x) => x.at > 0));
+  return (
+    <label className="field">Dose<input value={text} placeholder="400 mg" inputMode="text" onChange={(e) => setText(e.target.value)} onBlur={save} onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur(); }} />
+      {log.length > 0 && <small className="note">Changed {log.map((x) => `to ${x.dose} on ${dayLabel(x.at)}`).join(", ")} · Insights compares days on each dose.</small>}
+    </label>
+  );
+}
+
 function StackTab() {
   const list = useStore((s) => s.supplements);
   const profile = useStore((s) => s.profile);
@@ -752,7 +778,7 @@ function StackTab() {
           <div key={s.id} className="supp-edit">
             <div className="row2">
               <label className="field">Name<input autoFocus value={s.name} placeholder="Omega-3, zinc…" onChange={(e) => upd(s.id, { name: e.target.value })} /></label>
-              <label className="field">Dose<input value={s.dose} placeholder="1 capsule" onChange={(e) => upd(s.id, { dose: e.target.value })} /></label>
+              <DoseField s={s} />
             </div>
             <StackBadge name={s.name} report={report} hideNone={quiet} />
             <div className="field">When <span className="note">tap more than one if you take it more than once a day</span>
