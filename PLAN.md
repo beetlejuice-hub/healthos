@@ -319,7 +319,11 @@ email get Dev tools (`#dev`): raw entry editor, generate/remove sample, wipe acc
    people, no-effect people flagged ≤6%; e2e `cafsleep.cjs`.
 30. [x] **Graph + feelings visual prototypes** (2 Oct): https://claude.ai/artifact/EAqvs4f5jYBZzxZp8JPTqq —
    A readings · B mind strips · C days by hour · D instrument panel · E day stack · F one feeling. My pick:
-   D (with B as its feelings lanes) + C on Insights. Waiting for the owner's pick; nothing built yet.
+   D (with B as its feelings lanes) + C on Insights. **Owner picked A + D, 2 Oct:** *"I think I like A and D -
+   graph should be interactive...its good for now like this.."* → when built: the master graph becomes
+   D (instrument panel: lanes, one cursor reading every lane, overview to drag) with feelings drawn as
+   A (dots at real check-ins, joined only within 4 h, day range band, notes as rings), fully interactive.
+   Parked for now at the owner's word; nothing built yet.
 31. [x] **Mobile pass 1** (2 Oct; owner's screenshot: text ghosting under the tab bar). Tab bar solid, per-screen
    colour (Workout/Insights), short fade above it; card headers wrap their hint under the title instead
    of squeezing it; a check-in's log line names what you were up to, your own word included.
