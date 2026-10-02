@@ -33,7 +33,12 @@ a { color: inherit; }
 .app.r-insights { background: var(--i-bg); color: var(--i-ink); font-family: var(--f-plex); }
 
 /* bottom tabs on the phone, a top bar on wide screens */
-.tabs { position: sticky; bottom: 0; display: flex; justify-content: space-around; padding: 8px 6px calc(10px + env(safe-area-inset-bottom, 0px)); background: color-mix(in srgb, var(--c-bg) 88%, transparent); backdrop-filter: blur(12px); border-top: 1px solid #ffffff10; z-index: 5; }
+/* Solid, not see-through: text scrolling under a translucent bar showed as a clipped ghost (owner, 2 Oct).
+   A short fade above it lets content run out softly instead of being cut at a hard edge. */
+.tabs { --tab-bg: var(--c-bg); position: sticky; bottom: 0; display: flex; justify-content: space-around; padding: 8px 6px calc(6px + max(env(safe-area-inset-bottom, 0px), 6px)); background: var(--tab-bg); border-top: 1px solid #ffffff10; z-index: 5; }
+.tabs::before { content: ""; position: absolute; left: 0; right: 0; bottom: 100%; height: 18px; background: linear-gradient(transparent, var(--tab-bg)); pointer-events: none; }
+.app.r-workout .tabs { --tab-bg: var(--k-bg); }
+.app.r-insights .tabs { --tab-bg: var(--i-bg); }
 .tabs a { display: grid; justify-items: center; gap: 4px; text-decoration: none; font-size: 11.5px; color: var(--c-dim); padding: 4px 10px; }
 .tabs a i { width: 18px; height: 3px; border-radius: 2px; background: transparent; }
 .tabs a.on { color: var(--c-ink); } .tabs a.on i { background: var(--caf); }
@@ -54,8 +59,8 @@ a { color: inherit; }
 .calm .sum em { color: var(--caf); font-style: italic; }
 .calm .h { font-size: 11px; letter-spacing: .1em; text-transform: uppercase; color: var(--c-dim); padding: 6px 6px 0; display: flex; justify-content: space-between; }
 .card { padding: 14px 16px; border-radius: 20px; background: var(--c-card); display: grid; gap: 12px; min-width: 0; }
-.card h3 { margin: 0; font-size: 13px; font-weight: 600; color: var(--c-ink-2); display: flex; justify-content: space-between; gap: 8px; }
-.card h3 span { font-weight: 400; color: var(--c-dim); }
+.card h3 { margin: 0; font-size: 13px; font-weight: 600; color: var(--c-ink-2); display: flex; justify-content: space-between; align-items: baseline; gap: 4px 12px; flex-wrap: wrap; }
+.card h3 span { font-weight: 400; color: var(--c-dim); text-align: right; margin-left: auto; min-width: 0; }
 .item { background: var(--c-card); border-radius: 18px; padding: 12px 14px; display: grid; grid-template-columns: 30px 1fr; gap: 4px 10px; align-items: start; }
 .item .ic { width: 30px; height: 30px; border-radius: 10px; display: grid; place-items: center; font-weight: 700; font-size: 14px; }
 .item b { font-weight: 600; font-size: 14px; display: block; }

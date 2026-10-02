@@ -12,6 +12,7 @@ import { DRINKS } from "../lib/drinks";
 import { forGrams } from "../lib/nutrition";
 import { alcoholGrams } from "../lib/alcohol";
 import { addDays, atMinute, clock, dayLabel, localDay } from "../lib/time";
+import { labelOf } from "../lib/feel";
 import { readRoute, go } from "../lib/nav";
 import { bodyDays, weightTrend } from "../lib/tdee";
 import { LineChart } from "../components/Charts";
@@ -849,7 +850,7 @@ const describe = (e: Entry, supps: Supplement[]): [string, string] => {
     case "set": return [e.exercise, `${e.kg} kg × ${e.reps}`];
     case "weight": return ["Weight", `${e.kg} kg${e.fatPct != null ? ` · ${e.fatPct}% fat` : ""}`];
     // Only the sliders you set, all of them (stress was missing from this line).
-    case "feel": return ["Feeling", (["energy", "mood", "focus", "stress", "anxiety"] as const).filter((k) => e[k] != null).map((k) => `${k} ${e[k]}`).join(" · ") + (e.note ? ` — “${e.note}”` : "") || "a note"];
+    case "feel": return ["Feeling", (["energy", "mood", "focus", "stress", "anxiety"] as const).filter((k) => e[k] != null).map((k) => `${k} ${e[k]}`).join(" · ") + (e.doing?.length ? ` · ${e.doing.map(labelOf).join(", ")}` : "") + (e.note ? ` — “${e.note}”` : "") || "a note"];
     case "answer": return [e.question, e.answer];
     case "sleep": return ["Last night's sleep", `${e.rating != null ? `${e.rating} / 10` : "not rated"}${e.slow ? " · slow to fall asleep" : ""}`];
   }

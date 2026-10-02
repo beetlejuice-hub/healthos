@@ -50,6 +50,12 @@ const { chromium, APP, OUT, handle } = require('./harness.cjs');
   check('progress toward the engine', /1 of 8 check-in pairs/.test(await pg.locator('#feel').innerText()));
   await pg.screenshot({ path: OUT + 'hownow-open.png', fullPage: false });
 
+  // Owner, 2 Oct: the log should say what you were up to, your own word included.
+  await pg.goto(APP + '#log/food'); await pg.waitForTimeout(150);
+  check('the log line names what you were up to, your own word too', /mood 8 · stress 3 · [^\n]*gym[^\n]*sauna/.test(await pg.locator('text=Logged today').locator('..').innerText()));
+  const tabBg = await pg.evaluate(() => getComputedStyle(document.querySelector('nav.tabs')).backgroundColor);
+  check(`the tab bar is solid, not see-through (${tabBg})`, /^rgb\(/.test(tabBg));
+  await pg.goto(APP + '#today'); await pg.waitForTimeout(150);
   // Untick works; own word comes back first next time (most used).
   await tags.getByRole('button', { name: 'gym', exact: true }).click(); await pg.waitForTimeout(150);
   f = await feels();

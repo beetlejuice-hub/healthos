@@ -317,5 +317,19 @@ email get Dev tools (`#dev`): raw entry editor, generate/remove sample, wipe acc
    agree ("!"); otherwise it's a line under the curve. `caffeineTargetMg` removed. Also fixed: a bedtime
    after midnight (00:30) was read as this morning's 00:30. Tests: planted effect found in ≥85% of fake
    people, no-effect people flagged ≤6%; e2e `cafsleep.cjs`.
-30. [ ] **Graph + feelings visual prototypes** (claimed 2 Oct — artifact only; nothing in the app until
-   the owner picks).
+30. [x] **Graph + feelings visual prototypes** (2 Oct): https://claude.ai/artifact/EAqvs4f5jYBZzxZp8JPTqq —
+   A readings · B mind strips · C days by hour · D instrument panel · E day stack · F one feeling. My pick:
+   D (with B as its feelings lanes) + C on Insights. Waiting for the owner's pick; nothing built yet.
+31. [x] **Mobile pass 1** (2 Oct; owner's screenshot: text ghosting under the tab bar). Tab bar solid, per-screen
+   colour (Workout/Insights), short fade above it; card headers wrap their hint under the title instead
+   of squeezing it; a check-in's log line names what you were up to, your own word included.
+32. [ ] **Feelings slider** (claimed 2 Oct — `HowNow.tsx`, index.css). Owner: the 1–10 grid "looks pretty big
+   and bad on phone… desktop too — replace w a slider, make it nice and creative".
+33. [ ] **Workout, taken seriously** (claimed 2 Oct — `screens/Workout.tsx`, `lib/training.ts`). Finishing can't
+   be hit by mistake (owner hit "workout done" for "set done"); timer survives quitting; premade
+   common workouts; effortless flow.
+34. [ ] **Supplement dose** (claimed 2 Oct — Log Stack tab, `types.ts` supp entry dose, a detector): change mg;
+   each taken entry keeps its dose; compare how you felt at higher vs lower doses.
+35. [ ] **Muscle map** (claimed 2 Oct — new component): a figure, muscles coloured by how much you train them.
+36. [ ] **Romanian supermarket scans** (claimed 2 Oct — research first; `worker/index.ts` food, `barcode.ts`).
+37. [ ] **AI knows everything about mood** (claimed 2 Oct — `ai/context.ts`, AI memory).
