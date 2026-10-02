@@ -9,6 +9,7 @@
 
 import type { Food } from "./types";
 import { fromOff, OFF_FIELDS } from "./off";
+import { toEnglish } from "./hu";
 
 type UsdaNutrient = { nutrientId?: number; nutrientNumber?: string; value?: number };
 export type UsdaFood = { fdcId: number; description?: string; dataType?: string; brandOwner?: string; foodNutrients?: UsdaNutrient[] };
@@ -70,7 +71,8 @@ export async function searchAll(query: string, usdaKey: string | undefined, fetc
     return map(((await r.json()) as { products?: unknown[] }).products);
   })();
   const usdaP = (async () => {
-    const r = await fetcher(`https://api.nal.usda.gov/fdc/v1/foods/search?query=${q}&pageSize=20&dataType=Foundation,SR%20Legacy,Survey%20(FNDDS)&api_key=${usdaKey || "DEMO_KEY"}`);
+    // USDA only speaks English: "csirkemell" is asked as "chicken breast".
+    const r = await fetcher(`https://api.nal.usda.gov/fdc/v1/foods/search?query=${encodeURIComponent(toEnglish(query) ?? query.trim())}&pageSize=20&dataType=Foundation,SR%20Legacy,Survey%20(FNDDS)&api_key=${usdaKey || "DEMO_KEY"}`);
     if (!r.ok) throw new Error(`USDA ${r.status}`);
     return ((((await r.json()) as { foods?: UsdaFood[] }).foods) ?? []).map(fromUsda).filter((f): f is Food => f !== null);
   })();

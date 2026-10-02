@@ -9,6 +9,7 @@
  */
 
 import type { Food, Macros } from "./types";
+import { mineScore, type Taste } from "./rank";
 
 export const fold = (s: string) => s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[^a-z0-9]+/g, " ").trim();
 
@@ -77,7 +78,8 @@ export function typicalOf(key: string, items: Food[]): Food {
  * Group and rank. Order: what you asked for by brand, then the closest name matches, then the
  * most common foods (bigger groups), then the database's own order. Suspect labels sink.
  */
-export function groupFoods(foods: Food[], query: string): ResultRow[] {
+export function groupFoods(foods: Food[], query: string, taste?: Taste): ResultRow[] {
+  const mine = (f: Food) => (taste ? mineScore(f, taste) : 0);
   const qWords = fold(query).split(" ").filter((w) => w.length >= 3);
   const qKey = nameKey(query);
   const brandHit = (f: Food) => !!f.brand && qWords.some((w) => fold(f.brand!).split(" ").includes(w));
@@ -95,7 +97,7 @@ export function groupFoods(foods: Food[], query: string): ResultRow[] {
     // Plain reference foods (USDA) and brand hits are shown as themselves, never merged away.
     if (f.source === "usda" || brandHit(f)) {
       const suspect = !plausible(f.per100);
-      rows.push({ row: { kind: "one", food: f, suspect }, first: i, score: (brandHit(f) ? 10 : 0) + match(nameKey(f.name), f.name) - (suspect ? 5 : 0) });
+      rows.push({ row: { kind: "one", food: f, suspect }, first: i, score: (brandHit(f) ? 10 : 0) + match(nameKey(f.name), f.name) + mine(f) - (suspect ? 5 : 0) });
       return;
     }
     const key = nameKey(f.name);
@@ -107,16 +109,18 @@ export function groupFoods(foods: Food[], query: string): ResultRow[] {
     const m = match(key, items[0].name);
     if (items.length === 1) {
       const suspect = !plausible(items[0].per100);
-      rows.push({ row: { kind: "one", food: items[0], suspect }, first, score: m - (suspect ? 5 : 0) });
+      rows.push({ row: { kind: "one", food: items[0], suspect }, first, score: m + mine(items[0]) - (suspect ? 5 : 0) });
       continue;
     }
     const good = items.filter((f) => plausible(f.per100));
     const kcals = (good.length ? good : items).map((f) => f.per100.kcal);
     const lo = Math.min(...kcals), hi = Math.max(...kcals);
+    // Yours first inside the group (stable otherwise), and the group rises if any of it is yours.
+    const sorted = items.map((f, i) => ({ f, i, s: mine(f) })).sort((a, b) => b.s - a.s || a.i - b.i).map((x) => x.f);
     rows.push({
-      row: { kind: "group", key, typical: typicalOf(key, items), items, kcalRange: [lo, hi], varies: lo > 0 ? hi / lo > 1.3 : hi - lo > 30 },
+      row: { kind: "group", key, typical: typicalOf(key, items), items: sorted, kcalRange: [lo, hi], varies: lo > 0 ? hi / lo > 1.3 : hi - lo > 30 },
       first,
-      score: m + Math.min(items.length, 20) / 20, // size breaks ties between equally good names
+      score: m + Math.min(items.length, 20) / 20 + Math.max(0, ...items.map(mine)) * 0.8, // size breaks ties between equally good names
     });
   }
 

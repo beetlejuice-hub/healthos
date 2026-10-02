@@ -21,6 +21,8 @@ import { extractTime, matchDrink, parseMeal, readAmount, tokens, type DrinkLine 
 import { fromDatabase } from "../lib/fillin";
 import { caffeinePer100, drinkFromFood, sizesFor } from "../lib/drinkdb";
 import { bodyFat, FAT, parseFat } from "../lib/bodyfat";
+import { tasteOf } from "../lib/rank";
+import { convert, cookKind, cookState, WORD, type CookState } from "../lib/cooked";
 import { findBarcode, type Lookup } from "../lib/barcode";
 import { ScanButton, Scanner } from "../components/Scanner";
 
@@ -162,7 +164,9 @@ function FoodTab({ done }: { done: (m: string) => void }) {
     const byWord = matchDrink(needle.normalize("NFD").replace(/[\u0300-\u036f]/g, "").split(/\s+/), drinksMine);
     return all.filter((d) => drinkMatch(d, needle) || d === byWord).slice(0, 6);
   }, [q, drinksMine]);
-  const rows = useMemo(() => groupFoods(results, q), [results, q]);
+  // Products you've logged and brands you buy rise in the database list.
+  const taste = useMemo(() => tasteOf(entries, saved), [entries, saved]);
+  const rows = useMemo(() => groupFoods(results, q, taste), [results, q, taste]);
   const [allFor, setAllFor] = useState<string | null>(null);
   const showAll = allFor === q;
   const setShowAll = () => setAllFor(q);
@@ -343,6 +347,17 @@ function Basket({ lines, time, setTime, crafting, onChange, onDetail, onLogged }
               </> : <button type="button" className="amt" onClick={() => onDetail(i)}>{Math.round(l.grams ?? 100)} g</button>}
             </div>
             <button type="button" className="x" aria-label={`Remove ${l.food.name}`} onClick={() => onChange(lines.filter((_, j) => j !== i))}>×</button>
+            {(() => {
+              // Pasta, rice, meat: weighed dry/raw or cooked? Labels are for dry; plates are weighed cooked.
+              const k = cookKind(l.food);
+              if (!k) return null;
+              const st = cookState(l.food, k);
+              const pick = (to: CookState) => { if (to !== st) set(i, { food: convert(l.food, k, to), count: 1, unit: null, grams: gramsOf(l) }); };
+              return <div className="cookstate" role="group" aria-label={`${l.food.name} weighed`}>
+                <small>Weighed</small>
+                {(["uncooked", "cooked"] as const).map((x) => <button key={x} type="button" className="pill-btn" aria-pressed={st === x} onClick={() => pick(x)}>{WORD[k][x]}</button>)}
+              </div>;
+            })()}
             {l.alts && l.alts.length > 0 && <div className="alts"><small>Did you mean</small>{l.alts.map((f) => <button type="button" key={f.id} className="pill-btn" onClick={() => { const u = unitsOf(f); set(i, u.length ? { food: f, count: l.count, unit: u[0].name } : { food: f, count: 1, unit: null, grams: 100 }); }}>{f.name}</button>)}
               <button type="button" className="pill-btn" onClick={() => set(i, { ...l, alts: undefined })}>✓ it's right</button></div>}
           </div>
