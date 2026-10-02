@@ -1,3 +1,4 @@
+import { NowScreen } from "./components/NowScreen";
 import { useEffect, useState } from "react";
 import { Today } from "./screens/Today";
 import { Log } from "./screens/Log";
@@ -42,6 +43,8 @@ export function App() {
   if (!auth.ready) return <div className="app r-today" />;
   if (auth.recovering) return <div className="app r-today"><NewPassword done={auth.doneRecovering} /></div>;
   if (!auth.session) return <div className="app r-today"><Auth notice={auth.notice} /></div>;
+  // The "How now?" Home Screen icon and its notifications open /now: just the check-in.
+  if (location.pathname.replace(/\/$/, "") === "/now") return <NowScreen />;
 
   return (
     <div className={`app r-${route === "dev" ? "settings" : route}`}>

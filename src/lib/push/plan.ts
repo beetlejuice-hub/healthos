@@ -45,8 +45,8 @@ export function plan(c: Ctx): Reminder[] {
       const t = at(m);
       const rated = c.entries.some((e) => e.kind === "feel" && e.at > t - PLAN.ratedWithinMin * 60_000 && e.at <= t);
       if (!rated) add(m, m >= 20 * 60
-        ? { title: "How was today?", body: "Mood, energy, focus, stress: one tap each.", url: "/#today", tag: "feel" }
-        : { title: "How now?", body: "Mood, energy, focus, stress: one tap each.", url: "/#today", tag: "feel" });
+        ? { title: "How was today?", body: "Mood, energy, focus, stress: one tap each.", url: "/now", tag: "feel" }
+        : { title: "How now?", body: "Mood, energy, focus, stress: one tap each.", url: "/now", tag: "feel" });
     }
 
     if (c.prefs.supps) for (const slot of SLOTS) {

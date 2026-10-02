@@ -23,7 +23,8 @@ const wordOf = (k: FeelKey, v: number) => WORDS[k][Math.min(4, Math.floor((v - 1
 const cap = (s: string) => s[0].toUpperCase() + s.slice(1);
 const signed = (d: number) => (d > 0 ? `+${d}` : d < 0 ? `−${-d}` : "±0");
 
-export function HowNow({ now }: { now: number }) {
+/** `always`: the /now page — open even if you rated recently (until you tap Done). */
+export function HowNow({ now, always = false }: { now: number; always?: boolean }) {
   const entries = useStore((s) => s.entries);
   const workouts = useStore((s) => s.workouts);
   const [again, setAgain] = useState(false);
@@ -35,7 +36,7 @@ export function HowNow({ now }: { now: number }) {
   const open = last && now - last.at < OPEN_MS && now >= last.at ? last : undefined;
   const recent = last && now - last.at < ASK_AGAIN_MS ? last : undefined;
   const st = feelState(entries, now);
-  const expanded = (open && closedId !== open.id) || !recent || again;
+  const expanded = (open && closedId !== open.id) || !recent || again || (always && closedId !== last?.id);
 
   // What the logs already say happened since the last check-in today: pre-ticked.
   const since = (() => {

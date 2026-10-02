@@ -282,4 +282,9 @@ email get Dev tools (`#dev`): raw entry editor, generate/remove sample, wipe acc
    95% says so, else "about the same"; stress up = worse), best/worst time of day, best and lowest day
    with what happened (gym, alcohol, late caffeine, your tags), and the top connection from
    between.ts — a finding, or an early sign marked "could still be chance".
-25. [ ] **"How now?" on the Home Screen** *(claimed: same — `/now` page + its own manifest, Worker, App)*.
+25. [x] **"How now?" on the Home Screen** (2 Oct). `/now` = just the check-in (`components/NowScreen.tsx`),
+   served by the Worker with its own title/manifest/icon (`nowPage`, `public/now.webmanifest`), so Safari →
+   Share → Add to Home Screen at /now makes a separate "How now?" icon; Android/Chrome: long-press
+   shortcut in the main manifest. How now? notifications open /now. Also fixed: iPhone ignores SVG
+   Home Screen icons — PNG icons (`icon-180/512.png`, `now-180/512.png`) added. iPhone may keep a
+   Home Screen app's sign-in separate: sign in once in the new icon.

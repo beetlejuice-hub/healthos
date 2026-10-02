@@ -517,3 +517,8 @@ a { color: inherit; }
 .wk-avg.better b { color: var(--ok); } .wk-avg.worse b { color: var(--warn); }
 .wk-facts { margin: 0; padding-left: 18px; display: grid; gap: 6px; font-size: 13.5px; color: var(--i-ink); }
 .wk-facts .wk-early { color: var(--i-ink-2); }
+/* /now — the check-in on its own */
+.now-app { grid-template-rows: 1fr; }
+.now-screen { padding-bottom: calc(24px + env(safe-area-inset-bottom, 0px)); }
+.now-screen .hn-nums button { height: 42px; }
+.now-tip { text-align: center; margin-top: 4px; }

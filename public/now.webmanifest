@@ -1,0 +1,16 @@
+{
+  "name": "How now?",
+  "short_name": "How now?",
+  "description": "A 5-second check-in: mood, energy, focus, stress.",
+  "id": "/now",
+  "start_url": "/now",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#131a2b",
+  "theme_color": "#131a2b",
+  "icons": [
+    { "src": "/now-180.png", "sizes": "180x180", "type": "image/png" },
+    { "src": "/now-512.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}

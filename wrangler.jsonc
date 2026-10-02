@@ -11,7 +11,7 @@
     "directory": "./dist",
     "binding": "ASSETS",
     "not_found_handling": "single-page-application",
-    "run_worker_first": ["/api/*"]
+    "run_worker_first": ["/api/*", "/now"]
   },
   // Notifications: one Durable Object per account (worker/push.ts) — SQLite-backed, so it's on the
   // free plan, and created by `wrangler deploy` itself; nothing to set up in the dashboard.

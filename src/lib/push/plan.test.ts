@@ -13,6 +13,7 @@ const at = (rs: Reminder[], d: number) => rs.filter((r) => new Date(r.at).getDat
 
 describe("reminder plan", () => {
   it("a day with nothing logged yet, seen at 07:00", () => {
+    expect(plan(ctx(T(2, 7))).filter((r) => r.tag.includes("feel")).every((r) => r.url === "/now")).toBe(true); // opens the check-in on its own
     expect(at(plan(ctx(T(2, 7))), 2)).toEqual([
       "08:30 Morning stack",
       "09:30 Morning weigh-in",

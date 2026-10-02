@@ -72,12 +72,28 @@ export async function handlePush(req: Request, env: Env, f: typeof fetch = fetch
   return stub.fetch(new Request(`https://push/${op}`, { method: req.method, headers: { "content-type": "application/json" }, body: req.method === "POST" ? await req.text() : undefined }));
 }
 
+/**
+ * /now — the "How now?" check-in on its own. The same app page, but announcing itself as "How now?"
+ * (title, icon, manifest), so "Add to Home Screen" from here makes a separate one-tap icon.
+ */
+export function nowPage(html: string): string {
+  return html
+    .replace('<title>HealthOS</title>', '<title>How now?</title>')
+    .replace('href="/manifest.webmanifest"', 'href="/now.webmanifest"')
+    .replace('href="/icon-180.png"', 'href="/now-180.png"')
+    .replace('content="HealthOS" />', 'content="How now?" />');
+}
+
 export default {
   async fetch(req: Request, env: Env, ctx: Ctx): Promise<Response> {
     const url = new URL(req.url);
     if (url.pathname === "/api/food") return handleFood(req, env, ctx);
     if (url.pathname === "/api/ai" || url.pathname === "/api/ai/usage") return handleAi(req, env);
     if (url.pathname.startsWith("/api/push/")) return handlePush(req, env);
+    if (url.pathname === "/now" || url.pathname === "/now/") {
+      const page = await env.ASSETS.fetch(new Request(new URL("/", req.url)));
+      return new Response(nowPage(await page.text()), { headers: { "content-type": "text/html; charset=utf-8", "cache-control": "no-cache" } });
+    }
     if (url.pathname.startsWith("/api/")) return json({ error: "not found" }, 404);
     return env.ASSETS.fetch(req);
   },
