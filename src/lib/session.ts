@@ -8,6 +8,7 @@ import type { Session } from "@supabase/supabase-js";
 import { supabase, isTester } from "./supabase";
 import { applyFromServer, getState, openStore, resetLocal, setRemote, storageKey } from "./store";
 import { Syncer, type SyncStatus } from "./sync";
+import { startPlanner } from "./push/client";
 
 let syncer: Syncer | null = null;
 let status: SyncStatus = { state: "idle", pending: 0, lastSync: null };
@@ -26,6 +27,7 @@ function start(userId: string) {
   if (adopted) syncer.adoptLocal(getState());
   setRemote(syncer);
   void syncer.sync();
+  startPlanner(); // keeps the reminder plan in step (does nothing until notifications are on here)
 }
 
 function stop() {

@@ -492,3 +492,11 @@ a { color: inherit; }
 .hn-own { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; }
 .hn-own input { background: var(--c-card-2); border: 1px solid transparent; border-radius: 12px; padding: 8px 12px; font-size: 16px; color: var(--c-ink); min-width: 0; }
 .hn-reward { margin: 0; font-size: 13.5px; color: var(--ok); }
+/* Settings → Notifications */
+.notif { display: grid; gap: 10px; }
+.notif-kinds { display: grid; gap: 8px; }
+.notif-kind { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 10px; align-items: start; font-size: 14px; }
+.notif-kind input { width: 20px; height: 20px; margin-top: 1px; accent-color: var(--mood); }
+.notif-kind small { display: block; color: var(--c-ink-2); font-size: 12.5px; }
+.notif-devs { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; font-size: 13px; color: var(--c-ink-2); }
+.notif-devs b { color: var(--c-ink); font-weight: 600; }

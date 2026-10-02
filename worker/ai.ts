@@ -24,7 +24,7 @@ const json = (body: unknown, status = 200) => new Response(JSON.stringify(body),
 /** "2026-10-01" in the user's time zone, so the cap resets at their midnight. */
 const dayIn = (ms: number, tz: string) => { try { return new Intl.DateTimeFormat("en-CA", { timeZone: tz, year: "numeric", month: "2-digit", day: "2-digit" }).format(ms); } catch { return new Date(ms).toISOString().slice(0, 10); } };
 
-async function whoIs(req: Request, env: AiEnv, deps: Deps): Promise<{ id: string; token: string } | null> {
+export async function whoIs(req: Request, env: AiEnv, deps: Deps): Promise<{ id: string; token: string } | null> {
   const token = (req.headers.get("authorization") ?? "").replace(/^Bearer\s+/i, "");
   if (!token) return null;
   const r = await deps.fetch(`${env.SUPABASE_URL ?? SB_URL}/auth/v1/user`, { headers: { apikey: env.SUPABASE_KEY ?? SB_KEY, authorization: `Bearer ${token}` } });

@@ -54,6 +54,8 @@ export type Settings = {
   bodyKg: number;
   /** The drink the one-tap button logs. Chosen on Today; ✕ clears it. */
   usualDrink: Drink | null;
+  /** Which reminders to send, once notifications are on (Settings → Notifications). */
+  notify?: { checkins: boolean; supps: boolean; weigh: boolean };
 };
 
 export type State = {

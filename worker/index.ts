@@ -13,9 +13,14 @@
 
 import { searchAll } from "../src/lib/foodsearch";
 import { lookupBarcode, normalizeGtin } from "../src/lib/barcode";
-import { handleAi, type AiEnv } from "./ai";
+import { handleAi, whoIs, type AiEnv } from "./ai";
+import { PushHub } from "./push";
 
-type Env = AiEnv & { ASSETS: { fetch: (r: Request) => Promise<Response> }; USDA_KEY?: string };
+/** The Durable Object class must be exported from the Worker's entry point. */
+export { PushHub };
+
+type DOStub = { fetch: (r: Request) => Promise<Response> };
+type Env = AiEnv & { ASSETS: { fetch: (r: Request) => Promise<Response> }; USDA_KEY?: string; PUSH?: { idFromName: (n: string) => unknown; get: (id: unknown) => DOStub } };
 type Ctx = { waitUntil: (p: Promise<unknown>) => void };
 declare const caches: { default: { match: (r: Request) => Promise<Response | undefined>; put: (r: Request, res: Response) => Promise<void> } } | undefined;
 
@@ -52,11 +57,27 @@ async function handleBarcode(raw: string, ctx?: Ctx): Promise<Response> {
   return res;
 }
 
+/**
+ * /api/push/{key,subscribe,unsubscribe,schedule,test,status} — signed in only, each account its own
+ * Durable Object (worker/push.ts).
+ */
+export async function handlePush(req: Request, env: Env, f: typeof fetch = fetch): Promise<Response> {
+  if (!env.PUSH) return json({ error: "notifications aren't set up on this server" }, 503);
+  const op = new URL(req.url).pathname.replace(/^\/api\/push\/?/, "");
+  if (!["key", "subscribe", "unsubscribe", "schedule", "test", "status"].includes(op)) return json({ error: "not found" }, 404);
+  // Wrapped: Workers throw "Illegal invocation" if the global fetch is called as another object's method.
+  const user = await whoIs(req, env, { fetch: (u, i) => f(u, i), now: Date.now });
+  if (!user) return json({ error: "sign in first" }, 401);
+  const stub = env.PUSH.get(env.PUSH.idFromName(user.id));
+  return stub.fetch(new Request(`https://push/${op}`, { method: req.method, headers: { "content-type": "application/json" }, body: req.method === "POST" ? await req.text() : undefined }));
+}
+
 export default {
   async fetch(req: Request, env: Env, ctx: Ctx): Promise<Response> {
     const url = new URL(req.url);
     if (url.pathname === "/api/food") return handleFood(req, env, ctx);
     if (url.pathname === "/api/ai" || url.pathname === "/api/ai/usage") return handleAi(req, env);
+    if (url.pathname.startsWith("/api/push/")) return handlePush(req, env);
     if (url.pathname.startsWith("/api/")) return json({ error: "not found" }, 404);
     return env.ASSETS.fetch(req);
   },

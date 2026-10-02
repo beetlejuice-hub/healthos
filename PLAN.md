@@ -261,12 +261,14 @@ email get Dev tools (`#dev`): raw entry editor, generate/remove sample, wipe acc
    progress to 8 check-in pairs. One calm line after Done; asks again after 2 h. Tags (`doing` on the
    feel entry) feed `detectors/between.ts` as activities; bench: a walk effect found, random ticks not.
    Next phase (with push): a nudge around 13:00 / 17:00 if not rated recently.
-22. [ ] **Push notifications** *(claimed: agent "balance", 2 Oct — owner: "do 1")*. Plan: one Durable Object
-   per account (SQLite, alarms; makes its own VAPID keys, so no secret to set) stores devices + the next
-   24 h of reminders and fires each at its minute; Web Push encryption per RFC 8291 in the Worker
-   (tested on the RFC's own example); `public/sw.js` shows it and opens Today. The app plans the 24 h
-   (How now? 13:00 / 17:30 / 21:00 unless rated in the last 2 h; each supplement slot +30 min if not
-   ticked; weigh-in 09:30 if none) — quiet before 08:00 and after bedtime, close ones merged, ≤ 6 a day
-   — and re-sends the plan when anything changes. Settings → Notifications: turn on, send a test, which
-   kinds, each device's last delivery. iPhone: only from the Home Screen app (iOS 16.4+).
-   Files: `worker/push*.ts`, `public/sw.js`, `src/lib/push/*`, `src/components/Notifications.tsx`, wrangler.jsonc.
+22. [x] **Push notifications** (2 Oct). One Durable Object per account (`worker/push.ts`; SQLite, alarms;
+   makes its own VAPID keys — no secret) keeps devices + the next 48 h of reminders and fires each at
+   its minute (checked in the real runtime: fired 92 ms after due); stale (20+ min late) dropped,
+   several due merged, 404/410 devices forgotten. Encryption RFC 8291 (`worker/webpush.ts`, matches the
+   RFC's example byte for byte). App plans (`lib/push/plan.ts`): How now? 13:00 / 17:30, "How was
+   today?" 21:00 — each skipped if rated in the 2 h before; each supplement slot +30 min if unticked;
+   weigh-in 09:30; quiet before 08:00 and from bedtime − 15; within 30 min merged; ≤ 6 a day; re-sent
+   3 s after any change, on return to the app, and every 30 min. Settings → Notifications: turn on,
+   kinds, send a test, each device's last delivery. `public/sw.js` shows it, tap opens Today.
+   **Owner to check on the iPhone** (can't be automated): from the Home Screen app, Turn on → Send a
+   test → arrives; tap opens Today.

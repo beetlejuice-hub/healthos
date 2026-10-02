@@ -12,5 +12,9 @@
     "binding": "ASSETS",
     "not_found_handling": "single-page-application",
     "run_worker_first": ["/api/*"]
-  }
+  },
+  // Notifications: one Durable Object per account (worker/push.ts) — SQLite-backed, so it's on the
+  // free plan, and created by `wrangler deploy` itself; nothing to set up in the dashboard.
+  "durable_objects": { "bindings": [{ "name": "PUSH", "class_name": "PushHub" }] },
+  "migrations": [{ "tag": "v1-push", "new_sqlite_classes": ["PushHub"] }]
 }
