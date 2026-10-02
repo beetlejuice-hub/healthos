@@ -65,12 +65,25 @@ export const SLOTS: { id: Slot; name: string; at: number }[] = [
 export const slotOf = (at: number): Slot => (at < 11 * 60 ? "morning" : at < 17 * 60 ? "midday" : "evening");
 export const slotTime = (slot: Slot) => SLOTS.find((s) => s.id === slot)!.at;
 
+/** The slots a supplement is taken in, in day order. */
+export const slotsOf = (s: Pick<Supplement, "slot" | "slots">): Slot[] => {
+  const set = s.slots?.length ? s.slots : [s.slot];
+  return SLOTS.map((x) => x.id).filter((id) => set.includes(id));
+};
+/** The slot a tick belongs to. Ticks from before multi-slot have none: they were for the first slot. */
+export const answerSlot = (e: { slot?: Slot }, s: Pick<Supplement, "slot" | "slots"> | undefined): Slot => e.slot ?? (s ? slotsOf(s)[0] : "morning");
+
 /** A supplement in your stack. `at` is always its slot's time (kept so older data still reads). */
 export type Supplement = {
   id: string;
   name: string;
   dose: string;
   slot: Slot;
+  /**
+   * Every slot it's taken in, when more than one: L-theanine with the morning coffee and again with
+   * the midday one. Each slot is ticked on its own. `slot` stays the first of these.
+   */
+  slots?: Slot[];
   /** Minutes from midnight — the slot's time. */
   at: number;
   active: boolean;
@@ -81,7 +94,7 @@ export type Supplement = {
 export type Entry =
   | { id: string; kind: "food"; at: number; foodId?: string; name: string; grams: number; macros: Macros; /** As you counted it: 2 × "egg". */ count?: number; unit?: string }
   | { id: string; kind: "drink"; at: number; drinkId?: string; name: string; ml: number; caffeineMg: number; alcoholG: number; kcal: number; p?: number; c?: number; f?: number }
-  | { id: string; kind: "supp"; at: number; suppId: string; status: "taken" | "skipped" }
+  | { id: string; kind: "supp"; at: number; suppId: string; status: "taken" | "skipped"; /** Which of its slots this answers (older answers: its first). */ slot?: Slot }
   | { id: string; kind: "set"; at: number; workoutId: string; exercise: string; kg: number; reps: number }
   | { id: string; kind: "weight"; at: number; kg: number }
   | { id: string; kind: "feel"; at: number; energy?: number; mood?: number; focus?: number; anxiety?: number; stress?: number; note?: string }

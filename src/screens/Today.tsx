@@ -12,8 +12,8 @@ import { caffeineDoses } from "../lib/insights";
 import { add, byDay, macrosOf, ZERO } from "../lib/nutrition";
 import { atMinute, clock, dayLabel, localDay, MIN } from "../lib/time";
 import { go } from "../lib/nav";
-import type { Drink, Entry, EntryOf } from "../lib/types";
-import { SLOTS } from "../lib/types";
+import type { Drink, Entry, EntryOf, Slot } from "../lib/types";
+import { answerSlot, SLOTS, slotsOf } from "../lib/types";
 
 /**
  * The current time, re-read on every render and re-rendered every `ms` while open. Read fresh
@@ -52,8 +52,8 @@ export function Today() {
     return d.length ? d.reduce((a, x) => a + x.totals.kcal, 0) / d.length : null;
   })();
 
-  const answer = (suppIds: string[], status: "taken" | "skipped") => {
-    const ids = suppIds.map((suppId) => act.addEntry({ kind: "supp", at: Date.now(), suppId, status }).id);
+  const answer = (suppIds: string[], status: "taken" | "skipped", slot: Slot) => {
+    const ids = suppIds.map((suppId) => act.addEntry({ kind: "supp", at: Date.now(), suppId, status, slot }).id);
     offerUndo(ids, `${status === "taken" ? "Ticked" : "Skipped"} ${suppIds.length} supplement${suppIds.length > 1 ? "s" : ""}`);
   };
 
@@ -87,10 +87,10 @@ export function Today() {
           <div><b>{it.title}</b><p>{it.body}</p></div>
           <div className="acts">
             {(it.kind === "supp-missed" || it.kind === "supp-due") && <>
-              <button type="button" className="pill-btn pri" onClick={() => answer(it.suppIds, "taken")}>{it.suppIds.length > 1 ? "Took all" : "Took it"}</button>
+              <button type="button" className="pill-btn pri" onClick={() => answer(it.suppIds, "taken", it.slot)}>{it.suppIds.length > 1 ? "Took all" : "Took it"}</button>
               {it.suppIds.length > 1
                 ? <button type="button" className="pill-btn" onClick={() => document.getElementById("stack")?.scrollIntoView({ behavior: "smooth" })}>Pick…</button>
-                : <button type="button" className="pill-btn" onClick={() => answer(it.suppIds, "skipped")}>Skip today</button>}
+                : <button type="button" className="pill-btn" onClick={() => answer(it.suppIds, "skipped", it.slot)}>Skip</button>}
             </>}
             {it.kind === "caffeine" && <button type="button" className="pill-btn" onClick={() => setDismissed((d) => [...d, it.id])}>Got it</button>}
             {it.kind === "food" && <button type="button" className="pill-btn pri" onClick={() => go("log", "food")}>Log food</button>}
@@ -175,7 +175,8 @@ function CaffeineCard({ doses, now, bed, halfLife, cafNow, cafBed }: { doses: { 
         {probe != null && <g pointerEvents="none">
           <line x1={px} x2={px} y1={pt - 4} y2={y(0)} stroke="var(--c-ink)" strokeOpacity=".45" />
           <circle cx={px} cy={y(pmg)} r="3.5" fill="var(--c-bg)" stroke="var(--caf)" strokeWidth="2" />
-          <text x={Math.min(W - pr, Math.max(pl + 30, px))} y={10} textAnchor="middle" fontSize="10.5" fontWeight="600" fill="var(--c-ink)">{clock(probe)} · {pmg} mg{probe > now ? " (forecast)" : ""}</text>
+          {/* Anchored toward the middle near either edge, so "21:55 · 16 mg (forecast)" is never cut off. */}
+          <text x={px > W * 0.66 ? W - pr : px < W * 0.33 ? pl : px} y={10} textAnchor={px > W * 0.66 ? "end" : px < W * 0.33 ? "start" : "middle"} fontSize="10.5" fontWeight="600" fill="var(--c-ink)">{clock(probe)} · {pmg} mg{probe > now ? " (forecast)" : ""}</text>
         </g>}
       </svg>
       <UsualDrink />
@@ -230,35 +231,38 @@ function Stack({ now }: { now: number }) {
   const entries = useStore((s) => s.entries);
   const day = localDay(now);
   const supps = all.filter((x) => x.active);
-  const answers = new Map(entries.filter((e): e is EntryOf<"supp"> => e.kind === "supp" && localDay(e.at) === day).map((e) => [e.suppId, e]));
-  const set = (id: string, status: "taken" | "skipped") => {
-    const cur = answers.get(id);
+  // One answer per supplement per slot: theanine at breakfast and again at lunch are two ticks.
+  const key = (id: string, slot: Slot) => `${id}|${slot}`;
+  const answers = new Map(entries.filter((e): e is EntryOf<"supp"> => e.kind === "supp" && localDay(e.at) === day).map((e) => [key(e.suppId, answerSlot(e, all.find((x) => x.id === e.suppId))), e]));
+  const set = (id: string, slot: Slot, status: "taken" | "skipped") => {
+    const cur = answers.get(key(id, slot));
     if (cur && cur.status === status) act.removeEntry(cur.id);
     else if (cur) act.updateEntry(cur.id, { status } as Partial<Entry>);
-    else act.addEntry({ kind: "supp", at: Date.now(), suppId: id, status });
+    else act.addEntry({ kind: "supp", at: Date.now(), suppId: id, status, slot });
   };
-  const taken = supps.filter((s) => answers.get(s.id)?.status === "taken").length;
+  const doses = supps.flatMap((s) => slotsOf(s).map((slot) => key(s.id, slot)));
+  const taken = doses.filter((k) => answers.get(k)?.status === "taken").length;
   return (
     <div className="card" id="stack">
-      <h3>Stack <span>{taken} of {supps.length} taken</span></h3>
+      <h3>Stack <span>{taken} of {doses.length} taken</span></h3>
       {SLOTS.map((slot) => {
-        const list = supps.filter((s) => s.slot === slot.id);
+        const list = supps.filter((s) => slotsOf(s).includes(slot.id));
         if (!list.length) return null;
-        const open = list.filter((s) => !answers.has(s.id));
+        const open = list.filter((s) => !answers.has(key(s.id, slot.id)));
         return (
           <div key={slot.id} style={{ display: "grid", gap: 8 }}>
             <div className="h" style={{ padding: 0 }}>
               <span>{slot.name} · {clock(atMinute(day, slot.at))}</span>
-              {open.length > 1 && <button type="button" className="pill-btn" style={{ padding: "3px 10px", fontSize: 11 }} onClick={() => { const ids = open.map((s) => act.addEntry({ kind: "supp", at: Date.now(), suppId: s.id, status: "taken" }).id); offerUndo(ids, `Ticked ${ids.length} supplements`); }}>Took all</button>}
+              {open.length > 1 && <button type="button" className="pill-btn" style={{ padding: "3px 10px", fontSize: 11 }} onClick={() => { const ids = open.map((s) => act.addEntry({ kind: "supp", at: Date.now(), suppId: s.id, status: "taken", slot: slot.id }).id); offerUndo(ids, `Ticked ${ids.length} supplements`); }}>Took all</button>}
             </div>
             {list.map((s) => {
-              const a = answers.get(s.id);
+              const a = answers.get(key(s.id, slot.id));
               return (
                 <div className="stack-row" key={s.id}>
                   <span style={{ opacity: a ? 0.6 : 1 }}>{s.name} <span style={{ color: "var(--c-dim)", fontSize: 12.5 }}>{s.dose}</span></span>
                   <div className="tick">
-                    <button type="button" className="yes" aria-pressed={a?.status === "taken"} aria-label={`Took ${s.name}`} onClick={() => set(s.id, "taken")}>✓</button>
-                    <button type="button" className="no" aria-pressed={a?.status === "skipped"} aria-label={`Skipped ${s.name}`} onClick={() => set(s.id, "skipped")}>✗</button>
+                    <button type="button" className="yes" aria-pressed={a?.status === "taken"} aria-label={`Took ${s.name}`} onClick={() => set(s.id, slot.id, "taken")}>✓</button>
+                    <button type="button" className="no" aria-pressed={a?.status === "skipped"} aria-label={`Skipped ${s.name}`} onClick={() => set(s.id, slot.id, "skipped")}>✗</button>
                   </div>
                 </div>
               );
@@ -361,7 +365,7 @@ function WeighIn({ lastKg }: { lastKg: number | null }) {
   return (
     <div className="weighin">
       <input inputMode="decimal" aria-label="Weight in kg" value={kg} placeholder="kg" onChange={(e) => setKg(e.target.value)} />
-      <button type="button" className="pill-btn pri" disabled={!ok} onClick={() => { const e = act.addEntry({ kind: "weight", at: Date.now(), kg: Math.round(n * 10) / 10 }); offerUndo([e.id], `Logged ${Math.round(n * 10) / 10} kg`); }}>Log kg</button>
+      <button type="button" className="pill-btn pri" disabled={!ok} onClick={() => { const e = act.addEntry({ kind: "weight", at: Date.now(), kg: Math.round(n * 100) / 100 }); offerUndo([e.id], `Logged ${Math.round(n * 100) / 100} kg`); }}>Log kg</button>
     </div>
   );
 }
@@ -378,8 +382,8 @@ function DayChips({ now }: { now: number }) {
   const todays = entries.filter((e) => localDay(e.at) === day);
   const kcal = todays.reduce((a, e) => a + (e.kind === "food" ? e.macros.kcal : 0), 0);
   const drinks = todays.filter((e) => e.kind === "drink").length;
-  const active = supplements.filter((x) => x.active);
-  const ticked = new Set(todays.filter((e) => e.kind === "supp").map((e) => e.kind === "supp" ? e.suppId : "")).size;
+  const active = supplements.filter((x) => x.active).flatMap((s) => slotsOf(s).map((slot) => `${s.id}|${slot}`));
+  const ticked = new Set(todays.flatMap((e) => (e.kind === "supp" ? [`${e.suppId}|${answerSlot(e, supplements.find((x) => x.id === e.suppId))}`] : []))).size;
   const weighed = todays.some((e) => e.kind === "weight"), rated = todays.some((e) => e.kind === "feel");
   const scrollTo = (id: string) => document.getElementById(id)?.scrollIntoView({ behavior: "smooth" });
   const chips: [string, boolean, () => void][] = [

@@ -8,7 +8,7 @@
 
 import { useSyncExternalStore } from "react";
 import type { Drink, Entry, Food, Goals, Supplement, Template, Workout } from "./types";
-import { DEFAULT_GOALS, slotOf, slotTime } from "./types";
+import { DEFAULT_GOALS, slotOf, slotsOf, slotTime } from "./types";
 import { tidyWorkouts } from "./training";
 import type { ScoutMemo } from "./scout";
 import type { DigestItem, ModelChoice, Question, SupplementAnswer } from "./ai/tasks";
@@ -88,7 +88,10 @@ const DEFAULT_STACK: Supplement[] = [
 
 /** Older saves had a free time per supplement; snap each to its slot. */
 export const normalizeStack = (list: Supplement[]): Supplement[] =>
-  list.map((s) => { const slot = s.slot ?? slotOf(s.at); return { ...s, slot, at: slotTime(slot) }; });
+  list.map((s) => {
+    const slots = slotsOf({ slot: s.slot ?? slotOf(s.at), slots: s.slots });
+    return { ...s, slot: slots[0], slots: slots.length > 1 ? slots : undefined, at: slotTime(slots[0]) };
+  });
 
 const DEFAULT_TEMPLATES: Template[] = [
   { id: "upper-a", name: "Upper A", exercises: [

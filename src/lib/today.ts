@@ -5,13 +5,13 @@
  * offers the one action that settles it.
  */
 
-import type { Entry, Goals, Supplement } from "./types";
-import { SLOTS, slotOf } from "./types";
+import type { Entry, Goals, Slot, Supplement } from "./types";
+import { answerSlot, SLOTS, slotsOf } from "./types";
 import { caffeineAt, latestDoseFor, type Dose } from "./caffeine";
 import { atMinute, clock, localDay, minuteOfDay } from "./time";
 
 export type NowItem =
-  | { id: string; kind: "supp-missed" | "supp-due"; suppIds: string[]; title: string; body: string }
+  | { id: string; kind: "supp-missed" | "supp-due"; slot: Slot; suppIds: string[]; title: string; body: string }
   | { id: string; kind: "caffeine"; title: string; body: string }
   | { id: string; kind: "food"; title: string; body: string }
   | { id: string; kind: "feel"; title: string; body: string }
@@ -41,15 +41,15 @@ export function nowItems(c: NowContext): NowItem[] {
 
   // Supplements, grouped by their usual time: one card for "the morning stack", not one per pill
   // (owner, first look: "really complex right out of the gate"). A skip is an answer too.
-  const open = c.supplements.filter((s) => s.active && !todays.some((e) => e.kind === "supp" && e.suppId === s.id));
-  const slots = [...new Set(open.map((s) => s.at))].sort((a, b) => a - b);
-  for (const at of slots) {
-    const group = open.filter((s) => s.at === at);
-    const names = group.map((s) => s.name).join(", ");
-    const slotName = SLOTS.find((x) => x.id === slotOf(at))!.name;
-    const title = group.length === 1 ? `${group[0].name} ${group[0].dose}`.trim() : `${slotName} stack: ${names}`;
-    if (nowMin > at + MISSED_AFTER_MIN) out.push({ id: `supp:${at}`, kind: "supp-missed", suppIds: group.map((s) => s.id), title, body: `Not ticked yet — usually ${clockOf(at)}.` });
-    else if (nowMin >= at - DUE_WITHIN_MIN) out.push({ id: `supp:${at}`, kind: "supp-due", suppIds: group.map((s) => s.id), title, body: `Due at ${clockOf(at)}.` });
+  // A supplement taken in two slots (theanine with each coffee) is due twice, each answered on its own.
+  const answered = new Set(todays.flatMap((e) => (e.kind === "supp" ? [`${e.suppId}|${answerSlot(e, c.supplements.find((x) => x.id === e.suppId))}`] : [])));
+  for (const slot of SLOTS) {
+    const group = c.supplements.filter((s) => s.active && slotsOf(s).includes(slot.id) && !answered.has(`${s.id}|${slot.id}`));
+    if (!group.length) continue;
+    const at = slot.at, names = group.map((s) => s.name).join(", ");
+    const title = group.length === 1 ? `${group[0].name} ${group[0].dose}`.trim() : `${slot.name} stack: ${names}`;
+    if (nowMin > at + MISSED_AFTER_MIN) out.push({ id: `supp:${at}`, kind: "supp-missed", slot: slot.id, suppIds: group.map((s) => s.id), title, body: `Not ticked yet — usually ${clockOf(at)}.` });
+    else if (nowMin >= at - DUE_WITHIN_MIN) out.push({ id: `supp:${at}`, kind: "supp-due", slot: slot.id, suppIds: group.map((s) => s.id), title, body: `Due at ${clockOf(at)}.` });
   }
 
   // Caffeine cut-off: only on a day you've had caffeine, and only while bedtime is still ahead.

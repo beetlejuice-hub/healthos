@@ -21,8 +21,8 @@ export function feelByTime(state: Pick<State, "entries">, now: number): string[]
   return BANDS.flatMap(([name, from, to]) => {
     const xs = feels.filter((e) => { const h = new Date(e.at).getHours(); return h >= from && h < to; });
     if (!xs.length) return [];
-    const pick = (k: "energy" | "mood" | "focus") => avg(xs.flatMap((e) => (e.kind === "feel" && e[k] != null ? [e[k]!] : [])));
-    return [`${name}: ${xs.length} check-in${xs.length === 1 ? "" : "s"} · energy ${pick("energy") ?? "–"} · mood ${pick("mood") ?? "–"} · focus ${pick("focus") ?? "–"}`];
+    const pick = (k: "energy" | "mood" | "focus" | "stress") => avg(xs.flatMap((e) => (e.kind === "feel" && e[k] != null ? [e[k]!] : [])));
+    return [`${name}: ${xs.length} check-in${xs.length === 1 ? "" : "s"} · energy ${pick("energy") ?? "–"} · mood ${pick("mood") ?? "–"} · focus ${pick("focus") ?? "–"}${pick("stress") != null ? ` · stress ${pick("stress")}` : ""}`];
   });
 }
 

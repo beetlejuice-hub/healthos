@@ -195,3 +195,14 @@ describe("email links", () => {
     expect(readEmailLink("#error=access_denied&error_description=Email+link+is+invalid+or+has+expired")).toEqual({ kind: "notice", text: "Email link is invalid or has expired" });
   });
 });
+
+describe("stack slots", () => {
+  it("normalizeStack keeps several slots in day order, and the first is `slot`", async () => {
+    const { normalizeStack } = await import("./store");
+    const [s] = normalizeStack([{ id: "x", name: "Theanine", dose: "", slot: "midday", slots: ["midday", "morning"], at: 13 * 60, active: true }]);
+    expect(s).toMatchObject({ slot: "morning", slots: ["morning", "midday"], at: 8 * 60 });
+    const [one] = normalizeStack([{ id: "y", name: "Mag", dose: "", slot: "evening", at: 22 * 60, active: true }]);
+    expect(one.slots).toBeUndefined();
+    expect(one.at).toBe(21 * 60 + 30);
+  });
+});

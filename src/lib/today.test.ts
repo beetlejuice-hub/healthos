@@ -6,9 +6,9 @@ import { DEFAULT_GOALS } from "./types";
 
 const at = (h: number, m = 0) => new Date(2026, 8, 29, h, m).getTime();
 const stack: Supplement[] = [
-  { id: "cre", name: "Creatine", dose: "5 g", slot: "morning", at: 8 * 60 + 15, active: true },
-  { id: "cumin", name: "Black cumin oil", dose: "1 tsp", slot: "morning", at: 8 * 60 + 18, active: true },
-  { id: "mag", name: "Magnesium", dose: "400 mg", slot: "morning", at: 22 * 60 + 30, active: true },
+  { id: "cre", name: "Creatine", dose: "5 g", slot: "morning", at: 8 * 60, active: true },
+  { id: "cumin", name: "Black cumin oil", dose: "1 tsp", slot: "morning", at: 8 * 60, active: true },
+  { id: "mag", name: "Magnesium", dose: "400 mg", slot: "evening", at: 21 * 60 + 30, active: true },
   { id: "old", name: "Zinc", dose: "", slot: "morning", at: 9 * 60, active: false },
 ];
 const coffee = (h: number, m = 0): Entry => ({ id: `c${h}${m}`, kind: "drink", at: at(h, m), name: "Filter coffee", ml: 250, caffeineMg: 95, alcoholG: 0, kcal: 2 });
@@ -25,6 +25,26 @@ describe("nowItems", () => {
   it("treats a skip as an answer", () => {
     const items = nowItems(ctx(at(14, 20), [{ id: "s", kind: "supp", at: at(9), suppId: "cumin", status: "skipped" }, { id: "t", kind: "supp", at: at(8), suppId: "cre", status: "taken" }]));
     expect(items.some((i) => i.kind === "supp-missed")).toBe(false);
+  });
+
+  it("a supplement taken twice a day is due twice, and each tick only answers its own slot", () => {
+    const theanine: Supplement = { id: "lth", name: "L-theanine", dose: "200 mg", slot: "morning", slots: ["morning", "midday"], at: 8 * 60, active: true };
+    const c = (now: number, entries: Entry[]): NowContext => ({ ...ctx(now, entries), supplements: [theanine] });
+    const morningTick: Entry = { id: "m", kind: "supp", at: at(8, 5), suppId: "lth", status: "taken", slot: "morning" };
+    // 13:10: the morning one is answered; the midday one is due.
+    const mid = nowItems(c(at(13, 10), [morningTick])).filter((i) => i.kind === "supp-due" || i.kind === "supp-missed");
+    expect(mid).toHaveLength(1);
+    expect(mid[0]).toMatchObject({ slot: "midday", suppIds: ["lth"] });
+    // Both ticked: nothing left.
+    expect(nowItems(c(at(15), [morningTick, { id: "d", kind: "supp", at: at(13), suppId: "lth", status: "taken", slot: "midday" }])).some((i) => i.kind.startsWith("supp"))).toBe(false);
+    // The twin: without the morning tick, at 13:10 both are open (morning missed, midday due).
+    expect(nowItems(c(at(13, 10), [])).filter((i) => i.kind.startsWith("supp")).map((i) => (i as { slot: string }).slot).sort()).toEqual(["midday", "morning"]);
+  });
+
+  it("a tick from before multi-slot (no slot on it) counts for the first slot only", () => {
+    const theanine: Supplement = { id: "lth", name: "L-theanine", dose: "", slot: "morning", slots: ["morning", "midday"], at: 8 * 60, active: true };
+    const items = nowItems({ ...ctx(at(13, 10), [{ id: "o", kind: "supp", at: at(8), suppId: "lth", status: "taken" }]), supplements: [theanine] });
+    expect(items.filter((i) => i.kind.startsWith("supp")).map((i) => (i as { slot: string }).slot)).toEqual(["midday"]);
   });
 
   it("shows a supplement as due within the hour before its time", () => {

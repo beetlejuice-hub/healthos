@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { act, newId, offerUndo, useStore } from "../lib/store";
 import { searchBasic } from "../lib/foods-basic";
-import { SLOTS } from "../lib/types";
+import { SLOTS, slotsOf, slotTime, type Slot } from "../lib/types";
 import { searchFood } from "../lib/off";
 import { groupFoods, plausible, type ResultRow } from "../lib/foodgroup";
 import { StackBadge, useStackCheck } from "../components/StackCheck";
@@ -690,7 +690,14 @@ function StackTab() {
     else if (on && (!research[s.id] || research[s.id].asked.toLowerCase() !== s.name.trim().toLowerCase())) void researchSupplement(s);
     setEditing(null);
   };
-  const slotName = (s: Supplement) => { const x = SLOTS.find((y) => y.id === s.slot)!; return `${x.name} · ${hhmm(x.at)}`; };
+  const slotName = (s: Supplement) => slotsOf(s).map((id) => { const x = SLOTS.find((y) => y.id === id)!; return `${x.name} ${hhmm(x.at)}`; }).join(" + ");
+  // Tap slots on and off; at least one stays on. Several = taken several times a day, each ticked.
+  const toggleSlot = (s: Supplement, id: Slot) => {
+    const cur = slotsOf(s), next = cur.includes(id) ? cur.filter((x) => x !== id) : [...cur, id];
+    if (!next.length) return;
+    const ordered = SLOTS.map((x) => x.id).filter((x) => next.includes(x));
+    upd(s.id, { slot: ordered[0], slots: ordered.length > 1 ? ordered : undefined, at: slotTime(ordered[0]) });
+  };
   return (
     <div className="card">
       <h3>Your stack <span>ticked daily on Today · checked against <a href="#settings">About me</a></span></h3>
@@ -702,7 +709,11 @@ function StackTab() {
               <label className="field">Dose<input value={s.dose} placeholder="1 capsule" onChange={(e) => upd(s.id, { dose: e.target.value })} /></label>
             </div>
             <StackBadge name={s.name} report={report} hideNone={quiet} />
-            <label className="field">When<select value={s.slot} onChange={(e) => upd(s.id, { slot: e.target.value as Supplement["slot"] })}>{SLOTS.map((x) => <option key={x.id} value={x.id}>{x.name} · {hhmm(x.at)}</option>)}</select></label>
+            <div className="field">When <span className="note">tap more than one if you take it more than once a day</span>
+              <div className="seg sslots" role="group" aria-label="When you take it">
+                {SLOTS.map((x) => <button key={x.id} type="button" aria-pressed={slotsOf(s).includes(x.id)} onClick={() => toggleSlot(s, x.id)}>{x.name} · {hhmm(x.at)}</button>)}
+              </div>
+            </div>
             <div className="seg sstatus" role="group" aria-label="Status">
               {STATUSES.map(([v, label]) => <button key={v} type="button" aria-pressed={statusOf(s) === v} onClick={() => upd(s.id, STATUS_PATCH[v])}>{label}</button>)}
             </div>
@@ -744,7 +755,7 @@ function BodyTab({ done }: { done: (m: string) => void }) {
       <div className="row2">
         <label className="field">kg<input inputMode="decimal" value={kg} onChange={(e) => setKg(e.target.value)} /></label>
         <div style={{ display: "flex", alignItems: "end" }}>
-          <button type="button" className="pill-btn pri" disabled={!(n > 20 && n < 400)} onClick={() => { const e = act.addEntry({ kind: "weight", at: Date.now(), kg: Math.round(n * 10) / 10 }); offerUndo([e.id], `Logged ${n} kg`); done(`Logged ${n} kg`); }}>Log weight</button>
+          <button type="button" className="pill-btn pri" disabled={!(n > 20 && n < 400)} onClick={() => { const e = act.addEntry({ kind: "weight", at: Date.now(), kg: Math.round(n * 100) / 100 }); offerUndo([e.id], `Logged ${n} kg`); done(`Logged ${n} kg`); }}>Log weight</button>
         </div>
       </div>
       {pts.length >= 2 && <div className="wchart">
@@ -767,7 +778,8 @@ const describe = (e: Entry, supps: Supplement[]): [string, string] => {
     case "supp": return [supps.find((s) => s.id === e.suppId)?.name ?? "Supplement", e.status];
     case "set": return [e.exercise, `${e.kg} kg × ${e.reps}`];
     case "weight": return ["Weight", `${e.kg} kg`];
-    case "feel": return ["Feeling", `energy ${e.energy ?? "–"} · mood ${e.mood ?? "–"} · focus ${e.focus ?? "–"}`];
+    // Only the sliders you set, all of them (stress was missing from this line).
+    case "feel": return ["Feeling", (["energy", "mood", "focus", "stress", "anxiety"] as const).filter((k) => e[k] != null).map((k) => `${k} ${e[k]}`).join(" · ") || "a note"];
     case "answer": return [e.question, e.answer];
   }
 };
