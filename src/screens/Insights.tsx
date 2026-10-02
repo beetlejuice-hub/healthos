@@ -13,6 +13,7 @@ import { notice, WINDOW_DAYS, type Report } from "../lib/findings";
 import { StackCheckPanel } from "../components/StackCheck";
 import { useScout, WorthALook } from "../components/Scout";
 import { Experiments } from "../components/Ai";
+import { Weekly } from "../components/Weekly";
 import type { GraphFocus } from "../components/MasterGraph";
 
 const f0 = (v: number) => Math.round(v).toLocaleString("en-GB");
@@ -68,6 +69,7 @@ export function Insights() {
         {sample && <span className="badge">INCLUDES SAMPLE DATA · remove it in Settings</span>}
       </header>
       {nothing && <div className="needs">Nothing logged yet. Log food, drinks and supplements for a few days and this fills in — or load sample data in Settings to see what it will look like.</div>}
+      {!nothing && <Weekly now={now} />}
       {!nothing && <Noticed report={report} />}
       {!nothing && <WorthALook items={scouted} onShow={showOnGraph} />}
       {!nothing && <Kpis facts={facts} today={today} now={now} />}

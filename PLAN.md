@@ -277,5 +277,9 @@ email get Dev tools (`#dev`): raw entry editor, generate/remove sample, wipe acc
    products you logged (+6) and brands you buy rise in database results; yours first inside a group.
    Dry or cooked (`lib/cooked.ts`): pasta / rice / meat lines get "Weighed: dry · cooked" (raw for meat),
    converting by cooking factor (pasta ×2.25, rice ×2.7, meat ×0.75); sauces, soups, snacks excluded.
-24. [ ] **Weekly "what changed your mood"** on Insights *(claimed: same — `lib/weekly.ts`, Insights)*.
+24. [x] **Your week** on Insights (2 Oct; `lib/weekly.ts`, `components/Weekly.tsx`). After 14 days of
+   check-ins (before: "starts <day>"): last 7 days vs the 7 before per feeling (up/down only when Welch
+   95% says so, else "about the same"; stress up = worse), best/worst time of day, best and lowest day
+   with what happened (gym, alcohol, late caffeine, your tags), and the top connection from
+   between.ts — a finding, or an early sign marked "could still be chance".
 25. [ ] **"How now?" on the Home Screen** *(claimed: same — `/now` page + its own manifest, Worker, App)*.
