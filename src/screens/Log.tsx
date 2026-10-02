@@ -166,6 +166,8 @@ function FoodTab({ done }: { done: (m: string) => void }) {
   const setBasket = (b: Item[]) => { setBasketRaw(b); try { localStorage.setItem(BASKET_KEY, JSON.stringify(b.map((x) => (isDrink(x) ? x : (({ alts, ...l }) => { void alts; return l; })(x))))); } catch { /* private mode */ } };
   const [detail, setDetail] = useState<number | null>(null);
   const [custom, setCustom] = useState(false);
+  /** A barcode no database knew: the label form saves it with this code, so the next scan finds it. */
+  const [labelCode, setLabelCode] = useState<string | null>(null);
   const when = useWhen();
   const [crafting, setCrafting] = useState(false);
   const ctl = useRef<AbortController | null>(null);
@@ -215,7 +217,7 @@ function FoodTab({ done }: { done: (m: string) => void }) {
   const scan = useScan(({ food, drink, ml }) => {
     if (drink) { const d = drinkFromFood(food, ml ?? sizesFor(food)[0]); act.saveDrink(d); setBasket([...basket, { drink: d, count: 1 }]); setQ(""); }
     else { act.rememberFood(food); add(food); }
-  });
+  }, (code) => { setLabelCode(code); setCustom(true); });
   const [looking, setLooking] = useState(false);
   const [asking, setAsking] = useState<string[]>([]);
   const [aiNote, setAiNote] = useState<string | null>(null);
@@ -262,7 +264,7 @@ function FoodTab({ done }: { done: (m: string) => void }) {
   const opened = detail != null ? basket[detail] : undefined;
 
   if (detail != null && opened && !isDrink(opened)) return <Portion line={opened} onCancel={() => setDetail(null)} onDone={(l) => { upd(detail, l); setDetail(null); }} />;
-  if (custom) return <CustomFood onCancel={() => setCustom(false)} onDone={(f) => { setCustom(false); act.rememberFood(f); add(f); }} />;
+  if (custom) return <CustomFood barcode={labelCode ?? undefined} onCancel={() => { setCustom(false); setLabelCode(null); }} onDone={(f) => { setCustom(false); setLabelCode(null); act.rememberFood(f); add(f); }} />;
 
   return <>
     <div className="card">
@@ -494,14 +496,30 @@ function Portion({ line, onCancel, onDone }: { line: Line; onCancel: () => void;
 }
 
 /** Your own food: per 100 g, or just "about 900 kcal" for a restaurant meal. */
-function CustomFood({ onCancel, onDone }: { onCancel: () => void; onDone: (f: Food) => void }) {
+function CustomFood({ onCancel, onDone, barcode }: { onCancel: () => void; onDone: (f: Food) => void; barcode?: string }) {
   const [name, setName] = useState(""), [kcal, setKcal] = useState(""), [p, setP] = useState(""), [c, setC] = useState(""), [f, setF] = useState(""), [serving, setServing] = useState("100");
   const n = (v: string) => Number(v.replace(",", ".")) || 0;
   const s = n(serving) || 100;
   const ok = name.trim() && n(kcal) > 0;
+  const { on: aiOn } = useAiStatus();
+  const [reading, setReading] = useState<string | null>(null);
+  // A photo of the nutrition table, read by the AI into the fields (per 100 g) for you to check.
+  const readLabel = async (file: File) => {
+    setReading("Reading the label…");
+    const img = await shrinkImage(file);
+    const r = await askAi({ task: "describe", text: "This is a packaged food's nutrition label. Use the label's own per-100 g values exactly; name it from the pack.", image: img });
+    const it = r.ok ? r.answer.items.find((x) => x.kind === "food" && x.per100) : undefined;
+    if (!it?.per100) { setReading(r.ok ? "Couldn't read numbers off that photo — try closer, or type them." : r.message); return; }
+    const r1 = (v: number) => String(Math.round(v * 10) / 10);
+    setName((x) => x || it.name); setServing("100"); setKcal(r1(it.per100.kcal)); setP(r1(it.per100.p)); setC(r1(it.per100.c)); setF(r1(it.per100.f));
+    setReading("Filled in from the photo — check the numbers against the label.");
+  };
   return (
     <div className="card">
-      <h3>Add your own food <span>values for one portion</span></h3>
+      <h3>{barcode ? "Add it once" : "Add your own food"} <span>{barcode ? "from the label · per 100 g" : "values for one portion"}</span></h3>
+      {barcode && <p className="note">Saved with barcode {barcode}: next time you scan it, it's found instantly, on every device.</p>}
+      {barcode && aiOn && <div className="row2"><PhotoButton label="📷 Photo the label" onPick={(file) => void readLabel(file)} disabled={reading === "Reading the label…"} /></div>}
+      {reading && <p className="note" role="status">{reading}</p>}
       <label className="field">Name<input value={name} onChange={(e) => setName(e.target.value)} placeholder="Restaurant burger, grandma's pörkölt…" /></label>
       <label className="field">Portion size (g)<input inputMode="decimal" value={serving} onChange={(e) => setServing(e.target.value)} /></label>
       <div className="row4">
@@ -513,7 +531,7 @@ function CustomFood({ onCancel, onDone }: { onCancel: () => void; onDone: (f: Fo
       <p className="note">Only calories are required. It's saved to your foods.</p>
       <div className="row2">
         <button type="button" className="pill-btn" onClick={onCancel}>Back</button>
-        <button type="button" className="pill-btn pri" disabled={!ok} onClick={() => onDone({ id: `custom:${newId()}`, name: name.trim(), source: "custom", servingG: s, per100: { kcal: (n(kcal) / s) * 100, p: (n(p) / s) * 100, c: (n(c) / s) * 100, f: (n(f) / s) * 100 } })}>Next</button>
+        <button type="button" className="pill-btn pri" disabled={!ok} onClick={() => onDone({ id: `custom:${newId()}`, name: name.trim(), source: "custom", ...(barcode ? { barcode } : {}), servingG: s, per100: { kcal: (n(kcal) / s) * 100, p: (n(p) / s) * 100, c: (n(c) / s) * 100, f: (n(f) / s) * 100 } })}>Next</button>
       </div>
     </div>
   );
@@ -616,20 +634,23 @@ function DrinkTab({ done }: { done: (m: string) => void }) {
 }
 
 /** Scanner state for a tab: open it, look the code up, report what happened in words. */
-function useScan(onFound: (s: Extract<Lookup, { status: "found" }>["scanned"]) => void) {
+function useScan(onFound: (s: Extract<Lookup, { status: "found" }>["scanned"]) => void, onMissing?: (code: string) => void) {
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
+  const [missing, setMissing] = useState<string | null>(null);
   const onCode = async (code: string) => {
     setBusy(true);
-    const r = await findBarcode(code);
-    setBusy(false); setOpen(false);
+    const r = await findBarcode(code, getState().foods);
+    setBusy(false); setOpen(false); setMissing(null);
     if (r.status === "found") { setMsg(null); onFound(r.scanned); }
-    else setMsg(r.status === "missing" ? `Barcode ${code} isn't in Open Food Facts yet. Search it by name, or add it as your own.` : "Couldn't reach the food database. Check the connection and scan again.");
+    else if (r.status === "missing") { setMsg(`Barcode ${code} isn't in any food database yet (Romanian store brands often aren't).`); setMissing(code); }
+    else setMsg("Couldn't reach the food database. Check the connection and scan again.");
   };
   const ui = <>
     {open && <Scanner onCode={(c) => void onCode(c)} onClose={() => setOpen(false)} busy={busy} />}
-    {msg && <p className="err scan-note">{msg}</p>}
+    {msg && <div className="scan-miss"><p className="err scan-note">{msg}</p>
+      {missing && onMissing && <button type="button" className="pill-btn pri" onClick={() => { onMissing(missing); setMsg(null); setMissing(null); }}>Add it once from the label</button>}</div>}
   </>;
   return { start: () => { setMsg(null); setOpen(true); }, ui };
 }

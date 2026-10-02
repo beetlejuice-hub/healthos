@@ -1,0 +1,35 @@
+// A product no database knows: photo of its nutrition label → the AI reads it into the form (fake AI).
+const { chromium, APP, OUT, handle } = require('./harness.cjs');
+(async () => {
+  const b = await chromium.launch(); const errs = [], calls = [];
+  const check = (label, ok) => { console.log((ok ? 'PASS ' : 'FAIL ') + label); if (!ok) process.exitCode = 1; };
+  const ctx = await b.newContext({ viewport: { width: 390, height: 844 } });
+  await ctx.route('https://ubfvaewfdbmecowoeuni.supabase.co/**', handle);
+  await ctx.route(/openfoodfacts|\/api\/food\?/, (r) => r.fulfill({ status: 200, contentType: 'application/json', headers: { 'access-control-allow-origin': '*' }, body: JSON.stringify({ status: 'missing' }) }));
+  await ctx.route('**/api/ai/usage**', (r) => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ usage: null, cap: 50, on: true }) }));
+  await ctx.route('**/api/ai?**', (r) => { const body = r.request().postDataJSON();
+    const other = { questions: { questions: [] }, digest: { greeting: 'Hi', items: [] }, night: { summary: 'ok', happened: [], notes: '', change: [] } }[body.task];
+    if (other) return r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ answer: other, usage: null, costUsd: 0, model: 'opus' }) });
+    calls.push(body);
+    r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ answer: { items: [{ kind: 'food', name: 'K-Classic Fasole roșie', amount: '100 g', per100: { kcal: 92, p: 6.1, c: 13.2, f: 0.5 }, unit: { name: 'can', g: 400 }, count: 1, confidence: 'high', note: 'from the label' }], dropped: [] }, usage: null, costUsd: 0.01, model: 'opus' }) }); });
+  const pg = await ctx.newPage();
+  pg.on('pageerror', (e) => errs.push('pageerror: ' + e.message));
+  pg.on('console', (m) => { if (m.type() === 'error' && !/ERR_CERT|fonts|Failed to load resource/.test(m.text())) errs.push('console: ' + m.text()); });
+  await pg.goto(APP);
+  await pg.fill('input[type=email]', 'lukacsarnold9+healthtest@gmail.com'); await pg.fill('input[type=password]', 'secret123');
+  await pg.getByRole('button', { name: 'Sign in' }).click(); await pg.waitForSelector('text=Settings');
+  await pg.goto(APP + '#log/food'); await pg.waitForTimeout(300);
+  await pg.getByRole('button', { name: 'Scan a barcode' }).first().click();
+  await pg.getByRole('button', { name: 'Type the number' }).click();
+  await pg.getByLabel('Barcode number').fill('5998817311127'); await pg.getByRole('button', { name: 'Find' }).click();
+  await pg.getByRole('button', { name: 'Add it once from the label' }).click();
+  const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64');
+  await pg.setInputFiles('input[aria-label="Photo of food or drink"]', { name: 'label.png', mimeType: 'image/png', buffer: png });
+  await pg.waitForSelector('text=Filled in from the photo', { timeout: 5000 }).catch(() => {});
+  check('the AI was asked to read the label with the photo', calls.length === 1 && calls[0].task === 'describe' && !!calls[0].image && /nutrition label/.test(calls[0].text));
+  check('the form is filled per 100 g, to check against the label', await pg.getByLabel('Name').inputValue() === 'K-Classic Fasole roșie' && await pg.getByLabel('kcal').inputValue() === '92' && await pg.getByLabel('Portion size (g)').inputValue() === '100');
+  await pg.screenshot({ path: OUT + 'labelphoto.png' });
+  await pg.getByRole('button', { name: 'Next' }).click(); await pg.waitForTimeout(200);
+  check('saved with its barcode', (await pg.evaluate(() => JSON.parse(localStorage.getItem('healthos.v1:u-test')))).foods.some((f) => f.barcode === '5998817311127' && f.name === 'K-Classic Fasole roșie'));
+  console.log('errors:', JSON.stringify(errs)); await b.close();
+})().catch((e) => { console.log('CRASH', e.message); process.exit(1); });

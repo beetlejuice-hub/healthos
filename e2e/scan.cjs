@@ -69,7 +69,21 @@ const PRODUCTS = {
   await pg.getByLabel('Barcode number').fill('5998817311127');
   await pg.getByRole('button', { name: 'Find' }).click();
   await pg.waitForSelector('.scan-note', { timeout: 5000 }).catch(() => {});
-  check('unknown product: says so, offers name search', /isn't in Open Food Facts yet/.test(await pg.locator('.scan-note').innerText()));
+  check('unknown product: says so', /isn't in any food database yet/.test(await pg.locator('.scan-note').innerText()));
+
+  // Owner, 2 Oct: Romanian Lidl/Kaufland products weren't found. Add it once from the label → known forever.
+  await pg.getByRole('button', { name: 'Add it once from the label' }).click();
+  check('the label form knows the barcode', /Saved with barcode 5998817311127/.test(await pg.locator('.card').first().innerText()));
+  await pg.getByLabel('Name').fill('Pilos iaurt grecesc'); await pg.getByLabel('kcal').fill('97'); await pg.getByLabel('Protein').fill('9'); await pg.getByLabel('Carbs').fill('4'); await pg.getByLabel('Fat').fill('5');
+  await pg.getByRole('button', { name: 'Next' }).click(); await pg.waitForTimeout(200);
+  const saved = (await pg.evaluate(() => JSON.parse(localStorage.getItem('healthos.v1:u-test')))).foods.find((f) => f.barcode === '5998817311127');
+  check('saved to your foods with its barcode (synced like all your foods)', saved && saved.name === 'Pilos iaurt grecesc' && Math.round(saved.per100.kcal) === 97);
+  for (let i = (await pg.locator('.bline button.x').count()); i > 0; i--) await pg.locator('.bline button.x').first().click();
+  let offCalls = 0; pg.on('request', (r) => { if (/openfoodfacts|api\/food\?barcode/.test(r.url())) offCalls++; });
+  await pg.getByRole('button', { name: 'Scan a barcode' }).first().click();
+  await pg.getByRole('button', { name: 'Type the number' }).click();
+  await pg.getByLabel('Barcode number').fill('5998817311127'); await pg.getByRole('button', { name: 'Find' }).click(); await pg.waitForTimeout(300);
+  check('scanned again: found instantly from your own foods, no database call', /Pilos iaurt grecesc/.test(await pg.locator('body').innerText()) && offCalls === 0);
 
   // Drink tab: scanned product opens with its sizes, label size first; one tap logs it.
   await pg.goto(APP + '#log/drink');

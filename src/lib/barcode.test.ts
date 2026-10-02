@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { scanGrayBuffer } from "@undecaf/zbar-wasm";
-import { ean13Modules, fromScan, lookupBarcode, normalizeGtin, validGtin } from "./barcode";
+import { ean13Modules, findBarcode, fromScan, lookupBarcode, mineByBarcode, normalizeGtin, validGtin } from "./barcode";
 import { handleFood } from "../../worker/index";
 
 const SPRITE = "5449000014535";
@@ -69,5 +69,24 @@ describe("the decoder reads a real barcode", () => {
     const found = await scanGrayBuffer(buf.buffer, w, h);
     expect(found[0]?.typeName).toBe("ZBAR_EAN13"); // the name Scanner.tsx filters on
     expect(found.map((s) => s.decode())).toContain(SPRITE);
+  });
+});
+
+describe("your own barcodes (owner, 2 Oct: Romanian store brands aren't in Open Food Facts)", () => {
+  it("a food you added from the label is found by its code first, with no network call", async () => {
+    const mine = [{ id: "custom:1", name: "Pilos iaurt", source: "custom" as const, barcode: "5998817311127", per100: { kcal: 97, p: 9, c: 4, f: 5 } }];
+    let called = false;
+    const orig = globalThis.fetch;
+    globalThis.fetch = (async () => { called = true; return new Response("{}", { status: 500 }); }) as typeof fetch;
+    try {
+      const r = await findBarcode("5998817311127", mine);
+      expect(r.status === "found" && r.scanned.food.name).toBe("Pilos iaurt");
+      expect(called).toBe(false);
+    } finally { globalThis.fetch = orig; }
+  });
+  it("UPC-A and its EAN-13 form are the same product", () => {
+    const mine = [{ id: "c", name: "X", source: "custom" as const, barcode: "036000291452", per100: { kcal: 1, p: 0, c: 0, f: 0 } }];
+    expect(mineByBarcode("0036000291452", mine)?.food.name).toBe("X");
+    expect(mineByBarcode("4006381333931", mine)).toBeNull();
   });
 });

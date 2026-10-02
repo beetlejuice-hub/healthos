@@ -348,5 +348,13 @@ email get Dev tools (`#dev`): raw entry editor, generate/remove sample, wipe acc
    your days: front + back figure, each muscle filled by hard sets in the last 7 days (or a 4-week weekly
    average), full colour at 12 sets/week (Schoenfeld 2017 dose–response: 10+ sets/week clearly better than
    <5). Tap a muscle: "Chest · 12 hard sets in the last 7 days · in the growth range". e2e `muscles.cjs`.
-36. [ ] **Romanian supermarket scans** (claimed 2 Oct — research first; `worker/index.ts` food, `barcode.ts`).
+36. [x] **Romanian supermarket scans** (2 Oct; `barcode.ts` mineByBarcode, Log `CustomFood` + `useScan`). Research:
+   Open Food Facts has only ~32k products tagged Romania; Lidl/Kaufland own brands are patchy (the app
+   already asks OFF's whole world DB, so a Lidl code sold in DE/HU still matches). FatSecret covers
+   Romania only on its paid Premier tier (barcode + localization); EU retail APIs are paid. So: "scan
+   once, known forever" — a missed scan offers "Add it once from the label" (form with the barcode; or
+   📷 Photo the label → the AI fills per-100 g values to check, once ANTHROPIC_API_KEY is set). Saved to
+   your foods (synced), checked before any database on the next scan; barcode foods are kept past the
+   500-food cap. Tests: unit + `scan.cjs` + `labelphoto.cjs` (fake AI). Owner's call later: also
+   contribute added products back to Open Food Facts (needs an OFF account).
 37. [ ] **AI knows everything about mood** (claimed 2 Oct — `ai/context.ts`, AI memory).

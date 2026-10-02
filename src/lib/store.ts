@@ -218,7 +218,8 @@ export const act = {
   },
   /** Save a food so it's offered again next time — owner: "if I once add a food it should be saved". */
   rememberFood(f: Food) {
-    commit({ ...state, foods: [f, ...state.foods.filter((x) => x.id !== f.id)].slice(0, 500) });
+    // The newest 500, plus every food saved with a barcode (a scan of it must keep finding it).
+    commit({ ...state, foods: [f, ...state.foods.filter((x) => x.id !== f.id)].filter((x, i) => i < 500 || !!x.barcode) });
   },
   saveDrink(d: Drink) {
     commit({ ...state, drinks: [d, ...state.drinks.filter((x) => x.id !== d.id)] });

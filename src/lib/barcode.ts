@@ -56,8 +56,17 @@ export async function lookupBarcode(code: string, fetcher: typeof fetch = fetch)
   }
 }
 
-/** The app's lookup: our Worker (cached), else Open Food Facts directly. */
-export async function findBarcode(code: string): Promise<Lookup> {
+/** One of your own foods saved with this barcode ("Add it once from the label"). */
+export function mineByBarcode(code: string, mine: Food[]): Scanned | null {
+  const n = normalizeGtin(code) ?? code;
+  const f = [...mine].reverse().find((x) => x.barcode && (normalizeGtin(x.barcode) ?? x.barcode) === n);
+  return f ? { food: f, drink: false, ml: null } : null;
+}
+
+/** The app's lookup: your own foods first, then our Worker (cached), else Open Food Facts directly. */
+export async function findBarcode(code: string, mine: Food[] = []): Promise<Lookup> {
+  const own = mineByBarcode(code, mine);
+  if (own) return { status: "found", scanned: own };
   try {
     const r = await fetch(`/api/food?barcode=${code}`);
     if (r.ok && (r.headers.get("content-type") ?? "").includes("application/json")) {

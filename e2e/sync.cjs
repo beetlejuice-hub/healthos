@@ -60,7 +60,7 @@ const { chromium, APP, OUT, handle, tables, users } = require('./harness.cjs');
   await phone.goto(APP + '#dev'); await phone.getByRole('button', { name: 'Wipe account…' }).click(); await phone.getByRole('button', { name: /Yes: delete all/ }).click(); await phone.waitForTimeout(1000);
   check('wipe empties the server for the tester only', [...tables.entries.values()].filter(r => r.user_id === 'u-test').length === 0);
   await phone.screenshot({ path: out + 's-dev.png', fullPage: true });
-  await phone.goto(APP + '#settings'); await phone.getByRole('button', { name: 'Sign out' }).click(); await phone.waitForTimeout(1200);
+  await phone.goto(APP + '#settings'); await phone.getByRole('button', { name: 'Sign out' }).click(); await phone.getByRole('button', { name: 'Sign in' }).waitFor({ timeout: 6000 }).catch(() => {});
   check('sign out returns to the login screen', await phone.getByRole('button', { name: 'Sign in' }).count() === 1);
   console.log('errors:', JSON.stringify(errs));
   await b.close();
