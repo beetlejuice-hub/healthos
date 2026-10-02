@@ -340,6 +340,9 @@ email get Dev tools (`#dev`): raw entry editor, generate/remove sample, wipe acc
    Next for the workout: rest-over notification with the app closed (push), plate maths, warm-up sets.
 34. [ ] **Supplement dose** (claimed 2 Oct — Log Stack tab, `types.ts` supp entry dose, a detector): change mg;
    each taken entry keeps its dose; compare how you felt at higher vs lower doses.
-35. [ ] **Muscle map** (claimed 2 Oct — new component): a figure, muscles coloured by how much you train them.
+35. [x] **Muscle map** (2 Oct; `components/MuscleMap.tsx`, `training.ts` muscleWeek/WEEKLY_SETS). On Workout, below
+   your days: front + back figure, each muscle filled by hard sets in the last 7 days (or a 4-week weekly
+   average), full colour at 12 sets/week (Schoenfeld 2017 dose–response: 10+ sets/week clearly better than
+   <5). Tap a muscle: "Chest · 12 hard sets in the last 7 days · in the growth range". e2e `muscles.cjs`.
 36. [ ] **Romanian supermarket scans** (claimed 2 Oct — research first; `worker/index.ts` food, `barcode.ts`).
 37. [ ] **AI knows everything about mood** (claimed 2 Oct — `ai/context.ts`, AI memory).

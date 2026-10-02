@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { PROGRAMS, asSplit } from "./programs";
-import { MUSCLES, isBest, restLeft, sessionSummary } from "./training";
+import { MUSCLES, MUSCLE_GROUPS, isBest, muscleWeek, restLeft, sessionSummary } from "./training";
 
 describe("premade workouts", () => {
   it("only use exercises the app knows (history, suggestions and the muscle map understand them)", () => {
@@ -39,5 +39,22 @@ describe("during and after a session", () => {
     expect(s).toMatchObject({ minutes: 47, sets: 2, volume: 715 });
     expect(s.vsLast).toBeCloseTo(715 / (480 + 375), 5);
     expect(s.bests).toEqual([{ exercise: "Bench press", kg: 65, reps: 6, e1rm: 78 }]);
+  });
+});
+
+describe("the muscle map", () => {
+  const D = 86_400_000, now = 100 * D;
+  it("counts hard sets per muscle in the last 7 days, secondary muscles at half", () => {
+    const sets = [...Array(4)].map((_, i) => ({ at: now - D + i, exercise: "Bench press" })).concat([{ at: now - 8 * D, exercise: "Squat" }]);
+    const w = muscleWeek(sets, now);
+    expect(w).toMatchObject({ Chest: 4, Triceps: 2, Shoulders: 2, Quads: 0 });
+  });
+  it("4 weeks is a weekly average", () => {
+    const sets = [...Array(8)].map((_, i) => ({ at: now - i * 3 * D - 1, exercise: "Squat" }));
+    expect(muscleWeek(sets, now, 4).Quads).toBe(2);
+  });
+  it("every muscle any known exercise trains is on the map", () => {
+    const named = new Set(Object.values(MUSCLES).flatMap((m) => Object.keys(m)));
+    expect([...named].filter((m) => !(MUSCLE_GROUPS as readonly string[]).includes(m))).toEqual([]);
   });
 });

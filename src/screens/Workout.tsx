@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { act, newId, useStore } from "../lib/store";
 import { EXERCISES, e1rm, exerciseHistory, isBest, nextTemplate, restLeft, sessionPlan, sessionSummary, suggestNext, templateProblems, volume, type Suggestion } from "../lib/training";
 import { PROGRAMS, asSplit } from "../lib/programs";
+import { MuscleMap } from "../components/MuscleMap";
 import { dayLabel } from "../lib/time";
 import type { EntryOf, Template, Workout } from "../lib/types";
 
@@ -61,6 +62,7 @@ function Pick() {
         <button type="button" className="kbtn" onClick={() => setEditing("new")}>+ New day</button>
         <button type="button" className="kbtn" onClick={() => act.startWorkout("Quick workout")}>Quick workout</button>
       </div>
+      <MuscleMap sets={sets} now={Date.now()} />
       <Premade templates={templates} />
       {recent.length > 0 && (
         <div className="tile">

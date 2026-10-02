@@ -195,3 +195,20 @@ export function sessionSummary(w: { id: string; template: string; startedAt: num
     bests: [...best.values()].map((s) => ({ exercise: s.exercise, kg: s.kg, reps: s.reps, e1rm: Math.round(e1rm(s.kg, s.reps) * 10) / 10 })),
   };
 }
+
+/* ------------------------------------------------------------------ the muscle map */
+
+export const MUSCLE_GROUPS = ["Chest", "Shoulders", "Biceps", "Triceps", "Back", "Core", "Quads", "Hamstrings", "Glutes", "Calves"] as const;
+export type MuscleGroup = (typeof MUSCLE_GROUPS)[number];
+/**
+ * Hard sets per muscle per week where most of the growth is (Schoenfeld et al. 2017 dose–response:
+ * more weekly sets → more growth, 10+ clearly better than under 5). The map is fully coloured at `full`.
+ */
+export const WEEKLY_SETS = { low: 5, good: 10, full: 12, high: 20 };
+
+/** Hard sets per muscle group, per week, over the last `weeks` weeks before `now` (secondary muscles count half). */
+export function muscleWeek(sets: { at: number; exercise: string }[], now: number, weeks = 1): Record<MuscleGroup, number> {
+  const recent = sets.filter((s) => s.at <= now && s.at > now - weeks * 7 * 86_400_000);
+  const per = setsPerMuscle(recent);
+  return Object.fromEntries(MUSCLE_GROUPS.map((m) => [m, Math.round(((per[m] ?? 0) / weeks) * 10) / 10])) as Record<MuscleGroup, number>;
+}
