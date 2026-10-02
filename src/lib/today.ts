@@ -7,12 +7,13 @@
 
 import type { Entry, Goals, Slot, Supplement } from "./types";
 import { answerSlot, SLOTS, slotsOf } from "./types";
-import { caffeineAt, latestDoseFor, type Dose } from "./caffeine";
-import { atMinute, clock, localDay, minuteOfDay } from "./time";
+import { type Dose } from "./caffeine";
+import { bedtimeVerdict, personalSleep, ratedNights, tonightsBed } from "./caffeine-sleep";
+import { localDay, minuteOfDay } from "./time";
 
 export type NowItem =
   | { id: string; kind: "supp-missed" | "supp-due"; slot: Slot; suppIds: string[]; title: string; body: string }
-  | { id: string; kind: "caffeine"; title: string; body: string }
+  | { id: string; kind: "caffeine"; title: string; body: string; tone: "info" | "notice" }
   | { id: string; kind: "food"; title: string; body: string }
   | { id: string; kind: "feel"; title: string; body: string }
   | { id: string; kind: "weight"; title: string; body: string; lastKg: number | null }
@@ -25,11 +26,7 @@ export type NowContext = {
   goals: Goals;
   /** Bedtime, minutes from midnight. */
   bedMinute: number;
-  /** Most caffeine you want left at bedtime. */
-  caffeineTargetMg: number;
   halfLifeMin: number;
-  /** The drink the cut-off is phrased around — your usual coffee. */
-  coffeeMg: number;
 };
 
 const MISSED_AFTER_MIN = 30, DUE_WITHIN_MIN = 60;
@@ -52,22 +49,15 @@ export function nowItems(c: NowContext): NowItem[] {
     else if (nowMin >= at - DUE_WITHIN_MIN) out.push({ id: `supp:${at}`, kind: "supp-due", slot: slot.id, suppIds: group.map((s) => s.id), title, body: `Due at ${clockOf(at)}.` });
   }
 
-  // Caffeine cut-off: only on a day you've had caffeine, and only while bedtime is still ahead.
-  // Warning about a coffee you haven't had and may not want is noise.
-  const bed = atMinute(day, c.bedMinute);
+  // Caffeine at bedtime: only on a day you've had caffeine, only while bedtime is ahead, and only
+  // when it's worth a line in Now — how much, whether it could matter, and what your own nights say
+  // are kept apart (caffeine-sleep.ts). Most days it stays in the Caffeine card.
+  const bed = tonightsBed(c.now, c.bedMinute);
   const hadCaffeine = todays.some((e) => e.kind === "drink" && e.caffeineMg > 0 && e.at <= c.now);
   if (hadCaffeine && c.now < bed) {
     const doses: Dose[] = c.entries.filter((e): e is Extract<Entry, { kind: "drink" }> => e.kind === "drink" && e.caffeineMg > 0 && e.at <= c.now).map((e) => ({ at: e.at, mg: e.caffeineMg }));
-    const atBed = caffeineAt(doses, bed, c.halfLifeMin);
-    const latest = latestDoseFor(doses, bed, c.coffeeMg, c.caffeineTargetMg, c.halfLifeMin);
-    const withOne = Math.round(caffeineAt([...doses, { at: c.now, mg: c.coffeeMg }], bed, c.halfLifeMin));
-    if (latest === null) {
-      out.push({ id: "caffeine", kind: "caffeine", title: `About ${Math.round(atBed)} mg still in you at bedtime`, body: `That's by your planned bedtime, ${clockOf(c.bedMinute)}. Another one would make it ${withOne} mg.` });
-    } else if (latest < c.now) {
-      out.push({ id: "caffeine", kind: "caffeine", title: `Coffee cut-off was ${clock(latest)}`, body: `Another one now (${c.coffeeMg} mg) leaves about ${withOne} mg in you at your planned bedtime, ${clockOf(c.bedMinute)}.` });
-    } else if (latest - c.now < 90 * 60_000) {
-      out.push({ id: "caffeine", kind: "caffeine", title: `Last coffee by ${clock(latest)}`, body: `After that, another one (${c.coffeeMg} mg) leaves over ${c.caffeineTargetMg} mg in you at your planned bedtime, ${clockOf(c.bedMinute)}.` });
-    }
+    const v = bedtimeVerdict(doses, bed, clockOf(c.bedMinute), c.halfLifeMin, personalSleep(ratedNights(c.entries, c.halfLifeMin, c.bedMinute)));
+    if (v.prominence !== "quiet") out.push({ id: "caffeine", kind: "caffeine", tone: v.prominence, title: v.title, body: v.body });
   }
 
   // Food: nothing logged by late morning is worth a nudge; otherwise say where you stand after lunch.

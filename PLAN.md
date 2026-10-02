@@ -299,8 +299,16 @@ email get Dev tools (`#dev`): raw entry editor, generate/remove sample, wipe acc
 28. [ ] **A note on a check-in + the nightly digest** (claimed 2 Oct — `HowNow.tsx`, `feel.ts`,
    `ai/tasks.ts`, `ai/context.ts`). Optional "why?" note saved on the feel entry, shown in the log, read
    by the AI; an evening digest (what happened, what goes with what, one thing to try tomorrow).
-29. [ ] **Caffeine & sleep, three separate questions** (claimed 2 Oct — `caffeine.ts`, new
-   `caffeine-sleep.ts`, `today.ts` cut-off item, `Today.tsx` caffeine line/card). In you at bed / could
-   affect sleep / likely affects *your* sleep — tiers with configurable cut-points, own-data learning.
+29. [x] **Caffeine & sleep, three separate questions** (2 Oct; `lib/caffeine-sleep.ts`, `today.ts`, Today's
+   Caffeine card, Insights caffeine panel, How now?). Was: one hidden 50 mg "target" and a "!" card
+   ("Coffee cut-off was 14:58") even on a normal two-coffee day. Now: (1) mg likely left at bed, with a
+   range from the 3–7 h half-life spread; (2) general tier — under 30 low (Gardiner 2023 anchor), 30–100
+   possible (heuristic), 100+ higher (Drake 2013 anchor), all in `CAF_SLEEP`; (3) your own nights — a
+   morning "Last night's sleep" 1–10 + "took long to fall asleep" (own entry kind `sleep`, one per
+   night), compared 30+ mg nights vs under (Welch t 95%, ≥6 nights each; "no real difference" needs
+   10+ each and rules out a 1-point drop). Now shows an item only at 100+ (calm ☾) or when your nights
+   agree ("!"); otherwise it's a line under the curve. `caffeineTargetMg` removed. Also fixed: a bedtime
+   after midnight (00:30) was read as this morning's 00:30. Tests: planted effect found in ≥85% of fake
+   people, no-effect people flagged ≤6%; e2e `cafsleep.cjs`.
 30. [ ] **Graph + feelings visual prototypes** (claimed 2 Oct — artifact only; nothing in the app until
    the owner picks).

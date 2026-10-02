@@ -21,7 +21,7 @@ const nowHtml = () => fs.readFileSync(path.join(__dirname, '..', 'dist', 'index.
 
   await pg.goto(APP + 'now'); await pg.waitForSelector('#feel');
   check('it is "How now?": title and its own manifest', (await pg.title()) === 'How now?' && await pg.locator('link[rel=manifest]').getAttribute('href') === '/now.webmanifest');
-  check('just the check-in: four rows, no tab bar', await pg.locator('#feel .hn-nums').count() === 4 && await pg.locator('nav.tabs').count() === 0);
+  check('just the check-in: four rows, no tab bar', await pg.locator('#feel .hn-row:not(.hn-sleep) .hn-nums').count() === 4 && await pg.locator('nav.tabs').count() === 0);
   check('the full app is one tap away', await pg.getByRole('link', { name: 'Open HealthOS' }).getAttribute('href') === '/#today');
   await pg.getByRole('button', { name: 'mood 7', exact: true }).click();
   await pg.getByRole('button', { name: 'energy 5', exact: true }).click(); await pg.waitForTimeout(200);
@@ -29,7 +29,7 @@ const nowHtml = () => fs.readFileSync(path.join(__dirname, '..', 'dist', 'index.
   await pg.getByRole('button', { name: 'Done' }).click(); await pg.waitForTimeout(150);
   check('Done: one line confirms it', /Rated \d\d:\d\d · energy 5 · mood 7/.test(await pg.locator('#feel').innerText()));
   await pg.reload(); await pg.waitForSelector('#feel');
-  check('opened again soon after: still ready to rate (the icon is for rating)', await pg.locator('#feel .hn-nums').count() === 4);
+  check('opened again soon after: still ready to rate (the icon is for rating)', await pg.locator('#feel .hn-row:not(.hn-sleep) .hn-nums').count() === 4);
 
   // The manifests: the shortcut's own, and the main app's long-press shortcut (Android/Chrome).
   const nm = await (await pg.request.get(APP + 'now.webmanifest')).json(), mm = await (await pg.request.get(APP + 'manifest.webmanifest')).json();

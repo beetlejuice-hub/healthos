@@ -98,6 +98,8 @@ export type Entry =
   | { id: string; kind: "set"; at: number; workoutId: string; exercise: string; kg: number; reps: number }
   | { id: string; kind: "weight"; at: number; kg: number; /** From a smart scale, optional: its body-fat estimate. */ fatPct?: number }
   | { id: string; kind: "feel"; at: number; energy?: number; mood?: number; focus?: number; anxiety?: number; stress?: number; note?: string; /** What you were up to since the last check-in: "gym", "outside", your own words. */ doing?: string[] }
+  /** Last night's sleep, rated in the morning check-in: 1–10, and whether falling asleep took long. One per night. */
+  | { id: string; kind: "sleep"; at: number; rating?: number; slow?: boolean }
   /** An answer to one of the AI's questions; repeated ones (same key) become a daily signal. */
   | { id: string; kind: "answer"; at: number; key: string; question: string; answer: string };
 

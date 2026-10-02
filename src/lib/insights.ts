@@ -7,6 +7,7 @@ import type { Entry, EntryOf, Supplement, Workout } from "./types";
 import type { Point } from "./series";
 import type { Settings } from "./store";
 import { caffeineAt, cleared, type Dose } from "./caffeine";
+import { bedtimeOn } from "./caffeine-sleep";
 import { alcoholCurve, type AlcoholDose } from "./alcohol";
 import { atMinute, localDay, minuteOfDay, addDays, startOfDay, DAY, MIN } from "./time";
 import { correlation, difference, mean, median, sd, type Range } from "./stats";
@@ -126,7 +127,7 @@ export function dailyFacts(entries: Entry[], workouts: Workout[], settings: Sett
     const foods = of(es, "food");
     const feel = of(es, "feel");
     const avg = (k: "energy" | "mood" | "focus" | "stress") => { const v = feel.map((f) => f[k]).filter((x): x is number => x != null); return v.length ? mean(v) : null; };
-    const bed = atMinute(day, settings.bedMinute);
+    const bed = bedtimeOn(day, settings.bedMinute);
     const alcBed = (() => { const pts = alcoholCurve(drinks.filter((d) => d.at > bed - 24 * 60 * MIN && d.at <= bed), bed - 12 * 60 * MIN, bed, { bodyKg: settings.bodyKg }); return pts.length ? pts[pts.length - 1][1] : 0; })();
     out.push({
       day,

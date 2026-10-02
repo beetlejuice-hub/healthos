@@ -47,8 +47,6 @@ export type Settings = {
   halfLifeMin: number;
   /** Planned bedtime. Actual bedtime comes from the wearable later. */
   bedMinute: number;
-  /** Reference level for "a lot left at bedtime". Not a user setting; learned later. */
-  caffeineTargetMg: number;
   /** Fallback caffeine for "a coffee" when no usual drink is chosen. */
   coffeeMg: number;
   bodyKg: number;
@@ -77,7 +75,7 @@ export type State = {
 export type Profile = { conditions: string[]; meds: string[]; allergies: string[]; notes: string };
 export const EMPTY_PROFILE: Profile = { conditions: [], meds: [], allergies: [], notes: "" };
 
-export const DEFAULT_SETTINGS: Settings = { halfLifeMin: 300, bedMinute: 23 * 60, caffeineTargetMg: 50, coffeeMg: 95, bodyKg: 78, usualDrink: null };
+export const DEFAULT_SETTINGS: Settings = { halfLifeMin: 300, bedMinute: 23 * 60, coffeeMg: 95, bodyKg: 78, usualDrink: null };
 
 /** Your stack from the discovery answers; times are editable. */
 const DEFAULT_STACK: Supplement[] = [

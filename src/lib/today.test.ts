@@ -12,7 +12,7 @@ const stack: Supplement[] = [
   { id: "old", name: "Zinc", dose: "", slot: "morning", at: 9 * 60, active: false },
 ];
 const coffee = (h: number, m = 0): Entry => ({ id: `c${h}${m}`, kind: "drink", at: at(h, m), name: "Filter coffee", ml: 250, caffeineMg: 95, alcoholG: 0, kcal: 2 });
-const ctx = (now: number, entries: Entry[]): NowContext => ({ now, entries, supplements: stack, goals: DEFAULT_GOALS, bedMinute: 23 * 60, caffeineTargetMg: 50, halfLifeMin: 300, coffeeMg: 95 });
+const ctx = (now: number, entries: Entry[]): NowContext => ({ now, entries, supplements: stack, goals: DEFAULT_GOALS, bedMinute: 23 * 60, halfLifeMin: 300 });
 
 describe("nowItems", () => {
   it("lists missed supplements, not answered or inactive ones", () => {
@@ -52,18 +52,18 @@ describe("nowItems", () => {
     expect(items.find((i) => i.kind === "supp-due")).toMatchObject({ suppIds: ["mag"] });
   });
 
-  it("warns the coffee cut-off has passed, with the numbers from the prototype", () => {
-    const item = nowItems(ctx(at(14, 20), [coffee(8, 10), coffee(13)])).find((i) => i.kind === "caffeine")!;
-    expect(item.title).toMatch(/^Coffee cut-off was \d\d:\d\d$/);
-    expect(item.body).toContain("about 64 mg in you at your planned bedtime, 23:00");
+  it("a normal two-coffee day gets no item in Now (owner, 2 Oct: informative, not alarmist)", () => {
+    // 08:10 + 13:00 → ~36 mg at 23:00: "possible", which lives in the Caffeine card, not in Now.
+    // The old engine said "Coffee cut-off was 14:58" here, though nothing was drunk after lunch.
+    expect(nowItems(ctx(at(14, 20), [coffee(8, 10), coffee(13)])).find((i) => i.kind === "caffeine")).toBeUndefined();
   });
 
-  it("gives advance notice when the cut-off is under 90 minutes away", () => {
-    // One espresso-sized trace at 08:00 barely moves the cut-off (~18:2x).
-    const tiny: Entry = { id: "t", kind: "drink", at: at(8), name: "Tea", ml: 250, caffeineMg: 1, alcoholG: 0, kcal: 0 };
-    expect(nowItems(ctx(at(9), [tiny])).find((i) => i.kind === "caffeine")).toBeUndefined();
-    const late = nowItems(ctx(at(17, 30), [tiny])).find((i) => i.kind === "caffeine")!;
-    expect(late.title).toMatch(/^Last coffee by 18:2\d$/);
+  it("a lot left at bedtime is a calm item with the amount and its range, not a '!'", () => {
+    const item = nowItems(ctx(at(18), [coffee(15), coffee(17), coffee(17, 30)])).find((i) => i.kind === "caffeine")!;
+    expect(item).toMatchObject({ tone: "info" });
+    expect(item.title).toMatch(/^About 1\d\d mg likely still in you at 23:00$/);
+    expect(item.body).toMatch(/could shorten or lighten sleep for many people\. Likely \d+–\d+ mg/);
+    expect(item.body).not.toMatch(/cut-off|unhealthy|should/i);
   });
 
   it("says nothing about a coffee cut-off on a day with no caffeine", () => {

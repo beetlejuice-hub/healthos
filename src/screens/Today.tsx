@@ -6,7 +6,8 @@ import { notice } from "../lib/findings";
 import { StackAlert } from "../components/StackCheck";
 import { ScoutLine } from "../components/Scout";
 import { AiQuestions, MorningRead } from "../components/Ai";
-import { caffeineAt } from "../lib/caffeine";
+import { caffeineAt, latestDoseFor } from "../lib/caffeine";
+import { bedtimeVerdict, CAF_SLEEP, personalSleep, ratedNights, tonightsBed, type Personal } from "../lib/caffeine-sleep";
 import { caffeineDoses } from "../lib/insights";
 import { add, byDay, macrosOf, ZERO } from "../lib/nutrition";
 import { atMinute, clock, dayLabel, localDay, MIN } from "../lib/time";
@@ -38,14 +39,15 @@ export function Today() {
   const day = localDay(now);
   const [dismissed, setDismissed] = useState<string[]>([]);
 
-  // The cut-off is phrased around the drink you'd actually have next: your usual one if chosen.
+  // "Another one now" is phrased around the drink you'd actually have next: your usual one if chosen.
   const coffeeMg = s.settings.usualDrink?.caffeineMg || s.settings.coffeeMg;
-  const items = useMemo(() => nowItems({ now, entries: s.entries, supplements: s.supplements, goals: s.goals, ...s.settings, coffeeMg }), [now, s.entries, s.supplements, s.goals, s.settings, coffeeMg]);
+  const items = useMemo(() => nowItems({ now, entries: s.entries, supplements: s.supplements, goals: s.goals, ...s.settings }), [now, s.entries, s.supplements, s.goals, s.settings]);
   const shown = items.filter((i) => !dismissed.includes(i.id));
   const todays = s.entries.filter((e) => localDay(e.at) === day);
   const totals = todays.reduce((a, e) => { const m = macrosOf(e); return m ? add(a, m) : a; }, ZERO);
   const doses = caffeineDoses(s.entries);
-  const bed = atMinute(day, s.settings.bedMinute);
+  const bed = tonightsBed(now, s.settings.bedMinute);
+  const personal = useMemo(() => personalSleep(ratedNights(s.entries, s.settings.halfLifeMin, s.settings.bedMinute)), [s.entries, s.settings.halfLifeMin, s.settings.bedMinute]);
   const cafNow = Math.round(caffeineAt(doses, now, s.settings.halfLifeMin));
   const cafBed = Math.round(caffeineAt(doses.filter((d) => d.at <= now), bed, s.settings.halfLifeMin));
   const usual = (() => {
@@ -84,8 +86,8 @@ export function Today() {
       <div className="h"><span>Now</span><span>{shown.length ? `${shown.length} to do` : "all clear"}</span></div>
       {shown.length === 0 && <p className="empty-ok">Nothing needs you right now.</p>}
       {shown.map((it) => (
-        <div key={it.id} className={`item ${it.kind.startsWith("supp") || it.kind === "restock" ? "supp" : it.kind === "caffeine" ? "warn" : it.kind}`}>
-          <span className="ic" aria-hidden="true">{it.kind.startsWith("supp") ? "✓" : it.kind === "caffeine" ? "!" : it.kind === "food" ? "+" : it.kind === "weight" ? "kg" : it.kind === "restock" ? "↻" : "~"}</span>
+        <div key={it.id} className={`item ${it.kind.startsWith("supp") || it.kind === "restock" ? "supp" : it.kind === "caffeine" ? (it.tone === "notice" ? "warn" : "caf") : it.kind}`}>
+          <span className="ic" aria-hidden="true">{it.kind.startsWith("supp") ? "✓" : it.kind === "caffeine" ? (it.tone === "notice" ? "!" : "☾") : it.kind === "food" ? "+" : it.kind === "weight" ? "kg" : it.kind === "restock" ? "↻" : "~"}</span>
           <div><b>{it.title}</b><p>{it.body}</p></div>
           <div className="acts">
             {(it.kind === "supp-missed" || it.kind === "supp-due") && <>
@@ -108,7 +110,7 @@ export function Today() {
       ))}
 
       <Fuel totals={totals} goals={s.goals} />
-      <CaffeineCard doses={doses} now={now} bed={bed} halfLife={s.settings.halfLifeMin} cafNow={cafNow} cafBed={cafBed} />
+      <CaffeineCard doses={doses} now={now} bed={bed} halfLife={s.settings.halfLifeMin} cafNow={cafNow} cafBed={cafBed} personal={personal} coffeeMg={coffeeMg} />
       <Stack now={now} />
     </div>
   );
@@ -140,7 +142,7 @@ function Fuel({ totals, goals }: { totals: { kcal: number; p: number; c: number;
   );
 }
 
-function CaffeineCard({ doses, now, bed, halfLife, cafNow, cafBed }: { doses: { at: number; mg: number }[]; now: number; bed: number; halfLife: number; cafNow: number; cafBed: number }) {
+function CaffeineCard({ doses, now, bed, halfLife, cafNow, cafBed, personal, coffeeMg }: { doses: { at: number; mg: number }[]; now: number; bed: number; halfLife: number; cafNow: number; cafBed: number; personal: Personal; coffeeMg: number }) {
   const d0 = new Date(now); d0.setHours(6, 0, 0, 0);
   const t0 = d0.getTime(), t1 = t0 + 18 * 60 * MIN;
   const W = 320, H = 110, pl = 26, pr = 6, pt = 18, pb = 16;
@@ -166,6 +168,8 @@ function CaffeineCard({ doses, now, bed, halfLife, cafNow, cafBed }: { doses: { 
       <svg viewBox={`0 0 ${W} ${H}`} width="100%" role="img" aria-label={`Caffeine in your body today: ${cafNow} mg now, ${cafBed} mg at your planned bedtime`}
         style={{ touchAction: "pan-y", cursor: "crosshair" }} onPointerMove={onMove} onPointerDown={onMove} onPointerLeave={() => setProbe(null)}>
         {[0, max / 2, max].map((v) => <g key={v}><line x1={pl} x2={W - pr} y1={y(v)} y2={y(v)} stroke="var(--c-track)" /><text x={pl - 4} y={y(v) + 3} textAnchor="end" fontSize="9" fill="var(--c-dim)">{v}</text></g>)}
+        {/* Where sleep effects become possible (30 mg) and more likely (100 mg) — CAF_SLEEP, faint. */}
+        {[CAF_SLEEP.lowBelowMg, CAF_SLEEP.higherFromMg].map((v) => <line key={`t${v}`} x1={pl} x2={W - pr} y1={y(v)} y2={y(v)} stroke="var(--caf)" strokeOpacity=".3" strokeDasharray="1 3" />)}
         {[6, 12, 18, 24].map((h) => <text key={h} x={x(t0 + (h - 6) * 60 * MIN)} y={H - 3} textAnchor="middle" fontSize="9" fill="var(--c-dim)">{String(h % 24).padStart(2, "0")}</text>)}
         <polygon points={`${x(t0)},${y(0)} ${pts(t0, cut)} ${x(cut)},${y(0)}`} fill="var(--caf)" fillOpacity=".18" />
         <polyline points={pts(t0, cut)} fill="none" stroke="var(--caf)" strokeWidth="2.2" />
@@ -180,7 +184,33 @@ function CaffeineCard({ doses, now, bed, halfLife, cafNow, cafBed }: { doses: { 
           <text x={px > W * 0.66 ? W - pr : px < W * 0.33 ? pl : px} y={10} textAnchor={px > W * 0.66 ? "end" : px < W * 0.33 ? "start" : "middle"} fontSize="10.5" fontWeight="600" fill="var(--c-ink)">{clock(probe)} · {pmg} mg{probe > now ? " (forecast)" : ""}</text>
         </g>}
       </svg>
+      {doses.some((d) => d.at > now - 24 * 60 * MIN) && <BedtimeRead doses={doses.filter((d) => d.at <= now)} now={now} bed={bed} halfLife={halfLife} personal={personal} coffeeMg={coffeeMg} />}
       <UsualDrink />
+    </div>
+  );
+}
+
+/**
+ * Under the curve, three separate answers (caffeine-sleep.ts): how much is likely left at bedtime
+ * (with a range), whether that amount could matter for sleep in general, and what your own nights say.
+ * Plus one planning line: what another coffee now would do, or until when one keeps bedtime low.
+ */
+function BedtimeRead({ doses, now, bed, halfLife, personal, coffeeMg }: { doses: { at: number; mg: number }[]; now: number; bed: number; halfLife: number; personal: Personal; coffeeMg: number }) {
+  if (now >= bed) return null;
+  const v = bedtimeVerdict(doses, bed, clock(bed), halfLife, personal);
+  const P = CAF_SLEEP.personal, low = CAF_SLEEP.lowBelowMg;
+  const withOne = Math.round(caffeineAt([...doses, { at: now, mg: coffeeMg }], bed, halfLife));
+  const window = latestDoseFor(doses, bed, coffeeMg, low, halfLife);
+  const plan = window != null && window > now && v.tier === "low"
+    ? `A coffee (${coffeeMg} mg) before ${clock(window)} keeps bedtime under ${low} mg.`
+    : `Another one now (${coffeeMg} mg): about ${withOne} mg at ${clock(bed)}.`;
+  const own = personal.state === "learning"
+    ? `Rate last night's sleep in the morning check-in and this learns whether it matters for you — ${Math.min(personal.withN, P.minNights)} of ${P.minNights} nights with ${low}+ mg, ${Math.min(personal.withoutN, P.minNights)} of ${P.minNights} under.`
+    : personal.state === "unclear" ? `Your own nights: no clear pattern yet (${personal.withN} vs ${personal.withoutN} nights).` : null;
+  return (
+    <div className="bedread" aria-label="Caffeine at bedtime">
+      <p><b>{v.tier === "low" ? "Low" : v.tier === "possible" ? "Possible effect" : "Higher chance of an effect"}</b> · {v.mg === 0 ? "none" : `about ${v.mg} mg`} at {clock(bed)}. {v.body}</p>
+      <p className="note">{plan}{own ? ` ${own}` : ""}</p>
     </div>
   );
 }

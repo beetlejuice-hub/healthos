@@ -15,6 +15,7 @@ import { useScout, WorthALook } from "../components/Scout";
 import { Experiments } from "../components/Ai";
 import { Weekly } from "../components/Weekly";
 import type { GraphFocus } from "../components/MasterGraph";
+import { CAF_SLEEP } from "../lib/caffeine-sleep";
 
 const f0 = (v: number) => Math.round(v).toLocaleString("en-GB");
 const f1 = (v: number) => v.toFixed(1);
@@ -231,22 +232,22 @@ function Nutrition({ now }: { now: number }) {
 /* ------------------------------------------------------------------ caffeine & alcohol */
 
 function CaffeineAlcohol({ facts }: { facts: DayFacts[] }) {
-  const target = useStore((s) => s.settings.caffeineTargetMg);
+  const { lowBelowMg: low, higherFromMg: high } = CAF_SLEEP;
   const last30 = facts.slice(-31, -1);
   const has = last30.some((d) => d.caffeineMg > 0);
   const lastCoffee = last30.map((d) => d.lastCaffeineMin).filter((v): v is number => v != null);
-  const over = last30.filter((d) => d.caffeineAtBed > target).length;
+  const possible = last30.filter((d) => d.caffeineAtBed >= low && d.caffeineAtBed < high).length, higher = last30.filter((d) => d.caffeineAtBed >= high).length;
   const alcWeeks = [0, 1, 2, 3].map((k) => facts.slice(-1 - 7 * (k + 1), -1 - 7 * k).reduce((a, d) => a + d.alcoholG, 0));
   return (
     <section className="p">
       <h2>Caffeine and alcohol <span>last 30 days</span></h2>
       {has ? <>
-        <div className="sub"><h3>Caffeine left at planned bedtime, per night · {target} mg reference line</h3>
-          <Bars label="Caffeine left at bedtime each night" pts={last30.map((d, i) => [i, d.caffeineAtBed])} lo={0} hi={Math.max(target * 2, ...last30.map((d) => d.caffeineAtBed))} xs={[0, last30.length - 1]} color="var(--caf)" targets={[[target, `${target} mg`]]} />
+        <div className="sub"><h3>Caffeine left at planned bedtime, per night · {low} and {high} mg lines</h3>
+          <Bars label="Caffeine left at bedtime each night" pts={last30.map((d, i) => [i, d.caffeineAtBed])} lo={0} hi={Math.max(high * 1.4, ...last30.map((d) => d.caffeineAtBed))} xs={[0, last30.length - 1]} color="var(--caf)" targets={[[low, `${low} mg`], [high, `${high} mg`]]} />
         </div>
         <ul className="notes">
           <li>Average <b>{f0(mean(last30.map((d) => d.caffeineMg)))} mg</b> a day; median last caffeine at <b>{lastCoffee.length ? hm(median(lastCoffee)) : "—"}</b>.</li>
-          <li>Over {target} mg at bedtime on <b>{over} of {last30.length}</b> nights. Median left at bedtime: <b>{f0(median(last30.map((d) => d.caffeineAtBed)))} mg</b>.</li>
+          <li>Median left at bedtime: <b>{f0(median(last30.map((d) => d.caffeineAtBed)))} mg</b>. {low}–{high} mg (could affect sleep a little for some people) on <b>{possible}</b> nights; {high}+ mg on <b>{higher}</b> of {last30.length}.</li>
           <li>Alcohol per week, last 4 weeks (newest first): <b>{alcWeeks.map((g) => `${f0(g)} g`).join(" · ")}</b>. One drink ≈ 14 g.</li>
         </ul>
       </> : <div className="needs">Log drinks for a few days to see your caffeine pattern and how much is left at bedtime.</div>}

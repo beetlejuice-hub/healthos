@@ -14,6 +14,8 @@ import {
   phraseOf, previousCheckIn, sinceLast, tagOf, type FeelKey,
 } from "../lib/feel";
 import { BETWEEN, gaps } from "../lib/detectors/between";
+import { CAF_SLEEP } from "../lib/caffeine-sleep";
+import { localDay } from "../lib/time";
 
 const WORDS: Record<FeelKey, string[]> = {
   energy: ["drained", "low", "ok", "steady", "high"], mood: ["low", "flat", "ok", "good", "great"],
@@ -60,6 +62,16 @@ export function HowNow({ now, always = false }: { now: number; always?: boolean 
   };
   const addOwn = () => { const t = tagOf(own); if (t && open) { if (!(open.doing ?? []).includes(t)) toggle(t); setOwn(""); } };
 
+  // Mornings: last night's sleep, one entry per night (re-tapping changes it). It's what tells the app
+  // whether caffeine at bedtime goes with worse sleep for you (caffeine-sleep.ts).
+  const morning = new Date(now).getHours() < CAF_SLEEP.morningUntilHour;
+  const night = entries.find((e): e is Extract<Entry, { kind: "sleep" }> => e.kind === "sleep" && localDay(e.at) === localDay(now));
+  const rateSleep = (patch: { rating?: number; slow?: boolean }) => {
+    if (night) act.updateEntry(night.id, patch as Partial<Entry>);
+    else act.addEntry({ kind: "sleep", at: Date.now(), ...patch });
+  };
+  const sleepOpen = morning && (!night || now - night.at < OPEN_MS || again);
+
   const order = useMemo(() => doingOrder(entries, now), [entries, now]);
   const ticked = open?.doing ?? [];
   const shown = [...new Set([...ticked, ...order.slice(0, DOING_SHOWN)])];
@@ -73,7 +85,7 @@ export function HowNow({ now, always = false }: { now: number; always?: boolean 
     return (
       <div className="hownow calm-line" id="feel">
         <span>Rated {clock(recent.at)}{set ? ` · ${set}` : ""}</span>
-        <button type="button" className="pill-btn" onClick={() => setAgain(true)}>Rate again</button>
+        <button type="button" className="pill-btn" onClick={() => setAgain(true)}>{morning && night?.rating == null ? "Rate sleep" : "Rate again"}</button>
       </div>
     );
   }
@@ -81,6 +93,15 @@ export function HowNow({ now, always = false }: { now: number; always?: boolean 
   return (
     <div className="card hownow" id="feel">
       <h3>How now? <span>{open ? "saved as you tap" : last ? `last ${clock(last.at)}` : "tap a number for any you want to log"}</span></h3>
+      {sleepOpen && <div className="hn-row hn-sleep">
+        <div className="hn-head"><b>Last night's sleep</b><em>{night?.rating != null ? `${night.rating} / 10` : "optional"}</em></div>
+        <div className="hn-nums" role="group" aria-label="Last night's sleep">
+          {Array.from({ length: 10 }, (_, i) => i + 1).map((n) => (
+            <button key={n} type="button" aria-label={`sleep ${n}`} aria-pressed={night?.rating === n} onClick={() => rateSleep({ rating: n })}>{n}</button>
+          ))}
+        </div>
+        <div className="hn-tags"><button type="button" aria-pressed={!!night?.slow} onClick={() => rateSleep({ slow: !night?.slow })}>took long to fall asleep</button></div>
+      </div>}
       {FEEL_KEYS.map((k) => {
         const v = open?.[k], ghost = v == null ? st[k].last?.v : undefined;
         return (

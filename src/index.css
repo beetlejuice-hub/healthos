@@ -63,6 +63,10 @@ a { color: inherit; }
 .item .acts { grid-column: 2; display: flex; gap: 6px; margin-top: 6px; flex-wrap: wrap; }
 .item.supp .ic { background: color-mix(in srgb, var(--ok) 18%, transparent); color: var(--ok); }
 .item.warn .ic { background: color-mix(in srgb, var(--warn) 20%, transparent); color: var(--warn); }
+.item.caf .ic { background: color-mix(in srgb, var(--caf) 18%, transparent); color: var(--caf); }
+.bedread { margin-top: 8px; font-size: 13px; line-height: 1.45; }
+.bedread p { margin: 0 0 4px; }
+.bedread b { color: var(--caf); font-weight: 600; }
 .item.food .ic { background: color-mix(in srgb, var(--kcal) 18%, transparent); color: var(--kcal); }
 .item.feel .ic { background: color-mix(in srgb, var(--mood) 18%, transparent); color: var(--mood); }
 .pill-btn { border: 0; border-radius: 999px; padding: 8px 14px; font-size: 13px; font-weight: 600; background: var(--c-card-2); color: var(--c-ink); }

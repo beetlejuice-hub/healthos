@@ -822,6 +822,7 @@ const describe = (e: Entry, supps: Supplement[]): [string, string] => {
     // Only the sliders you set, all of them (stress was missing from this line).
     case "feel": return ["Feeling", (["energy", "mood", "focus", "stress", "anxiety"] as const).filter((k) => e[k] != null).map((k) => `${k} ${e[k]}`).join(" · ") || "a note"];
     case "answer": return [e.question, e.answer];
+    case "sleep": return ["Last night's sleep", `${e.rating != null ? `${e.rating} / 10` : "not rated"}${e.slow ? " · slow to fall asleep" : ""}`];
   }
 };
 
