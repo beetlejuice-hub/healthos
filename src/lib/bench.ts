@@ -4,7 +4,7 @@
  * Deterministic per seed, so a failing seed can be replayed.
  */
 
-import type { Entry } from "./types";
+import type { Entry, Workout } from "./types";
 import type { DayFacts } from "./insights";
 import { addDays, atMinute } from "./time";
 
@@ -91,4 +91,46 @@ export function feelWorld(w: FeelWorld): DayFacts[] {
     out.push(day); prev = day;
   }
   return out;
+}
+
+export type BetweenWorld = {
+  seed: number; days?: number; lastDay?: string;
+  /** Points added to mood at the first check-in after a gym session. */
+  gymMood?: number;
+  /** Go to the gym (15:00) only on days the 13:00 mood was 5 or less — and on no other days. */
+  gymWhenLow?: boolean;
+  /** Share of the four daily check-ins (9, 13, 17, 21) actually logged. */
+  logRate?: number;
+};
+
+/**
+ * A month of check-ins with moods that bounce around and come back by themselves (a low reading is
+ * partly a bad moment), gym, meals and coffee — the bench for detectors/between.ts.
+ */
+export function betweenWorld(w: BetweenWorld): { entries: Entry[]; workouts: Workout[] } {
+  const { r, g } = rng(w.seed);
+  const days = w.days ?? 28, last = w.lastDay ?? "2026-10-01";
+  const entries: Entry[] = [], workouts: Workout[] = [];
+  const clamp = (v: number) => Math.max(1, Math.min(10, Math.round(v)));
+  for (let i = 0; i < days; i++) {
+    const day = addDays(last, i - days + 1), dow = i % 7;
+    const level = 6 + g() * 0.7;
+    let moment = g() * 1.2, lift = 0, prev13: number | null = null;
+    for (const [h, slot] of [[9, 0], [13, 1], [17, 2], [21, 3]] as const) {
+      if (slot === 2) {
+        // 15:00: the gym, either on its usual days or only after a low lunchtime.
+        const go = w.gymWhenLow ? prev13 != null && prev13 <= 5 : [0, 2, 4].includes(dow) && r() < 0.9;
+        if (go) { workouts.push({ id: `gw${i}`, template: "Upper A", startedAt: atMinute(day, 15 * 60), endedAt: atMinute(day, 16 * 60) }); lift = w.gymMood ?? 0; }
+      }
+      if (slot === 1 && r() < 0.9) entries.push({ id: `bm${i}l`, kind: "food", at: atMinute(day, 12 * 60 + 30), name: "Lunch", grams: 400, macros: { kcal: 650, p: 35, c: 70, f: 22 } });
+      if (slot === 3 && r() < 0.9) entries.push({ id: `bm${i}d`, kind: "food", at: atMinute(day, 19 * 60), name: "Dinner", grams: 450, macros: { kcal: 700, p: 40, c: 70, f: 25 } });
+      if ((slot === 0 || slot === 2) && r() < 0.7) entries.push({ id: `bc${i}${slot}`, kind: "drink", at: atMinute(day, (h - 1) * 60), name: "Coffee", ml: 250, caffeineMg: 95, alcoholG: 0, kcal: 2 });
+      moment = 0.3 * moment + g() * 1.2;
+      const mood = clamp(level + moment + lift);
+      lift *= 0.4;
+      if (slot === 1) prev13 = mood;
+      if (r() < (w.logRate ?? 0.85)) entries.push({ id: `bf${i}${slot}`, kind: "feel", at: atMinute(day, h * 60 + Math.round(g() * 15)), mood, energy: clamp(6 + g()) });
+    }
+  }
+  return { entries: entries.sort((a, b) => a.at - b.at), workouts };
 }

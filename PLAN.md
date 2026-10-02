@@ -241,3 +241,12 @@ email get Dev tools (`#dev`): raw entry editor, generate/remove sample, wipe acc
    wipes this device (state, unsent queue, basket, dismissed card, Undo) — saved at once. Every other
    device checks the `reset` doc before it sends anything, so an offline phone's stale data and unsent
    edits can't come back (`Syncer.resetAll` / `checkReset`). Dev tools' wipe uses the same path.
+19. [x] **Between check-ins** (2 Oct; `lib/detectors/between.ts`). Owner: *"look at what i was doing
+   before that log… bad mood, then gym, and after that its high mood, 3x this week… make this smart"*.
+   Each pair of check-ins on the same day (20 min–10 h): change = rebound (how far from your usual you
+   started) + gap length + one term per activity in between (gym, 300+ kcal meal, 40+ mg caffeine,
+   alcohol, each supplement); BH 10% across all activity × feeling; ≥ 1 point and 4+ gaps with it.
+   Bench (`betweenWorld`): a +2 gym lift found 85% of fake months; "gym only after a low lunch, no
+   real effect" — the owner's own example, which a plain average credits with ~+0.9 — flagged ≤ 10%;
+   any false finding ~8–10% of months. Noticed cards (area "feel") + "still checking". Tried and
+   dropped: carry-over and time-of-day terms (no measurable gain on the bench).

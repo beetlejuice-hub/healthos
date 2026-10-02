@@ -14,9 +14,10 @@ import { caffeineFindings } from "./detectors/caffeine";
 import { effectFindings } from "./detectors/effects";
 import { baseline, proteinPerKg, strengthTrends } from "./detectors/more";
 import { dailyFacts } from "./insights";
+import { betweenFindings } from "./detectors/between";
 import type { Settings } from "./store";
 
-export type Area = "body" | "food" | "caffeine" | "stack" | "training";
+export type Area = "body" | "food" | "caffeine" | "stack" | "training" | "feel";
 
 export type Finding = {
   id: string;
@@ -136,6 +137,7 @@ export function notice(entries: Entry[], goals: Goals, now: number, bodyKg = 78,
     const fx = effectFindings(facts, ctx.supplements);
     const b = baseline(facts), pr = proteinPerKg(facts, kg);
     parts.push({ found: [...(b ? [b] : []), ...(pr ? [pr] : []), ...strengthTrends(entries, now), ...fx.found], checking: fx.checking });
+    parts.push(betweenFindings(entries, ctx.workouts, new Map(ctx.supplements.filter((x) => x.active).map((x) => [x.id, x.name])), now));
     none = fx.none;
   }
   return {
