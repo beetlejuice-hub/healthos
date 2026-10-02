@@ -382,6 +382,10 @@ a { color: inherit; }
 .noticed-line .r { color: var(--c-dim); }
 .when { display: grid; gap: 6px; }
 .when .chips .pill-btn { padding: 6px 10px; font-size: 12px; }
+.when.earlier { padding: 10px; border-radius: 12px; background: color-mix(in srgb, var(--warn) 9%, transparent); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--warn) 35%, transparent); }
+.when-day { display: flex; justify-content: space-between; align-items: baseline; font-size: 14px; }
+.when-day b { color: var(--warn); }
+.when .chips .linkish { font-size: 12px; padding: 6px 4px; }
 .row-log { grid-template-columns: 1fr; }
 .sstatus button { font-size: 12px; padding: 8px 2px; }
 .wchart { --i-line: #ffffff12; --i-dim: var(--c-dim); --i-ink: var(--c-ink); --i-ink-2: var(--c-ink-2); }

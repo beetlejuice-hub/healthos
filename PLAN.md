@@ -294,8 +294,10 @@ email get Dev tools (`#dev`): raw entry editor, generate/remove sample, wipe acc
    words (cooked, grilled, főtt, sült…) are how it was made, not part of the name (`quickadd.ts` PREP),
    and converting prefers the built-in list's measured twin (`cooked.ts`): "Salmon, cooked" = USDA
    206 kcal/100 g, fillet 105 g / large 170 g.
-27. [ ] **Log on an earlier day** (claimed 2 Oct — `Log.tsx` When picker). Not the default: today's
-   chips stay; a small "Earlier day…" opens a date. Food, drinks, stack.
+27. [x] **Log on an earlier day** (2 Oct; `Log.tsx` `useWhen`/`WhenChips`). Today stays the default; an
+   "Earlier day…" link after the time chips opens Yesterday + a date (max yesterday) and meal-time chips;
+   the Log button says "for yesterday" / "on Tue 29 Sep" and so does the toast; "Back to today" undoes it.
+   Food and drinks (the stack is answered on Today). e2e `earlier.cjs`, run at 00:20 for the midnight edge.
 28. [ ] **A note on a check-in + the nightly digest** (claimed 2 Oct — `HowNow.tsx`, `feel.ts`,
    `ai/tasks.ts`, `ai/context.ts`). Optional "why?" note saved on the feel entry, shown in the log, read
    by the AI; an evening digest (what happened, what goes with what, one thing to try tomorrow).

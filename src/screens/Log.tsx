@@ -11,7 +11,7 @@ import { fromDescribed } from "../lib/ai/apply";
 import { DRINKS } from "../lib/drinks";
 import { forGrams } from "../lib/nutrition";
 import { alcoholGrams } from "../lib/alcohol";
-import { addDays, clock, localDay } from "../lib/time";
+import { addDays, atMinute, clock, dayLabel, localDay } from "../lib/time";
 import { readRoute, go } from "../lib/nav";
 import { bodyDays, weightTrend } from "../lib/tdee";
 import { LineChart } from "../components/Charts";
@@ -33,19 +33,48 @@ const drinkMatch = (d: Drink, needle: string) => { const n = fold(needle.trim())
 type Tab = "food" | "drink" | "stack" | "body";
 const TABS: [Tab, string][] = [["food", "Food"], ["drink", "Drink"], ["stack", "Stack"], ["body", "Body"]];
 
-/** "HH:MM" today → epoch ms. Lets you log something you had earlier without a date picker. */
-const timeToday = (hhmm: string) => { const [h, m] = hhmm.split(":").map(Number); const d = new Date(); d.setHours(h, m, 0, 0); return d.getTime(); };
 const nowHHMM = () => clock(Date.now());
 const hhmmOf = (minute: number) => `${String(Math.floor(minute / 60)).padStart(2, "0")}:${String(minute % 60).padStart(2, "0")}`;
 
-/** Logging for earlier is one tap: "1 h ago" instead of fiddling with a clock. */
-function WhenChips({ time, setTime }: { time: string; setTime: (t: string) => void }) {
+/**
+ * When you had it: today at a time by default; an earlier day only if you ask for it (owner, 2 Oct:
+ * "should not be default option but there should be a way to"). `day` null = today.
+ */
+type When = { time: string; setTime: (t: string) => void; day: string | null; setDay: (d: string | null) => void };
+function useWhen(): When {
+  const [time, setTime] = useState(nowHHMM);
+  const [day, setDay] = useState<string | null>(null);
+  return { time, setTime, day, setDay };
+}
+/** "HH:MM" on the chosen day (today unless an earlier day was picked) → epoch ms. */
+const atOf = (day: string | null, hhmm: string, now = Date.now()) => { const [h, m] = hhmm.split(":").map(Number); return atMinute(day ?? localDay(now), h * 60 + m); };
+/** " on Wed 30 Sep" for an earlier day, nothing for today — so every "Logged …" says where it went. */
+const onDay = (w: When) => (w.day ? ` on ${dayLabel(atMinute(w.day, 12 * 60))}` : "");
+
+/** Logging for earlier today is one tap ("1 h ago"); another day is one more ("Earlier day…"). */
+function WhenChips({ w }: { w: When }) {
+  const today = localDay(Date.now()), yesterday = addDays(today, -1);
+  if (w.day) {
+    const meals: [string, string][] = [["Breakfast", "08:00"], ["Lunch", "12:30"], ["Dinner", "19:00"], ["Late", "22:00"]];
+    return (
+      <div className="when earlier">
+        <div className="when-day"><b>{w.day === yesterday ? "Yesterday" : dayLabel(atMinute(w.day, 12 * 60))}</b>
+          <button type="button" className="linkish" onClick={() => { w.setDay(null); w.setTime(nowHHMM()); }}>Back to today</button></div>
+        <div className="row2">
+          <label className="field">Day<input type="date" max={yesterday} value={w.day} onChange={(e) => e.target.value && w.setDay(e.target.value > yesterday ? yesterday : e.target.value)} /></label>
+          <label className="field">Time<input type="time" value={w.time} onChange={(e) => w.setTime(e.target.value)} /></label>
+        </div>
+        <div className="chips">{meals.map(([n, t]) => <button key={n} type="button" className={`pill-btn${w.time === t ? " pri" : ""}`} onClick={() => w.setTime(t)}>{n}</button>)}</div>
+      </div>
+    );
+  }
   const ago = (min: number) => clock(Date.now() - min * 60_000);
   const opts: [string, string][] = [["Now", ago(0)], ["30 min ago", ago(30)], ["1 h ago", ago(60)], ["2 h ago", ago(120)], ["3 h ago", ago(180)]];
   return (
     <div className="when">
-      <label className="field">When<input type="time" value={time} onChange={(e) => setTime(e.target.value)} /></label>
-      <div className="chips">{opts.map(([n, t]) => <button key={n} type="button" className={`pill-btn${time === t ? " pri" : ""}`} onClick={() => setTime(t)}>{n}</button>)}</div>
+      <label className="field">When<input type="time" value={w.time} onChange={(e) => w.setTime(e.target.value)} /></label>
+      <div className="chips">{opts.map(([n, t]) => <button key={n} type="button" className={`pill-btn${w.time === t ? " pri" : ""}`} onClick={() => w.setTime(t)}>{n}</button>)}
+        <button type="button" className="linkish" onClick={() => { w.setDay(yesterday); w.setTime("12:30"); }}>Earlier day…</button></div>
     </div>
   );
 }
@@ -135,7 +164,7 @@ function FoodTab({ done }: { done: (m: string) => void }) {
   const setBasket = (b: Item[]) => { setBasketRaw(b); try { localStorage.setItem(BASKET_KEY, JSON.stringify(b.map((x) => (isDrink(x) ? x : (({ alts, ...l }) => { void alts; return l; })(x))))); } catch { /* private mode */ } };
   const [detail, setDetail] = useState<number | null>(null);
   const [custom, setCustom] = useState(false);
-  const [time, setTime] = useState(nowHHMM);
+  const when = useWhen();
   const [crafting, setCrafting] = useState(false);
   const ctl = useRef<AbortController | null>(null);
 
@@ -192,7 +221,7 @@ function FoodTab({ done }: { done: (m: string) => void }) {
   const addTyped = async () => {
     // "coffee at 11" → the whole meal is logged for 11:00.
     const { text, minute } = extractTime(typed);
-    if (minute != null) setTime(hhmmOf(minute));
+    if (minute != null) when.setTime(hhmmOf(minute));
     const parsed = parseMeal(text, saved, drinksMine);
     const found = parsed.flatMap((p): Item[] => (p.drink ? [p.drink] : p.line ? [{ ...p.line, alts: p.unsure ? p.alternatives : undefined }] : []));
     const missing = parsed.filter((p) => !p.line && !p.drink).map((p) => p.text);
@@ -247,7 +276,7 @@ function FoodTab({ done }: { done: (m: string) => void }) {
       {looking && <p className="note">Looking up {missed.map((m) => `“${m}”`).join(", ")} in the food database…</p>}
       {!looking && !asking.length && missed.length > 0 && <p className="err">Couldn't find {missed.map((m) => `“${m}”`).join(", ")} — search it below or add it yourself.</p>}
       {crafting && <p className="note">Making your own food: type what's in it, roughly — “200 g chicken, 1 bowl rice, 1 tbsp oil, salad” — then <b>Save as a meal</b> and say how many portions it makes.</p>}
-      {basket.length > 0 && <Basket lines={basket} time={time} setTime={setTime} crafting={crafting} onChange={setBasket} onDetail={setDetail} onLogged={(m) => { setBasket([]); setMissed([]); setCrafting(false); done(m); }} />}
+      {basket.length > 0 && <Basket lines={basket} when={when} crafting={crafting} onChange={setBasket} onDetail={setDetail} onLogged={(m) => { setBasket([]); setMissed([]); setCrafting(false); done(m); }} />}
     </div>
     <div className="card">
       <div className="searchrow">
@@ -290,14 +319,14 @@ function FoodTab({ done }: { done: (m: string) => void }) {
 const amountOf = (l: Line) => (l.unit ? amountText(l.count, l.unit) : `${Math.round(l.grams ?? 100)} g`);
 
 /** The meal being built: − / + per line, ≈ totals, one tap to log, or save it as a meal. */
-function Basket({ lines, time, setTime, crafting, onChange, onDetail, onLogged }: { lines: Item[]; time: string; setTime: (t: string) => void; crafting: boolean; onChange: (l: Item[]) => void; onDetail: (i: number) => void; onLogged: (m: string) => void }) {
+function Basket({ lines, when, crafting, onChange, onDetail, onLogged }: { lines: Item[]; when: When; crafting: boolean; onChange: (l: Item[]) => void; onDetail: (i: number) => void; onLogged: (m: string) => void }) {
   const [saving, setSaving] = useState(false);
   const [mealName, setMealName] = useState(""), [pieces, setPieces] = useState("1");
   const tot = lines.reduce((a, l) => { if (isDrink(l)) return { kcal: a.kcal + l.drink.kcal * l.count, p: a.p }; const m = macrosOfLine(l); return { kcal: a.kcal + m.kcal, p: a.p + m.p }; }, { kcal: 0, p: 0 });
   const foods = lines.filter((l): l is Line & { alts?: Food[] } => !isDrink(l));
   const set = (i: number, l: Item) => onChange(lines.map((x, j) => (j === i ? l : x)));
   const log = () => {
-    const at = timeToday(time);
+    const at = atOf(when.day, when.time);
     const ids = lines.map((l) => {
       if (isDrink(l)) {
         const k = l.count, d = l.drink;
@@ -309,8 +338,8 @@ function Basket({ lines, time, setTime, crafting, onChange, onDetail, onLogged }
     });
     const one = lines[0];
     const label = lines.length === 1 ? (isDrink(one) ? `${countText(one.count)} × ${one.drink.name}` : `${amountOf(one)} ${one.food.name}`) : `${lines.length} ${lines.some(isDrink) ? "items" : "foods"}, ≈${approx(tot.kcal)} kcal`;
-    offerUndo(ids, `Logged ${label}`);
-    onLogged(`Logged ${label}`);
+    offerUndo(ids, `Logged ${label}${onDay(when)}`);
+    onLogged(`Logged ${label}${onDay(when)}`);
   };
   const saveMeal = () => {
     const n = Math.max(1, Number(pieces) || 1);
@@ -369,8 +398,8 @@ function Basket({ lines, time, setTime, crafting, onChange, onDetail, onLogged }
         <div className="row2"><button type="button" className="pill-btn" onClick={() => setSaving(false)}>Cancel</button><button type="button" className="pill-btn pri" disabled={!mealName.trim()} onClick={saveMeal}>Save meal</button></div>
         <p className="note">Next time type “2 {mealName.trim() || "Arnold's special"}” or pick it from Recent.</p>
       </div> : <div className="row-log">
-        <WhenChips time={time} setTime={setTime} />
-        <button type="button" className="pill-btn pri" onClick={log}>Log {lines.length === 1 ? "it" : `${lines.length} ${lines.some(isDrink) ? "items" : "foods"}`}</button>
+        <WhenChips w={when} />
+        <button type="button" className="pill-btn pri" onClick={log}>Log {lines.length === 1 ? "it" : `${lines.length} ${lines.some(isDrink) ? "items" : "foods"}`}{when.day ? (when.day === addDays(localDay(Date.now()), -1) ? " for yesterday" : onDay(when)) : ""}</button>
       </div>}
       {!saving && (foods.length > 1 || (crafting && foods.length > 0)) && <button type="button" className="linkish" onClick={() => setSaving(true)}>Save as a meal…</button>}
     </div>
@@ -503,7 +532,7 @@ function DrinkTab({ done }: { done: (m: string) => void }) {
     }
     return out;
   }, [entries, custom]);
-  const [time, setTime] = useState(nowHHMM);
+  const when = useWhen();
   const [making, setMaking] = useState(false);
   const [dq, setDq] = useState("");
   // A scanned product, shown open with its sizes (the label size first).
@@ -524,14 +553,14 @@ function DrinkTab({ done }: { done: (m: string) => void }) {
     if (g.drinks.length) { setAiText(""); setDq(""); }
   };
   const log = (d: Drink) => {
-    const e = act.addEntry({ kind: "drink", at: timeToday(time), drinkId: d.id, name: d.name, ml: d.ml, caffeineMg: d.caffeineMg, alcoholG: d.alcoholG, kcal: d.kcal, p: d.p, c: d.c, f: d.f });
-    offerUndo([e.id], `Logged ${d.name}`);
-    done(`Logged ${d.name}`);
+    const e = act.addEntry({ kind: "drink", at: atOf(when.day, when.time), drinkId: d.id, name: d.name, ml: d.ml, caffeineMg: d.caffeineMg, alcoholG: d.alcoholG, kcal: d.kcal, p: d.p, c: d.c, f: d.f });
+    offerUndo([e.id], `Logged ${d.name}${onDay(when)}`);
+    done(`Logged ${d.name}${onDay(when)}`);
   };
   if (making) return <CustomDrink onCancel={() => setMaking(false)} onDone={(d) => { act.saveDrink(d); setMaking(false); log(d); }} />;
   return (
     <div className="card">
-      <WhenChips time={time} setTime={setTime} />
+      <WhenChips w={when} />
       <div className="searchrow">
         <input className="search" type="search" placeholder="Search drinks: sprite, espresso, dreher…" value={dq} onChange={(e) => setDq(e.target.value)} aria-label="Find a drink" />
         <ScanButton onClick={scan.start} />
