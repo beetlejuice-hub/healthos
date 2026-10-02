@@ -113,6 +113,8 @@ export type Workout = {
   endedAt: number | null;
   /** This session's exercises: a copy of the template at start, changed by adds and swaps. */
   plan?: Template["exercises"];
+  /** When the current rest ends (epoch ms): saved, so rest keeps counting while the app is closed. */
+  restUntil?: number | null;
   /** How it felt, in your words. */
   note?: string;
 };

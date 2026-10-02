@@ -329,9 +329,15 @@ email get Dev tools (`#dev`): raw entry editor, generate/remove sample, wipe acc
    drag, a vertical swipe scrolls instead of rating, arrow keys work (ARIA slider), last value as a
    faint ring. Card 430 → 313 px on a phone. Found while testing: a desktop drag could be cancelled by
    the browser dragging selected text — the slider is unselectable now. e2e `slider.cjs` (+ `rate()`).
-33. [ ] **Workout, taken seriously** (claimed 2 Oct — `screens/Workout.tsx`, `lib/training.ts`). Finishing can't
-   be hit by mistake (owner hit "workout done" for "set done"); timer survives quitting; premade
-   common workouts; effortless flow.
+33. [x] **Workout, taken seriously — part 1** (2 Oct; `screens/Workout.tsx`, `lib/programs.ts`, `lib/training.ts`).
+   Owner hit "workout done" meaning "set done": after the last set the big "Log set" spot turned into
+   "Finish workout". Now that spot says "✓ All planned sets done"; finishing is "Finish workout…" at the
+   bottom → a summary (minutes, sets, kg, % of last time, new bests, note) → Finish / Keep going. The
+   big button also ignores a second tap within 0.9 s after a set. Rest ends at a saved time
+   (`restUntil`), so it keeps counting with the app closed (it froze before); buzz at 0 on Android.
+   Premade workouts: Full body A/B, 5×5, PPL, Upper/Lower, Dumbbells, Bodyweight, Glutes — start a day
+   once or make a program your split (asks first). "New best" when a set beats every earlier e1RM.
+   Next for the workout: rest-over notification with the app closed (push), plate maths, warm-up sets.
 34. [ ] **Supplement dose** (claimed 2 Oct — Log Stack tab, `types.ts` supp entry dose, a detector): change mg;
    each taken entry keeps its dose; compare how you felt at higher vs lower doses.
 35. [ ] **Muscle map** (claimed 2 Oct — new component): a figure, muscles coloured by how much you train them.

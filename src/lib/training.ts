@@ -160,3 +160,38 @@ export function exerciseHistory(sets: LoggedSet[], exercise: string, n = 5): { w
     .map(([workoutId, ss]) => ({ workoutId, at: Math.min(...ss.map((s) => s.at)), sets: ss.sort((a, b) => a.at - b.at).map((s) => ({ kg: s.kg, reps: s.reps })), best: Math.max(0, ...ss.filter((s) => s.reps <= 12 && s.kg > 0).map((s) => e1rm(s.kg, s.reps))) }))
     .sort((a, b) => b.at - a.at).slice(0, n);
 }
+
+/* ------------------------------------------------------------------ during and after a session */
+
+/** Seconds of rest left. Rest ends at a saved time, so it keeps running while the app is closed. */
+export const restLeft = (restUntil: number | null | undefined, now: number) => (restUntil ? Math.max(0, Math.ceil((restUntil - now) / 1000)) : 0);
+
+/** Sets that count for a best: some weight, 12 reps or fewer (beyond that the 1RM estimate is poor). */
+const counts = (s: { kg: number; reps: number }) => s.kg > 0 && s.reps > 0 && s.reps <= 12;
+
+/**
+ * A new best: this set's estimated 1RM beats every earlier set of the same exercise. Never on the
+ * first time you do an exercise (nothing to beat), and never twice for the same number.
+ */
+export function isBest(sets: LoggedSet[], set: LoggedSet): boolean {
+  if (!counts(set)) return false;
+  const before = sets.filter((s) => s.exercise === set.exercise && s.at < set.at && counts(s));
+  return before.length > 0 && e1rm(set.kg, set.reps) > Math.max(...before.map((s) => e1rm(s.kg, s.reps))) + 1e-9;
+}
+
+export type Summary = { minutes: number; sets: number; volume: number; vsLast: number | null; bests: { exercise: string; kg: number; reps: number; e1rm: number }[] };
+
+/** The finish screen: how long, how much, against the last session of the same day, and new bests. */
+export function sessionSummary(w: { id: string; template: string; startedAt: number }, sets: LoggedSet[], workouts: { id: string; template: string; startedAt: number; endedAt: number | null }[], now: number): Summary {
+  const mine = sets.filter((s) => s.workoutId === w.id);
+  const prev = [...workouts].filter((x) => x.template === w.template && x.id !== w.id && x.endedAt && x.startedAt < w.startedAt).sort((a, b) => a.startedAt - b.startedAt).pop();
+  const prevVol = prev ? volume(sets.filter((s) => s.workoutId === prev.id)) : 0;
+  const vol = volume(mine);
+  const best = new Map<string, LoggedSet>();
+  for (const s of mine) if (isBest(sets, s) && (!best.has(s.exercise) || e1rm(s.kg, s.reps) > e1rm(best.get(s.exercise)!.kg, best.get(s.exercise)!.reps))) best.set(s.exercise, s);
+  return {
+    minutes: Math.max(0, Math.round((now - w.startedAt) / 60_000)), sets: mine.length, volume: vol,
+    vsLast: prevVol > 0 ? vol / prevVol : null,
+    bests: [...best.values()].map((s) => ({ exercise: s.exercise, kg: s.kg, reps: s.reps, e1rm: Math.round(e1rm(s.kg, s.reps) * 10) / 10 })),
+  };
+}

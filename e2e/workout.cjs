@@ -50,7 +50,7 @@ const { chromium, APP, OUT, handle } = require('./harness.cjs');
   check('added exercise becomes current', /Face pull/.test(await pg.locator('.tile.cur .ex').innerText()));
   await pg.getByLabel('How did it feel?').fill('Strong today');
   await pg.getByRole('button', { name: 'Log set' }).click();
-  await pg.getByRole('button', { name: 'Finish early' }).click(); await pg.waitForTimeout(200);
+  await pg.getByRole('button', { name: 'Finish early…' }).click(); await pg.getByRole('button', { name: 'Finish', exact: true }).click(); await pg.waitForTimeout(200);
   const pick = await pg.locator('.cockpit').innerText();
   check('saved split is unchanged by today\'s swap/add', /Bench press · Overhead press · Dips · Lat pulldown/.test(pick) && !/Face pull ·/.test(pick));
   check('note shows in Recent', /“Strong today”/.test(pick));
@@ -62,13 +62,13 @@ const { chromium, APP, OUT, handle } = require('./harness.cjs');
   await pg.getByRole('button', { name: 'History' }).click();
   check('history shows last session', /\d+×\d+/.test(await pg.locator('.hist').innerText()));
   await pg.screenshot({ path: OUT + 'w-session.png', fullPage: true });
-  await pg.getByRole('button', { name: 'Finish early' }).click(); await pg.waitForTimeout(150);
+  await pg.getByRole('button', { name: 'Finish early…' }).click(); await pg.getByRole('button', { name: 'Finish', exact: true }).click(); await pg.waitForTimeout(150);
 
   // Quick workout without a plan.
-  await pg.getByRole('button', { name: 'Quick workout (no plan)' }).click(); await pg.waitForTimeout(150);
+  await pg.getByRole('button', { name: 'Quick workout' }).click(); await pg.waitForTimeout(150);
   await pg.getByRole('button', { name: '+ Add exercise' }).click(); await pg.getByLabel('Exercise to add').fill('Pull-ups'); await pg.locator('.addex').getByRole('button', { name: 'Add' }).click();
   check('quick workout: first exercise added and ready', /Pull-ups/.test(await pg.locator('.tile.cur .ex').innerText()));
-  await pg.getByRole('button', { name: 'Log set' }).click(); await pg.getByRole('button', { name: 'Finish early' }).click(); await pg.waitForTimeout(150);
+  await pg.getByRole('button', { name: 'Log set' }).click(); await pg.getByRole('button', { name: 'Finish early…' }).click(); await pg.getByRole('button', { name: 'Finish', exact: true }).click(); await pg.waitForTimeout(150);
   check('a quick workout doesn\'t break the rotation', (await tiles())[0] === 'Lower A');
 
   // Delete a day.

@@ -1,6 +1,7 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { act, newId, useStore } from "../lib/store";
-import { EXERCISES, exerciseHistory, nextTemplate, sessionPlan, suggestNext, templateProblems, volume, type Suggestion } from "../lib/training";
+import { EXERCISES, e1rm, exerciseHistory, isBest, nextTemplate, restLeft, sessionPlan, sessionSummary, suggestNext, templateProblems, volume, type Suggestion } from "../lib/training";
+import { PROGRAMS, asSplit } from "../lib/programs";
 import { dayLabel } from "../lib/time";
 import type { EntryOf, Template, Workout } from "../lib/types";
 
@@ -58,8 +59,9 @@ function Pick() {
       })}
       <div className="grid2">
         <button type="button" className="kbtn" onClick={() => setEditing("new")}>+ New day</button>
-        <button type="button" className="kbtn" onClick={() => act.startWorkout("Quick workout")}>Quick workout (no plan)</button>
+        <button type="button" className="kbtn" onClick={() => act.startWorkout("Quick workout")}>Quick workout</button>
       </div>
+      <Premade templates={templates} />
       {recent.length > 0 && (
         <div className="tile">
           <span className="k">Recent</span>
@@ -71,6 +73,44 @@ function Pick() {
 }
 
 /** Make or change one day of your split: its name and exercises (sets × reps, rest). */
+/**
+ * Premade workouts (lib/programs): start any day once, or make the whole program your split.
+ * Replacing the split asks first, and past workouts keep their names and history.
+ */
+function Premade({ templates }: { templates: Template[] }) {
+  const [open, setOpen] = useState<string | null>(null);
+  const [confirm, setConfirm] = useState<string | null>(null);
+  const mine = templates.map((t) => t.name).join("|");
+  return (
+    <div className="tile premade">
+      <span className="k">Premade workouts</span>
+      {PROGRAMS.map((p) => {
+        const isMine = p.days.map((d) => d.name).join("|") === mine;
+        return (
+          <div key={p.id} className={`prog-card${open === p.id ? " open" : ""}`}>
+            <button type="button" className="prog-head" aria-expanded={open === p.id} onClick={() => { setOpen(open === p.id ? null : p.id); setConfirm(null); }}>
+              <b>{p.name}</b><span>{p.who} · {p.perWeek}</span>
+            </button>
+            {open === p.id && <div className="prog-body">
+              {p.days.map((d) => (
+                <div key={d.id} className="prog-day">
+                  <div><b>{d.name}</b><p>{d.exercises.map((e) => `${e.name} ${e.sets}×${e.reps === 1 ? "hold" : e.reps}`).join(" · ")}</p></div>
+                  <button type="button" className="kbtn pri" onClick={() => act.startWorkout(d.name, Date.now(), d.exercises)}>Start</button>
+                </div>
+              ))}
+              {isMine ? <p className="s">This is your split.</p>
+                : confirm === p.id
+                  ? <div className="grid2"><button type="button" className="kbtn" onClick={() => setConfirm(null)}>Cancel</button><button type="button" className="kbtn pri" onClick={() => { act.setTemplates(asSplit(p)); setConfirm(null); setOpen(null); }}>Replace my split</button></div>
+                  : <button type="button" className="kbtn" onClick={() => setConfirm(p.id)}>Make this my split…</button>}
+              {confirm === p.id && <p className="s">Your {templates.length} days ({templates.map((t) => t.name).join(", ")}) are replaced by these {p.days.length}. Past workouts and their history stay.</p>}
+            </div>}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 function TemplateEditor({ t, onClose }: { t: Template | null; onClose: () => void }) {
   const templates = useStore((s) => s.templates);
   const [name, setName] = useState(t?.name ?? "");
@@ -158,10 +198,20 @@ function Session({ w }: { w: Workout }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [i]);
 
-  const [rest, setRest] = useState(0);
-  useEffect(() => { if (rest <= 0) return; const t = setTimeout(() => setRest((r) => r - 1), 1000); return () => clearTimeout(t); }, [rest]);
   const [now, setNow] = useState(Date.now());
   useEffect(() => { const t = setInterval(() => setNow(Date.now()), 1000); return () => clearInterval(t); }, []);
+  // Rest ends at a saved time (owner: "time should continue when i quit the app"): leave the app,
+  // come back, and it shows what's really left. A buzz when it runs out while open (Android).
+  const rest = restLeft(w.restUntil, Date.now()); // fresh, not the last tick: right after a set it reads 2:30, not 2:31
+  const setRest = (sec: number) => act.updateWorkout(w.id, { restUntil: sec > 0 ? Date.now() + sec * 1000 : null });
+  const wasResting = useRef(false);
+  useEffect(() => { if (wasResting.current && rest === 0) navigator.vibrate?.([180, 90, 180]); wasResting.current = rest > 0; }, [rest]);
+  const [best, setBest] = useState<{ exercise: string; kg: number; reps: number; e1rm: number; at: number } | null>(null);
+  const [finishing, setFinishing] = useState(false);
+  // The big button changes job after a set (Log set → Next); a quick second tap meant for "Log set"
+  // shouldn't land on the new job. Owner, 2 Oct: hit "workout done" when meaning "set done".
+  const lastLog = useRef(0);
+  const settled = () => Date.now() - lastLog.current > 900;
   const el = Math.max(0, Math.floor((now - w.startedAt) / 1000));
 
   const total = plan.reduce((a, e) => a + e.sets, 0);
@@ -171,7 +221,11 @@ function Session({ w }: { w: Workout }) {
 
   const log = () => {
     if (!cur) return;
-    act.addEntry({ kind: "set", at: Date.now(), workoutId: w.id, exercise: cur.name, kg, reps });
+    const at = Date.now();
+    lastLog.current = at;
+    const set = { at, workoutId: w.id, exercise: cur.name, kg, reps };
+    if (isBest(sets, set)) setBest({ exercise: cur.name, kg, reps, e1rm: Math.round(e1rm(kg, reps) * 10) / 10, at });
+    act.addEntry({ kind: "set", ...set });
     const after = mine.length + 1;
     if (after < cur.sets || i < plan.length - 1) setRest(cur.restSec);
   };
@@ -187,6 +241,7 @@ function Session({ w }: { w: Workout }) {
     </div>
   );
 
+  if (finishing) return <FinishSheet w={w} onBack={() => setFinishing(false)} />;
   return (
     <div className="cockpit">
       <div className="top"><h1>{w.template}</h1><div className="meta"><b>{fmt(el)}</b>elapsed</div></div>
@@ -216,9 +271,11 @@ function Session({ w }: { w: Workout }) {
         {/* After the planned sets, the big button moves you on — it never keeps adding sets by
             accident (found in testing: 17 sets logged on a 12-set plan). An extra set is still
             one deliberate tap away. */}
+        {best && best.exercise === cur.name && now - best.at < 20_000 && <p className="best" role="status">New best · {best.kg} kg × {best.reps} · est. 1RM {best.e1rm} kg</p>}
         {!exDone && <button type="button" className="go" onClick={log}>Log set</button>}
-        {exDone && i < plan.length - 1 && <button type="button" className="go" onClick={() => setI(i + 1)}>Next: {plan[i + 1].name}</button>}
-        {exDone && i === plan.length - 1 && <button type="button" className="go" onClick={() => act.endWorkout(w.id)}>Finish workout</button>}
+        {exDone && i < plan.length - 1 && <button type="button" className="go" onClick={() => settled() && setI(i + 1)}>Next: {plan[i + 1].name}</button>}
+        {/* Finishing never sits where "Log set" was: it's at the bottom, and asks first. */}
+        {exDone && i === plan.length - 1 && <p className="alldone" role="status">✓ All planned sets done</p>}
         {exDone && <button type="button" className="kbtn" onClick={log}>+ Extra set of {cur.name}</button>}
         <div className="sets">
           {Array.from({ length: Math.max(cur.sets, mine.length) }, (_, k) => {
@@ -238,8 +295,8 @@ function Session({ w }: { w: Workout }) {
       <div className={`tile rest ${rest > 0 ? "" : "idle"}`}>
         <div><span className="k">Rest</span><output>{rest > 0 ? fmt(rest) : "Go"}</output></div>
         <div className="bt">
-          <button type="button" onClick={() => setRest((r) => Math.max(0, r - 30))}>−30s</button>
-          <button type="button" onClick={() => setRest((r) => r + 30)}>+30s</button>
+          <button type="button" onClick={() => setRest(Math.max(0, rest - 30))}>−30s</button>
+          <button type="button" onClick={() => setRest(rest + 30)}>+30s</button>
           <button type="button" onClick={() => setRest(0)}>Skip</button>
         </div>
       </div>
@@ -261,7 +318,33 @@ function Session({ w }: { w: Workout }) {
         {!adding && <button type="button" className="kbtn" onClick={() => { setAdding("add"); setNewEx(""); }}>+ Add exercise</button>}
       </div>
       {note}
-      {!(exDone && i === plan.length - 1) && <button type="button" className="go alt" onClick={() => { act.endWorkout(w.id); }}>Finish early</button>}
+      <button type="button" className="go alt" onClick={() => setFinishing(true)}>{doneN >= total ? "Finish workout…" : "Finish early…"}</button>
+    </div>
+  );
+}
+
+/** Two deliberate taps to finish: this summary, then "Finish". "Keep going" goes back. */
+function FinishSheet({ w, onBack }: { w: Workout; onBack: () => void }) {
+  const entries = useStore((s) => s.entries);
+  const workouts = useStore((s) => s.workouts);
+  const sets = useMemo(() => entries.filter((e): e is SetE => e.kind === "set"), [entries]);
+  const [now] = useState(() => Date.now());
+  const sum = sessionSummary(w, sets, workouts, now);
+  return (
+    <div className="cockpit">
+      <div className="top"><h1>Finish?</h1><div className="meta">{w.template}</div></div>
+      <div className="tile finish">
+        <div className="fin-stats">
+          <div><b>{sum.minutes}</b><span>min</span></div>
+          <div><b>{sum.sets}</b><span>sets</span></div>
+          <div><b>{Math.round(sum.volume).toLocaleString("en-GB")}</b><span>kg moved</span></div>
+        </div>
+        {sum.vsLast != null && <p className="s">{Math.round(sum.vsLast * 100)}% of last {w.template}'s volume.</p>}
+        {sum.bests.length > 0 && <div className="fin-bests"><span className="k" style={{ color: "var(--gym)" }}>New bests</span>{sum.bests.map((b) => <p key={b.exercise}><b>{b.exercise}</b> {b.kg} kg × {b.reps} · est. 1RM {b.e1rm} kg</p>)}</div>}
+        <label className="kfield">How did it feel?<textarea rows={2} value={w.note ?? ""} placeholder="Strong today, left shoulder a bit off…" onChange={(e) => act.updateWorkout(w.id, { note: e.target.value })} /></label>
+      </div>
+      <button type="button" className="go" onClick={() => act.endWorkout(w.id)}>Finish</button>
+      <button type="button" className="kbtn" onClick={onBack}>Keep going</button>
     </div>
   );
 }
