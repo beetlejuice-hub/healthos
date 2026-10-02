@@ -11,7 +11,7 @@ import type { Drink, Entry, Food, Goals, Supplement, Template, Workout } from ".
 import { DEFAULT_GOALS, slotOf, slotsOf, slotTime } from "./types";
 import { tidyWorkouts } from "./training";
 import type { ScoutMemo } from "./scout";
-import type { DigestItem, ModelChoice, Question, SupplementAnswer } from "./ai/tasks";
+import type { DigestItem, ModelChoice, NightAnswer, Question, SupplementAnswer } from "./ai/tasks";
 
 /** Everything the in-app AI keeps for you, synced like the rest (doc "ai"). */
 export type AiState = {
@@ -22,6 +22,8 @@ export type AiState = {
   chat: { role: "user" | "assistant"; text: string; at: number; unprompted?: boolean }[];
   /** The morning read, for the day it's for. */
   digest: { day: string; greeting: string; items: DigestItem[]; read?: boolean } | null;
+  /** The nightly read-back of a day (optional: older synced docs don't have it). */
+  night?: (NightAnswer & { day: string; at: number }) | null;
   /** Titles already shown, so the morning read doesn't repeat itself. */
   shown: string[];
   /** Today's questions; daily ones are asked again every day without a new AI call. */
@@ -36,7 +38,7 @@ export type AiState = {
   seenAt: number;
 };
 export type Experiment = { id: string; name: string; how: string; days: number; measure: string; start: string; ended?: string };
-export const EMPTY_AI: AiState = { models: { everyday: "opus", research: "opus" }, memory: [], chat: [], digest: null, shown: [], questions: null, daily: [], asked: [], research: {}, experiments: [], seenAt: 0 };
+export const EMPTY_AI: AiState = { models: { everyday: "opus", research: "opus" }, memory: [], chat: [], digest: null, night: null, shown: [], questions: null, daily: [], asked: [], research: {}, experiments: [], seenAt: 0 };
 
 /**
  * What the calculations need. Only `bedMinute` (planned bedtime) and `usualDrink` are asked of you;

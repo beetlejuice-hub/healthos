@@ -404,6 +404,12 @@ a { color: inherit; }
 /* the AI: morning read, quick question, chat, look-ups */
 .morning { background: linear-gradient(160deg, #2a2f52 0, var(--c-card) 70%); }
 .morning .greet { margin: 0; font-family: var(--f-serif); font-size: 19px; line-height: 1.3; }
+.night { background: linear-gradient(160deg, #23284a 0, var(--c-card) 75%); display: grid; gap: 8px; }
+.night .greet { margin: 0; font-family: var(--f-serif); font-size: 17px; line-height: 1.35; }
+.night-list { margin: 0; padding-left: 18px; display: grid; gap: 3px; font-size: 13.5px; color: var(--c-ink-2); }
+.night small { display: block; font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--c-dim); margin-bottom: 2px; }
+.night-notes, .night-change p { margin: 0; font-size: 14px; line-height: 1.45; }
+.night-change { display: grid; gap: 4px; }
 .mr { display: grid; gap: 4px; padding-top: 10px; border-top: 1px solid #ffffff10; }
 .mr small { font-size: 10.5px; letter-spacing: .12em; text-transform: uppercase; color: var(--c-dim); }
 .mr-protocol small { color: var(--gym); } .mr-pattern small { color: var(--mood); } .mr-study small { color: var(--supp); }
@@ -492,6 +498,8 @@ a { color: inherit; }
 .hn-nums button { height: 36px; border: 0; border-radius: 9px; background: var(--c-card-2); color: var(--c-ink-2); font-size: 14px; font-weight: 600; font-variant-numeric: tabular-nums; padding: 0; }
 .hn-nums button.ghost { box-shadow: inset 0 0 0 1.5px #ffffff2e; }
 .hn-nums button[aria-pressed="true"] { background: var(--mood); color: var(--c-bg); }
+.hn-note { display: grid; gap: 6px; }
+.hn-note input { width: 100%; border: 0; border-radius: 10px; padding: 10px 12px; background: var(--c-card-2); color: var(--c-ink); font-size: 15px; }
 .hn-doing { display: grid; gap: 6px; padding-top: 4px; border-top: 1px solid #ffffff0d; }
 .hn-tags { display: flex; flex-wrap: wrap; gap: 6px; }
 .hn-tags button { border: 0; border-radius: 999px; padding: 7px 12px; background: var(--c-card-2); color: var(--c-ink); font-size: 13px; font-weight: 600; }

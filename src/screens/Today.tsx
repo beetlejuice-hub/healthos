@@ -5,7 +5,7 @@ import { nowItems } from "../lib/today";
 import { notice } from "../lib/findings";
 import { StackAlert } from "../components/StackCheck";
 import { ScoutLine } from "../components/Scout";
-import { AiQuestions, MorningRead } from "../components/Ai";
+import { AiQuestions, MorningRead, NightRead } from "../components/Ai";
 import { caffeineAt, latestDoseFor } from "../lib/caffeine";
 import { bedtimeVerdict, CAF_SLEEP, personalSleep, ratedNights, tonightsBed, type Personal } from "../lib/caffeine-sleep";
 import { caffeineDoses } from "../lib/insights";
@@ -74,6 +74,7 @@ export function Today() {
       </p>
 
       <HowNow now={now} />
+      <NightRead />
       <MorningRead />
       <DayChips now={now} />
       <AiQuestions />

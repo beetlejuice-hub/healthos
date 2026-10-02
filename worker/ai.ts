@@ -10,7 +10,7 @@
 
 import Anthropic from "@anthropic-ai/sdk";
 import {
-  DAILY_CAP, MODELS, SCHEMAS, SYSTEM, TIER, checkChat, checkDescribe, checkDigest, checkQuestions, checkSupplement, costUsd, jsonFrom,
+  DAILY_CAP, MODELS, SCHEMAS, SYSTEM, TIER, checkChat, checkDescribe, checkDigest, checkNight, checkQuestions, checkSupplement, costUsd, jsonFrom,
   type AiRequest, type ModelChoice, type Task, type UsageDoc,
 } from "../src/lib/ai/tasks";
 
@@ -60,6 +60,7 @@ function validate(b: AiRequest): string | null {
     case "supplement": return !b.name || long(b.name, 100) || long(b.context, 20000) ? "bad supplement request" : null;
     case "chat": return !Array.isArray(b.messages) || !b.messages.length || b.messages.length > 40 || b.messages.some((m) => long(m.text, 4000)) || long(b.context, 20000) ? "bad chat request" : null;
     case "questions": case "digest": return long(b.context, 20000) ? "context too long" : null;
+    case "night": return !/^\d{4}-\d{2}-\d{2}$/.test(String(b.day)) ? "bad day" : long(b.context, 24000) ? "context too long" : null;
     default: return "unknown task";
   }
 }
@@ -74,6 +75,7 @@ function messagesFor(b: AiRequest, today: string): Anthropic.Beta.BetaMessagePar
     case "chat": return b.messages.map((m) => ({ role: m.role, content: m.text }));
     case "questions": return [{ role: "user", content: `Today is ${today}.\n\nMy data:\n${b.context}\n\nAlready asked: ${b.asked.join(" | ") || "nothing yet"}` }];
     case "digest": return [{ role: "user", content: `Today is ${today}. Write my morning read.\n\nMy data:\n${b.context}\n\nAlready shown: ${b.shown.join(" | ") || "nothing yet"}` }];
+    case "night": return [{ role: "user", content: `Read back my day, ${b.day}.\n\nMy data:\n${b.context}` }];
   }
 }
 
@@ -112,7 +114,7 @@ export async function callModel(b: AiRequest, choice: ModelChoice, apiKey: strin
   if (res.stop_reason === "refusal") return { refused: true as const, usage };
   const text = textOf(res.content);
   const raw = schema ? JSON.parse(text) : jsonFrom(text);
-  const answer = task === "describe" ? checkDescribe(raw) : task === "supplement" ? checkSupplement(raw) : task === "chat" ? checkChat(raw) : task === "questions" ? checkQuestions(raw) : checkDigest(raw);
+  const answer = task === "describe" ? checkDescribe(raw) : task === "supplement" ? checkSupplement(raw) : task === "chat" ? checkChat(raw) : task === "questions" ? checkQuestions(raw) : task === "night" ? checkNight(raw) : checkDigest(raw);
   return { refused: false as const, answer, usage };
 }
 

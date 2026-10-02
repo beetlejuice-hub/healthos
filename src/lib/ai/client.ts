@@ -11,7 +11,7 @@ import { notice } from "../findings";
 import { scout } from "../scout";
 import { bodyDays, weightTrend } from "../tdee";
 import { addDays, localDay } from "../time";
-import { buildContext } from "./context";
+import { buildContext, dayTimeline } from "./context";
 import type { AiAnswer, AiRequest, Task, UsageDoc } from "./tasks";
 
 export type AiStatus = { on: boolean | null; usage: UsageDoc | null; cap: number; busy: number };
@@ -66,6 +66,12 @@ export function contextNow(state: State = getState(), now = Date.now()): string 
   const patterns = scout(days, state.supplements, (id) => !!state.scout[id]?.dismissed);
   const t = weightTrend(bodyDays(state.entries, addDays(today, -27), today));
   return buildContext({ state, now, days, findings: report.found, patterns, weight: t ? { kg: t.nowKg, perWeek: t.perDay * 7 } : null });
+}
+
+/** The nightly read-back's context: everything above, plus that day in order with your notes. */
+export function nightContext(day: string, state: State = getState(), now = Date.now()): string {
+  const tl = dayTimeline(state, day);
+  return `${contextNow(state, now)}\n## Today, as it happened (${day})\n${tl.length ? tl.map((l) => `- ${l}`).join("\n") : "- nothing logged"}`;
 }
 
 /** Downscale a photo to ≤1024 px JPEG before sending: cheaper, faster, and plenty to see a plate. */

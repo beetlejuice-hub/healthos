@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { fromDescribed, judge } from "./apply";
-import { buildContext, feelByTime } from "./context";
-import { checkDescribe, costUsd, jsonFrom } from "./tasks";
+import { buildContext, dayTimeline, feelByTime } from "./context";
+import { checkDescribe, checkNight, costUsd, jsonFrom } from "./tasks";
 import { parseItem } from "../quickadd";
 import { feelWorld } from "../bench";
 import { EMPTY_AI, type State } from "../store";
@@ -69,5 +69,36 @@ describe("what the AI sees", () => {
     expect(c).toContain("Saffron 30 mg (evening) — running low");
     expect(c).toContain("Usual coffee is a long coffee");
     expect(c).not.toContain("f1");
+  });
+});
+
+describe("the day, read back (owner, 2 Oct)", () => {
+  const T = (h: number, m = 0) => new Date(2026, 9, 1, h, m).getTime();
+  const state = { entries: [
+    { id: "d1", kind: "drink", at: T(8, 10), name: "Coffee", ml: 250, caffeineMg: 95, alcoholG: 0, kcal: 2 },
+    { id: "f1", kind: "feel", at: T(14), mood: 4, stress: 8, note: "deadline at work", doing: ["work"] },
+    { id: "s1", kind: "sleep", at: T(7, 30), rating: 5, slow: true },
+    { id: "x", kind: "feel", at: T(14) - 86_400_000, mood: 9, note: "yesterday's note" },
+  ], workouts: [{ id: "w", template: "Upper A", startedAt: T(18), endedAt: T(19) }], supplements: [], profile: { conditions: [], meds: [], allergies: [], notes: "" }, goals: DEFAULT_GOALS, ai: EMPTY_AI } as unknown as State;
+
+  it("the timeline is that day, in order, with the note quoted exactly", () => {
+    expect(dayTimeline(state, "2026-10-01")).toEqual([
+      "07:30 rated last night's sleep 5/10, slow to fall asleep",
+      "08:10 drank Coffee (95 mg caffeine)",
+      '14:00 check-in: mood 4, stress 8 · up to: work · my note: "deadline at work"',
+      "18:00 gym: Upper A",
+    ]);
+  });
+
+  it("notes reach every AI call's context, marked as the user's own reasons", () => {
+    const c = buildContext({ state, now: T(22), days: [], findings: [], patterns: [] });
+    expect(c).toMatch(/## Why I felt that way \(my own notes[\s\S]*2026-10-01 14:00 mood 4, stress 8 — "deadline at work"/);
+    expect(c).toContain("yesterday's note");
+  });
+
+  it("checkNight keeps it short and refuses an empty summary", () => {
+    expect(() => checkNight({ summary: " ", happened: [], notes: "", change: [] })).toThrow();
+    const n = checkNight({ summary: "ok", happened: ["a", "", "b"], notes: "  n ", change: [{ what: "", why: "x" }, { what: "walk", why: "dip" }] });
+    expect(n).toEqual({ summary: "ok", happened: ["a", "b"], notes: "n", change: [{ what: "walk", why: "dip" }] });
   });
 });

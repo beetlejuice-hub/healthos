@@ -92,6 +92,27 @@ describe("/api/ai", () => {
     expect(body.costUsd).toBeCloseTo((2000 * 4 + 1000 * 20) / 1e6 + 0.03, 6);
   });
 
+  it("night: the day is read back with a schema, no web search, and checked", async () => {
+    const night = { summary: "A steady day; stress peaked at 14:00 with the deadline you noted.", happened: ["2 coffees, last 13:00", "gym 18:00", "x", "y", "dropped"], notes: "You wrote 'deadline' at 14:00 — the stress 8 fits that.", change: [{ what: "Walk after lunch", why: "your 15:00 dip" }, { what: "b", why: "" }, { what: "dropped", why: "" }] };
+    const w = world([{ text: JSON.stringify(night) }]);
+    const res = await handleAi(post({ task: "night", day: "2026-10-01", context: "## Today, as it happened\n- 14:00 check-in: stress 8 · my note: \"deadline\"" }), env, w.deps);
+    const body = (await res.json()) as { answer: typeof night };
+    expect(res.status).toBe(200);
+    expect(body.answer.happened).toHaveLength(4);
+    expect(body.answer.change).toHaveLength(2);
+    const sent = w.sent[0].body;
+    expect(sent.tools).toBeUndefined();
+    expect((sent.output_config as { format: { type: string } }).format.type).toBe("json_schema");
+    expect(JSON.stringify(sent.messages)).toContain("my note: \\\"deadline\\\"");
+    expect(JSON.stringify(sent.system)).toContain("Take them seriously");
+  });
+
+  it("night: a bad day or an answer without a summary is refused", async () => {
+    expect((await handleAi(post({ task: "night", day: "yesterday", context: "c" }), env, world([]).deps)).status).toBe(400);
+    const w = world([{ text: JSON.stringify({ summary: "", happened: [], notes: "", change: [] }) }]);
+    expect((await handleAi(post({ task: "night", day: "2026-10-01", context: "c" }), env, w.deps)).status).toBe(502);
+  });
+
   it("rejects oversized input before spending anything", async () => {
     const w = world([]);
     expect((await handleAi(post({ task: "describe", text: "x".repeat(3000) }), env, w.deps)).status).toBe(400);

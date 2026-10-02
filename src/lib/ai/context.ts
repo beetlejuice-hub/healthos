@@ -9,7 +9,7 @@ import type { State } from "../store";
 import type { DayFacts } from "../insights";
 import type { Finding } from "../findings";
 import type { Pattern } from "../scout";
-import { clock } from "../time";
+import { clock, localDay } from "../time";
 
 const BANDS: [string, number, number][] = [["morning (5–11)", 5, 11], ["midday (11–14)", 11, 14], ["afternoon (14–18)", 14, 18], ["evening (18–24)", 18, 24]];
 const avg = (xs: number[]) => (xs.length ? Math.round((xs.reduce((a, b) => a + b, 0) / xs.length) * 10) / 10 : null);
@@ -24,6 +24,37 @@ export function feelByTime(state: Pick<State, "entries">, now: number): string[]
     const pick = (k: "energy" | "mood" | "focus" | "stress") => avg(xs.flatMap((e) => (e.kind === "feel" && e[k] != null ? [e[k]!] : [])));
     return [`${name}: ${xs.length} check-in${xs.length === 1 ? "" : "s"} · energy ${pick("energy") ?? "–"} · mood ${pick("mood") ?? "–"} · focus ${pick("focus") ?? "–"}${pick("stress") != null ? ` · stress ${pick("stress")}` : ""}`];
   });
+}
+
+const feelText = (e: Extract<State["entries"][number], { kind: "feel" }>) =>
+  (["energy", "mood", "focus", "stress"] as const).filter((k) => e[k] != null).map((k) => `${k} ${e[k]}`).join(", ");
+
+/**
+ * One day in order — what was eaten and drunk, the gym, every check-in with what you were up to and
+ * the note you wrote. The nightly read-back is built on it; notes are quoted exactly.
+ */
+export function dayTimeline(state: Pick<State, "entries" | "workouts">, day: string): string[] {
+  const es = state.entries.filter((e) => localDay(e.at) === day).sort((a, b) => a.at - b.at);
+  const lines: string[] = [];
+  for (const e of es) {
+    const t = clock(e.at);
+    if (e.kind === "food") lines.push(`${t} ate ${e.name} (${Math.round(e.macros.kcal)} kcal, P ${Math.round(e.macros.p)} g)`);
+    else if (e.kind === "drink") lines.push(`${t} drank ${e.name}${e.caffeineMg ? ` (${e.caffeineMg} mg caffeine)` : ""}${e.alcoholG ? ` (${e.alcoholG} g alcohol)` : ""}`);
+    else if (e.kind === "feel") lines.push(`${t} check-in: ${feelText(e) || "no ratings"}${e.doing?.length ? ` · up to: ${e.doing.join(", ")}` : ""}${e.note ? ` · my note: "${e.note}"` : ""}`);
+    else if (e.kind === "sleep" && e.rating != null) lines.push(`${t} rated last night's sleep ${e.rating}/10${e.slow ? ", slow to fall asleep" : ""}`);
+    else if (e.kind === "weight") lines.push(`${t} weighed ${e.kg} kg`);
+    else if (e.kind === "supp" && e.status === "skipped") lines.push(`${t} skipped a supplement`);
+  }
+  for (const w of state.workouts ?? []) if (localDay(w.startedAt) === day) lines.push(`${clock(w.startedAt)} gym: ${w.template ?? "workout"}`);
+  return lines.sort().slice(0, 60);
+}
+
+/** The why behind ratings, last 14 days: "13:10 mood 4, stress 7 — 'deadline at work'". */
+export function feelNotes(state: Pick<State, "entries">, now: number): string[] {
+  return state.entries
+    .filter((e): e is Extract<State["entries"][number], { kind: "feel" }> => e.kind === "feel" && !!e.note && e.at > now - 14 * 86_400_000)
+    .sort((a, b) => a.at - b.at).slice(-25)
+    .map((e) => `${localDay(e.at)} ${clock(e.at)} ${feelText(e)} — "${e.note}"`);
 }
 
 export function dayLine(d: DayFacts, suppNames: Map<string, string>): string {
@@ -67,6 +98,7 @@ export function buildContext({ state, now, days, findings, patterns, weight }: C
     ...(feelByTime(state, now).map((l) => `- ${l}`) || []),
     ...(findings.length ? ["## What the app's statistics found (tested, trust these numbers)", ...findings.slice(0, 8).map((f) => `- ${f.title} (${f.value}${f.unit ? ` ${f.unit}` : ""}; ${f.sure})`)] : []),
     ...(patterns.length ? ["## Early patterns (could be chance, still being checked)", ...patterns.slice(0, 5).map((p) => `- ${p.text} — held ${p.held} of ${p.of}`)] : []),
+    ...(feelNotes(state, now).length ? ["## Why I felt that way (my own notes on check-ins — take these seriously)", ...feelNotes(state, now).map((l) => `- ${l}`)] : []),
     ...(answers.length ? ["## My recent answers to your questions", ...answers.map((a) => (a.kind === "answer" ? `- ${new Date(a.at).toISOString().slice(0, 10)} ${a.question} → ${a.answer}` : ""))] : []),
   ];
   return lines.join("\n");

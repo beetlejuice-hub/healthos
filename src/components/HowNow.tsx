@@ -130,6 +130,8 @@ export function HowNow({ now, always = false }: { now: number; always?: boolean 
         </form>}
       </div>}
 
+      {open && <NoteField key={open.id} id={open.id} initial={open.note ?? ""} />}
+
       {open && reward && reward.changes.length > 0 && <p className="hn-reward" role="status">
         Since {clock(reward.at)}: {reward.changes.map((c) => `${c.k} ${signed(c.d)}`).join(", ")}{reward.between.length ? ` · ${reward.between.map(phraseOf).join(", ")} in between` : ""}.
       </p>}
@@ -137,5 +139,21 @@ export function HowNow({ now, always = false }: { now: number; always?: boolean 
 
       {open && <button type="button" className="pill-btn" onClick={() => setClosedId(open.id)}>Done</button>}
     </div>
+  );
+}
+
+/**
+ * Why you feel this way, in your words (owner, 2 Oct: "a reason why i am stressed/sad… ai should take
+ * this seriously"). Saved on the check-in when you leave the field or press Enter; the nightly
+ * read-back quotes it.
+ */
+function NoteField({ id, initial }: { id: string; initial: string }) {
+  const [text, setText] = useState(initial);
+  const save = () => { const t = text.trim(); if (t !== initial) act.updateEntry(id, { note: t || undefined } as Partial<Entry>); };
+  return (
+    <form className="hn-note" onSubmit={(e) => { e.preventDefault(); save(); (document.activeElement as HTMLElement | null)?.blur(); }}>
+      <label className="hn-head" htmlFor={`note-${id}`}><b>Why?</b><em>optional · in your words</em></label>
+      <input id={`note-${id}`} value={text} onChange={(e) => setText(e.target.value)} onBlur={save} maxLength={200} placeholder="deadline, slept badly, good news…" aria-label="Why? A note on this check-in" />
+    </form>
   );
 }

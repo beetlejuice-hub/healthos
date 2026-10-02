@@ -298,9 +298,14 @@ email get Dev tools (`#dev`): raw entry editor, generate/remove sample, wipe acc
    "Earlier day…" link after the time chips opens Yesterday + a date (max yesterday) and meal-time chips;
    the Log button says "for yesterday" / "on Tue 29 Sep" and so does the toast; "Back to today" undoes it.
    Food and drinks (the stack is answered on Today). e2e `earlier.cjs`, run at 00:20 for the midnight edge.
-28. [ ] **A note on a check-in + the nightly digest** (claimed 2 Oct — `HowNow.tsx`, `feel.ts`,
-   `ai/tasks.ts`, `ai/context.ts`). Optional "why?" note saved on the feel entry, shown in the log, read
-   by the AI; an evening digest (what happened, what goes with what, one thing to try tomorrow).
+28. [x] **A note on a check-in + your day, read back** (2 Oct; `HowNow.tsx` NoteField, `ai/context.ts`
+   `dayTimeline`/`feelNotes`, `ai/tasks.ts` task `night`, `worker/ai.ts`, `Ai.tsx` NightRead). After rating,
+   an optional "Why?" (saved on the check-in, shown in the log). Every AI call now sees notes under
+   "Why I felt that way (… take these seriously)". From 21:00 (or next morning if the app wasn't opened)
+   the AI reads the day back: summary, what happened, how your notes read, 1–2 small things for
+   tomorrow — card on Today until noon + a 🌙 message in chat; "read it again" if you log more after.
+   No web search; the research-tier model. Needs ANTHROPIC_API_KEY (not set yet): tested against a fake
+   AI (unit + `e2e/night.cjs`), the real model's wording is unverified.
 29. [x] **Caffeine & sleep, three separate questions** (2 Oct; `lib/caffeine-sleep.ts`, `today.ts`, Today's
    Caffeine card, Insights caffeine panel, How now?). Was: one hidden 50 mg "target" and a "!" card
    ("Coffee cut-off was 14:58") even on a normal two-coffee day. Now: (1) mg likely left at bed, with a

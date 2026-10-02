@@ -8,7 +8,7 @@
  * estimate, so it's used once and free after that.
  */
 
-export type Task = "describe" | "supplement" | "chat" | "questions" | "digest";
+export type Task = "describe" | "supplement" | "chat" | "questions" | "digest" | "night";
 export type ModelChoice = "opus" | "sonnet" | "haiku";
 /** Everyday = food, chat, questions (many small calls). Research = supplement look-ups and the morning digest (few, with web search). */
 export type Tier = "everyday" | "research";
@@ -21,7 +21,7 @@ export const MODELS: Record<ModelChoice, { id: string; label: string; inUsd: num
 /** Web search is billed per search on top of tokens. */
 export const WEB_SEARCH_USD = 0.01;
 
-export const TIER: Record<Task, Tier> = { describe: "everyday", chat: "everyday", questions: "everyday", supplement: "research", digest: "research" };
+export const TIER: Record<Task, Tier> = { describe: "everyday", chat: "everyday", questions: "everyday", supplement: "research", digest: "research", night: "research" };
 
 export type Usage = { input_tokens: number; output_tokens: number; cache_read_input_tokens?: number | null; cache_creation_input_tokens?: number | null; server_tool_use?: { web_search_requests?: number } | null };
 
@@ -68,6 +68,9 @@ export type QuestionsAnswer = { questions: Question[] };
 export type DigestItem = { type: "fact" | "study" | "pattern" | "protocol"; title: string; text: string; source?: { title: string; url: string }; protocol?: { name: string; how: string; days: number; measure: string } };
 export type DigestAnswer = { greeting: string; items: DigestItem[] };
 
+/** The nightly read-back of your day (owner, 2 Oct: "summarizing what happened, what i should change"). */
+export type NightAnswer = { summary: string; happened: string[]; notes: string; change: { what: string; why: string }[] };
+
 /* ------------------------------------------------------------------ schemas (JSON Schema for structured output) */
 
 const str = { type: "string" } as const, num = { type: "number" } as const;
@@ -85,6 +88,7 @@ export const SCHEMAS: Record<Exclude<Task, "supplement" | "digest">, unknown> = 
   }),
   chat: obj({ reply: str, remember: arr(str) }),
   questions: obj({ questions: arr(obj({ id: str, text: str, why: str, options: arr(str), key: str, repeat: { type: "string", enum: ["daily", "once"] } })) }),
+  night: obj({ summary: str, happened: arr(str), notes: str, change: arr(obj({ what: str, why: str })) }),
 };
 
 /* ------------------------------------------------------------------ prompts */
@@ -92,7 +96,16 @@ export const SCHEMAS: Record<Exclude<Task, "supplement" | "digest">, unknown> = 
 const VOICE = `You are the AI inside HealthOS, a personal health tracker used by one person. Talk like a friend who knows the science: casual, short, specific, never preachy, never guilt-tripping. The user may have ADHD: make things feel easy and rewarding, one small next step at a time.
 Hard rules: you are not a doctor. Never tell the user to stop, start or change a prescribed medication — say "ask your doctor/dermatologist" instead. Don't invent numbers the app's engines measure; use the numbers given in the context. If you aren't sure, say so.`;
 
+const NIGHT = `${VOICE}
+Task: read the user's day back to them at night. Use "## Today, as it happened" and the rest of the context.
+- summary: 2–3 sentences on how the day went, with specifics (times, numbers) from the context.
+- happened: 2–4 short bullets — what mattered today (meals, caffeine, alcohol, gym, how they felt and when).
+- notes: the user's own notes on their check-ins say WHY they felt a way ("stressed — deadline"). Take them seriously: reflect what they said, connect it to the data only where the data supports it, never dismiss or explain it away. One or two sentences; empty string if there were no notes.
+- change: 1–2 small, concrete things to try tomorrow, each with a one-line "why" tied to today's data or notes. Options, not orders; no guilt, no "you should have". If the day went well, say what to keep doing.
+Use "goes with", never "causes". No medical advice; anything health-worrying → "worth asking a doctor".`;
+
 export const SYSTEM: Record<Task, string> = {
+  night: NIGHT,
   describe: `${VOICE}
 Task: turn a description and/or photo of food or drink into items with nutrition values. Rules:
 - Split a meal into its parts when they're logged separately (toast and butter), keep a dish whole when it's one thing (lasagne).
@@ -116,6 +129,7 @@ Answer with ONLY a JSON object, no prose:
 {"greeting":"one short line","items":[{"type":"fact|study|pattern|protocol","title":"","text":"2–3 sentences","source":{"title":"","url":""},"protocol":{"name":"","how":"","days":14,"measure":"energy|mood|focus|stress|sleep|weight"}}]}
 3–5 items. "source" is required for facts and studies. "protocol" only on protocol items. Don't repeat titles listed as already shown.`,
 };
+
 
 /* ------------------------------------------------------------------ checks */
 
@@ -174,6 +188,17 @@ export function checkDigest(a: DigestAnswer): DigestAnswer {
   return { greeting: typeof a.greeting === "string" ? a.greeting : "Morning!", items };
 }
 
+export function checkNight(a: NightAnswer): NightAnswer {
+  const line = (x: unknown, n: number) => (typeof x === "string" ? x.trim().slice(0, n) : "");
+  if (!line(a?.summary, 800)) throw new SyntaxError("night answer has no summary");
+  return {
+    summary: line(a.summary, 800),
+    happened: (a.happened ?? []).map((x) => line(x, 200)).filter(Boolean).slice(0, 4),
+    notes: line(a.notes, 500),
+    change: (a.change ?? []).filter((c) => line(c?.what, 200)).slice(0, 2).map((c) => ({ what: line(c.what, 200), why: line(c.why, 240) })),
+  };
+}
+
 export function checkQuestions(a: QuestionsAnswer): QuestionsAnswer {
   return { questions: (a.questions ?? []).filter((q) => q.text && q.options?.length >= 2 && q.options.length <= 6).slice(0, 3).map((q) => ({ ...q, key: q.key.toLowerCase().replace(/[^a-z0-9_]+/g, "_").slice(0, 40) || "q" })) };
 }
@@ -189,9 +214,10 @@ export type AiRequest =
   | { task: "supplement"; name: string; dose?: string; context: string }
   | { task: "chat"; messages: { role: "user" | "assistant"; text: string }[]; context: string }
   | { task: "questions"; context: string; asked: string[] }
-  | { task: "digest"; context: string; shown: string[] };
+  | { task: "digest"; context: string; shown: string[] }
+  | { task: "night"; day: string; context: string };
 
-export type AiAnswer<T extends Task> = T extends "describe" ? { items: DescribedItem[]; dropped: string[] } : T extends "supplement" ? SupplementAnswer : T extends "chat" ? ChatAnswer : T extends "questions" ? QuestionsAnswer : DigestAnswer;
+export type AiAnswer<T extends Task> = T extends "describe" ? { items: DescribedItem[]; dropped: string[] } : T extends "supplement" ? SupplementAnswer : T extends "chat" ? ChatAnswer : T extends "questions" ? QuestionsAnswer : T extends "night" ? NightAnswer : DigestAnswer;
 
 /** What the Worker keeps per account (doc "ai_usage", written only by the Worker). */
 export type UsageDoc = { day: string; calls: number; dayUsd: number; month: string; monthUsd: number; byModel: Partial<Record<ModelChoice, number>> };
