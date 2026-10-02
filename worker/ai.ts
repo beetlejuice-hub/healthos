@@ -57,10 +57,10 @@ function validate(b: AiRequest): string | null {
   const long = (s: unknown, n: number) => typeof s === "string" && s.length > n;
   switch (b.task) {
     case "describe": return !b.text && !b.image ? "say or show what it is" : long(b.text, 2000) ? "text too long" : b.image && (long(b.image.data, 2_000_000) || !/^image\/(jpeg|png|webp)$/.test(b.image.mediaType)) ? "image too big or wrong type" : null;
-    case "supplement": return !b.name || long(b.name, 100) || long(b.context, 20000) ? "bad supplement request" : null;
-    case "chat": return !Array.isArray(b.messages) || !b.messages.length || b.messages.length > 40 || b.messages.some((m) => long(m.text, 4000)) || long(b.context, 20000) ? "bad chat request" : null;
-    case "questions": case "digest": return long(b.context, 20000) ? "context too long" : null;
-    case "night": return !/^\d{4}-\d{2}-\d{2}$/.test(String(b.day)) ? "bad day" : long(b.context, 24000) ? "context too long" : null;
+    case "supplement": return !b.name || long(b.name, 100) || long(b.context, 48000) ? "bad supplement request" : null;
+    case "chat": return !Array.isArray(b.messages) || !b.messages.length || b.messages.length > 40 || b.messages.some((m) => long(m.text, 4000)) || long(b.context, 48000) ? "bad chat request" : null;
+    case "questions": case "digest": return long(b.context, 48000) ? "context too long" : null;
+    case "night": return !/^\d{4}-\d{2}-\d{2}$/.test(String(b.day)) ? "bad day" : long(b.context, 52000) ? "context too long" : null;
     default: return "unknown task";
   }
 }
@@ -88,7 +88,8 @@ export async function callModel(b: AiRequest, choice: ModelChoice, apiKey: strin
   const client = new Anthropic({ apiKey, fetch: deps.fetch, maxRetries: 1 });
   const effort = TIER[task] === "research" ? "medium" : "low";
   const system: Anthropic.Beta.BetaTextBlockParam[] = [{ type: "text", text: SYSTEM[task], cache_control: { type: "ephemeral" } }];
-  if (b.task === "chat") system.push({ type: "text", text: `Context — the user's data right now:\n${b.context}` });
+  // The data block is large and the same across a chat's messages: cached, so a reply costs ~10% for it.
+  if (b.task === "chat") system.push({ type: "text", text: `Context — the user's data right now:\n${b.context}`, cache_control: { type: "ephemeral" } });
   let messages = messagesFor(b, today);
   const usage = { input_tokens: 0, output_tokens: 0, cache_read_input_tokens: 0, cache_creation_input_tokens: 0, server_tool_use: { web_search_requests: 0 } };
   let res: Anthropic.Beta.BetaMessage | null = null;

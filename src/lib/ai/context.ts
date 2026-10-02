@@ -9,7 +9,10 @@ import type { State } from "../store";
 import type { DayFacts } from "../insights";
 import type { Finding } from "../findings";
 import type { Pattern } from "../scout";
-import { clock, localDay } from "../time";
+import { addDays, clock, localDay } from "../time";
+import { weekly } from "../weekly";
+import { personalSleep, ratedNights } from "../caffeine-sleep";
+import { doseCompare } from "../dose";
 
 const BANDS: [string, number, number][] = [["morning (5–11)", 5, 11], ["midday (11–14)", 11, 14], ["afternoon (14–18)", 14, 18], ["evening (18–24)", 18, 24]];
 const avg = (xs: number[]) => (xs.length ? Math.round((xs.reduce((a, b) => a + b, 0) / xs.length) * 10) / 10 : null);
@@ -57,6 +60,50 @@ export function feelNotes(state: Pick<State, "entries">, now: number): string[] 
     .map((e) => `${localDay(e.at)} ${clock(e.at)} ${feelText(e)} — "${e.note}"`);
 }
 
+/** The most the context may be (characters); the Worker accepts a little more. Oldest journal days go first. */
+export const CONTEXT_MAX = 44_000;
+
+const short = (k: string) => k[0].toUpperCase();
+
+/**
+ * Every check-in, day by day, for the last `days` days — the raw material for "what changes my mood"
+ * (owner, 2 Oct: the AI should know everything when it looks at mood). Compact: one line a day,
+ * that morning's sleep rating, then each check-in: time, E/M/F/S, what you were up to, your note.
+ */
+export function moodJournal(state: Pick<State, "entries">, now: number, days = 60): string[] {
+  const from = addDays(localDay(now), -(days - 1));
+  const byDay = new Map<string, string[]>();
+  const sleep = new Map<string, string>();
+  for (const e of [...state.entries].sort((a, b) => a.at - b.at)) {
+    const d = localDay(e.at);
+    if (d < from || e.at > now) continue;
+    if (e.kind === "sleep" && e.rating != null && !sleep.has(d)) sleep.set(d, `slept ${e.rating}${e.slow ? " (slow to fall asleep)" : ""}`);
+    if (e.kind === "feel") {
+      const v = (["energy", "mood", "focus", "stress"] as const).filter((k) => e[k] != null).map((k) => `${short(k)}${e[k]}`).join(" ");
+      byDay.set(d, [...(byDay.get(d) ?? []), `${clock(e.at)} ${v}${e.doing?.length ? ` [${e.doing.join(",")}]` : ""}${e.note ? ` "${e.note}"` : ""}`]);
+    }
+  }
+  return [...new Set([...byDay.keys(), ...sleep.keys()])].sort().map((d) => `${d}: ${[sleep.get(d), ...(byDay.get(d) ?? [])].filter(Boolean).join(" · ")}`);
+}
+
+/** This week against last, caffeine-at-bedtime vs your sleep, and dose comparisons — the engines' own numbers. */
+export function moodEngines(state: Pick<State, "entries" | "workouts" | "supplements" | "settings">, now: number): string[] {
+  const out: string[] = [];
+  const names = new Map((state.supplements ?? []).map((s) => [s.id, s.name]));
+  const w = weekly(state.entries, state.workouts ?? [], names, now);
+  if (w.ready) {
+    const k = w.week;
+    out.push(`Week vs the week before: ${k.avgs.map((a) => `${a.k} ${a.now != null ? a.now.toFixed(1) : "–"} (${a.dir ?? "n/a"})`).join(", ")}${k.best && k.worst ? `; best ${k.best.name}, lowest ${k.worst.name}` : ""}${k.top ? `; top connection between check-ins: ${k.top.r.label} → ${k.top.r.metric} ${k.top.r.effect >= 0 ? "+" : ""}${k.top.r.effect.toFixed(1)} [${k.top.r.lo.toFixed(1)}, ${k.top.r.hi.toFixed(1)}] ${k.top.sure ? "(found)" : "(early sign, may be chance)"}` : ""}.`);
+  }
+  const p = personalSleep(ratedNights(state.entries, state.settings?.halfLifeMin ?? 300, state.settings?.bedMinute ?? 23 * 60));
+  if (p.withN + p.withoutN > 0) out.push(`Caffeine at bedtime vs sleep rating: ${p.state}${p.diff != null ? ` (30+ mg nights ${p.diff >= 0 ? "+" : ""}${p.diff.toFixed(1)} vs under, 95% ${p.lo!.toFixed(1)} to ${p.hi!.toFixed(1)})` : ""}, ${p.withN} vs ${p.withoutN} nights.`);
+  for (const c of doseCompare(state.entries, state.supplements ?? [])) {
+    const rows = c.rows.filter((r) => r.diff).map((r) => `${r.metric} ${r.diff!.value >= 0 ? "+" : ""}${r.diff!.value.toFixed(1)} [${r.diff!.lo.toFixed(1)}, ${r.diff!.hi.toFixed(1)}]${r.diff!.clear ? "" : " unclear"}`);
+    out.push(`${c.name} ${c.hi.dose} (${c.hi.days} days) vs ${c.lo.dose} (${c.lo.days} days): ${rows.length ? rows.join(", ") : `needs ${c.need} more days`}.`);
+  }
+  return out;
+}
+
 export function dayLine(d: DayFacts, suppNames: Map<string, string>): string {
   const parts = [
     d.day + (d.weekend ? " (weekend)" : ""),
@@ -80,7 +127,20 @@ export type ContextInput = {
   weight?: { kg: number; perWeek: number } | null;
 };
 
-export function buildContext({ state, now, days, findings, patterns, weight }: ContextInput): string {
+export function buildContext(input: ContextInput): string {
+  const { state, now } = input;
+  const base = baseContext(input);
+  const engines = moodEngines({ ...state, workouts: state.workouts ?? [] }, now);
+  const extra = engines.length ? `\n## Mood engines (tested numbers)\n${engines.map((l) => `- ${l}`).join("\n")}` : "";
+  // The journal fills what's left, newest days kept: the oldest go first when it's too long.
+  let journal = moodJournal(state, now);
+  const room = CONTEXT_MAX - base.length - extra.length - 80;
+  while (journal.length && journal.join("\n").length + journal.length * 2 > room) journal = journal.slice(1);
+  const j = journal.length ? `\n## Mood journal, every check-in (E energy, M mood, F focus, S stress; [up to]; "my note") — ${journal.length} days\n${journal.map((l) => `- ${l}`).join("\n")}` : "";
+  return base + extra + j;
+}
+
+function baseContext({ state, now, days, findings, patterns, weight }: ContextInput): string {
   const { profile, supplements, ai, goals } = state;
   const names = new Map(supplements.map((s) => [s.id, s.name]));
   const answers = state.entries.filter((e) => e.kind === "answer" && e.at > now - 14 * 86_400_000).slice(-20);

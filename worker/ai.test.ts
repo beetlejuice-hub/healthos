@@ -93,7 +93,7 @@ describe("/api/ai", () => {
   });
 
   it("night: the day is read back with a schema, no web search, and checked", async () => {
-    const night = { summary: "A steady day; stress peaked at 14:00 with the deadline you noted.", happened: ["2 coffees, last 13:00", "gym 18:00", "x", "y", "dropped"], notes: "You wrote 'deadline' at 14:00 — the stress 8 fits that.", change: [{ what: "Walk after lunch", why: "your 15:00 dip" }, { what: "b", why: "" }, { what: "dropped", why: "" }] };
+    const night = { summary: "A steady day; stress peaked at 14:00 with the deadline you noted.", happened: ["2 coffees, last 13:00", "gym 18:00", "x", "y", "dropped"], notes: "You wrote 'deadline' at 14:00 — the stress 8 fits that.", change: [{ what: "Walk after lunch", why: "your 15:00 dip" }, { what: "b", why: "" }, { what: "dropped", why: "" }], remember: ["Stress runs high on deadline days."] };
     const w = world([{ text: JSON.stringify(night) }]);
     const res = await handleAi(post({ task: "night", day: "2026-10-01", context: "## Today, as it happened\n- 14:00 check-in: stress 8 · my note: \"deadline\"" }), env, w.deps);
     const body = (await res.json()) as { answer: typeof night };
@@ -111,6 +111,15 @@ describe("/api/ai", () => {
     expect((await handleAi(post({ task: "night", day: "yesterday", context: "c" }), env, world([]).deps)).status).toBe(400);
     const w = world([{ text: JSON.stringify({ summary: "", happened: [], notes: "", change: [] }) }]);
     expect((await handleAi(post({ task: "night", day: "2026-10-01", context: "c" }), env, w.deps)).status).toBe(502);
+  });
+
+  it("a big context (two months of check-ins) is accepted; chat caches it", async () => {
+    const big = "x".repeat(44_000);
+    expect((await handleAi(post({ task: "questions", context: big, asked: [] }), env, world([{ text: JSON.stringify({ questions: [] }) }]).deps)).status).toBe(200);
+    expect((await handleAi(post({ task: "questions", context: "x".repeat(49_000), asked: [] }), env, world([]).deps)).status).toBe(400);
+    const w = world([{ text: JSON.stringify({ reply: "hi", remember: [] }) }]);
+    await handleAi(post({ task: "chat", messages: [{ role: "user", text: "hi" }], context: big }), env, w.deps);
+    expect((w.sent[0].body.system as { cache_control?: unknown }[])[1].cache_control).toEqual({ type: "ephemeral" });
   });
 
   it("rejects oversized input before spending anything", async () => {

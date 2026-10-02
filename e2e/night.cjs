@@ -2,7 +2,7 @@
 // Fake /api/ai: no credits spent; we check what the AI was sent, and what the app shows.
 const { chromium, APP, OUT, handle, rate } = require('./harness.cjs');
 const calls = [];
-const NIGHT = { summary: 'A steady day with one spike: stress hit 8 at 14:00, right when the deadline you wrote about landed.', happened: ['Coffee at 08:10, nothing after', 'Check-in at 14:00: mood 4, stress 8'], notes: 'You said the stress was the deadline at work — the 8 fits that, and nothing else in your log points elsewhere.', change: [{ what: 'A 10-minute walk before the next deadline block.', why: 'Your stress tends to ease after time outside.' }] };
+const NIGHT = { summary: 'A steady day with one spike: stress hit 8 at 14:00, right when the deadline you wrote about landed.', happened: ['Coffee at 08:10, nothing after', 'Check-in at 14:00: mood 4, stress 8'], notes: 'You said the stress was the deadline at work — the 8 fits that, and nothing else in your log points elsewhere.', change: [{ what: 'A 10-minute walk before the next deadline block.', why: 'Your stress tends to ease after time outside.' }], remember: ['Stress runs high on deadline days; it eases after time outside.'] };
 const ANSWERS = { night: () => NIGHT, digest: () => ({ greeting: 'Hi', items: [] }), questions: () => ({ questions: [] }) };
 
 (async () => {
@@ -42,6 +42,8 @@ const ANSWERS = { night: () => NIGHT, digest: () => ({ greeting: 'Hi', items: []
   check('one read-back asked for, for today', sent.length === 1 && sent[0].day === '2026-10-01');
   check('the AI gets the day in order, the note quoted exactly', /## Today, as it happened \(2026-10-01\)[\s\S]*08:10 drank Coffee[\s\S]*14:00 check-in: mood 4, stress 8 · my note: "deadline at work"/.test(sent[0].context));
   check('…and the notes marked as the user\'s own reasons', /## Why I felt that way \(my own notes on check-ins — take these seriously\)/.test(sent[0].context));
+  check('…and the mood journal: every check-in of the last weeks', /## Mood journal, every check-in[\s\S]*2026-10-01: 14:00 M4 S8 "deadline at work"/.test(sent[0].context));
+  check('what it learned that lasts goes into its memory', (await pg.evaluate(() => JSON.parse(localStorage.getItem('healthos.v1:u-test')))).ai.memory.some((m) => /deadline days/.test(m.text)));
   const card = pg.getByLabel('Your day, read back');
   const txt = await card.innerText();
   check('Today: the read-back card with notes and tomorrow', /stress hit 8 at 14:00/.test(txt) && /YOUR NOTES|Your notes/i.test(txt) && /A 10-minute walk/.test(txt));

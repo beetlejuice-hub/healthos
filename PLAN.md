@@ -357,4 +357,12 @@ email get Dev tools (`#dev`): raw entry editor, generate/remove sample, wipe acc
    your foods (synced), checked before any database on the next scan; barcode foods are kept past the
    500-food cap. Tests: unit + `scan.cjs` + `labelphoto.cjs` (fake AI). Owner's call later: also
    contribute added products back to Open Food Facts (needs an OFF account).
-37. [ ] **AI knows everything about mood** (claimed 2 Oct — `ai/context.ts`, AI memory).
+37. [x] **AI knows everything about mood** (2 Oct; `ai/context.ts` moodJournal/moodEngines/CONTEXT_MAX, `worker/ai.ts`,
+   night `remember`). Every AI call now sees a mood journal — every check-in of the last 60 days, one line
+   a day (sleep that morning, E/M/F/S, what you were up to, your notes) — plus the engines' numbers:
+   this week vs last + top between-check-ins connection, caffeine-at-bed vs your sleep, dose
+   comparisons. Budget 44k chars, oldest days trimmed first (a year of check-ins fits as the newest
+   ~2 months); the Worker accepts 48k; chat caches the data block. The nightly read-back adds 0–2
+   lasting patterns to the AI's memory (Settings → AI, deletable) when the journal shows them on
+   several days. Cost estimate updated (≈4k tokens per everyday call). Real-model wording unverified
+   until ANTHROPIC_API_KEY is set.

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { fromDescribed, judge } from "./apply";
-import { buildContext, dayTimeline, feelByTime } from "./context";
+import { CONTEXT_MAX, buildContext, dayTimeline, feelByTime, moodJournal } from "./context";
 import { checkDescribe, checkNight, costUsd, jsonFrom } from "./tasks";
 import { parseItem } from "../quickadd";
 import { feelWorld } from "../bench";
@@ -97,8 +97,35 @@ describe("the day, read back (owner, 2 Oct)", () => {
   });
 
   it("checkNight keeps it short and refuses an empty summary", () => {
-    expect(() => checkNight({ summary: " ", happened: [], notes: "", change: [] })).toThrow();
-    const n = checkNight({ summary: "ok", happened: ["a", "", "b"], notes: "  n ", change: [{ what: "", why: "x" }, { what: "walk", why: "dip" }] });
-    expect(n).toEqual({ summary: "ok", happened: ["a", "b"], notes: "n", change: [{ what: "walk", why: "dip" }] });
+    expect(() => checkNight({ summary: " ", happened: [], notes: "", change: [], remember: [] })).toThrow();
+    const n = checkNight({ summary: "ok", happened: ["a", "", "b"], notes: "  n ", change: [{ what: "", why: "x" }, { what: "walk", why: "dip" }], remember: ["short", "Stress runs high on deadline days.", "x".repeat(300), "third one is dropped"] });
+    expect(n).toEqual({ summary: "ok", happened: ["a", "b"], notes: "n", change: [{ what: "walk", why: "dip" }], remember: ["Stress runs high on deadline days.", "x".repeat(180)] });
+  });
+});
+
+describe("the AI knows everything about mood (owner, 2 Oct)", () => {
+  const D = 86_400_000, now = new Date(2026, 9, 2, 22).getTime();
+  const many = (days: number) => {
+    const entries: unknown[] = [];
+    for (let d = days - 1; d >= 0; d--) {
+      const t = now - d * D;
+      entries.push({ id: `s${d}`, kind: "sleep", at: t - 14 * 3600e3, rating: 6, slow: d % 2 === 0 });
+      entries.push({ id: `a${d}`, kind: "feel", at: t - 12 * 3600e3, energy: 6, mood: 7, doing: ["work"] });
+      entries.push({ id: `b${d}`, kind: "feel", at: t - 6 * 3600e3, stress: 8, note: d === 0 ? "deadline at work" : undefined });
+    }
+    return { entries, workouts: [], supplements: [], settings: { halfLifeMin: 300, bedMinute: 23 * 60, coffeeMg: 95, bodyKg: 78, usualDrink: null }, profile: { conditions: [], meds: [], allergies: [], notes: "" }, goals: DEFAULT_GOALS, ai: EMPTY_AI } as unknown as State;
+  };
+  it("the journal has every check-in of a day on one line, sleep first, notes quoted", () => {
+    const j = moodJournal(many(3), now);
+    expect(j).toHaveLength(3);
+    expect(j[2]).toBe('2026-10-02: slept 6 (slow to fall asleep) · 10:00 E6 M7 [work] · 16:00 S8 "deadline at work"');
+  });
+  it("two months of check-ins fit; a year is trimmed oldest-first to the budget, newest days kept", () => {
+    const two = buildContext({ state: many(60), now, days: [], findings: [], patterns: [] });
+    expect(two).toMatch(/## Mood journal[^\n]*— 60 days/);
+    const year = buildContext({ state: many(365), now, days: [], findings: [], patterns: [] });
+    expect(year.length).toBeLessThanOrEqual(CONTEXT_MAX);
+    expect(year).toContain('2026-10-02: slept 6');
+    expect(year).not.toContain("2025-10-05:");
   });
 });

@@ -69,7 +69,7 @@ export type DigestItem = { type: "fact" | "study" | "pattern" | "protocol"; titl
 export type DigestAnswer = { greeting: string; items: DigestItem[] };
 
 /** The nightly read-back of your day (owner, 2 Oct: "summarizing what happened, what i should change"). */
-export type NightAnswer = { summary: string; happened: string[]; notes: string; change: { what: string; why: string }[] };
+export type NightAnswer = { summary: string; happened: string[]; notes: string; change: { what: string; why: string }[]; /** Lasting patterns worth remembering (kept in AI memory). */ remember: string[] };
 
 /* ------------------------------------------------------------------ schemas (JSON Schema for structured output) */
 
@@ -88,7 +88,7 @@ export const SCHEMAS: Record<Exclude<Task, "supplement" | "digest">, unknown> = 
   }),
   chat: obj({ reply: str, remember: arr(str) }),
   questions: obj({ questions: arr(obj({ id: str, text: str, why: str, options: arr(str), key: str, repeat: { type: "string", enum: ["daily", "once"] } })) }),
-  night: obj({ summary: str, happened: arr(str), notes: str, change: arr(obj({ what: str, why: str })) }),
+  night: obj({ summary: str, happened: arr(str), notes: str, change: arr(obj({ what: str, why: str })), remember: arr(str) }),
 };
 
 /* ------------------------------------------------------------------ prompts */
@@ -102,6 +102,7 @@ Task: read the user's day back to them at night. Use "## Today, as it happened" 
 - happened: 2–4 short bullets — what mattered today (meals, caffeine, alcohol, gym, how they felt and when).
 - notes: the user's own notes on their check-ins say WHY they felt a way ("stressed — deadline"). Take them seriously: reflect what they said, connect it to the data only where the data supports it, never dismiss or explain it away. One or two sentences; empty string if there were no notes.
 - change: 1–2 small, concrete things to try tomorrow, each with a one-line "why" tied to today's data or notes. Options, not orders; no guilt, no "you should have". If the day went well, say what to keep doing.
+- remember: 0–2 lasting patterns about what goes with this user's mood, energy, focus, stress or sleep, only when the mood journal shows it on several days (not just today) and it isn't already in "What you remember about me". One short line each, e.g. "Stress runs high on deadline days; it eases after time outside." Empty if nothing new.
 Use "goes with", never "causes". No medical advice; anything health-worrying → "worth asking a doctor".`;
 
 export const SYSTEM: Record<Task, string> = {
@@ -196,6 +197,7 @@ export function checkNight(a: NightAnswer): NightAnswer {
     happened: (a.happened ?? []).map((x) => line(x, 200)).filter(Boolean).slice(0, 4),
     notes: line(a.notes, 500),
     change: (a.change ?? []).filter((c) => line(c?.what, 200)).slice(0, 2).map((c) => ({ what: line(c.what, 200), why: line(c.why, 240) })),
+    remember: (a.remember ?? []).map((x) => line(x, 180)).filter((x) => x.length > 8).slice(0, 2),
   };
 }
 
@@ -225,13 +227,15 @@ export const DAILY_CAP = 50;
 
 /**
  * A typical month, for the estimate in Settings (and the doc's model comparison): per day, ~10
- * everyday calls (food the parser didn't know, a photo, chat, questions; ~1.8k tokens in, ~0.7k
- * out incl. thinking) and the research tier's morning read (~25k in with search results, ~3k out,
- * 3 searches) plus a supplement look-up every few days. Real spend is measured and shown next to it.
+ * everyday calls (food the parser didn't know, a photo, chat, questions). Chat and questions now send
+ * up to two months of check-ins (~11k tokens; chat caches it after the first message), so the average
+ * is ~4k in, ~0.7k out. Research: the morning read (~25k in with search results, 3 searches), the
+ * nightly read-back (~13k in, no search) and a supplement look-up every few days. Real spend is
+ * measured and shown next to it.
  */
 export const TYPICAL_DAY = {
-  everyday: { calls: 10, input_tokens: 1800, output_tokens: 700 },
-  research: { calls: 1.2, input_tokens: 25000, output_tokens: 3000, searches: 3 },
+  everyday: { calls: 10, input_tokens: 4000, output_tokens: 700 },
+  research: { calls: 2.2, input_tokens: 20000, output_tokens: 2500, searches: 1.6 },
 };
 export function estimateMonthUsd(models: { everyday: ModelChoice; research: ModelChoice }): { everyday: number; research: number; total: number } {
   const e = TYPICAL_DAY.everyday, r = TYPICAL_DAY.research;

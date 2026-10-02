@@ -43,6 +43,8 @@ async function makeNight(day: string, force = false) {
   const at = Date.now();
   act.setAi((a) => ({
     night: { ...r.answer, day, at },
+    // What it learned that lasts: into memory (shown in Settings → AI, deletable), no duplicates.
+    memory: [...a.memory, ...r.answer.remember.filter((x) => !a.memory.some((m) => m.text.toLowerCase() === x.toLowerCase())).map((x) => ({ id: newId(), text: x, at }))].slice(-60),
     chat: [...a.chat, { role: "assistant" as const, text: `🌙 ${r.answer.summary}${r.answer.change.length ? `\n\nTomorrow, maybe: ${r.answer.change.map((c) => c.what).join("; ")}.` : ""}`, at, unprompted: true }].slice(-80),
   }));
 }
