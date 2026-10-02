@@ -272,3 +272,8 @@ email get Dev tools (`#dev`): raw entry editor, generate/remove sample, wipe acc
    kinds, send a test, each device's last delivery. `public/sw.js` shows it, tap opens Today.
    **Owner to check on the iPhone** (can't be automated): from the Home Screen app, Turn on → Send a
    test → arrives; tap opens Today.
+23. [ ] **Search pass** *(claimed: agent "balance", 2 Oct — `lib/hu.ts`, `lib/cooked.ts`, `lib/rank.ts`,
+   foodsearch.ts, Log.tsx)*: Hungarian words reach USDA (translated); dry vs cooked for pasta/rice/meat;
+   your brands and foods first.
+24. [ ] **Weekly "what changed your mood"** on Insights *(claimed: same — `lib/weekly.ts`, Insights)*.
+25. [ ] **"How now?" on the Home Screen** *(claimed: same — `/now` page + its own manifest, Worker, App)*.
