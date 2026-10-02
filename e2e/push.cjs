@@ -1,7 +1,7 @@
 // Notifications: turn on (real permission + service worker; the push subscription and /api/push are
 // faked — headless Chrome can't reach Google's push service), the plan the app sends, re-planning
 // after a check-in, switching a kind off, a test, turning off. Plus the iPhone-in-Safari message.
-const { chromium, APP, OUT, handle } = require('./harness.cjs');
+const { chromium, APP, OUT, handle, rate } = require('./harness.cjs');
 
 (async () => {
   const b = await chromium.launch(); const errs = [];
@@ -52,7 +52,7 @@ const { chromium, APP, OUT, handle } = require('./harness.cjs');
 
   // A check-in at 12:00 → the 13:00 nudge is dropped from the next plan.
   await pg.goto(APP + '#today');
-  await pg.getByRole('button', { name: 'mood 7', exact: true }).click();
+  await rate(pg, 'mood', 7);
   await pg.clock.fastForward(4000); await pg.waitForTimeout(300);
   const plan2 = calls.filter((c) => c.op === 'schedule').pop()?.body.reminders ?? [];
   check(`after rating, today's 13:00 nudge gone, tomorrow's kept (first now: ${plan2[0] && fmt(plan2[0])})`, !plan2.some((r) => fmt(r) === '13:00 How now?' && new Date(r.at).getDate() === 2) && plan2.some((r) => fmt(r) === '13:00 How now?' && new Date(r.at).getDate() === 3));

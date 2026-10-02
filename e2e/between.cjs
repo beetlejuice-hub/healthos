@@ -1,6 +1,6 @@
 // Between check-ins: a month where the gym really lifts mood (bench fixture, +2.5, a month with no other finding) shows as a
 // Noticed card on Insights, with its evidence; an empty account says what's missing instead.
-const { chromium, APP, OUT, handle } = require('./harness.cjs');
+const { chromium, APP, OUT, handle, rate } = require('./harness.cjs');
 const month = require('./fixtures/between-month.json');
 
 (async () => {
@@ -17,7 +17,7 @@ const month = require('./fixtures/between-month.json');
   await pg.getByRole('button', { name: 'Sign in' }).click(); await pg.waitForSelector('text=Settings');
   // One check-in so far: Insights says what it still needs.
   await pg.goto(APP + '#today');
-  await pg.getByRole('button', { name: 'mood 6', exact: true }).click(); await pg.waitForTimeout(200);
+  await rate(pg, 'mood', 6); await pg.waitForTimeout(200);
   await pg.goto(APP + '#insights'); await pg.waitForTimeout(400);
   check('one check-in: "still checking" says to rate a few times a day', /What changes how you feel during the day\?/.test(await pg.locator('body').innerText()));
 

@@ -1,6 +1,6 @@
 // How now? — the check-in at the top of Today: 1–10 taps, what you were up to (pre-ticked from logs,
 // your own word), the small reward, then one calm line until it asks again ~2 h later.
-const { chromium, APP, OUT, handle } = require('./harness.cjs');
+const { chromium, APP, OUT, handle, rate } = require('./harness.cjs');
 
 (async () => {
   const b = await chromium.launch(); const errs = [];
@@ -20,22 +20,23 @@ const { chromium, APP, OUT, handle } = require('./harness.cjs');
   // 13:00 — the first check-in: top of Today, a tap per feeling.
   const box = await pg.locator('#feel').boundingBox();
   check('How now? sits near the top of Today', box && box.y < 260);
-  await pg.getByRole('button', { name: 'mood 4', exact: true }).click();
-  await pg.getByRole('button', { name: 'stress 7', exact: true }).click();
+  await rate(pg, 'mood', 4);
+  await rate(pg, 'stress', 7);
   await pg.waitForTimeout(250);
   let f = await feels();
   check('two taps → one check-in with exactly mood 4 and stress 7', f.length === 1 && f[0].mood === 4 && f[0].stress === 7 && f[0].energy == null);
-  check('shows the words: 4 · flat, 7 · high', /4 · flat/.test(await pg.locator('#feel').innerText()) && /7 · high/.test(await pg.locator('#feel').innerText()));
+  const vt = async (n) => pg.locator(`#feel [role=slider][data-name="${n}"]`).getAttribute('aria-valuetext');
+  check('shows the words: 4 · flat, 7 · high', await vt('mood') === '4, flat' && await vt('stress') === '7, high' && /flat[\s\S]*high/.test(await pg.locator('#feel').innerText()));
   await pg.getByRole('button', { name: 'Done' }).click(); await pg.waitForTimeout(150);
-  check('Done → one calm line', /Rated 13:00 · mood 4 · stress 7/.test(await pg.locator('#feel').innerText()) && await pg.locator('#feel .hn-nums').count() === 0);
+  check('Done → one calm line', /Rated 13:00 · mood 4 · stress 7/.test(await pg.locator('#feel').innerText()) && await pg.locator('#feel [role=slider]').count() === 0);
 
   // A gym session at 15:00, logged.
   await pg.evaluate(() => { const k = 'healthos.v1:u-test', s = JSON.parse(localStorage.getItem(k)); s.workouts = [...(s.workouts || []), { id: 'gw', template: 'Upper A', startedAt: new Date('2026-10-02T15:00:00').getTime(), endedAt: new Date('2026-10-02T16:00:00').getTime() }]; localStorage.setItem(k, JSON.stringify(s)); });
   // 17:10 — more than 2 h later: it asks again.
   await pg.clock.setFixedTime(new Date('2026-10-02T17:10:00')); await pg.reload(); await pg.waitForSelector('text=Settings');
-  check('2 h later it asks again (rows open, last values shown faintly)', await pg.locator('#feel .hn-nums').count() === 4 && /was 4/.test(await pg.locator('#feel').innerText()));
-  await pg.getByRole('button', { name: 'mood 8', exact: true }).click();
-  await pg.getByRole('button', { name: 'stress 3', exact: true }).click(); await pg.waitForTimeout(250);
+  check('2 h later it asks again (rows open, last values shown faintly)', await pg.locator('#feel .hn-sliders [role=slider]').count() === 4 && /was 4/.test(await pg.locator('#feel').innerText()));
+  await rate(pg, 'mood', 8);
+  await rate(pg, 'stress', 3); await pg.waitForTimeout(250);
   const tags = pg.getByRole('group', { name: 'What were you up to' });
   check('gym pre-ticked from the logged workout', await tags.getByRole('button', { name: 'gym', exact: true }).getAttribute('aria-pressed') === 'true');
   check('not cluttered: at most 6 tags + "more"', await tags.locator('button').count() <= 7);

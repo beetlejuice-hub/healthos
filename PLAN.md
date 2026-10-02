@@ -323,8 +323,12 @@ email get Dev tools (`#dev`): raw entry editor, generate/remove sample, wipe acc
 31. [x] **Mobile pass 1** (2 Oct; owner's screenshot: text ghosting under the tab bar). Tab bar solid, per-screen
    colour (Workout/Insights), short fade above it; card headers wrap their hint under the title instead
    of squeezing it; a check-in's log line names what you were up to, your own word included.
-32. [ ] **Feelings slider** (claimed 2 Oct — `HowNow.tsx`, index.css). Owner: the 1–10 grid "looks pretty big
-   and bad on phone… desktop too — replace w a slider, make it nice and creative".
+32. [x] **Feelings slider** (2 Oct; `components/FeelSlider.tsx`). Owner: the 1–10 grid "looks pretty big and bad
+   on phone… replace w a slider, make it nice and creative". One line per feeling (and last night's
+   sleep): tap or drag, thumb carries the number, a bubble shows the word while dragging, one save per
+   drag, a vertical swipe scrolls instead of rating, arrow keys work (ARIA slider), last value as a
+   faint ring. Card 430 → 313 px on a phone. Found while testing: a desktop drag could be cancelled by
+   the browser dragging selected text — the slider is unselectable now. e2e `slider.cjs` (+ `rate()`).
 33. [ ] **Workout, taken seriously** (claimed 2 Oct — `screens/Workout.tsx`, `lib/training.ts`). Finishing can't
    be hit by mistake (owner hit "workout done" for "set done"); timer survives quitting; premade
    common workouts; effortless flow.

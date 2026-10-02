@@ -543,3 +543,25 @@ a { color: inherit; }
 .now-screen { padding-bottom: calc(24px + env(safe-area-inset-bottom, 0px)); }
 .now-screen .hn-nums button { height: 42px; }
 .now-tip { text-align: center; margin-top: 4px; }
+
+/* ---- Feelings slider (FeelSlider.tsx): one line per feeling, tap or drag ---- */
+.fs { display: grid; grid-template-columns: 62px minmax(0, 1fr) 70px; align-items: center; gap: 10px; min-height: 40px; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
+.fs-label { font-size: 13.5px; font-weight: 600; color: var(--c-ink); }
+.fs-word { font-size: 12.5px; color: var(--c-dim); text-align: right; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.fs.fs-on .fs-word { color: var(--c-ink-2); }
+.fs-track { position: relative; height: 40px; touch-action: pan-y; cursor: pointer; outline: none; margin: 0 14px; -webkit-tap-highlight-color: transparent; }
+.fs-track:focus-visible .fs-rail { box-shadow: 0 0 0 2px var(--fs); }
+.fs-rail { position: absolute; left: -14px; right: -14px; top: 50%; height: 10px; margin-top: -5px; border-radius: 999px; background: var(--c-card-2); overflow: hidden; }
+.fs-fill { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 999px; background: linear-gradient(90deg, var(--fs-lo), var(--fs)); transition: width .18s cubic-bezier(.3, 1.4, .5, 1); }
+.fs-dots { position: absolute; inset: 0; pointer-events: none; }
+.fs-dots i { position: absolute; top: 50%; width: 3px; height: 3px; margin: -1.5px 0 0 -1.5px; border-radius: 50%; background: #ffffff26; }
+.fs-dots i.on { background: #00000033; }
+.fs-thumb { position: absolute; top: 50%; width: 30px; height: 30px; margin: -15px 0 0 -15px; border-radius: 50%; background: var(--fs); color: var(--c-bg); font: 700 14px/30px var(--f-sans); text-align: center; font-variant-numeric: tabular-nums; box-shadow: 0 0 0 3px var(--c-card), 0 4px 14px -4px #000; animation: fs-pop .22s cubic-bezier(.3, 1.6, .5, 1); transition: left .18s cubic-bezier(.3, 1.4, .5, 1); pointer-events: none; }
+.fs.dragging .fs-thumb { transition: none; transform: scale(1.12); }
+.fs-ghost { position: absolute; top: 50%; width: 16px; height: 16px; margin: -8px 0 0 -8px; border-radius: 50%; box-shadow: inset 0 0 0 1.5px #ffffff4d; pointer-events: none; }
+.fs-bubble { position: absolute; bottom: calc(100% + 8px); left: 50%; transform: translateX(-50%); background: var(--c-ink); color: var(--c-bg); font: 600 12px/1 var(--f-sans); padding: 5px 9px; border-radius: 999px; white-space: nowrap; }
+@keyframes fs-pop { from { transform: scale(.6); } to { transform: scale(1); } }
+@media (prefers-reduced-motion: reduce) { .fs-thumb, .fs-fill { animation: none; transition: none; } }
+@media (min-width: 700px) { .fs { grid-template-columns: 80px minmax(0, 1fr) 90px; } }
+.hn-sliders { display: grid; gap: 2px; }
+.hn-sleep { display: grid; gap: 6px; padding-bottom: 8px; border-bottom: 1px solid #ffffff0d; }

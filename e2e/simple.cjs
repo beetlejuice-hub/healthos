@@ -1,4 +1,4 @@
-const { chromium, APP, OUT, handle } = require('./harness.cjs');
+const { chromium, APP, OUT, handle, rate } = require('./harness.cjs');
 // Simple logging: type a meal, count it, save a meal; feelings log only what you touch;
 // forgotten workouts end themselves.
 (async () => {
@@ -51,11 +51,11 @@ const { chromium, APP, OUT, handle } = require('./harness.cjs');
 
   // Feelings: only what you touch.
   await pg.goto(APP + '#today'); await pg.waitForTimeout(200);
-  await pg.getByRole('button', { name: 'stress 7', exact: true }).click();
+  await rate(pg, 'stress', 7);
   await pg.waitForTimeout(150);
   const feel = await pg.locator('#feel').innerText();
-  check('tapping stress logs stress', /Stress\s*\n?\s*7 · high/.test(feel));
-  check('energy, mood, focus stay unset', await pg.locator('#feel .hn-nums button[aria-pressed="true"]').count() === 1);
+  check('tapping stress logs stress', await pg.locator('#feel [role=slider][data-name="stress"]').getAttribute('aria-valuetext') === '7, high' && /high/.test(feel));
+  check('energy, mood, focus stay unset', await pg.locator('#feel .hn-sliders [role=slider][aria-valuenow]').count() === 1);
   await pg.goto(APP + '#log/food'); await pg.waitForTimeout(150);
   const logged = await pg.locator('text=Logged today').locator('..').innerText();
   check('the rating has stress only', /Feeling/.test(logged) && !/energy \d/.test(logged));

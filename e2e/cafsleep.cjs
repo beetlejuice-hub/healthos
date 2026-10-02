@@ -1,6 +1,6 @@
 // Caffeine & sleep (owner, 2 Oct): amount at bedtime, could it matter in general, does it for you —
 // kept apart; a normal coffee day isn't warned about; the morning sleep rating is what it learns from.
-const { chromium, APP, OUT, handle } = require('./harness.cjs');
+const { chromium, APP, OUT, handle, rate } = require('./harness.cjs');
 
 (async () => {
   const b = await chromium.launch(); const errs = [];
@@ -21,18 +21,18 @@ const { chromium, APP, OUT, handle } = require('./harness.cjs');
   const at = async (iso) => { await pg.clock.setFixedTime(new Date(iso)); await pg.goto(APP + '#today'); await pg.reload(); await pg.waitForSelector('text=Settings'); };
 
   // 08:30 — the morning check-in asks about last night, once per night.
-  const sleepRow = pg.getByRole('group', { name: "Last night's sleep" });
+  const sleepRow = pg.locator('#feel [role=slider][data-name="sleep"]');
   check('morning: "Last night\'s sleep" row in How now?', await sleepRow.count() === 1);
-  await sleepRow.getByRole('button', { name: 'sleep 4', exact: true }).click();
+  await rate(pg, 'sleep', 4);
   await pg.getByRole('button', { name: 'took long to fall asleep' }).click();
-  await sleepRow.getByRole('button', { name: 'sleep 6', exact: true }).click(); await pg.waitForTimeout(250);
+  await rate(pg, 'sleep', 6); await pg.waitForTimeout(250);
   let sl = ((await local()).entries || []).filter((e) => e.kind === 'sleep');
   check('one entry for the night, re-tap changes it (6, slow)', sl.length === 1 && sl[0].rating === 6 && sl[0].slow === true);
   check('a sleep rating is not a check-in (no feel entry)', ((await local()).entries || []).every((e) => e.kind !== 'feel'));
   await pg.goto(APP + '#log/food'); await pg.waitForTimeout(200);
   check('the log shows it', /Last night's sleep[\s\S]*6 \/ 10 · slow to fall asleep/.test(await pg.locator('body').innerText()));
   await at('2026-10-02T15:00:00');
-  check('afternoon: no sleep row', await pg.getByRole('group', { name: "Last night's sleep" }).count() === 0);
+  check('afternoon: no sleep row', await pg.locator('#feel [role=slider][data-name="sleep"]').count() === 0);
 
   // A normal day: 08:10 + 13:00, at 14:20 → ~36 mg at 23:00: in the card, not in Now.
   await setEntries([coffee('2026-10-02T08:10:00'), coffee('2026-10-02T13:00:00')]);

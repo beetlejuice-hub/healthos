@@ -16,12 +16,16 @@ import {
 import { BETWEEN, gaps } from "../lib/detectors/between";
 import { CAF_SLEEP } from "../lib/caffeine-sleep";
 import { localDay } from "../lib/time";
+import { FeelSlider } from "./FeelSlider";
 
 const WORDS: Record<FeelKey, string[]> = {
   energy: ["drained", "low", "ok", "steady", "high"], mood: ["low", "flat", "ok", "good", "great"],
   focus: ["foggy", "scattered", "ok", "sharp", "locked in"], stress: ["calm", "low", "some", "high", "maxed"],
 };
 const wordOf = (k: FeelKey, v: number) => WORDS[k][Math.min(4, Math.floor((v - 1) / 2))];
+const COLOR: Record<FeelKey, string> = { energy: "var(--gym)", mood: "var(--mood)", focus: "var(--supp)", stress: "var(--hr)" };
+const SLEEP_WORDS = ["awful", "poor", "ok", "good", "great"];
+const sleepWord = (v: number) => SLEEP_WORDS[Math.min(4, Math.floor((v - 1) / 2))];
 const cap = (s: string) => s[0].toUpperCase() + s.slice(1);
 const signed = (d: number) => (d > 0 ? `+${d}` : d < 0 ? `−${-d}` : "±0");
 
@@ -92,29 +96,17 @@ export function HowNow({ now, always = false }: { now: number; always?: boolean 
 
   return (
     <div className="card hownow" id="feel">
-      <h3>How now? <span>{open ? "saved as you tap" : last ? `last ${clock(last.at)}` : "tap a number for any you want to log"}</span></h3>
-      {sleepOpen && <div className="hn-row hn-sleep">
-        <div className="hn-head"><b>Last night's sleep</b><em>{night?.rating != null ? `${night.rating} / 10` : "optional"}</em></div>
-        <div className="hn-nums" role="group" aria-label="Last night's sleep">
-          {Array.from({ length: 10 }, (_, i) => i + 1).map((n) => (
-            <button key={n} type="button" aria-label={`sleep ${n}`} aria-pressed={night?.rating === n} onClick={() => rateSleep({ rating: n })}>{n}</button>
-          ))}
-        </div>
+      <h3>How now? <span>{open ? "saved as you tap" : last ? `last ${clock(last.at)}` : "tap or slide any you want to log"}</span></h3>
+      {sleepOpen && <div className="hn-sleep">
+        <FeelSlider label="Sleep" name="sleep" value={night?.rating} word={sleepWord} color="var(--ok)" empty="last night" onChange={(n) => rateSleep({ rating: n })} />
         <div className="hn-tags"><button type="button" aria-pressed={!!night?.slow} onClick={() => rateSleep({ slow: !night?.slow })}>took long to fall asleep</button></div>
       </div>}
-      {FEEL_KEYS.map((k) => {
-        const v = open?.[k], ghost = v == null ? st[k].last?.v : undefined;
-        return (
-          <div className="hn-row" key={k}>
-            <div className="hn-head"><b>{cap(k)}</b><em>{v != null ? `${v} · ${wordOf(k, v)}` : ghost != null ? `was ${ghost}` : ""}</em></div>
-            <div className="hn-nums" role="group" aria-label={cap(k)}>
-              {Array.from({ length: 10 }, (_, i) => i + 1).map((n) => (
-                <button key={n} type="button" aria-label={`${k} ${n}`} aria-pressed={v === n} className={ghost === n ? "ghost" : ""} onClick={() => rate(k, n)}>{n}</button>
-              ))}
-            </div>
-          </div>
-        );
-      })}
+      <div className="hn-sliders">
+        {FEEL_KEYS.map((k) => (
+          <FeelSlider key={k} label={cap(k)} name={k} value={open?.[k]} ghost={open?.[k] == null ? st[k].last?.v : undefined}
+            word={(v) => wordOf(k, v)} color={COLOR[k]} inverted={k === "stress"} onChange={(n) => rate(k, n)} />
+        ))}
+      </div>
 
       {open && <div className="hn-doing">
         <div className="hn-head"><b>What were you up to?</b><em>{since ? `since ${clock(since)}` : "today"} · optional</em></div>

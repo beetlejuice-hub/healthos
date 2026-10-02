@@ -45,4 +45,11 @@ async function handle(route) {
   return json(404, { message: 'fake: ' + m + ' ' + p });
 }
 
-module.exports = { chromium, APP, OUT, handle, users, tables };
+/** Rate a feeling on the How now? slider the way a finger does: one tap at that value's spot on the track. */
+async function rate(pg, name, v) {
+  const t = pg.locator(`#feel [role=slider][data-name="${name}"]`);
+  await t.scrollIntoViewIfNeeded();
+  const b = await t.boundingBox();
+  await pg.mouse.click(b.x + ((v - 1) / 9) * b.width, b.y + b.height / 2);
+}
+module.exports = { rate, chromium, APP, OUT, handle, users, tables };

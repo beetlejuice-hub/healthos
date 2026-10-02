@@ -1,6 +1,6 @@
 /**
  * /now — just the check-in, for the "How now?" Home Screen icon and the How now? notifications:
- * open, tap a number per feeling, done. The full app is one tap away.
+ * open, tap or slide each feeling, done. The full app is one tap away.
  */
 
 import { HowNow } from "./HowNow";

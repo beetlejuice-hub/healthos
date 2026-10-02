@@ -1,6 +1,6 @@
 // Owner's 2 Oct list: exact weight (71,95 stays 71.95), stress shows in the log, a supplement taken
 // twice a day (L-theanine with each coffee) is ticked per slot.
-const { chromium, APP, OUT, handle } = require('./harness.cjs');
+const { chromium, APP, OUT, handle, rate } = require('./harness.cjs');
 
 (async () => {
   const b = await chromium.launch(); const errs = [];
@@ -21,8 +21,8 @@ const { chromium, APP, OUT, handle } = require('./harness.cjs');
 
   // Stress from the feel card shows up in the log line.
   await pg.goto(APP + '#today');
-  await pg.getByRole('button', { name: 'stress 6', exact: true }).click(); await pg.waitForTimeout(150);
-  await pg.getByRole('button', { name: 'mood 6', exact: true }).click(); await pg.waitForTimeout(150);
+  await rate(pg, 'stress', 6); await pg.waitForTimeout(150);
+  await rate(pg, 'mood', 6); await pg.waitForTimeout(150);
   await pg.goto(APP + '#log/food'); await pg.waitForTimeout(200);
   const feelLine = await pg.locator('.li', { hasText: 'Feeling' }).first().innerText();
   check(`the log line shows stress (${feelLine.replace(/\s+/g, ' ')})`, /stress \d/.test(feelLine) && /mood \d/.test(feelLine));

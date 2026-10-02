@@ -1,6 +1,6 @@
 // A "why?" note on a check-in, and the nightly read-back that takes it seriously (owner, 2 Oct).
 // Fake /api/ai: no credits spent; we check what the AI was sent, and what the app shows.
-const { chromium, APP, OUT, handle } = require('./harness.cjs');
+const { chromium, APP, OUT, handle, rate } = require('./harness.cjs');
 const calls = [];
 const NIGHT = { summary: 'A steady day with one spike: stress hit 8 at 14:00, right when the deadline you wrote about landed.', happened: ['Coffee at 08:10, nothing after', 'Check-in at 14:00: mood 4, stress 8'], notes: 'You said the stress was the deadline at work — the 8 fits that, and nothing else in your log points elsewhere.', change: [{ what: 'A 10-minute walk before the next deadline block.', why: 'Your stress tends to ease after time outside.' }] };
 const ANSWERS = { night: () => NIGHT, digest: () => ({ greeting: 'Hi', items: [] }), questions: () => ({ questions: [] }) };
@@ -24,8 +24,8 @@ const ANSWERS = { night: () => NIGHT, digest: () => ({ greeting: 'Hi', items: []
   await pg.reload(); await pg.waitForSelector('text=Settings');
 
   // 14:00 — rate, then say why.
-  await pg.getByRole('button', { name: 'mood 4', exact: true }).click();
-  await pg.getByRole('button', { name: 'stress 8', exact: true }).click(); await pg.waitForTimeout(150);
+  await rate(pg, 'mood', 4);
+  await rate(pg, 'stress', 8); await pg.waitForTimeout(150);
   const note = pg.getByLabel('Why? A note on this check-in');
   check('after rating: an optional "Why?" field', await note.count() === 1);
   await note.fill('deadline at work'); await note.press('Enter'); await pg.waitForTimeout(200);
