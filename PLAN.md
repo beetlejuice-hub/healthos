@@ -250,3 +250,7 @@ email get Dev tools (`#dev`): raw entry editor, generate/remove sample, wipe acc
    real effect" — the owner's own example, which a plain average credits with ~+0.9 — flagged ≤ 10%;
    any false finding ~8–10% of months. Noticed cards (area "feel") + "still checking". Tried and
    dropped: carry-over and time-of-day terms (no measurable gain on the bench).
+20. [x] **Body fat from the smart scale** (2 Oct; owner: "yes add that box"). Optional "Body fat %" next to
+   both weigh-ins (`fatPct` on the weight entry). Shown only as a 2-week average (3+ readings, a 5-point
+   one-off left out), with the change vs the 2 weeks before as fat kg / lean kg when it's bigger than
+   the scale's own swing (`lib/bodyfat.ts`). The scale's other numbers: not tracked (mostly formulas).

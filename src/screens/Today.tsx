@@ -14,6 +14,7 @@ import { atMinute, clock, dayLabel, localDay, MIN } from "../lib/time";
 import { go } from "../lib/nav";
 import type { Drink, Entry, EntryOf, Slot } from "../lib/types";
 import { answerSlot, SLOTS, slotsOf } from "../lib/types";
+import { parseFat } from "../lib/bodyfat";
 
 /**
  * The current time, re-read on every render and re-rendered every `ms` while open. Read fresh
@@ -360,12 +361,15 @@ function WorkoutRunning({ now }: { now: number }) {
 /** Weigh in right from Today: yesterday's weight is pre-filled, so it's usually one small edit. */
 function WeighIn({ lastKg }: { lastKg: number | null }) {
   const [kg, setKg] = useState(lastKg != null ? String(lastKg) : "");
+  const [fat, setFat] = useState("");
   const n = Number(kg.replace(",", "."));
-  const ok = n > 20 && n < 400;
+  const fatPct = parseFat(fat);
+  const ok = n > 20 && n < 400 && (fat.trim() === "" || fatPct != null);
   return (
     <div className="weighin">
       <input inputMode="decimal" aria-label="Weight in kg" value={kg} placeholder="kg" onChange={(e) => setKg(e.target.value)} />
-      <button type="button" className="pill-btn pri" disabled={!ok} onClick={() => { const e = act.addEntry({ kind: "weight", at: Date.now(), kg: Math.round(n * 100) / 100 }); offerUndo([e.id], `Logged ${Math.round(n * 100) / 100} kg`); }}>Log kg</button>
+      <input inputMode="decimal" aria-label="Body fat % (optional)" value={fat} placeholder="fat %" className="fatin" onChange={(e) => setFat(e.target.value)} />
+      <button type="button" className="pill-btn pri" disabled={!ok} onClick={() => { const e = act.addEntry({ kind: "weight", at: Date.now(), kg: Math.round(n * 100) / 100, ...(fatPct != null ? { fatPct } : {}) }); offerUndo([e.id], `Logged ${Math.round(n * 100) / 100} kg`); }}>Log kg</button>
     </div>
   );
 }

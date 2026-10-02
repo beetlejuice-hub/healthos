@@ -465,3 +465,11 @@ a { color: inherit; }
 .pill-btn.danger:disabled { opacity: .45; }
 .card.reset { border: 1px solid #6b2a2a55; }
 .ok-note { color: var(--ok); }
+/* body fat (smart scale) */
+.row3w { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto; gap: 8px; }
+.fatcard { display: grid; gap: 4px; padding: 10px 0 2px; border-top: 1px solid #ffffff0d; }
+.fatcard h3 { margin: 0; }
+.fatnum { margin: 0; display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; }
+.fatnum b { font-size: 22px; font-weight: 700; }
+.fatnum span { font-size: 12.5px; color: var(--c-ink-2); }
+.weighin .fatin { max-width: 92px; }

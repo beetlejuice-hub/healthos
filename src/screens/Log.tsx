@@ -20,6 +20,7 @@ import { amountText, approx, countText, gramsOf, macrosOfLine, mealFood, step, u
 import { extractTime, matchDrink, parseMeal, readAmount, tokens, type DrinkLine } from "../lib/quickadd";
 import { fromDatabase } from "../lib/fillin";
 import { caffeinePer100, drinkFromFood, sizesFor } from "../lib/drinkdb";
+import { bodyFat, FAT, parseFat } from "../lib/bodyfat";
 import { findBarcode, type Lookup } from "../lib/barcode";
 import { ScanButton, Scanner } from "../components/Scanner";
 
@@ -742,7 +743,11 @@ function BodyTab({ done }: { done: (m: string) => void }) {
   const all = entries.filter((e): e is EntryOf<"weight"> => e.kind === "weight");
   const weights = all.slice(-7).reverse();
   const [kg, setKg] = useState(weights[0] ? String(weights[0].kg) : "");
+  const [fat, setFat] = useState("");
   const n = Number(kg.replace(",", "."));
+  const fatPct = parseFat(fat);
+  const fatBad = fat.trim() !== "" && fatPct == null;
+  const bf = bodyFat(entries, Date.now());
   // The last 30 days with the same trend line Noticed uses (typos and one-offs left out).
   const today = localDay(Date.now());
   const days = bodyDays(entries, addDays(today, -29), today);
@@ -752,19 +757,40 @@ function BodyTab({ done }: { done: (m: string) => void }) {
   return (
     <div className="card">
       <h3>Weight <span>morning, before food, is most comparable</span></h3>
-      <div className="row2">
+      <div className="row3w">
         <label className="field">kg<input inputMode="decimal" value={kg} onChange={(e) => setKg(e.target.value)} /></label>
+        <label className="field">Body fat %<input inputMode="decimal" value={fat} placeholder="optional" onChange={(e) => setFat(e.target.value)} aria-invalid={fatBad} /></label>
         <div style={{ display: "flex", alignItems: "end" }}>
-          <button type="button" className="pill-btn pri" disabled={!(n > 20 && n < 400)} onClick={() => { const e = act.addEntry({ kind: "weight", at: Date.now(), kg: Math.round(n * 100) / 100 }); offerUndo([e.id], `Logged ${n} kg`); done(`Logged ${n} kg`); }}>Log weight</button>
+          <button type="button" className="pill-btn pri" disabled={!(n > 20 && n < 400) || fatBad} onClick={() => { const e = act.addEntry({ kind: "weight", at: Date.now(), kg: Math.round(n * 100) / 100, ...(fatPct != null ? { fatPct } : {}) }); setFat(""); offerUndo([e.id], `Logged ${n} kg`); done(`Logged ${n} kg`); }}>Log weight</button>
         </div>
       </div>
+      {fatBad && <p className="err">Body fat should be a percentage between {FAT.lo} and {FAT.hi}, like 20.1.</p>}
       {pts.length >= 2 && <div className="wchart">
         <LineChart label="Weight, last 30 days" h={130} lo={Math.floor(Math.min(...ys) - 0.5)} hi={Math.ceil(Math.max(...ys) + 0.5)} xs={[0, 29]} yfmt={(v) => v.toFixed(1)}
           xlabels={[[0, "30 days ago"], [29, "today"]]}
           series={[{ pts, color: "var(--wt)", dots: true, line: false, dotOpacity: 0.9 }, ...(trend ? [{ pts: trend.fit, color: "var(--c-ink)", width: 1.5 }] : [])]} />
         <p className="note">{trend ? `Trend ${trend.perDay * 7 >= 0 ? "+" : "−"}${Math.abs(trend.perDay * 7).toFixed(2)} kg a week · trend weight ${trend.nowKg.toFixed(1)} kg` : `The trend line appears after 8 weigh-ins over 2 weeks (${pts.length} so far).`}</p>
       </div>}
-      <div className="list">{weights.map((w) => <div className="li" key={w.id}><span>{w.kg} kg<small>{localDay(w.at)} {clock(w.at)}</small></span><button type="button" className="x" aria-label="Delete" onClick={() => act.removeEntry(w.id)}>×</button></div>)}</div>
+      <BodyFatCard s={bf} />
+      <div className="list">{weights.map((w) => <div className="li" key={w.id}><span>{w.kg} kg{w.fatPct != null ? <em> · {w.fatPct}% fat</em> : null}<small>{localDay(w.at)} {clock(w.at)}</small></span><button type="button" className="x" aria-label="Delete" onClick={() => act.removeEntry(w.id)}>×</button></div>)}</div>
+    </div>
+  );
+}
+
+/** Body fat from the scale, only as 2-week averages: one reading swings too much to mean anything. */
+function BodyFatCard({ s }: { s: ReturnType<typeof bodyFat> }) {
+  const sgn = (v: number, d = 1) => `${v >= 0 ? "+" : "−"}${Math.abs(v).toFixed(d)}`;
+  if (!s.now && !s.have) return null;
+  return (
+    <div className="fatcard">
+      <h3>Body fat <span>scale estimate · 2-week average</span></h3>
+      {!s.now ? <p className="note">{s.have} of {FAT.minReadings} readings in the last 2 weeks. One reading swings 1–2 points with water, so only the average is shown.</p> : <>
+        <p className="fatnum"><b className="num">{s.now.pct.toFixed(1)}%</b> <span>about {s.now.fatKg.toFixed(1)} kg fat, {s.now.leanKg.toFixed(1)} kg everything else · {s.now.n} readings</span></p>
+        {s.change ? <p className="note">{s.change.clear
+          ? <>{sgn(s.change.pts)} points vs the 2 weeks before: about <b>{sgn(s.change.fatKg)} kg fat</b> and <b>{sgn(s.change.leanKg)} kg lean</b>.</>
+          : <>{sgn(s.change.pts)} points vs the 2 weeks before, which is within the scale's own swing ({sgn(s.change.lo)} to {sgn(s.change.hi)}), so not a real change yet.</>}</p>
+          : <p className="note">The change shows once the 2 weeks before also have {FAT.minReadings}+ readings.</p>}
+      </>}
     </div>
   );
 }
@@ -777,7 +803,7 @@ const describe = (e: Entry, supps: Supplement[]): [string, string] => {
     case "drink": return [e.name, [e.caffeineMg ? `${e.caffeineMg} mg caffeine` : "", e.alcoholG ? `${e.alcoholG} g alcohol` : "", e.kcal > 5 ? `${e.kcal} kcal` : ""].filter(Boolean).join(" · ")];
     case "supp": return [supps.find((s) => s.id === e.suppId)?.name ?? "Supplement", e.status];
     case "set": return [e.exercise, `${e.kg} kg × ${e.reps}`];
-    case "weight": return ["Weight", `${e.kg} kg`];
+    case "weight": return ["Weight", `${e.kg} kg${e.fatPct != null ? ` · ${e.fatPct}% fat` : ""}`];
     // Only the sliders you set, all of them (stress was missing from this line).
     case "feel": return ["Feeling", (["energy", "mood", "focus", "stress", "anxiety"] as const).filter((k) => e[k] != null).map((k) => `${k} ${e[k]}`).join(" · ") || "a note"];
     case "answer": return [e.question, e.answer];

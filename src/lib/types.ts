@@ -96,7 +96,7 @@ export type Entry =
   | { id: string; kind: "drink"; at: number; drinkId?: string; name: string; ml: number; caffeineMg: number; alcoholG: number; kcal: number; p?: number; c?: number; f?: number }
   | { id: string; kind: "supp"; at: number; suppId: string; status: "taken" | "skipped"; /** Which of its slots this answers (older answers: its first). */ slot?: Slot }
   | { id: string; kind: "set"; at: number; workoutId: string; exercise: string; kg: number; reps: number }
-  | { id: string; kind: "weight"; at: number; kg: number }
+  | { id: string; kind: "weight"; at: number; kg: number; /** From a smart scale, optional: its body-fat estimate. */ fatPct?: number }
   | { id: string; kind: "feel"; at: number; energy?: number; mood?: number; focus?: number; anxiety?: number; stress?: number; note?: string }
   /** An answer to one of the AI's questions; repeated ones (same key) become a daily signal. */
   | { id: string; kind: "answer"; at: number; key: string; question: string; answer: string };
