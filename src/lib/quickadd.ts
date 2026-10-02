@@ -9,6 +9,7 @@ import type { Drink, Food } from "./types";
 import { BASIC_FOODS } from "./foods-basic";
 import { DRINKS } from "./drinks";
 import { unitsOf, type Line } from "./units";
+import { convert, cookKind, cookState } from "./cooked";
 
 export const tokens = (s: string) => fold(s).split(" ").filter(Boolean);
 const fold = (s: string) => s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[^a-z0-9½¼¾.,]+/g, " ").trim();
@@ -31,6 +32,8 @@ const UNIT_WORDS: Record<string, string[]> = {
 };
 const GRAM_WORDS = new Set(["g", "gr", "gram", "grams", "gramm", "ml"]);
 const FILLER = new Set(["of", "some", "x"]);
+/** How it was made, not what it is: "1 cooked salmon" is salmon, eaten cooked. (Breaded/rántott is a different food.) */
+const PREP = new Set(["cooked", "boiled", "roasted", "grilled", "baked", "fried", "steamed", "pan", "fott", "fozott", "sult", "grillezett", "parolt"]);
 
 /** Drinks typed in the same sentence ("2 eggs, toast, coffee") are logged as drinks — caffeine and alcohol count. */
 export type DrinkLine = { drink: Drink; count: number };
@@ -172,7 +175,14 @@ export function parseItem(text: string, mine: Food[] = [], drinks: Drink[] = [],
   if (!toks.length) return { text, line: null, unsure: true, alternatives: [] };
   const drink = grams == null ? matchDrink(toks, drinks) : null;
   if (drink) return { text, line: null, drink: { drink, count: Math.round((count ?? 1) * size * 4) / 4 }, unsure: false, alternatives: [] };
+  if (toks.every((t) => PREP.has(t))) return { text, line: null, unsure: true, alternatives: [] };
   let found = candidates(toks, mine);
+  // "cooked salmon" when only "Salmon, raw" is known: find salmon, then switch it to cooked below.
+  let prepared = false;
+  if (!found.length) {
+    const bare = toks.filter((t) => !PREP.has(t));
+    if (bare.length < toks.length) { found = candidates(bare, mine); prepared = found.length > 0; if (prepared) toks = bare; }
+  }
   // Words no food knows ("normal", "homemade", typos) are dropped rather than sinking the match.
   let ignored: string[] = [];
   if (!found.length) {
@@ -183,7 +193,8 @@ export function parseItem(text: string, mine: Food[] = [], drinks: Drink[] = [],
   }
   if (!found.length) return { text, line: null, unsure: true, alternatives: [] };
   const [best] = found;
-  const food = best.food;
+  const kind = prepared ? cookKind(best.food) : null;
+  const food = kind && cookState(best.food, kind) === "uncooked" ? convert(best.food, kind, "cooked") : best.food;
   const units = unitsOf(food);
   let line: Line;
   if (grams != null) line = { food, count: 1, unit: null, grams };

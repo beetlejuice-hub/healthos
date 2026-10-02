@@ -3,9 +3,12 @@
  * ~360. Package labels are for the dry (or raw) product; a plate is weighed cooked. So pasta, rice and
  * meat lines get a "Weighed: dry · cooked" switch that converts the values by how much the food gains
  * (water) or loses (meat) in cooking. Factors = cooked weight ÷ uncooked weight, typical values.
+ * When the built-in list has measured values for the other version ("Salmon, cooked": USDA 206 kcal),
+ * those win over the factor — a lean-meat factor made cooked salmon 277 kcal/100 g.
  */
 
 import type { Food } from "./types";
+import { BASIC_FOODS } from "./foods-basic";
 
 export type CookKind = "pasta" | "rice" | "meat";
 export type CookState = "uncooked" | "cooked";
@@ -47,8 +50,12 @@ const r1 = (v: number) => Math.round(v * 10) / 10;
 export function convert(f: Food, k: CookKind, to: CookState): Food {
   const from = cookState(f, k);
   if (from === to) return f;
-  const x = to === "cooked" ? 1 / FACTOR[k] : FACTOR[k];
   const base = f.name.replace(new RegExp(`[,\\s]*${COOKED.source}`, "gi"), "").replace(new RegExp(`[,\\s]*${UNCOOKED.source}`, "gi"), "").trim();
+  if (f.source === "basic") {
+    const twin = BASIC_FOODS.find((b) => b.name === `${base}, ${WORD[k][to]}`);
+    if (twin) return twin;
+  }
+  const x = to === "cooked" ? 1 / FACTOR[k] : FACTOR[k];
   return {
     ...f,
     id: `${f.id.replace(/~(cooked|uncooked)$/, "")}${to === "cooked" ? "~cooked" : "~uncooked"}`,

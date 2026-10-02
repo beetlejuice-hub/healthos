@@ -43,6 +43,14 @@ const HITS = [P('1', 'Spagetti', 'Colavita', 355), P('2', 'Spagetti', 'Barilla',
   const line = await pg.locator('.bline').first().innerText(), cooked = await kcalOf();
   check(`switching to cooked: same weight, ~2.25× fewer kcal (${dry} → ${cooked})`, /Pasta, cooked/.test(line) && cooked < dry / 2 && cooked > dry / 2.6);
   await pg.screenshot({ path: OUT + 'searchpass-cooked.png', fullPage: false });
+
+  // Owner, 2 Oct: "1 cooked salmon, 2 slices of bread" came out as cod + raw salmon, 420 kcal.
+  for (let i = await pg.locator('.bline button.x').count(); i > 0; i--) await pg.locator('.bline button.x').first().click();
+  await pg.getByLabel('Type what you ate').fill('1 cooked salmon, 2 slices of bread'); await pg.getByRole('button', { name: 'Add', exact: true }).click();
+  await pg.waitForTimeout(300);
+  const lines = await pg.locator('.bline').allInnerTexts();
+  check(`cooked salmon is one cooked line, ~220 kcal for a fillet (${lines.map((l) => l.split('\n')[0]).join(' | ')})`, lines.length === 2 && /Salmon, cooked/.test(lines[0]) && /≈\s*2[0-3]\d\s*kcal/.test(lines[0]) && !/Cod/.test(lines.join()));
+  await pg.screenshot({ path: OUT + 'searchpass-salmon.png', fullPage: false });
   console.log('errors:', JSON.stringify(errs));
   await b.close();
 })().catch((e) => { console.log('CRASH', e.message); process.exit(1); });

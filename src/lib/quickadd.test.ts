@@ -142,3 +142,23 @@ describe("unknown words", () => {
     expect(parseItem("zzz mystery stew").line).toBeNull();
   });
 });
+
+describe("how it was made (owner, 2 Oct: '1 cooked salmon' came out 420 kcal)", () => {
+  it("'1 cooked salmon' is one salmon line with cooked reference values — not 'Cod, cooked' plus raw salmon", () => {
+    const r = parseMeal("1 cooked salmon, 2 slices of bread");
+    expect(r.map((p) => p.line?.food.name)).toEqual(["Salmon, cooked", "Bread, white"]);
+    expect(r[0].line?.food.per100.kcal).toBe(206); // USDA farmed Atlantic, dry heat
+    expect(r[0].line?.unit).toBe("fillet");
+  });
+  it("prep words in either language, and a prep word alone is not a food", () => {
+    for (const q of ["grilled salmon", "főtt lazac", "sült lazac"]) expect(parseItem(q).line?.food.name).toBe("Salmon, cooked");
+    expect(parseItem("sült csirkemell").line?.food.name).toBe("Chicken breast, cooked");
+    expect(parseItem("1 cooked").line).toBeNull();
+  });
+  it("a food of your own that's raw becomes cooked by the cooking factor", () => {
+    const mine = [{ id: "own:1", name: "Csirkemell filé Tesco", per100: { kcal: 105, p: 23, c: 0, f: 1.5 }, source: "custom" as const }];
+    const p = parseItem("grillezett tesco csirkemell", mine);
+    expect(p.line?.food.name).toBe("Csirkemell filé Tesco, cooked");
+    expect(p.line?.food.per100.kcal).toBe(140);
+  });
+});

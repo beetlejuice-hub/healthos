@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { convert, cookKind, cookState } from "./cooked";
 import type { Food } from "./types";
+import { BASIC_FOODS } from "./foods-basic";
 
 const F = (name: string, kcal: number, brand?: string): Food => ({ id: `off:${name}`, name, brand, per100: { kcal, p: 13, c: 72, f: 1.5 }, source: "off" });
 
@@ -37,5 +38,14 @@ describe("dry or cooked", () => {
     expect(back.per100.kcal).toBeCloseTo(357, 0);
     expect(back.name).toBe("Penne, dry");
     expect(convert(f, "pasta", "uncooked")).toBe(f);
+  });
+
+  it("uses measured values for the other version when the built-in list has them (salmon is not lean meat)", () => {
+    const raw = BASIC_FOODS.find((f) => f.name === "Salmon, raw")!;
+    const c = convert(raw, "meat", "cooked");
+    expect(c.name).toBe("Salmon, cooked");
+    expect(c.per100.kcal).toBe(206); // the factor alone said 277
+    expect(convert(c, "meat", "uncooked")).toBe(raw);
+    expect(convert(BASIC_FOODS.find((f) => f.name === "Chicken breast, raw")!, "meat", "cooked").per100.kcal).toBe(165);
   });
 });

@@ -288,3 +288,19 @@ email get Dev tools (`#dev`): raw entry editor, generate/remove sample, wipe acc
    shortcut in the main manifest. How now? notifications open /now. Also fixed: iPhone ignores SVG
    Home Screen icons — PNG icons (`icon-180/512.png`, `now-180/512.png`) added. iPhone may keep a
    Home Screen app's sign-in separate: sign in once in the new icon.
+26. [x] **"1 cooked salmon" = cooked salmon** (2 Oct; owner: *"not 420 kcal full"*). Two bugs: the parser
+   needed every word in a food's name, so "cooked salmon" split into "1 cooked" → Cod, cooked + raw
+   salmon; and raw → cooked used the lean-meat factor (×1/0.75), making salmon 277 kcal/100 g. Now prep
+   words (cooked, grilled, főtt, sült…) are how it was made, not part of the name (`quickadd.ts` PREP),
+   and converting prefers the built-in list's measured twin (`cooked.ts`): "Salmon, cooked" = USDA
+   206 kcal/100 g, fillet 105 g / large 170 g.
+27. [ ] **Log on an earlier day** (claimed 2 Oct — `Log.tsx` When picker). Not the default: today's
+   chips stay; a small "Earlier day…" opens a date. Food, drinks, stack.
+28. [ ] **A note on a check-in + the nightly digest** (claimed 2 Oct — `HowNow.tsx`, `feel.ts`,
+   `ai/tasks.ts`, `ai/context.ts`). Optional "why?" note saved on the feel entry, shown in the log, read
+   by the AI; an evening digest (what happened, what goes with what, one thing to try tomorrow).
+29. [ ] **Caffeine & sleep, three separate questions** (claimed 2 Oct — `caffeine.ts`, new
+   `caffeine-sleep.ts`, `today.ts` cut-off item, `Today.tsx` caffeine line/card). In you at bed / could
+   affect sleep / likely affects *your* sleep — tiers with configurable cut-points, own-data learning.
+30. [ ] **Graph + feelings visual prototypes** (claimed 2 Oct — artifact only; nothing in the app until
+   the owner picks).
