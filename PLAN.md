@@ -323,7 +323,12 @@ email get Dev tools (`#dev`): raw entry editor, generate/remove sample, wipe acc
    graph should be interactive...its good for now like this.."* → when built: the master graph becomes
    D (instrument panel: lanes, one cursor reading every lane, overview to drag) with feelings drawn as
    A (dots at real check-ins, joined only within 4 h, day range band, notes as rings), fully interactive.
-   Parked for now at the owner's word; nothing built yet.
+   Built 3 Oct (owner: "go"): `MasterGraph.tsx` + `lib/feelgraph.ts` — feelings share one lane (dots at
+   real check-ins, lines only within 4 h, day band when one feeling is on, notes ringed); point at a dot
+   → the readout shows that check-in with what you were up to and your note; sleep-rating lane; 30/100
+   mg lines on caffeine; nights shaded; meal kcal labels ≤3 days; an overview strip of all history
+   (drag the window or tap to jump) replaces the scroll slider; on a phone the readout sits right under
+   the chart. "Show on graph" unchanged. e2e `graph.cjs` (desktop + phone).
 31. [x] **Mobile pass 1** (2 Oct; owner's screenshot: text ghosting under the tab bar). Tab bar solid, per-screen
    colour (Workout/Insights), short fade above it; card headers wrap their hint under the title instead
    of squeezing it; a check-in's log line names what you were up to, your own word included.

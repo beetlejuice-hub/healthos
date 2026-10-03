@@ -8,6 +8,7 @@ import type { Point } from "./series";
 import type { Settings } from "./store";
 import { caffeineAt, cleared, type Dose } from "./caffeine";
 import { bedtimeOn } from "./caffeine-sleep";
+import type { Check } from "./feelgraph";
 import { alcoholCurve, type AlcoholDose } from "./alcohol";
 import { atMinute, localDay, minuteOfDay, addDays, startOfDay, DAY, MIN } from "./time";
 import { correlation, difference, mean, median, sd, type Range } from "./stats";
@@ -34,6 +35,10 @@ export type Lanes = {
   stress: Point[];
   /** Calories per logged day, placed at noon. */
   kcalDay: Point[];
+  /** Every check-in as given (feelings drawn as dots, joined only within hours: lib/feelgraph). */
+  checks: Check[];
+  /** Morning sleep ratings (1–10) at the time they were given. */
+  sleep: Point[];
 };
 
 /** Continuous lanes on a 10-minute grid from the first entry (or 14 days back) to `now`. */
@@ -67,6 +72,8 @@ export function lanes(entries: Entry[], workouts: Workout[], supplements: Supple
     mood: of(entries, "feel").filter((f) => f.mood != null).map((f) => [f.at, f.mood!]),
     focus: of(entries, "feel").filter((f) => f.focus != null).map((f) => [f.at, f.focus!]),
     stress: of(entries, "feel").filter((f) => f.stress != null).map((f) => [f.at, f.stress!]),
+    checks: of(entries, "feel").map((f) => ({ at: f.at, energy: f.energy, mood: f.mood, focus: f.focus, stress: f.stress, note: f.note, doing: f.doing })),
+    sleep: of(entries, "sleep").filter((x) => x.rating != null).map((x) => [x.at, x.rating!] as Point),
     kcalDay: (() => { const m = new Map<string, number>(); for (const f of of(entries, "food")) m.set(localDay(f.at), (m.get(localDay(f.at)) ?? 0) + f.macros.kcal); return [...m.entries()].sort().map(([d, k]) => [atMinute(d, 12 * 60), k] as Point); })(),
   };
 }

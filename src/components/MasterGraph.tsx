@@ -3,6 +3,8 @@ import type { Lanes } from "../lib/insights";
 import { buckets, valueAt, type Point } from "../lib/series";
 import { atMinute, clock, dayLabel, DAY, HOUR, MIN } from "../lib/time";
 import type { Supplement } from "../lib/types";
+import { dayRanges, feelRuns, feelText, latestCheck, nearestCheck, type Check, type FeelK } from "../lib/feelgraph";
+import { CAF_SLEEP } from "../lib/caffeine-sleep";
 
 /**
  * One timeline for everything (owner: "one master graph that has everything on it and things can
@@ -11,7 +13,8 @@ import type { Supplement } from "../lib/types";
  * time; ⌘/Ctrl + wheel zooms. Canvas, because a year of data is too many SVG nodes.
  */
 
-type Kind = "series" | "daily" | "sticks" | "blocks" | "ticks" | "wearable";
+/** "feel": one of the four feelings — all that are on are drawn together in one Feelings lane (prototype A). "chips": sleep ratings. */
+type Kind = "series" | "daily" | "sticks" | "blocks" | "ticks" | "wearable" | "feel" | "feelrow" | "chips";
 type Lane = { id: string; name: string; unit: string; color: string; h: number; kind: Kind; pts?: Point[]; lo?: number; hi?: number; area?: boolean; overlay?: boolean };
 
 const cssVar = (v: string) => getComputedStyle(document.documentElement).getPropertyValue(v).trim() || "#888";
@@ -21,7 +24,7 @@ const LEFT = 104, RIGHT = 46, TOP = 22, GAP = 7;
 export type GraphFocus = { key: string; lanes: string[]; days: string[] };
 
 export function MasterGraph({ data, supplements, focus }: { data: Lanes; supplements: Supplement[]; focus?: GraphFocus | null }) {
-  const C = useMemo(() => ({ caf: cssVar("--caf"), alc: cssVar("--alc"), kcal: cssVar("--kcal"), gym: cssVar("--gym"), supp: cssVar("--supp"), wt: cssVar("--wt"), mood: cssVar("--mood"), hr: cssVar("--hr"), line: cssVar("--i-line"), ink: cssVar("--i-ink"), ink2: cssVar("--i-ink-2"), dim: cssVar("--i-dim") }), []);
+  const C = useMemo(() => ({ ok: cssVar("--ok"), caf: cssVar("--caf"), alc: cssVar("--alc"), kcal: cssVar("--kcal"), gym: cssVar("--gym"), supp: cssVar("--supp"), wt: cssVar("--wt"), mood: cssVar("--mood"), hr: cssVar("--hr"), line: cssVar("--i-line"), ink: cssVar("--i-ink"), ink2: cssVar("--i-ink-2"), dim: cssVar("--i-dim") }), []);
   const lanes: Lane[] = useMemo(() => {
     const range = (pts: Point[], pad: number, floor?: [number, number]): [number, number] => {
       if (!pts.length) return floor ?? [0, 1];
@@ -39,15 +42,16 @@ export function MasterGraph({ data, supplements, focus }: { data: Lanes; supplem
       { id: "gym", name: "Workouts", unit: "", color: C.gym, h: 20, kind: "blocks" },
       { id: "supps", name: "Supplements", unit: "", color: C.supp, h: Math.max(20, supplements.length * 7), kind: "ticks" },
       { id: "wt", name: "Weight", unit: "kg", color: C.wt, h: 36, kind: "daily", pts: data.weight, lo: wLo, hi: wHi, overlay: true },
-      { id: "energy", name: "Energy (you)", unit: "/10", color: C.mood, h: 32, kind: "daily", pts: data.energy, lo: 0, hi: 10, overlay: true },
-      { id: "mood", name: "Mood (you)", unit: "/10", color: C.ink2, h: 32, kind: "daily", pts: data.mood, lo: 0, hi: 10, overlay: true },
-      { id: "focus", name: "Focus (you)", unit: "/10", color: C.supp, h: 32, kind: "daily", pts: data.focus, lo: 0, hi: 10, overlay: true },
-      { id: "stress", name: "Stress (you)", unit: "/10", color: C.hr, h: 32, kind: "daily", pts: data.stress, lo: 0, hi: 10, overlay: true },
+      { id: "energy", name: "Energy (you)", unit: "/10", color: C.gym, h: 0, kind: "feel", pts: data.energy, lo: 0, hi: 10, overlay: true },
+      { id: "mood", name: "Mood (you)", unit: "/10", color: C.mood, h: 0, kind: "feel", pts: data.mood, lo: 0, hi: 10, overlay: true },
+      { id: "focus", name: "Focus (you)", unit: "/10", color: C.supp, h: 0, kind: "feel", pts: data.focus, lo: 0, hi: 10, overlay: true },
+      { id: "stress", name: "Stress (you)", unit: "/10", color: C.hr, h: 0, kind: "feel", pts: data.stress, lo: 0, hi: 10, overlay: true },
+      { id: "slept", name: "Sleep rating", unit: "/10", color: C.ok, h: 22, kind: "chips", pts: data.sleep, lo: 1, hi: 10 },
       { id: "kcal", name: "Calories per day", unit: "kcal", color: C.kcal, h: 36, kind: "daily", pts: data.kcalDay, lo: 0, hi: Math.max(3000, Math.ceil(Math.max(0, ...data.kcalDay.map((p) => p[1])) / 500) * 500), overlay: true },
     ];
   }, [data, supplements.length, C]);
 
-  const [on, setOn] = useState<Record<string, boolean>>({ caf: true, alc: true, meals: true, gym: true, supps: false, wt: true, energy: true, mood: false, focus: false, stress: false, kcal: false });
+  const [on, setOn] = useState<Record<string, boolean>>({ caf: true, alc: true, meals: true, gym: true, supps: false, wt: true, energy: true, mood: true, focus: false, stress: true, slept: true, kcal: false });
   const [over, setOver] = useState<Record<string, boolean>>({ energy: false });
   const [view, setView] = useState({ t1: data.to + 90 * MIN, span: 3 * DAY });
   const [hover, setHover] = useState<number | null>(null);
@@ -84,8 +88,18 @@ export function MasterGraph({ data, supplements, focus }: { data: Lanes; supplem
   const host = visible.find((l) => l.kind === "series");
   const drawn = visible.filter((l) => !(over[l.id] && host && l.id !== host.id));
   const overlays = host ? visible.filter((l) => over[l.id] && l.id !== host.id) : [];
-  let y = TOP; const layout = drawn.map((l) => { const r = { l, y }; y += l.h + GAP; return r; });
+  // The feelings that are on share one lane, placed where the first of them sits in the list.
+  const feels = drawn.filter((l) => l.kind === "feel");
+  const FEEL_ROW: Lane = { id: "feel", name: "Feelings", unit: "1–10", color: C.mood, h: 84, kind: "feelrow", lo: 1, hi: 10 };
+  const rowsDrawn = drawn.flatMap((l) => (l.kind !== "feel" ? [l] : l === feels[0] ? [FEEL_ROW] : []));
+  let y = TOP; const layout = rowsDrawn.map((l) => { const r = { l, y }; y += l.h + GAP; return r; });
   const H = y + 4;
+  const feelRow = layout.find((r) => r.l.id === "feel");
+  const [hoverY, setHoverY] = useState<number | null>(null);
+  // The check-in under the finger or cursor (within ~14 px), when pointing inside the Feelings lane.
+  const pwNow = Math.max(10, w - LEFT - RIGHT);
+  const hovered: Check | null = hover != null && hoverY != null && feelRow && hoverY >= feelRow.y - 4 && hoverY <= feelRow.y + feelRow.l.h + 4
+    ? nearestCheck(data.checks.filter((c) => feels.some((f) => c[f.id as FeelK] != null)), hover, (14 / pwNow) * view.span) : null;
 
   useEffect(() => {
     const el = cv.current; if (!el) return;
@@ -110,6 +124,12 @@ export function MasterGraph({ data, supplements, focus }: { data: Lanes; supplem
     // Days a pattern rests on, shaded behind every lane.
     if (focus) for (const d of focus.days) { const a = X(atMinute(d, 0)), b = X(atMinute(d, 24 * 60)); if (b < LEFT || a > w - RIGHT) continue; ctx.fillStyle = C.ink; ctx.globalAlpha = .07; ctx.fillRect(Math.max(LEFT, a), TOP - 4, Math.min(w - RIGHT, b) - Math.max(LEFT, a), H - TOP); ctx.globalAlpha = 1; }
 
+    // Nights (23:00–07:00) faintly shaded, so the gaps between check-ins read as sleep, not missing data.
+    for (let d = new Date(t0 - DAY).setHours(23, 0, 0, 0); d < view.t1; d += DAY) {
+      const a = Math.max(LEFT, X(d)), b = Math.min(w - RIGHT, X(d + 8 * HOUR));
+      if (b > a && view.span <= 21 * DAY) { ctx.fillStyle = C.ink; ctx.globalAlpha = .035; ctx.fillRect(a, TOP - 4, b - a, H - TOP); ctx.globalAlpha = 1; }
+    }
+
     const yOf = (top: number, h: number, lo: number, hi: number, v: number) => top + h - ((Math.max(lo, Math.min(hi, v)) - lo) / (hi - lo || 1)) * h;
     const drawSeries = (l: Lane, top: number, h: number, asOverlay: boolean) => {
       const lo = l.lo ?? 0, hi = l.hi ?? 1, pts = l.pts ?? [];
@@ -125,6 +145,16 @@ export function MasterGraph({ data, supplements, focus }: { data: Lanes; supplem
         ctx.beginPath(); let pen = false;
         b.forEach((k, i) => { if (!k) { pen = false; return; } const x = LEFT + i, yy = Y(k.mean); if (pen) ctx.lineTo(x, yy); else ctx.moveTo(x, yy); pen = true; });
         ctx.stroke(); ctx.setLineDash([]);
+      } else if (l.kind === "feel") {
+        const Y = (v: number) => yOf(top, h, lo, hi, v);
+        ctx.strokeStyle = l.color; ctx.fillStyle = l.color; ctx.lineWidth = 1.5; if (asOverlay) ctx.setLineDash([4, 3]);
+        for (const run of feelRuns(data.checks, l.id as FeelK)) {
+          if (run[run.length - 1][0] < t0 - HOUR || run[0][0] > view.t1 + HOUR) continue;
+          ctx.beginPath(); run.forEach((p, i) => (i ? ctx.lineTo(X(p[0]), Y(p[1])) : ctx.moveTo(X(p[0]), Y(p[1])))); ctx.stroke();
+          const r = view.span <= 7 * DAY ? 3.6 : view.span <= 30 * DAY ? 2.6 : 1.6;
+          run.forEach((p) => { ctx.beginPath(); ctx.arc(X(p[0]), Y(p[1]), r, 0, 7); ctx.fill(); });
+        }
+        ctx.setLineDash([]); ctx.lineWidth = 1;
       } else {
         const inView = pts.filter((p) => p[0] >= t0 - 3 * DAY && p[0] <= view.t1 + 3 * DAY);
         const Y = (v: number) => yOf(top, h, lo, hi, v);
@@ -140,16 +170,38 @@ export function MasterGraph({ data, supplements, focus }: { data: Lanes; supplem
       ctx.font = "10px IBM Plex Mono, monospace"; ctx.fillStyle = C.dim; if (l.unit) ctx.fillText(l.unit, 8, top + 20);
       ctx.strokeStyle = C.line; ctx.beginPath(); ctx.moveTo(LEFT, top + l.h + .5); ctx.lineTo(w - RIGHT, top + l.h + .5); ctx.stroke();
       ctx.save(); ctx.beginPath(); ctx.rect(LEFT, top - 2, pw, l.h + 4); ctx.clip();
-      if (l.kind === "wearable") { ctx.fillStyle = C.dim; ctx.textAlign = "left"; ctx.fillText("Connect a wearable to fill this lane", LEFT + 8, top + l.h / 2); }
+      if (l.kind === "wearable") { ctx.fillStyle = C.dim; ctx.textAlign = "left"; ctx.fillText("Connect a wearable", LEFT + 8, top + l.h / 2); }
       else if (l.kind === "series" || l.kind === "daily") drawSeries(l, top, l.h, false);
-      else if (l.kind === "sticks") data.meals.forEach((m) => { if (m.at < t0 || m.at > view.t1) return; const x = X(m.at), bh = Math.min(l.h, (m.kcal / 1100) * l.h); ctx.fillStyle = l.color; ctx.fillRect(x - 1, top + l.h - bh, 2, bh); if (view.span <= 2 * DAY) { ctx.fillStyle = C.ink2; ctx.textAlign = "left"; ctx.fillText(String(Math.round(m.kcal)), x + 4, top + l.h - bh + 5); } });
+      else if (l.kind === "sticks") data.meals.forEach((m) => { if (m.at < t0 || m.at > view.t1) return; const x = X(m.at), bh = Math.min(l.h, (m.kcal / 1100) * l.h), bw = view.span <= 3 * DAY ? 4 : 2; ctx.fillStyle = l.color; ctx.fillRect(x - bw / 2, top + l.h - bh, bw, bh); if (view.span <= 3 * DAY) { ctx.fillStyle = C.ink2; ctx.textAlign = "left"; ctx.fillText(String(Math.round(m.kcal)), x + 4, top + l.h - bh + 5); } });
       else if (l.kind === "blocks") data.workouts.forEach((b) => { if (b.end < t0 || b.start > view.t1) return; const x0 = X(b.start), x1 = X(b.end); ctx.fillStyle = l.color; ctx.globalAlpha = .85; ctx.fillRect(x0, top + 3, Math.max(2, x1 - x0), l.h - 6); ctx.globalAlpha = 1; if (x1 - x0 > 50) { ctx.fillStyle = "#1a1a12"; ctx.textAlign = "left"; ctx.fillText(b.name, x0 + 4, top + l.h / 2); } });
+      else if (l.kind === "feelrow") {
+        // Prototype A: each day's range as a faint band, lines only within 4 h, a dot per check-in, notes ringed.
+        const Y = (v: number) => yOf(top + 4, l.h - 8, 0.5, 10.5, v);
+        [3, 5.5, 8].forEach((v) => { ctx.strokeStyle = C.line; ctx.setLineDash([1, 4]); ctx.beginPath(); ctx.moveTo(LEFT, Y(v)); ctx.lineTo(w - RIGHT, Y(v)); ctx.stroke(); ctx.setLineDash([]); });
+        // The day's range only for one feeling (with several, the bands stacked into grey blocks).
+        const band = feels.length === 1 ? feels[0] : null;
+        if (band && view.span <= 21 * DAY) for (const r of dayRanges(data.checks, band.id as FeelK)) {
+          if (r.to < t0 || r.from > view.t1) continue;
+          ctx.fillStyle = band.color; ctx.globalAlpha = .13; ctx.beginPath(); ctx.roundRect(X(r.from) - 5, Y(r.hi) - 5, X(r.to) - X(r.from) + 10, Y(r.lo) - Y(r.hi) + 10, 5); ctx.fill(); ctx.globalAlpha = 1;
+        }
+        for (const f of feels) drawSeries(f, top + 4, l.h - 8, false);
+        const k0 = feels[0]?.id as FeelK | undefined;
+        if (k0) for (const c of data.checks) if (c.note && c[k0] != null && c.at >= t0 && c.at <= view.t1) { ctx.strokeStyle = C.ink; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.arc(X(c.at), Y(c[k0]!), 6, 0, 7); ctx.stroke(); ctx.lineWidth = 1; }
+        if (hovered) { const hx = X(hovered.at); ctx.strokeStyle = C.ink; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(hx, Y(hovered[k0 ?? "mood"] ?? 5.5), 8.5, 0, 7); ctx.stroke(); ctx.lineWidth = 1; }
+      }
+      else if (l.kind === "chips") (l.pts ?? []).forEach(([at, v]) => {
+        if (at < t0 - HOUR || at > view.t1) return;
+        const x = X(at), cw = view.span <= 7 * DAY ? 22 : 6;
+        ctx.fillStyle = l.color; ctx.globalAlpha = .25 + .75 * ((v - 1) / 9); ctx.fillRect(x - cw / 2, top + 2, cw, l.h - 4); ctx.globalAlpha = 1;
+        if (cw > 10) { ctx.fillStyle = v >= 7 ? "#10181a" : C.ink; ctx.textAlign = "center"; ctx.fillText(String(v), x, top + l.h / 2); }
+      });
       else if (l.kind === "ticks") {
         const rowH = l.h / Math.max(1, supplements.length);
         data.supps.forEach((s) => { if (s.at < t0 || s.at > view.t1) return; ctx.fillStyle = l.color; ctx.globalAlpha = .5 + (s.row % 5) * .1; ctx.fillRect(X(s.at) - 1, top + s.row * rowH + 1, 2.5, rowH - 2); });
         ctx.globalAlpha = 1;
         if (view.span <= 2 * DAY) { ctx.fillStyle = C.dim; ctx.font = "9.5px IBM Plex Mono, monospace"; ctx.textAlign = "left"; supplements.forEach((s, i) => ctx.fillText(s.name.split(" ")[0], LEFT + 3, top + i * rowH + rowH / 2)); }
       }
+      if (l.id === "caf") [CAF_SLEEP.lowBelowMg, CAF_SLEEP.higherFromMg].forEach((v) => { if (v > (l.hi ?? 0)) return; const yy = yOf(top, l.h, 0, l.hi ?? 1, v); ctx.strokeStyle = C.caf; ctx.globalAlpha = .45; ctx.setLineDash([2, 4]); ctx.beginPath(); ctx.moveTo(LEFT, yy); ctx.lineTo(w - RIGHT, yy); ctx.stroke(); ctx.setLineDash([]); ctx.globalAlpha = 1; ctx.fillStyle = C.caf; ctx.textAlign = "right"; ctx.font = "9px IBM Plex Mono, monospace"; ctx.fillText(`${v}`, w - RIGHT - 3, yy - 6); ctx.font = "10px IBM Plex Mono, monospace"; });
       if (host && l.id === host.id) overlays.forEach((o) => drawSeries(o, top, l.h, true));
       ctx.restore();
       // Axis values sit just inside the plot so they never collide with the lane's name.
@@ -176,10 +228,42 @@ export function MasterGraph({ data, supplements, focus }: { data: Lanes; supplem
     ["Last meal", (() => { const m = [...data.meals].reverse().find((x) => x.at <= t && x.at > t - 6 * HOUR); return m ? `${clock(m.at)} · ${Math.round(m.kcal)} kcal` : "—"; })()],
     ["Workout", data.workouts.find((b) => b.start <= t && b.end >= t)?.name ?? "—"],
     ["Weight", (() => { const v = valueAt(data.weight, t); return v ? `${v[1]} kg` : "—"; })()],
-    ["Energy", (() => { const v = valueAt(data.energy, t); return v && t - v[0] < DAY ? `${v[1]}/10` : "—"; })()],
+    ["Feelings", (() => { const c = hovered ?? latestCheck(data.checks, t); return c ? `${clock(c.at)} · ${feelText(c)}` : "—"; })()],
+    ...(() => { const c = hovered ?? latestCheck(data.checks, t); return [...(c?.doing?.length ? [["Up to", c.doing.join(", ")] as [string, string]] : []), ...(c?.note ? [["Note", `“${c.note}”`] as [string, string]] : [])]; })(),
+    ["Sleep rating", (() => { const v = valueAt(data.sleep, t); return v && t - v[0] < DAY ? `${v[1]}/10 · ${dayLabel(v[0])}` : "—"; })()],
     ["Heart rate", "no wearable"],
   ];
-  const scrubMax = Math.max(1, maxT - minT - view.span);
+  // The overview: the whole history, small, with the window you're looking at. Drag it, or tap to jump.
+  const ov = useRef<HTMLCanvasElement>(null);
+  const ovDrag = useRef<{ dx: number } | null>(null);
+  const OVH = 48;
+  const ovX = (t: number) => LEFT + ((t - minT) / Math.max(1, maxT - minT)) * Math.max(10, w - LEFT - RIGHT);
+  const ovT = (x: number) => minT + ((x - LEFT) / Math.max(10, w - LEFT - RIGHT)) * (maxT - minT);
+  useEffect(() => {
+    const el = ov.current; if (!el) return;
+    const dpr = window.devicePixelRatio || 1;
+    el.width = Math.round(w * dpr); el.height = Math.round(OVH * dpr); el.style.height = `${OVH}px`;
+    const ctx = el.getContext("2d")!; ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.clearRect(0, 0, w, OVH);
+    const pw = Math.max(10, w - LEFT - RIGHT), top = 6, h = OVH - 20;
+    ctx.fillStyle = C.line; ctx.globalAlpha = .5; ctx.fillRect(LEFT, top, pw, h); ctx.globalAlpha = 1;
+    const b = buckets(data.caffeine, minT, maxT, Math.floor(pw)), hi = Math.max(100, ...b.map((k) => k?.max ?? 0));
+    ctx.fillStyle = C.caf; ctx.globalAlpha = .55;
+    b.forEach((k, i) => { if (!k || k.max <= 0) return; const bh = (k.max / hi) * h; ctx.fillRect(LEFT + i, top + h - bh, 1, bh); });
+    ctx.globalAlpha = 1;
+    for (const c of data.checks) if (c.mood != null) { ctx.fillStyle = C.mood; ctx.fillRect(ovX(c.at) - .5, top + h - 2 - ((c.mood - 1) / 9) * (h - 4), 1.6, 2); }
+    const a = ovX(view.t1 - view.span), z = ovX(view.t1);
+    ctx.fillStyle = C.ink; ctx.globalAlpha = .1; ctx.fillRect(a, top - 3, Math.max(3, z - a), h + 6); ctx.globalAlpha = 1;
+    ctx.strokeStyle = C.ink; ctx.lineWidth = 1.5; ctx.strokeRect(a + .5, top - 2.5, Math.max(3, z - a) - 1, h + 5); ctx.lineWidth = 1;
+    ctx.font = "9.5px IBM Plex Mono, monospace"; ctx.fillStyle = C.dim; ctx.textBaseline = "alphabetic";
+    ctx.textAlign = "left"; ctx.fillText(dayLabel(minT), LEFT, OVH - 1); ctx.textAlign = "right"; ctx.fillText(dayLabel(data.to), w - RIGHT, OVH - 1);
+    ctx.textAlign = "right"; ctx.fillText("all", LEFT - 6, top + h / 2 + 3);
+  });
+  const ovMove = (clientX: number, start: boolean) => {
+    const r = ov.current!.getBoundingClientRect(), x = clientX - r.left, a = ovX(view.t1 - view.span), z = ovX(view.t1);
+    if (start) ovDrag.current = { dx: x >= a && x <= z ? x - (a + z) / 2 : 0 };
+    const mid = ovT(x - (ovDrag.current?.dx ?? 0));
+    setView(clampView(mid + view.span / 2, view.span));
+  };
   const presets: [string, number][] = [["1D", DAY], ["3D", 3 * DAY], ["7D", 7 * DAY], ["30D", 30 * DAY], ["90D", 90 * DAY], ["All", maxT - minT]];
 
   return (
@@ -192,16 +276,19 @@ export function MasterGraph({ data, supplements, focus }: { data: Lanes; supplem
           <button type="button" className="ibtn" aria-label="Zoom in" onClick={() => setView(clampView(view.t1 - view.span * .19, view.span / 1.6))}>＋</button>
           <button type="button" className="ibtn" aria-label="Zoom out" onClick={() => setView(clampView(view.t1 + view.span * .3, view.span * 1.6))}>－</button>
           <span className="range-lbl">{dayLabel(view.t1 - view.span)} {clock(view.t1 - view.span)} → {dayLabel(view.t1)} {clock(view.t1)}</span>
-          <label className="scrub"><span className="k">Scroll back</span>
-            <input type="range" min={0} max={1000} value={Math.round(((view.t1 - view.span - minT) / scrubMax) * 1000)} aria-label="Scroll back in time" onChange={(e) => setView(clampView(minT + view.span + (+e.target.value / 1000) * scrubMax, view.span))} />
-          </label>
           <button type="button" className="ibtn" onClick={() => setView(clampView(maxT, view.span))}>Now</button>
         </div>
         <canvas ref={cv} className="mg-canvas" aria-label="Master graph of every tracked metric over time"
-          onPointerDown={(e) => { drag.current = { x: e.clientX, t1: view.t1 }; e.currentTarget.setPointerCapture(e.pointerId); }}
-          onPointerMove={(e) => { if (drag.current) { const pw = e.currentTarget.getBoundingClientRect().width - LEFT - RIGHT; setView(clampView(drag.current.t1 - ((e.clientX - drag.current.x) / pw) * view.span, view.span)); } setHover(tAt(e.clientX)); }}
+          data-lanes={layout.map((r) => r.l.id).join(",")} data-view={`${Math.round(view.t1 - view.span)},${Math.round(view.t1)}`} data-feel={feelRow ? `${feelRow.y},${feelRow.l.h}` : ""}
+          onPointerDown={(e) => { drag.current = { x: e.clientX, t1: view.t1 }; e.currentTarget.setPointerCapture(e.pointerId); setHover(tAt(e.clientX)); setHoverY(e.clientY - e.currentTarget.getBoundingClientRect().top); }}
+          onPointerMove={(e) => { if (drag.current && Math.abs(e.clientX - drag.current.x) > 4) { const pw = e.currentTarget.getBoundingClientRect().width - LEFT - RIGHT; setView(clampView(drag.current.t1 - ((e.clientX - drag.current.x) / pw) * view.span, view.span)); } setHover(tAt(e.clientX)); setHoverY(e.clientY - e.currentTarget.getBoundingClientRect().top); }}
           onPointerUp={() => { drag.current = null; }} onPointerCancel={() => { drag.current = null; }} onPointerLeave={() => { if (!drag.current) setHover(null); }} />
-        <div className="mg-bar"><span className="hint-i">Drag to scroll back · ⌘/Ctrl + wheel to zoom · tick lanes on and off; "on top" draws a line over {host?.name.toLowerCase() ?? "the first lane"} with its own axis.</span></div>
+        <canvas ref={ov} className="mg-overview" role="slider" aria-label="Whole history: drag the window or tap to jump" aria-valuemin={minT} aria-valuemax={maxT} aria-valuenow={Math.round(view.t1)}
+          data-window={`${Math.round(view.t1 - view.span)},${Math.round(view.t1)}`}
+          onPointerDown={(e) => { e.currentTarget.setPointerCapture(e.pointerId); ovMove(e.clientX, true); }}
+          onPointerMove={(e) => { if (ovDrag.current) ovMove(e.clientX, false); }}
+          onPointerUp={() => { ovDrag.current = null; }} onPointerCancel={() => { ovDrag.current = null; }} />
+        <div className="mg-bar"><span className="hint-i">Point at a check-in dot to read it · drag the chart or the overview to move · ⌘/Ctrl + wheel to zoom · tick lanes on and off; "on top" draws a line over {host?.name.toLowerCase() ?? "the first lane"} with its own axis.</span></div>
       </div>
       <aside className="mg-side">
         <div className="legend">
@@ -216,7 +303,7 @@ export function MasterGraph({ data, supplements, focus }: { data: Lanes; supplem
           ))}
         </div>
         <div className="readout">
-          <span className="t">{dayLabel(t)} · {clock(t)}{hover == null ? " (now)" : ""}</span>
+          <span className="t">{hovered ? `Check-in · ${dayLabel(hovered.at)} ${clock(hovered.at)}` : `${dayLabel(t)} · ${clock(t)}${hover == null ? " (now)" : ""}`}</span>
           {rows.map(([a, b]) => <div key={a}><span>{a}</span><b>{b}</b></div>)}
         </div>
       </aside>
