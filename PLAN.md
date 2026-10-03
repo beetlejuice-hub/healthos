@@ -392,3 +392,16 @@ email get Dev tools (`#dev`): raw entry editor, generate/remove sample, wipe acc
    stages, 5-min heart rate, HRV, readiness; readout; overview), then Mind / Connections (forest plot,
    explorer with strongest pairs) / Sleep & recovery (hypnogram, schedule, stages, HRV & RHR vs baseline)
    / Intake & body / Training & stack / Data. Waiting for the owner's OK before the phone version.
+   **Owner, 3 Oct: *"god damn this is hella good … lets get this built"*.** Build plan (each phase lands on
+   its own, the old panels stay below until their replacement lands, so nothing disappears mid-way):
+   1. [ ] At a glance — `lib/glance.ts` (+ test), `components/Glance.tsx`: week in plain words + day-by-day
+      strip, vitals table judged against your usual *week*. Page shell: 12-column board, period switch.
+   2. [ ] Master chart — `components/MasterGraph.tsx`: label column with values at the cursor, readout panel
+      (moment / the day / night before), presets 1D–All, readiness/wearable lanes ready for when one connects.
+   3. [ ] Mind — mood course vs your average (life-chart), mood by weekday × time.
+   4. [ ] Connections — one forest plot for every with/without comparison (replaces Noticed cards, What moves
+      what, Does it do anything), explorer with strongest pairs.
+   5. [ ] Sleep, intake & body, training & stack, coverage, methods — wearable panels show only with data.
+   6. [ ] Phone layout of the same page (after the owner checks desktop).
+   Defaults picked: dark only (the app is dark only, owner 29 Sept); wearable rows hidden until a wearable
+   is connected, never sample data mixed into real numbers.
