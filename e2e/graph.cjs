@@ -33,7 +33,7 @@ const { chromium, APP, OUT, handle } = require('./harness.cjs');
     // Point at Thursday 15:00's check-in (mood row; energy is the first feeling → its dot carries the note ring).
     const [t0, t1] = (await cv.getAttribute('data-view')).split(',').map(Number);
     const [ftop, fh] = (await cv.getAttribute('data-feel')).split(',').map(Number);
-    const box = await cv.boundingBox(), LEFT = 104, RIGHT = 46;
+    const box = await cv.boundingBox(), [LEFT, RIGHT] = (await cv.getAttribute('data-plot')).split(',').map(Number);
     const at = new Date(2026, 9, 2, 15).getTime();
     const x = box.x + LEFT + ((at - t0) / (t1 - t0)) * (box.width - LEFT - RIGHT);
     const y = box.y + ftop + 4 + (fh - 8) - ((4 - 0.5) / 10) * (fh - 8);

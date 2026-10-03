@@ -230,6 +230,8 @@ a { color: inherit; }
 .readout .t { color: var(--i-ink); margin-bottom: 4px; }
 .readout div { display: flex; justify-content: space-between; gap: 8px; color: var(--i-ink-2); }
 .readout b { color: var(--i-ink); font-weight: 500; }
+.readout .sec { margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--i-line); font-size: 10px; letter-spacing: .08em; text-transform: uppercase; color: var(--i-dim); }
+.mg-title { margin: 0 6px 0 0; font-size: 14.5px; font-weight: 600; font-family: var(--f-plex); }
 /* Insights → At a glance (prototype v2, dark). Status colours are reserved: green = better for you,
    amber = worse, grey = neither — always with ▲/▼ and a word, never colour alone. */
 .app.r-insights { --g-now: #3987e5; --g-band: rgba(57,135,229,.16); --g-before: #6b737c; --g-good: #2fb54a; --g-good-t: #5cc96f; --g-warn: #fab219; --g-bad-t: #f07a6a; --g-mind: #3987e5; --g-sleep: #199e70; --g-link: #9085e9; --g-serious: #ec835a; }

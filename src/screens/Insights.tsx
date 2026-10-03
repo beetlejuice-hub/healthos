@@ -3,6 +3,7 @@ import { useStore } from "../lib/store";
 import { adherence, dailyFacts, lanes, pairs, suppEffects, type DayFacts, type Pair } from "../lib/insights";
 import { MasterGraph } from "../components/MasterGraph";
 import { Glance } from "../components/Glance";
+import { glanceDays } from "../lib/glance";
 import { Bars, LineChart } from "../components/Charts";
 import { averageOver, byDay, againstGoals, add, macrosOf, split, ZERO } from "../lib/nutrition";
 import { e1rmHistory, setsPerMuscle, suggestNext } from "../lib/training";
@@ -31,6 +32,7 @@ export function Insights() {
   const data = useMemo(() => lanes(s.entries, s.workouts, s.supplements, s.settings, now), [s.entries, s.workouts, s.supplements, s.settings, now]);
   const facts = useMemo(() => dailyFacts(s.entries, s.workouts, s.settings, addDays(today, -89), today), [s.entries, s.workouts, s.settings, today]);
   const sample = s.entries.some((e) => e.id.startsWith("sample:"));
+  const gdays = useMemo(() => glanceDays(s.entries, s.workouts, s.settings, addDays(today, -119), today), [s.entries, s.workouts, s.settings, today]);
   const scouted = useScout();
   const [focus, setFocus] = useState<GraphFocus | null>(null);
   const [period, setPeriod] = useState<7 | 30 | 84>(30);
@@ -82,7 +84,7 @@ export function Insights() {
       {!nothing && <Weekly now={now} />}
       {!nothing && <Noticed report={report} />}
       {!nothing && <WorthALook items={scouted} onShow={showOnGraph} />}
-      {!nothing && <MasterGraph data={data} supplements={s.supplements} focus={focus} />}
+      {!nothing && <MasterGraph data={data} supplements={s.supplements} focus={focus} days={gdays} />}
       <div className="pgrid">
         {has.food && <Nutrition now={now} />}
         {has.caffeine && <CaffeineAlcohol facts={facts} />}

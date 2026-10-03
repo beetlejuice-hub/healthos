@@ -397,8 +397,9 @@ email get Dev tools (`#dev`): raw entry editor, generate/remove sample, wipe acc
    1. [x] At a glance — `lib/glance.ts` (+ test), `components/Glance.tsx`: week in plain words + day-by-day
       strip, vitals table judged against your usual *week*. Page shell: period switch (7 / 30 days / 12 weeks).
       Replaces the old KPI strip. Usual week needs 3 weeks of history ("Learning" until then).
-   2. [ ] Master chart — `components/MasterGraph.tsx`: label column with values at the cursor, readout panel
-      (moment / the day / night before), presets 1D–All, readiness/wearable lanes ready for when one connects.
+   2. [x] Master chart — `components/MasterGraph.tsx`: label column shows each lane's value at the cursor
+      (laptop; phone keeps the narrow column), readout adds "the day" and "night before" (from lib/glance),
+      title bar. Kept the owner's picks: lane ticks, "on top" overlays, feelings row, overview.
    3. [ ] Mind — mood course vs your average (life-chart), mood by weekday × time.
    4. [ ] Connections — one forest plot for every with/without comparison (replaces Noticed cards, What moves
       what, Does it do anything), explorer with strongest pairs.

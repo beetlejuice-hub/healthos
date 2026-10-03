@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { Lanes } from "../lib/insights";
 import { buckets, valueAt, type Point } from "../lib/series";
-import { atMinute, clock, dayLabel, DAY, HOUR, MIN } from "../lib/time";
+import { atMinute, clock, dayLabel, localDay, DAY, HOUR, MIN } from "../lib/time";
 import type { Supplement } from "../lib/types";
+import type { GlanceDay } from "../lib/glance";
 import { dayRanges, feelRuns, feelText, latestCheck, nearestCheck, type Check, type FeelK } from "../lib/feelgraph";
 import { CAF_SLEEP } from "../lib/caffeine-sleep";
 
@@ -18,12 +19,14 @@ type Kind = "series" | "daily" | "sticks" | "blocks" | "ticks" | "wearable" | "f
 type Lane = { id: string; name: string; unit: string; color: string; h: number; kind: Kind; pts?: Point[]; lo?: number; hi?: number; area?: boolean; overlay?: boolean };
 
 const cssVar = (v: string) => getComputedStyle(document.documentElement).getPropertyValue(v).trim() || "#888";
-const LEFT = 104, RIGHT = 46, TOP = 22, GAP = 7;
+const RIGHT = 46, TOP = 22, GAP = 7;
+/** The label column: room for each lane's value at the cursor on a laptop, narrower on a phone. */
+const leftFor = (w: number) => (w >= 640 ? 136 : 96);
 
 /** "Show on graph" from a scout pattern: these lanes, on top of each other, these days highlighted. */
 export type GraphFocus = { key: string; lanes: string[]; days: string[] };
 
-export function MasterGraph({ data, supplements, focus }: { data: Lanes; supplements: Supplement[]; focus?: GraphFocus | null }) {
+export function MasterGraph({ data, supplements, focus, days }: { data: Lanes; supplements: Supplement[]; focus?: GraphFocus | null; /** Per-day numbers for the readout's "the day" and "last night" (lib/glance). */ days?: GlanceDay[] }) {
   const C = useMemo(() => ({ ok: cssVar("--ok"), caf: cssVar("--caf"), alc: cssVar("--alc"), kcal: cssVar("--kcal"), gym: cssVar("--gym"), supp: cssVar("--supp"), wt: cssVar("--wt"), mood: cssVar("--mood"), hr: cssVar("--hr"), line: cssVar("--i-line"), ink: cssVar("--i-ink"), ink2: cssVar("--i-ink-2"), dim: cssVar("--i-dim") }), []);
   const lanes: Lane[] = useMemo(() => {
     const range = (pts: Point[], pad: number, floor?: [number, number]): [number, number] => {
@@ -58,6 +61,7 @@ export function MasterGraph({ data, supplements, focus }: { data: Lanes; supplem
   const cv = useRef<HTMLCanvasElement>(null);
   const drag = useRef<{ x: number; t1: number } | null>(null);
   const [w, setW] = useState(900);
+  const LEFT = leftFor(w);
 
   // A pattern asked to be shown: only its lanes, the second drawn over the first where it can be,
   // and the view widened to cover the days that show it.
@@ -100,6 +104,17 @@ export function MasterGraph({ data, supplements, focus }: { data: Lanes; supplem
   const pwNow = Math.max(10, w - LEFT - RIGHT);
   const hovered: Check | null = hover != null && hoverY != null && feelRow && hoverY >= feelRow.y - 4 && hoverY <= feelRow.y + feelRow.l.h + 4
     ? nearestCheck(data.checks.filter((c) => feels.some((f) => c[f.id as FeelK] != null)), hover, (14 / pwNow) * view.span) : null;
+
+  /** What a lane reads at time t, for the label column (null: nothing to say). */
+  const laneValue = (l: Lane, t: number): string | null => {
+    if (l.id === "caf") return `${Math.round(valueAt(data.caffeine, t)?.[1] ?? 0)}`;
+    if (l.id === "alc") { const v = valueAt(data.alcohol, t)?.[1] ?? 0; return v >= 0.05 ? v.toFixed(1) : "0"; }
+    if (l.id === "wt" || l.id === "kcal") { const v = valueAt(l.pts ?? [], t); return v && t - v[0] < 3 * DAY ? (l.id === "wt" ? v[1].toFixed(1) : Math.round(v[1]).toLocaleString("en-GB")) : null; }
+    if (l.id === "slept") { const v = valueAt(l.pts ?? [], t); return v && t - v[0] < DAY ? String(v[1]) : null; }
+    if (l.id === "meals") { const m = [...data.meals].reverse().find((x) => x.at <= t && x.at > t - 5 * HOUR); return m ? String(Math.round(m.kcal)) : null; }
+    if (l.id === "feel") { const c = hovered ?? latestCheck(data.checks, t); return c && t - c.at < 6 * HOUR && c.mood != null ? String(c.mood) : null; }
+    return null;
+  };
 
   useEffect(() => {
     const el = cv.current; if (!el) return;
@@ -168,6 +183,8 @@ export function MasterGraph({ data, supplements, focus }: { data: Lanes; supplem
     layout.forEach(({ l, y: top }) => {
       ctx.textAlign = "left"; ctx.font = "11px IBM Plex Sans, sans-serif"; ctx.fillStyle = l.kind === "wearable" ? C.dim : C.ink2; ctx.fillText(l.name, 8, top + 8);
       ctx.font = "10px IBM Plex Mono, monospace"; ctx.fillStyle = C.dim; if (l.unit) ctx.fillText(l.unit, 8, top + 20);
+      const lv = LEFT >= 120 ? laneValue(l, hover ?? data.to) : null;
+      if (lv) { ctx.font = "600 12px IBM Plex Sans, sans-serif"; ctx.fillStyle = C.ink; ctx.textAlign = "right"; ctx.fillText(lv, LEFT - 8, top + (l.h >= 34 ? l.h - 9 : 8)); ctx.textAlign = "left"; ctx.font = "10px IBM Plex Mono, monospace"; }
       ctx.strokeStyle = C.line; ctx.beginPath(); ctx.moveTo(LEFT, top + l.h + .5); ctx.lineTo(w - RIGHT, top + l.h + .5); ctx.stroke();
       ctx.save(); ctx.beginPath(); ctx.rect(LEFT, top - 2, pw, l.h + 4); ctx.clip();
       if (l.kind === "wearable") { ctx.fillStyle = C.dim; ctx.textAlign = "left"; ctx.fillText("Connect a wearable", LEFT + 8, top + l.h / 2); }
@@ -222,6 +239,18 @@ export function MasterGraph({ data, supplements, focus }: { data: Lanes; supplem
   useEffect(() => { const el = cv.current; if (!el) return; el.addEventListener("wheel", onWheel, { passive: false }); return () => el.removeEventListener("wheel", onWheel); });
 
   const t = hover ?? data.to;
+  const dayOf = days?.find((d) => d.day === localDay(t));
+  const f1 = (v: number | null | undefined) => (v == null ? "–" : v.toFixed(1));
+  const takenThatDay = data.supps.filter((x) => localDay(x.at) === localDay(t)).map((x) => supplements.find((s) => s.id === x.suppId)?.name.split(" ")[0] ?? "?");
+  const dayRows: [string, string][] = dayOf ? [
+    ["Feelings, avg", dayOf.mood != null || dayOf.energy != null ? `${f1(dayOf.mood)} · ${f1(dayOf.energy)} · ${f1(dayOf.stress)}` : "no check-ins"],
+    ["kcal · protein", dayOf.kcal != null ? `${Math.round(dayOf.kcal).toLocaleString("en-GB")} · ${Math.round(dayOf.protein ?? 0)} g` : "not logged"],
+    ["Caffeine at bedtime", dayOf.cafBed != null ? `${Math.round(dayOf.cafBed)} mg` : "–"],
+    ...(dayOf.drinks ? [["Drinks", `${dayOf.drinks.toFixed(1)}`] as [string, string]] : []),
+    ["Training", dayOf.trained ? (data.workouts.find((b) => localDay(b.start) === dayOf.day)?.name ?? "yes") : "rest day"],
+    ["Supplements", takenThatDay.length ? [...new Set(takenThatDay)].join(" · ") : "none ticked"],
+  ] : [];
+  const nightRows: [string, string][] = dayOf?.sleep != null ? [["Slept, your rating", `${dayOf.sleep}/10`]] : [];
   const rows: [string, string][] = [
     ["Caffeine", `${Math.round(valueAt(data.caffeine, t)?.[1] ?? 0)} mg`],
     ["Alcohol", `${(valueAt(data.alcohol, t)?.[1] ?? 0).toFixed(1)} g`],
@@ -230,7 +259,6 @@ export function MasterGraph({ data, supplements, focus }: { data: Lanes; supplem
     ["Weight", (() => { const v = valueAt(data.weight, t); return v ? `${v[1]} kg` : "—"; })()],
     ["Feelings", (() => { const c = hovered ?? latestCheck(data.checks, t); return c ? `${clock(c.at)} · ${feelText(c)}` : "—"; })()],
     ...(() => { const c = hovered ?? latestCheck(data.checks, t); return [...(c?.doing?.length ? [["Up to", c.doing.join(", ")] as [string, string]] : []), ...(c?.note ? [["Note", `“${c.note}”`] as [string, string]] : [])]; })(),
-    ["Sleep rating", (() => { const v = valueAt(data.sleep, t); return v && t - v[0] < DAY ? `${v[1]}/10 · ${dayLabel(v[0])}` : "—"; })()],
     ["Heart rate", "no wearable"],
   ];
   // The overview: the whole history, small, with the window you're looking at. Drag it, or tap to jump.
@@ -270,6 +298,7 @@ export function MasterGraph({ data, supplements, focus }: { data: Lanes; supplem
     <section className="master" aria-label="Master graph">
       <div className="mg-main">
         <div className="mg-bar">
+          <h2 className="mg-title">Everything, on one timeline</h2>
           <div className="iseg" role="group" aria-label="Time range">
             {presets.map(([n, s]) => <button key={n} type="button" aria-pressed={Math.abs(view.span - s) < MIN} onClick={() => setView(clampView(maxT, s))}>{n}</button>)}
           </div>
@@ -279,7 +308,7 @@ export function MasterGraph({ data, supplements, focus }: { data: Lanes; supplem
           <button type="button" className="ibtn" onClick={() => setView(clampView(maxT, view.span))}>Now</button>
         </div>
         <canvas ref={cv} className="mg-canvas" aria-label="Master graph of every tracked metric over time"
-          data-lanes={layout.map((r) => r.l.id).join(",")} data-view={`${Math.round(view.t1 - view.span)},${Math.round(view.t1)}`} data-feel={feelRow ? `${feelRow.y},${feelRow.l.h}` : ""}
+          data-lanes={layout.map((r) => r.l.id).join(",")} data-plot={`${LEFT},${RIGHT}`} data-view={`${Math.round(view.t1 - view.span)},${Math.round(view.t1)}`} data-feel={feelRow ? `${feelRow.y},${feelRow.l.h}` : ""}
           onPointerDown={(e) => { drag.current = { x: e.clientX, t1: view.t1 }; e.currentTarget.setPointerCapture(e.pointerId); setHover(tAt(e.clientX)); setHoverY(e.clientY - e.currentTarget.getBoundingClientRect().top); }}
           onPointerMove={(e) => { if (drag.current && Math.abs(e.clientX - drag.current.x) > 4) { const pw = e.currentTarget.getBoundingClientRect().width - LEFT - RIGHT; setView(clampView(drag.current.t1 - ((e.clientX - drag.current.x) / pw) * view.span, view.span)); } setHover(tAt(e.clientX)); setHoverY(e.clientY - e.currentTarget.getBoundingClientRect().top); }}
           onPointerUp={() => { drag.current = null; }} onPointerCancel={() => { drag.current = null; }} onPointerLeave={() => { if (!drag.current) setHover(null); }} />
@@ -305,6 +334,8 @@ export function MasterGraph({ data, supplements, focus }: { data: Lanes; supplem
         <div className="readout">
           <span className="t">{hovered ? `Check-in · ${dayLabel(hovered.at)} ${clock(hovered.at)}` : `${dayLabel(t)} · ${clock(t)}${hover == null ? " (now)" : ""}`}</span>
           {rows.map(([a, b]) => <div key={a}><span>{a}</span><b>{b}</b></div>)}
+          {dayRows.length > 0 && <><span className="sec">{dayLabel(t)} — the day</span>{dayRows.map(([a, b]) => <div key={a}><span>{a}</span><b>{b}</b></div>)}</>}
+          {nightRows.length > 0 && <><span className="sec">Night before</span>{nightRows.map(([a, b]) => <div key={a}><span>{a}</span><b>{b}</b></div>)}</>}
         </div>
       </aside>
     </section>
