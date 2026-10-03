@@ -384,4 +384,11 @@ email get Dev tools (`#dev`): raw entry editor, generate/remove sample, wipe acc
    for every "what goes with what" (replaces Noticed, Worth a look, What moves what, Does it do anything,
    the week's top connection); mood charted above/below your average (clinical life-chart layout);
    master graph moves to "Explore" at the bottom. My pick: C's structure with A's charts; B's cards
-   for Today. Waiting for the owner's pick.
+   for Today. Owner liked v1: *"do more research, get better ideas, better layout, better graphs … more
+   space for wearable data, it should be desktop sizze priority … i need the master chart tho … then
+   after i confirm we can have a phone version"*. Desktop v2: https://claude.ai/artifact/39TNZA3rdYtPoRwkGZzMc7
+   — plain-words week + day-by-day strip, vitals table judged against your usual *week* (a 7-day average
+   vs single days would call almost every week typical), full-width master timeline (15 lanes incl. sleep
+   stages, 5-min heart rate, HRV, readiness; readout; overview), then Mind / Connections (forest plot,
+   explorer with strongest pairs) / Sleep & recovery (hypnogram, schedule, stages, HRV & RHR vs baseline)
+   / Intake & body / Training & stack / Data. Waiting for the owner's OK before the phone version.
