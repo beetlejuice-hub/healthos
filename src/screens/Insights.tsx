@@ -2,9 +2,10 @@ import { useMemo, useState } from "react";
 import { useStore } from "../lib/store";
 import { adherence, dailyFacts, lanes, pairs, suppEffects, type DayFacts, type Pair } from "../lib/insights";
 import { MasterGraph } from "../components/MasterGraph";
+import { Glance } from "../components/Glance";
 import { Bars, LineChart } from "../components/Charts";
 import { averageOver, byDay, againstGoals, add, macrosOf, split, ZERO } from "../lib/nutrition";
-import { e1rmHistory, setsPerMuscle, suggestNext, volume } from "../lib/training";
+import { e1rmHistory, setsPerMuscle, suggestNext } from "../lib/training";
 import { mean, median, slope, strength, type Range } from "../lib/stats";
 import { addDays, dayLabel, localDay, DAY } from "../lib/time";
 import type { EntryOf } from "../lib/types";
@@ -32,6 +33,7 @@ export function Insights() {
   const sample = s.entries.some((e) => e.id.startsWith("sample:"));
   const scouted = useScout();
   const [focus, setFocus] = useState<GraphFocus | null>(null);
+  const [period, setPeriod] = useState<7 | 30 | 84>(30);
   const showOnGraph = (f: GraphFocus) => { setFocus(f); setTimeout(() => document.querySelector(".master")?.scrollIntoView({ behavior: "smooth" }), 50); };
   const report = useMemo(() => notice(s.entries, s.goals, now, s.settings.bodyKg, { workouts: s.workouts, supplements: s.supplements, settings: s.settings }), [s.entries, s.goals, now, s.settings, s.workouts, s.supplements]);
   // Show a section only once there's something in it; list the rest in one line each, so a new
@@ -66,15 +68,20 @@ export function Insights() {
       <header>
         <div>
           <h1>Insights</h1>
-          <p>Every metric on one timeline, then the numbers behind nutrition, training, supplements and what affects how you feel. Each comparison shows its size, how many days it's based on and how certain it is.</p>
+          <p>Your week against your own usual weeks — never against other people. Then every metric on one timeline, and what goes with better or worse days, with how sure each one is.</p>
         </div>
-        {sample && <span className="badge">INCLUDES SAMPLE DATA · remove it in Settings</span>}
+        <div className="ins-ctrls">
+          {sample && <span className="badge">INCLUDES SAMPLE DATA · remove it in Settings</span>}
+          {!nothing && <div className="iseg" role="group" aria-label="Period for the charts">
+            {([[7, "7 days"], [30, "30 days"], [84, "12 weeks"]] as const).map(([n, l]) => <button type="button" key={n} aria-pressed={period === n} onClick={() => setPeriod(n)}>{l}</button>)}
+          </div>}
+        </div>
       </header>
       {nothing && <div className="needs">Nothing logged yet. Log food, drinks and supplements for a few days and this fills in — or load sample data in Settings to see what it will look like.</div>}
+      {!nothing && <Glance now={now} trendDays={period} report={report} />}
       {!nothing && <Weekly now={now} />}
       {!nothing && <Noticed report={report} />}
       {!nothing && <WorthALook items={scouted} onShow={showOnGraph} />}
-      {!nothing && <Kpis facts={facts} today={today} now={now} />}
       {!nothing && <MasterGraph data={data} supplements={s.supplements} focus={focus} />}
       <div className="pgrid">
         {has.food && <Nutrition now={now} />}
@@ -157,36 +164,6 @@ function CompareBars({ c }: { c: Extract<NonNullable<Report["found"][number]["ch
         </div>
       ))}
     </div>
-  );
-}
-
-/* ------------------------------------------------------------------ KPIs: last 7 days vs 28 */
-
-function Kpis({ facts, today, now }: { facts: DayFacts[]; today: string; now: number }) {
-  const entries = useStore((s) => s.entries);
-  const past = facts.filter((d) => d.day < today);
-  const last = (n: number) => past.slice(-n);
-  const kcal = (d: DayFacts[]) => d.filter((x) => x.kcal != null).map((x) => x.kcal!);
-  const k7 = kcal(last(7)), k28 = kcal(last(28));
-  const p7 = last(7).filter((x) => x.proteinG != null).map((x) => x.proteinG!);
-  const weights = entries.filter((e): e is EntryOf<"weight"> => e.kind === "weight" && e.at > now - 28 * DAY);
-  const wSlope = weights.length >= 5 ? slope(weights.map((w) => w.at / DAY), weights.map((w) => w.kg)) * 7 : NaN;
-  const sets = entries.filter((e): e is EntryOf<"set"> => e.kind === "set");
-  const vol = (days: number) => volume(sets.filter((x) => x.at > now - days * DAY));
-  const caf7 = last(7).map((x) => x.caffeineMg), caf28 = last(28).map((x) => x.caffeineMg);
-  const bed7 = last(7).map((x) => x.caffeineAtBed);
-  const items: [string, string, string, string][] = [
-    ["Calories", k7.length ? f0(mean(k7)) : "—", "kcal", k7.length ? `${k28.length ? `${sgn(mean(k7) - mean(k28), f0)} vs 28d · ` : ""}${k7.length}/7 days logged` : "no logged days"],
-    ["Protein", p7.length ? f0(mean(p7)) : "—", "g/day", p7.length ? `logged days, last 7` : ""],
-    ["Weight trend", Number.isFinite(wSlope) ? sgn(wSlope, (v) => v.toFixed(2)) : "—", "kg/wk", Number.isFinite(wSlope) ? `28d fit · ${weights.length} weigh-ins` : "needs 5 weigh-ins"],
-    ["Training volume", sets.length ? f1(vol(7) / 1000) : "—", "t", sets.length ? `${f1(vol(28) / 4000)} t avg week` : "no sets yet"],
-    ["Caffeine / day", caf7.some((v) => v > 0) ? f0(mean(caf7)) : "—", "mg", caf28.some((v) => v > 0) ? `${f0(mean(caf28))} mg over 28d` : ""],
-    ["Left at bedtime", bed7.some((v) => v > 0) ? f0(median(bed7)) : "—", "mg", "median, last 7 nights"],
-  ];
-  return (
-    <section className="kpis" aria-label="Last 7 days">
-      {items.filter(([, v]) => v !== "—").map(([k, v, u, d]) => <div className="kpi" key={k}><span className="k">{k}</span><span className="v">{v}<small>{u}</small></span><span className="d">{d}</span></div>)}
-    </section>
   );
 }
 

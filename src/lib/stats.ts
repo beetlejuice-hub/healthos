@@ -18,6 +18,13 @@ export function median(a: number[]): number {
   return b.length % 2 ? b[i] : (b[i - 1] + b[i]) / 2;
 }
 
+/** The p-quantile (0–1) of a list, linear between neighbours. NaN for an empty list. */
+export function quantile(a: number[], p: number): number {
+  if (!a.length) return NaN;
+  const b = [...a].sort((x, y) => x - y), k = (b.length - 1) * p, lo = Math.floor(k), hi = Math.ceil(k);
+  return b[lo] + (b[hi] - b[lo]) * (k - lo);
+}
+
 /** Least-squares slope of y on x. */
 export function slope(xs: number[], ys: number[]): number {
   const mx = mean(xs), my = mean(ys);
