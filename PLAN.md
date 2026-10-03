@@ -375,3 +375,13 @@ email get Dev tools (`#dev`): raw entry editor, generate/remove sample, wipe acc
    lasting patterns to the AI's memory (Settings → AI, deletable) when the journal shows them on
    several days. Cost estimate updated (≈4k tokens per everyday call). Real-model wording unverified
    until ANTHROPIC_API_KEY is set.
+38. [ ] **Insights, rethought** (claimed 3 Oct — `screens/Insights.tsx` + new components; prototypes first). Owner:
+   *"we have to rethink the insights page...Its a mess rn..its not clear whats what .. i dont like the new
+   mood tracker..professional, medical almost, something clearly understandable, clear charts, nice ui"*.
+   Prototypes: https://claude.ai/artifact/LK11ZcUcuuRptfH4DdRP5h — A clinical report (usual-range
+   number lines, mood course vs your average, forest plot), B health dashboard (domain cards + detail),
+   C questions & answers. Shared structure: personal usual range as the reference everywhere; one place
+   for every "what goes with what" (replaces Noticed, Worth a look, What moves what, Does it do anything,
+   the week's top connection); mood charted above/below your average (clinical life-chart layout);
+   master graph moves to "Explore" at the bottom. My pick: C's structure with A's charts; B's cards
+   for Today. Waiting for the owner's pick.
