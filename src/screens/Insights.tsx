@@ -3,6 +3,7 @@ import { useStore } from "../lib/store";
 import { adherence, dailyFacts, lanes, pairs, suppEffects, type DayFacts, type Pair } from "../lib/insights";
 import { MasterGraph } from "../components/MasterGraph";
 import { Glance } from "../components/Glance";
+import { Mind } from "../components/Mind";
 import { glanceDays } from "../lib/glance";
 import { Bars, LineChart } from "../components/Charts";
 import { averageOver, byDay, againstGoals, add, macrosOf, split, ZERO } from "../lib/nutrition";
@@ -85,6 +86,7 @@ export function Insights() {
       {!nothing && <Noticed report={report} />}
       {!nothing && <WorthALook items={scouted} onShow={showOnGraph} />}
       {!nothing && <MasterGraph data={data} supplements={s.supplements} focus={focus} days={gdays} />}
+      {!nothing && <Mind days={gdays} now={now} period={period} />}
       <div className="pgrid">
         {has.food && <Nutrition now={now} />}
         {has.caffeine && <CaffeineAlcohol facts={facts} />}

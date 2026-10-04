@@ -400,7 +400,9 @@ email get Dev tools (`#dev`): raw entry editor, generate/remove sample, wipe acc
    2. [x] Master chart — `components/MasterGraph.tsx`: label column shows each lane's value at the cursor
       (laptop; phone keeps the narrow column), readout adds "the day" and "night before" (from lib/glance),
       title bar. Kept the owner's picks: lane ticks, "on top" overlays, feelings row, overview.
-   3. [ ] Mind — mood course vs your average (life-chart), mood by weekday × time.
+   3. [x] Mind — `lib/mind.ts` (+ test), `components/Mind.tsx`: mood course vs your average (life-chart, with
+      energy/stress/sleep strips and events), mood by weekday × 3-hour block (a check-in before 06:00 counts
+      as the evening before). Under the master chart.
    4. [ ] Connections — one forest plot for every with/without comparison (replaces Noticed cards, What moves
       what, Does it do anything), explorer with strongest pairs.
    5. [ ] Sleep, intake & body, training & stack, coverage, methods — wearable panels show only with data.
