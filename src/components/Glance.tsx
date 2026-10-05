@@ -84,7 +84,7 @@ function DayStrip({ stats, week, today }: { stats: MeasureStat[]; week: GlanceDa
         <tbody>
           {rows.map((m) => <tr key={m.k}><th>{m.k === "sleep" ? "Sleep" : m.k === "kcal" ? "kcal" : m.name}</th>{week.map((d) => {
             const v = d[m.k], tone = dayTone(m, v);
-            return <td key={d.day} className={`n${tone ? ` out ${tone}` : ""}`} title={v == null ? undefined : `${dayLabel(noon(d.day))}: ${m.name} ${fmt(m, v)}${unitOf(m)}${m.day ? ` · a usual day ${fmt(m, m.day.p10)}–${fmt(m, m.day.p90)}` : ""}${d.day === today && m.partialToday ? " (so far)" : ""}`}>{v == null ? <span className="gl-dim">–</span> : short(m, v)}</td>;
+            return <td key={d.day} className={`n${tone ? ` out ${tone}` : ""}`} data-tip={v == null ? undefined : `${dayLabel(noon(d.day))}: ${m.name} ${fmt(m, v)}${unitOf(m)}${m.day ? ` · a usual day ${fmt(m, m.day.p10)}–${fmt(m, m.day.p90)}` : ""}${d.day === today && m.partialToday ? " (so far)" : ""}`}>{v == null ? <span className="gl-dim">–</span> : short(m, v)}</td>;
           })}</tr>)}
           <tr className="ev"><th>Events</th>{week.map((d) => <td key={d.day} className="n">{ev(d) || <span className="gl-dim">·</span>}</td>)}</tr>
         </tbody>
@@ -136,7 +136,7 @@ function Vitals({ stats, trendDays }: { stats: MeasureStat[]; trendDays: number 
             const dcls = m.state === "hi" || m.state === "lo" ? (m.better == null ? "flat" : m.better ? "good" : "bad") : "flat";
             const tip = `${m.name}${m.why ? ` — ${m.why}` : ""}\nThis week: ${m.week != null ? fmt(m, m.week) + unitOf(m) : "not enough days"} (${m.weekDays} of 7 days)\n${m.usualWeek ? `A usual week: ${fmt(m, m.usualWeek.p10)}–${fmt(m, m.usualWeek.p90)}` : "Usual week: needs 3 weeks of history"}${m.day ? `\nA usual day: ${fmt(m, m.day.p10)}–${fmt(m, m.day.p90)}` : ""}`;
             return (
-              <tr key={m.k} title={tip}>
+              <tr key={m.k} data-tip={tip}>
                 <td className="nm">{m.name}</td>
                 <td className="sp"><Spark m={m} /></td>
                 <td className="wv">{m.week != null ? <>{fmt(m, m.week)}<small>{m.unit}</small></> : <span className="gl-dim">–</span>}</td>

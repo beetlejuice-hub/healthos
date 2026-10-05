@@ -89,7 +89,7 @@ function SleepPanel({ all, ns }: { all: GlanceDay[]; ns: ReturnType<typeof night
               {n.rating != null && <path d={col(x(j), bw, Y(n.rating), Y(0))} fill="var(--ok)" opacity={(.3 + .7 * (n.rating - 1) / 9).toFixed(2)} />}
               {cw >= 7 && [n.lateCaffeine && "✕", n.drinks && "◆", n.trained && "●"].filter(Boolean).map((g, k) => <text key={k} x={x(j) + bw / 2} y={evY + k * 10} textAnchor="middle" className="ev" style={{ fontSize: 8.5 }}>{g}</text>)}
               {labs.has(j) && <text x={x(j)} y={H - 2}>{labs.get(j)}</text>}
-              <rect x={L + j * cw} y={top} width={cw} height={evY + 24 - top} fill="transparent"><title>{`Night of ${dayLabel(noon(n.day))}\n${n.rating != null ? `Rated ${n.rating}/10` : "Not rated"}${n.cafBed != null ? `\n${f0(n.cafBed)} mg caffeine at bedtime` : ""}${n.drinks ? "\nDrinks that evening" : ""}${n.trained ? "\nTrained that day" : ""}`}</title></rect>
+              <rect x={L + j * cw} y={top} width={cw} height={evY + 24 - top} fill="transparent" data-tip={`Night of ${dayLabel(noon(n.day))}\n${n.rating != null ? `Rated ${n.rating}/10` : "Not rated"}${n.cafBed != null ? `\n${f0(n.cafBed)} mg caffeine at bedtime` : ""}${n.drinks ? "\nDrinks that evening" : ""}${n.trained ? "\nTrained that day" : ""}`} />
             </g>
           ))}
           <line x1={L} x2={w - R} y1={Y(avg)} y2={Y(avg)} className="avgl" />
@@ -118,7 +118,7 @@ function CaffeinePanel({ ns }: { ns: ReturnType<typeof nights> }) {
           <rect x={L} y={Y(hi)} width={w - L - R} height={Y(lo) - Y(hi)} className="tiermid" />
           {[0, lo, hi].map((v) => <g key={v}><line x1={L} x2={w - R} y1={Y(v)} y2={Y(v)} className={v ? "grid" : "axis"} /><text x={L - 5} y={Y(v) + 3.5} textAnchor="end">{v}</text></g>)}
           <text x={w - R + 8} y={(Y(top2) + Y(hi)) / 2 + 4} className="l">higher</text><text x={w - R + 8} y={(Y(hi) + Y(lo)) / 2 + 4} className="l">possible</text><text x={w - R + 8} y={(Y(lo) + Y(0)) / 2 + 4} className="l">low</text>
-          {ns.map((n, j) => n.cafBed == null ? null : <circle key={n.day} cx={L + (j + .5) * cw} cy={Y(n.cafBed)} r={cw > 8 ? 3.8 : 2.6} className="cafdot" opacity={n.lateCaffeine ? 1 : .45}><title>{`Night of ${dayLabel(noon(n.day))}\n${f0(n.cafBed)} mg at bedtime${n.rating != null ? `\nRated ${n.rating}/10 next morning` : ""}${n.lateCaffeine ? "\nCaffeine after 14:00" : ""}`}</title></circle>)}
+          {ns.map((n, j) => n.cafBed == null ? null : <circle key={n.day} cx={L + (j + .5) * cw} cy={Y(n.cafBed)} r={cw > 8 ? 3.8 : 2.6} className="cafdot" opacity={n.lateCaffeine ? 1 : .45} data-tip={`Night of ${dayLabel(noon(n.day))}\n${f0(n.cafBed)} mg at bedtime${n.rating != null ? `\nRated ${n.rating}/10 next morning` : ""}${n.lateCaffeine ? "\nCaffeine after 14:00" : ""}`} />)}
         </svg>
       </div>
     </Panel>
@@ -145,7 +145,7 @@ function DrinksPanel({ days, period }: { days: GlanceDay[]; period: number }) {
               {wk.drinks != null && wk.drinks > 0 && <path d={col(x, bw, Y(wk.drinks), Y(0))} fill="var(--alc)" />}
               <text x={x + bw / 2} y={wk.drinks ? Y(wk.drinks) - 4 : Y(0) - 4} textAnchor="middle" className={wk.drinks != null ? "v" : ""}>{wk.drinks == null ? "–" : wk.drinks ? f1(wk.drinks).replace(/\.0$/, "") : "0"}</text>
               {(weeks.length <= 6 || j % 2 === 0) && <text x={x + bw / 2} y={H - 2} textAnchor="middle" style={{ fontSize: 9.5 }}>{short(wk.start)}</text>}
-              <rect x={L + j * cw} y={top} width={cw} height={ph} fill="transparent"><title>{`Week from ${dayLabel(noon(wk.start))}\n${wk.drinks == null ? `Only ${wk.loggedDays} days logged` : `${f1(wk.drinks)} drinks (${f0(wk.drinks * 14)} g alcohol)`}`}</title></rect>
+              <rect x={L + j * cw} y={top} width={cw} height={ph} fill="transparent" data-tip={`Week from ${dayLabel(noon(wk.start))}\n${wk.drinks == null ? `Only ${wk.loggedDays} days logged` : `${f1(wk.drinks)} drinks (${f0(wk.drinks * 14)} g alcohol)`}`} />
             </g>
           ); })}
         </svg>
@@ -180,7 +180,7 @@ function KcalPanel({ list }: { list: GlanceDay[] }) {
             let acc = 0; const segs = MAC.map(([k, , c, kc], m) => { const v = r.m![k] * kc, ya = Y(acc + v), yb = Y(acc); acc += v; return m === 2 ? <path key={k} d={col(x(j), bw, ya + 1.5, yb)} fill={c} /> : <rect key={k} x={x(j)} y={ya + 1.5} width={bw} height={Math.max(.5, yb - ya - 1.5)} fill={c} />; });
             return (
               <g key={r.day}>{segs}{labs.has(j) && <text x={x(j)} y={H - 2}>{labs.get(j)}</text>}
-                <rect x={L + j * cw} y={top} width={cw} height={ph} fill="transparent"><title>{`${dayLabel(noon(r.day))}\n${f0(r.m.kcal)} kcal\nProtein ${f0(r.m.p)} g · Carbs ${f0(r.m.c)} g · Fat ${f0(r.m.f)} g`}</title></rect></g>
+                <rect x={L + j * cw} y={top} width={cw} height={ph} fill="transparent" data-tip={`${dayLabel(noon(r.day))}\n${f0(r.m.kcal)} kcal\nProtein ${f0(r.m.p)} g · Carbs ${f0(r.m.c)} g · Fat ${f0(r.m.f)} g`} /></g>
             );
           })}
           <line x1={L} x2={w - R + 4} y1={Y(goals.kcal)} y2={Y(goals.kcal)} className="goal" /><text x={w - R + 10} y={Y(goals.kcal) + 4} className="v">goal {f0(goals.kcal)}</text>
@@ -216,7 +216,7 @@ function WeightPanel({ period, now }: { period: number; now: number }) {
         <svg viewBox={`0 0 ${w} ${H}`} width={w} height={H} role="img" aria-label="Weight: weigh-ins, 7-day average and trend">
           {ticks.map((v) => <g key={v}><line x1={L} x2={w - R} y1={Y(v)} y2={Y(v)} className="grid" /><text x={L - 6} y={Y(v) + 3.5} textAnchor="end">{v}</text></g>)}
           {ahead > 0 && <rect x={X(last) + 4} y={top} width={w - R - X(last) - 4} height={ph} className="proj" />}
-          {days.map((d, i) => d.kg == null ? null : <circle key={d.day} cx={X(i)} cy={Y(d.kg)} r="3" className="wdot"><title>{`${dayLabel(noon(d.day))}\n${d.kg.toFixed(1)} kg`}</title></circle>)}
+          {days.map((d, i) => d.kg == null ? null : <circle key={d.day} cx={X(i)} cy={Y(d.kg)} r="3" className="wdot" data-tip={`${dayLabel(noon(d.day))}\n${d.kg.toFixed(1)} kg`} />)}
           <path d={avgPath} className="wavg" />
           {trend && <line x1={X(trend.fit[0][0] + offset)} x2={X(last + ahead)} y1={Y(trend.fit[0][1])} y2={Y(trend.nowKg + trend.perDay * ahead)} className="wtrend" />}
           {trend && <><circle cx={X(last)} cy={Y(trend.nowKg)} r="4.5" className="wnow" /><text x={w - R + 8} y={Y(trend.nowKg + trend.perDay * ahead) + 4} className="v">{f1(trend.nowKg + trend.perDay * ahead)} kg</text><text x={w - R + 8} y={Y(trend.nowKg + trend.perDay * ahead) + 17} style={{ fontSize: 9.5 }}>in 3 weeks</text></>}

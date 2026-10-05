@@ -22,7 +22,7 @@ function SideCol({ side, kind }: { side: Side; kind: "worst" | "best" }) {
         {rows.map((r) => {
           const max = Math.max(r.group, r.rest, r.f.share ? 1 : 0) || 1;
           return (
-            <div className={`pt-row${r.diff!.clear ? " clear" : ""}`} key={r.f.k} title={`${r.f.name}\nThese days: ${fmt(r, r.group)} (${r.nGroup})\nOther days: ${fmt(r, r.rest)} (${r.nRest})\nDifference ${r.diff!.value >= 0 ? "+" : "−"}${fmt(r, Math.abs(r.diff!.value))}, 95% range ${fmt(r, r.diff!.lo)} to ${fmt(r, r.diff!.hi)}\n${r.diff!.clear ? "Clear" : "Not clear yet"}`}>
+            <div className={`pt-row${r.diff!.clear ? " clear" : ""}`} key={r.f.k} data-tip={`${r.f.name}\nThese days: ${fmt(r, r.group)} (${r.nGroup})\nOther days: ${fmt(r, r.rest)} (${r.nRest})\nDifference ${r.diff!.value >= 0 ? "+" : "−"}${fmt(r, Math.abs(r.diff!.value))}, 95% range ${fmt(r, r.diff!.lo)} to ${fmt(r, r.diff!.hi)}\n${r.diff!.clear ? "Clear" : "Not clear yet"}`}>
               <span className="nm">{r.f.name}</span>
               <span className="bars"><i className="g" style={{ width: `${Math.max(2, (r.group / max) * 100)}%` }} /><i className="r" style={{ width: `${Math.max(2, (r.rest / max) * 100)}%` }} /></span>
               <span className="vals"><b>{fmt(r, r.group)}</b> vs {fmt(r, r.rest)}</span>
@@ -31,7 +31,7 @@ function SideCol({ side, kind }: { side: Side; kind: "worst" | "best" }) {
           );
         })}
       </div>
-      {side.words.length > 0 && <div className="pt-words"><span className="gp-k">In your notes then</span>{side.words.map((w) => <span key={w.word} className="pt-word" title={`On ${w.days} of these ${side.days.length} days`}>{w.word} <small>{w.days}</small></span>)}</div>}
+      {side.words.length > 0 && <div className="pt-words"><span className="gp-k">In your notes then</span>{side.words.map((w) => <span key={w.word} className="pt-word" data-tip={`On ${w.days} of these ${side.days.length} days`}>{w.word} <small>{w.days}</small></span>)}</div>}
     </div>
   );
 }

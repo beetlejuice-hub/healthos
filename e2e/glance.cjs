@@ -39,6 +39,11 @@ const { chromium, APP, OUT, handle } = require('./harness.cjs');
     check(name + ` : jumping to Connections brings it to the top (${Math.round(top)} px)`, top >= 0 && top < 200);
     check(name + ': the bar stays pinned and marks it', await pg.locator('.secbar').isVisible() && await pg.locator('.secbar button[aria-current="true"]').innerText() === 'Connections');
     await pg.evaluate(() => window.scrollTo(0, 0)); await pg.waitForTimeout(200);
+    // One tooltip, styled, instead of the browser's: pointing at a vitals row shows its numbers.
+    if (name === 'laptop') { const row = pg.locator('.gl-vt tbody tr').nth(1); await row.scrollIntoViewIfNeeded(); await pg.waitForTimeout(300); await row.hover(); await pg.waitForTimeout(150);
+      check('laptop: pointing at a row shows the tooltip', /A usual week/.test(await pg.locator('.tipbox').innerText().catch(() => '')));
+      check('laptop: no browser title tooltips left on the new panels', await pg.evaluate(() => !document.querySelector('.gl title, .gl [title]'))); }
+    check(name + ': no duplicate "Your week" block', await pg.locator('.weekly').count() === 0);
     await pg.locator('.gl').first().screenshot({ path: OUT + `glance-${name}.png` });
     await ctx.close();
   }

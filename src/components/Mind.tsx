@@ -75,7 +75,7 @@ function CoursePanel({ course, roll, trend }: { course: ReturnType<typeof moodCo
                 {shown.map(([k, , color], s) => { const v = d[k] as number | null; return v == null ? null : <rect key={k} x={x} y={sy + s * (sh + 4)} width={bw} height={sh} rx={Math.min(2, bw / 2)} fill={color} opacity={(.12 + .88 * Math.max(0, Math.min(1, (v - 2) / 7))).toFixed(2)} />; })}
                 {cw >= 8 && ev(d).map((g, k) => <text key={k} x={x + bw / 2} y={evY + k * 10} textAnchor="middle" className="ev" style={{ fontSize: cw < 12 ? 8 : 9 }}>{g}</text>)}
                 {lab && <text x={L + j * cw + 2} y={evY + 44}>{dt.getDate()} {dayLabel(noon(d.day)).slice(-3)}</text>}
-                <rect x={L + j * cw} y={top} width={cw} height={evY + 40 - top} fill="transparent"><title>{tip}</title></rect>
+                <rect x={L + j * cw} y={top} width={cw} height={evY + 40 - top} fill="transparent" data-tip={tip} />
               </g>
             );
           })}
@@ -109,7 +109,7 @@ function RhythmPanel({ rhythm, days }: { rhythm: ReturnType<typeof moodRhythm>; 
             const st = stepOf(c.mean, lo, hi);
             return (
               <g key={`${c.row}-${c.col}`}>
-                <rect x={x} y={y} width={cwid} height={ch} rx="4" fill={`var(--q${st})`}><title>{`${name(c)}\nMood ${f1(c.mean)} on average\n${c.n} check-in${c.n === 1 ? "" : "s"}`}</title></rect>
+                <rect x={x} y={y} width={cwid} height={ch} rx="4" fill={`var(--q${st})`} data-tip={`${name(c)}\nMood ${f1(c.mean)} on average\n${c.n} check-in${c.n === 1 ? "" : "s"}`} />
                 <text x={x + cwid / 2} y={y + ch / 2 + 4} textAnchor="middle" className="cell" style={{ fill: `var(--qt${st})` }} pointerEvents="none">{f1(c.mean)}</text>
               </g>
             );

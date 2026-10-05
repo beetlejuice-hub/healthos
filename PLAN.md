@@ -282,6 +282,8 @@ email get Dev tools (`#dev`): raw entry editor, generate/remove sample, wipe acc
    95% says so, else "about the same"; stress up = worse), best/worst time of day, best and lowest day
    with what happened (gym, alcohol, late caffeine, your tags), and the top connection from
    between.ts — a finding, or an early sign marked "could still be chance".
+   *5 Oct: taken off Insights — the week card (vs your usual week) and Noticed (same between.ts findings) cover
+   it; one view of the week, not two. `lib/weekly.ts` stays: the AI's context uses it.*
 25. [x] **"How now?" on the Home Screen** (2 Oct). `/now` = just the check-in (`components/NowScreen.tsx`),
    served by the Worker with its own title/manifest/icon (`nowPage`, `public/now.webmanifest`), so Safari →
    Share → Add to Home Screen at /now makes a separate "How now?" icon; Android/Chrome: long-press
@@ -437,5 +439,9 @@ email get Dev tools (`#dev`): raw entry editor, generate/remove sample, wipe acc
       lane (MasterGraph; feelgraph ribbonRuns/ribbonWidth/stressMix/lifeBars + tests). ≤ 7 days: C ribbon, joined
       within a day. Past a week: A day bars vs your average + energy/stress lines. Key under the chart switches
       with zoom. Scout "show on graph" for any feeling opens this lane. --g-now/--g-down now also on :root.
+   e. [x] One look (owner, 5 Oct: "its good continue"): `components/Tip.tsx` — one styled tooltip for every
+      `data-tip` (hover, tap, focus) replacing the browser's title tooltips on all new panels; Noticed, Worth a
+      look, Strength, doses, experiments, stack check restyled to the new panels (scoped CSS); Strength full
+      width; the duplicate "Your week" block taken off.
    Defaults picked: dark only (the app is dark only, owner 29 Sept); wearable rows hidden until a wearable
    is connected, never sample data mixed into real numbers.

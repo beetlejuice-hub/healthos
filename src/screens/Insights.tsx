@@ -7,6 +7,7 @@ import { Mind } from "../components/Mind";
 import { Connections } from "../components/Connections";
 import { Body } from "../components/Body";
 import { SectionBar } from "../components/SectionBar";
+import { Tip } from "../components/Tip";
 import { Coverage, Methods, SuppMatrix, TrainingLoad } from "../components/Stack";
 import { glanceDays } from "../lib/glance";
 import { LineChart } from "../components/Charts";
@@ -19,7 +20,6 @@ import { notice, WINDOW_DAYS, type Report } from "../lib/findings";
 import { StackCheckPanel } from "../components/StackCheck";
 import { useScout, WorthALook } from "../components/Scout";
 import { Experiments } from "../components/Ai";
-import { Weekly } from "../components/Weekly";
 import type { GraphFocus } from "../components/MasterGraph";
 import { DOSE_MIN_DAYS, doseCompare } from "../lib/dose";
 
@@ -75,9 +75,9 @@ export function Insights() {
         </div>
       </header>
       {nothing && <div className="needs">Nothing logged yet. Log food, drinks and supplements for a few days and this fills in — or load sample data in Settings to see what it will look like.</div>}
+      <Tip />
       {!nothing && <SectionBar version={`${s.entries.length}-${period}`} />}
       {!nothing && <Glance now={now} trendDays={period} report={report} />}
-      {!nothing && <Weekly now={now} />}
       {!nothing && <MasterGraph data={data} supplements={s.supplements} focus={focus} days={gdays} />}
       {!nothing && <Mind days={gdays} now={now} period={period} />}
       {!nothing && <Connections days={gdays} />}
@@ -183,13 +183,13 @@ function Strength({ now: nowMs }: { now: number }) {
     sets.forEach((s) => count.set(s.exercise, (count.get(s.exercise) ?? new Set()).add(s.workoutId)));
     return [...count.entries()].filter(([, w]) => w.size >= 2).sort((a, b) => b[1].size - a[1].size).slice(0, 6).map(([e]) => e);
   }, [sets]);
-  if (!exercises.length) return <section className="p w8"><h2>Strength <span>estimated 1-rep max</span></h2><div className="needs">Log the same exercise in two workouts to start seeing strength trends.</div></section>;
+  if (!exercises.length) return <section className="p w12"><h2>Strength <span>estimated 1-rep max</span></h2><div className="needs">Log the same exercise in two workouts to start seeing strength trends.</div></section>;
   const hist = exercises.map((e) => e1rmHistory(sets, e));
   const first = Math.min(...hist.map((h) => h[0].at)), lastT = nowMs;
   const allPct = hist.flatMap((h) => h.map((x) => (x.e1rm / h[0].e1rm) * 100));
   const target = (ex: string) => templates.flatMap((t) => t.exercises).find((x) => x.name === ex)?.reps ?? 8;
   return (
-    <section className="p w8">
+    <section className="p w12">
       <h2>Strength <span>estimated 1-rep max (Epley)</span></h2>
       <div className="twocol">
         <div className="sub"><h3>e1RM, % of where each lift started</h3>

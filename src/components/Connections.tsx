@@ -55,7 +55,7 @@ function Forest({ rows }: { rows: Comparison[] }) {
         <text x={plotR + (narrow ? 44 : 50)} y={cy + 4} textAnchor="end" className="v">{sg(r.diff!.value)}</text>
         {!narrow && <text x={plotR + 58} y={cy + 4} className="rng">{sg(r.diff!.lo)} to {sg(r.diff!.hi)}</text>}
         <text x={w} y={cy + 4} textAnchor="end">{r.nWith}/{r.nWithout}</text>
-        <rect x={0} y={y} width={w} height={rowH} fill="transparent"><title>{`${r.what} → ${r.outcome}\n${sg(r.diff!.value)} points (95% range ${sg(r.diff!.lo)} to ${sg(r.diff!.hi)})\n${r.nWith} days with, ${r.nWithout} without\n${r.diff!.clear ? "Clear: the range stays on one side of zero" : "Not clear yet: the range crosses zero"}`}</title></rect>
+        <rect x={0} y={y} width={w} height={rowH} fill="transparent" data-tip={`${r.what} → ${r.outcome}\n${sg(r.diff!.value)} points (95% range ${sg(r.diff!.lo)} to ${sg(r.diff!.hi)})\n${r.nWith} days with, ${r.nWithout} without\n${r.diff!.clear ? "Clear: the range stays on one side of zero" : "Not clear yet: the range crosses zero"}`} />
       </g>,
     );
     y += rowH;
@@ -103,7 +103,7 @@ function Explorer({ days, pairs }: { days: GlanceDay[]; pairs: ReturnType<typeof
         {tk(ylo - py, yhi + py).map((v) => <g key={`y${v}`}><line x1={L} x2={w - R} y1={SY(v)} y2={SY(v)} className="grid" /><text x={L - 6} y={SY(v) + 3.5} textAnchor="end">{v}</text></g>)}
         {tk(xlo - px, xhi + px).map((v) => <text key={`x${v}`} x={SX(v)} y={h - bot + 14} textAnchor="middle">{v}</text>)}
         <line x1={L} x2={w - R} y1={h - bot} y2={h - bot} className="axis" />
-        {p.pts.map(([a, b, d], i) => <circle key={d} cx={SX(a) + (intX ? jit(i) : 0)} cy={SY(b) + (intY ? jit(i + 7) : 0)} r="4" className="dot"><title>{`${dayLabel(atMinute(d, 720))}\n${X.name}: ${+a.toFixed(1)}\n${Y.name} (${when}): ${+b.toFixed(1)}`}</title></circle>)}
+        {p.pts.map(([a, b, d], i) => <circle key={d} cx={SX(a) + (intX ? jit(i) : 0)} cy={SY(b) + (intY ? jit(i + 7) : 0)} r="4" className="dot" data-tip={`${dayLabel(atMinute(d, 720))}\n${X.name}: ${+a.toFixed(1)}\n${Y.name} (${when}): ${+b.toFixed(1)}`} />)}
         {Number.isFinite(sl) && <line x1={SX(xlo)} x2={SX(xhi)} y1={SY(my + sl * (xlo - mx))} y2={SY(my + sl * (xhi - mx))} className="fit" />}
         <text x={w - R} y={h - 2} textAnchor="end" className="c">{X.name} →</text>
         <text x={L - 34} y={9} className="c">↑ {Y.name}, {when}</text>

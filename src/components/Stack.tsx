@@ -12,7 +12,7 @@ import { MUSCLE_GROUPS, WEEKLY_SETS, muscleWeek } from "../lib/training";
 import { doseAt } from "../lib/dose";
 import { mean } from "../lib/stats";
 import { atMinute, dayLabel, localDay, DAY } from "../lib/time";
-import { slotsOf, type EntryOf } from "../lib/types";
+import type { EntryOf } from "../lib/types";
 import { useWidth } from "./useWidth";
 
 const f1 = (v: number) => v.toFixed(1);
@@ -62,7 +62,7 @@ export function TrainingLoad({ now, period }: { now: number; period: number }) {
               <text x={L - 6} y={y + ch / 2 + 4} textAnchor="end" className="l">{m}</text>
               {weeks.map((wk, k) => { const v = wk.load[m], st = setStep(v), x = L + k * (cwid + gap); return (
                 <g key={k}>
-                  <rect x={x} y={y} width={cwid} height={ch} rx="3" fill={st < 0 ? "var(--i-panel-2)" : `var(--q${st})`}><title>{`${m}, week ending ${dayLabel(wk.end)}\n${v} hard sets${v >= WEEKLY_SETS.good ? " — in the growth range" : v >= WEEKLY_SETS.low ? " — moderate" : v ? " — light" : ""}`}</title></rect>
+                  <rect x={x} y={y} width={cwid} height={ch} rx="3" fill={st < 0 ? "var(--i-panel-2)" : `var(--q${st})`} data-tip={`${m}, week ending ${dayLabel(wk.end)}\n${v} hard sets${v >= WEEKLY_SETS.good ? " — in the growth range" : v >= WEEKLY_SETS.low ? " — moderate" : v ? " — light" : ""}`} />
                   {v > 0 && cwid >= 18 && <text x={x + cwid / 2} y={y + ch / 2 + 4} textAnchor="middle" className="cell" style={{ fill: `var(--qt${st})` }} pointerEvents="none">{v % 1 ? f1(v) : v}</text>}
                 </g>
               ); })}
@@ -100,12 +100,11 @@ export function SuppMatrix({ days, period }: { days: GlanceDay[]; period: number
               <text x={L - 8} y={y + rh / 2 + 4} textAnchor="end" className="l">{s.name.length > 18 ? s.name.slice(0, 17) + "…" : s.name}</text>
               {list.map((d, j) => { const x = L + j * cw, took = d.taken?.includes(s.id), ans = d.stackAnswered; return (
                 <g key={d.day}>
-                  <rect x={x + (cw > 4 ? .6 : 0)} y={y} width={Math.max(.8, cw - (cw > 4 ? 1.2 : 0))} height={rh} rx={cw > 6 ? 2 : 0} fill={took ? "var(--supp)" : ans ? "var(--i-line-2)" : "var(--i-panel-2)"}><title>{`${s.name}, ${dayLabel(noon(d.day))}\n${took ? `Taken · ${doseAt(s, noon(d.day))}` : ans ? "Not taken" : "Stack not ticked"}`}</title></rect>
+                  <rect x={x + (cw > 4 ? .6 : 0)} y={y} width={Math.max(.8, cw - (cw > 4 ? 1.2 : 0))} height={rh} rx={cw > 6 ? 2 : 0} fill={took ? "var(--supp)" : ans ? "var(--i-line-2)" : "var(--i-panel-2)"} data-tip={`${s.name}, ${dayLabel(noon(d.day))}\n${took ? `Taken · ${doseAt(s, noon(d.day))}` : ans ? "Not taken" : "Stack not ticked"}`} />
                   {changes.get(s.id)?.has(d.day) && <line x1={x} x2={x} y1={y - 3} y2={y + rh + 3} stroke="var(--g-now)" strokeWidth="2" />}
                 </g>
               ); })}
               <text x={w - R + 8} y={y + rh / 2 + 4} className="v">{rate.of ? `${Math.round((rate.took / rate.of) * 100)}%` : "–"}</text>
-              <title>{`${s.name} · ${slotsOf(s).join(", ")}`}</title>
             </g>
           ); })}
           {[...labs].map(([j, t]) => <text key={j} x={L + j * cw} y={H - 2}>{t}</text>)}
