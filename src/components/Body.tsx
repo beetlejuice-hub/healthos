@@ -47,16 +47,16 @@ export function Body({ days, period, now }: { days: GlanceDay[]; period: number;
   return (
     <>
       {sleepGroup && <>
-        <div className="gl-group" id="ins-sleep"><h2>Sleep</h2><span>your own morning rating, and what you had that evening · stages and HRV join once a ring or watch is connected</span></div>
-        <div className="gl">
+        <div className="gl-group" id="ins-sleep" data-sec="sleep"><h2>Sleep</h2><span>your own morning rating, and what you had that evening · stages and HRV join once a ring or watch is connected</span></div>
+        <div className="gl" data-sec="sleep">
           {rated.length > 0 && <SleepPanel all={days} ns={ns} />}
           {hasCaf && <CaffeinePanel ns={ns} />}
           {hasCaf && <DrinksPanel days={days} period={period} />}
         </div>
       </>}
       {(hasFood || hasWeight) && <>
-        <div className="gl-group" id="ins-intake"><h2>Intake &amp; body</h2><span>food and weight</span></div>
-        <div className="gl">
+        <div className="gl-group" id="ins-intake" data-sec="intake"><h2>Intake &amp; body</h2><span>food and weight</span></div>
+        <div className="gl" data-sec="intake">
           {hasFood && <KcalPanel list={list.slice(-period)} />}
           {hasWeight && <WeightPanel period={period} now={now} />}
         </div>

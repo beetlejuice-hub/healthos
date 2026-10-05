@@ -18,13 +18,13 @@ const month = require('./fixtures/between-month.json');
   // One check-in so far: Insights says what it still needs.
   await pg.goto(APP + '#today');
   await rate(pg, 'mood', 6); await pg.waitForTimeout(200);
-  await pg.goto(APP + '#insights'); await pg.waitForTimeout(400);
+  await pg.goto(APP + '#insights/connections'); await pg.waitForTimeout(400);
   check('one check-in: "still checking" says to rate a few times a day', /What changes how you feel during the day\?/.test(await pg.locator('body').innerText()));
 
   // Load the month (as if logged on this phone) and look again.
   await pg.evaluate((m) => { const k = 'healthos.v1:u-test'; const s = JSON.parse(localStorage.getItem(k) || '{}'); localStorage.setItem(k, JSON.stringify({ ...s, entries: m.entries, workouts: m.workouts })); }, month);
   await pg.reload(); await pg.waitForSelector('text=Settings', { timeout: 10000 }).catch(() => {});
-  await pg.goto(APP + '#insights'); await pg.waitForTimeout(600);
+  await pg.goto(APP + '#insights/connections'); await pg.waitForTimeout(600);
   const body = await pg.locator('body').innerText();
   check('Insights: the gym lifts mood, in words', /After the gym, your mood rises about \d\.\d points more than it otherwise does/.test(body));
   check('with its evidence: how often it held and the range', /gaps with the gym · \d+ of \d+ beat what was expected · 95% range/.test(body));

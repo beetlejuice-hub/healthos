@@ -24,7 +24,7 @@ const { chromium, APP, OUT, handle } = require('./harness.cjs');
     check(name + ': Today shows one Noticed line', /NOTICED|Noticed/.test(line) && /You burn about [\d,]+ kcal a day/.test(line));
     await pg.screenshot({ path: out + `n-today-${name}.png` });
     await nline().click(); await pg.waitForTimeout(800);
-    check(name + ': tapping it opens Insights at Noticed', pg.url().endsWith('#insights') && await pg.locator('.ncard').count() >= 2);
+    check(name + ': tapping it opens Insights at Noticed', /#insights(\/connections)?$/.test(pg.url()) && await pg.locator('.ncard').count() >= 2);
     const cards = await pg.locator('.ncards').innerText();
     check(name + ': weight card has evidence', /weigh-ins over \d+ days · 95% range/.test(cards));
     check(name + ': caffeine habit card learned from data', /You take about \d+ mg of caffeine a day — (light|moderate|high) for your weight/.test(cards) && /mg per kg/.test(cards));

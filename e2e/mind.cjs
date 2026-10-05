@@ -18,7 +18,7 @@ const { chromium, APP, OUT, handle } = require('./harness.cjs');
       check('empty account: no Mind section', await pg.locator('.gl-course').count() === 0);
       await pg.goto(APP + '#settings'); await pg.getByRole('button', { name: /Load sample/ }).click(); await pg.waitForTimeout(300);
     }
-    await pg.goto(APP + '#insights'); await pg.waitForTimeout(600);
+    await pg.goto(APP + '#insights/mind'); await pg.waitForTimeout(600);
     const course = await pg.locator('.gl-course').innerText();
     check(name + ': course says days above your average', /\d+ of \d+ days above your average of \d\.\d/.test(course) && /Best: \w{3} \d+ \w{3}/.test(course));
     const bars = await pg.locator('.gl-course path.up, .gl-course path.down').count();

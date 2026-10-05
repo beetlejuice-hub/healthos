@@ -25,8 +25,8 @@ export function Mind({ days, now, period }: { days: GlanceDay[]; now: number; pe
   if (!course.rated && !rhythm.n) return null;
   return (
     <>
-      <div className="gl-group" id="ins-mind"><h2>Mind</h2><span>how you felt, when, and around what</span></div>
-      <div className="gl">
+      <div className="gl-group" id="ins-mind" data-sec="mind"><h2>Mind</h2><span>how you felt, when, and around what</span></div>
+      <div className="gl" data-sec="mind">
         {course.rated > 0 && <CoursePanel course={course} roll={rolling7(days.map((d) => d.mood)).slice(-course.days.length)} trend={weeklyTrend(days, "mood")} />}
         {rhythm.n > 0 && <RhythmPanel rhythm={rhythm} days={rhythmDays} />}
         <Patterns days={days} />

@@ -18,7 +18,7 @@ const { chromium, APP, OUT, handle } = require('./harness.cjs');
       check('empty account: no Connections', await pg.locator('.gl-forest').count() === 0);
       await pg.goto(APP + '#settings'); await pg.getByRole('button', { name: /Load sample/ }).click(); await pg.waitForTimeout(300);
     }
-    await pg.goto(APP + '#insights'); await pg.waitForTimeout(700);
+    await pg.goto(APP + '#insights/connections'); await pg.waitForTimeout(700);
     const forest = await pg.locator('.gl-forest').innerText();
     check(name + ': forest says how many comparisons are clear', /\d+ of \d+ comparisons are clear/.test(forest));
     const squares = await pg.locator('.gl-forest rect.sq').count();

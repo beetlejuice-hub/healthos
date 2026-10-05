@@ -26,7 +26,7 @@ const { chromium, APP, OUT, handle } = require('./harness.cjs');
     check(name + ': day strip has 7 days ending today', heads.length === 8 && /^Today/.test(heads[7].trim()));
     const vt = await pg.locator('.gl-vt').innerText();
     check(name + ': vitals table has mind and intake rows (no sleep ratings in the sample, so no sleep row)', /Mood/.test(vt) && /Calories/.test(vt) && /Weight/.test(vt) && !/Sleep rating/.test(vt));
-    check(name + ': judged against a usual week', /Usual week/i.test(vt) && /(Typical|Higher|Lower)/.test(vt));
+    check(name + ': judged against a usual week', (name === 'phone' || /Usual week/i.test(vt)) && /(Typical|Higher|Lower)/.test(vt)); // a phone drops the usual-range column; the word still says it
     check(name + ': no "−0" deltas', !/−0(\.0)?\b(?!\.\d*[1-9])/.test(vt.replace(/−0\.\d*[1-9]\d*/g, '')));
     await pg.getByRole('button', { name: '7 days', exact: true }).click(); await pg.waitForTimeout(150);
     check(name + ': period switch reaches the sparklines', /Daily, last 7 days/i.test(await pg.locator('.gl-vt thead').innerText()));
@@ -34,10 +34,12 @@ const { chromium, APP, OUT, handle } = require('./harness.cjs');
     check(name + ': page never scrolls sideways', await pg.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth));
     const secs = await pg.locator('.secbar button').allInnerTexts();
     check(name + ': section bar lists the page (' + secs.join(', ') + ')', secs.includes('This week') && secs.includes('Timeline') && secs.includes('Connections') && secs.includes('Your data'));
+    if (name === 'laptop') { // on a phone the bar switches tabs instead: e2e/phone.cjs
     await pg.locator('.secbar button', { hasText: 'Connections' }).click(); await pg.waitForTimeout(900);
     const top = await pg.locator('#ins-connections').evaluate((el) => el.getBoundingClientRect().top);
     check(name + ` : jumping to Connections brings it to the top (${Math.round(top)} px)`, top >= 0 && top < 200);
     check(name + ': the bar stays pinned and marks it', await pg.locator('.secbar').isVisible() && await pg.locator('.secbar button[aria-current="true"]').innerText() === 'Connections');
+    }
     await pg.evaluate(() => window.scrollTo(0, 0)); await pg.waitForTimeout(200);
     // One tooltip, styled, instead of the browser's: pointing at a vitals row shows its numbers.
     if (name === 'laptop') { const row = pg.locator('.gl-vt tbody tr').nth(1); await row.scrollIntoViewIfNeeded(); await pg.waitForTimeout(300); await row.hover(); await pg.waitForTimeout(150);

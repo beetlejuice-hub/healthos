@@ -62,6 +62,8 @@ export function MasterGraph({ data, supplements, focus, days }: { data: Lanes; s
   const cv = useRef<HTMLCanvasElement>(null);
   const drag = useRef<{ x: number; t1: number } | null>(null);
   const [w, setW] = useState(900);
+  // The lane list is long; on a phone it starts folded so the readout sits right under the chart.
+  const [lanesOpen, setLanesOpen] = useState(() => typeof window === "undefined" || window.innerWidth > 700);
   const LEFT = leftFor(w);
 
   // A pattern asked to be shown: only its lanes, the second drawn over the first where it can be,
@@ -318,7 +320,7 @@ export function MasterGraph({ data, supplements, focus, days }: { data: Lanes; s
   const presets: [string, number][] = [["1D", DAY], ["3D", 3 * DAY], ["7D", 7 * DAY], ["30D", 30 * DAY], ["90D", 90 * DAY], ["All", maxT - minT]];
 
   return (
-    <section className="master" id="ins-timeline" aria-label="Master graph">
+    <section className="master" id="ins-timeline" data-sec="timeline" aria-label="Master graph">
       <div className="mg-main">
         <div className="mg-bar">
           <h2 className="mg-title">Everything, on one timeline</h2>
@@ -347,8 +349,8 @@ export function MasterGraph({ data, supplements, focus, days }: { data: Lanes; s
       </div>
       <aside className="mg-side">
         <div className="legend">
-          <span className="k" style={{ marginBottom: 4 }}>Lanes</span>
-          {lanes.map((l) => (
+          <button type="button" className="lanes-t" aria-expanded={lanesOpen} onClick={() => setLanesOpen(!lanesOpen)}><span className="k">Lanes</span><span className="dimt">{lanes.filter((l) => l.kind !== "wearable" && on[l.id]).length} on {lanesOpen ? "▴" : "▾"}</span></button>
+          {lanesOpen && lanes.map((l) => (
             <div className="lg" key={l.id}>
               <input type="checkbox" id={`lg-${l.id}`} checked={l.kind === "wearable" ? false : !!on[l.id]} disabled={l.kind === "wearable"} onChange={(e) => setOn({ ...on, [l.id]: e.target.checked })} />
               <i style={{ background: l.color, opacity: l.kind === "wearable" ? .35 : 1 }} />

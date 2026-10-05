@@ -45,6 +45,7 @@ export function TrainingLoad({ now, period }: { now: number; period: number }) {
   const [ref, w] = useWidth<HTMLDivElement>();
   if (!sets.length) return null;
   const L = 82, R = 70, top = 20, ch = 22, gap = 3, cwid = (w - L - R) / nW - gap, H = top + MUSCLE_GROUPS.length * (ch + gap) + 2;
+  const labEvery = Math.ceil(46 / (cwid + gap)); // week labels ~46 px wide: on a phone, label every other week, counting back from this one
   const avg = Object.fromEntries(MUSCLE_GROUPS.map((m) => [m, mean(weeks.map((x) => x.load[m]))])) as Record<string, number>;
   const rank = [...MUSCLE_GROUPS].sort((a, b) => avg[b] - avg[a]), inG = rank.filter((m) => avg[m] >= WEEKLY_SETS.good);
   return (
@@ -55,7 +56,7 @@ export function TrainingLoad({ now, period }: { now: number; period: number }) {
       foot={<><span className="lgd"><i style={{ background: "var(--i-panel-2)" }} />0</span>{STEP_LABELS.map((t, k) => <span key={t} className="lgd"><i style={{ background: `var(--q${k})` }} />{t}</span>)}<span className="gl-dim">sets a week · {WEEKLY_SETS.good}–{WEEKLY_SETS.high} is where most growth happens (Schoenfeld 2017)</span></>}>
       <div ref={ref} className="gl-chart">
         <svg viewBox={`0 0 ${w} ${H}`} width={w} height={H} role="img" aria-label="Hard sets per muscle per week">
-          {weeks.map((wk, k) => <text key={k} x={L + k * (cwid + gap) + cwid / 2} y={12} textAnchor="middle" style={{ fontSize: 9.5 }}>{short(localDay(wk.end - 6 * DAY))}</text>)}
+          {weeks.map((wk, k) => (nW - 1 - k) % labEvery ? null : <text key={k} x={L + k * (cwid + gap) + cwid / 2} y={12} textAnchor="middle" style={{ fontSize: 9.5 }}>{short(localDay(wk.end - 6 * DAY))}</text>)}
           <text x={w - R + 8} y={12} className="c">avg/wk</text>
           {MUSCLE_GROUPS.map((m, r) => { const y = top + r * (ch + gap); return (
             <g key={m}>

@@ -25,7 +25,7 @@ const { chromium, APP, OUT, handle } = require('./harness.cjs');
         if (d === 1) es.push({ id: 'f' + n++, kind: 'feel', at: D(d, 15), energy: 4, mood: 4, stress: 8, doing: ['work'], note: 'deadline at work' });
       }
       s.entries = es; localStorage.setItem(k, JSON.stringify(s)); });
-    await pg.goto(APP + '#insights'); await pg.reload(); await pg.waitForSelector('.master'); await pg.waitForTimeout(400);
+    await pg.goto(APP + '#insights/timeline'); await pg.reload(); await pg.waitForSelector('.master'); await pg.waitForTimeout(400);
     const cv = pg.locator('.mg-canvas');
     const lanes = (await cv.getAttribute('data-lanes')).split(',');
     check(`[${vw}] one How you felt lane, first (${lanes.join(' ')})`, lanes[0] === 'feel' && lanes.includes('slept') && !lanes.some((x) => ['mood', 'energy', 'stress'].includes(x)));

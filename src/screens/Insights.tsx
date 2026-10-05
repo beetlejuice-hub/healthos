@@ -1,4 +1,5 @@
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { readRoute } from "../lib/nav";
 import { useStore } from "../lib/store";
 import { dailyFacts, lanes } from "../lib/insights";
 import { MasterGraph } from "../components/MasterGraph";
@@ -6,7 +7,7 @@ import { Glance } from "../components/Glance";
 import { Mind } from "../components/Mind";
 import { Connections } from "../components/Connections";
 import { Body } from "../components/Body";
-import { SectionBar } from "../components/SectionBar";
+import { SectionBar, TABS } from "../components/SectionBar";
 import { Tip } from "../components/Tip";
 import { Top } from "../components/Top";
 import { Coverage, Methods, SuppMatrix, TrainingLoad } from "../components/Stack";
@@ -27,6 +28,18 @@ import { DOSE_MIN_DAYS, doseCompare } from "../lib/dose";
 const f1 = (v: number) => v.toFixed(1);
 const sgn = (v: number, f = f1) => `${v >= 0 ? "+" : "−"}${f(Math.abs(v))}`;
 
+/** True on a phone-width screen, kept current. */
+function usePhone() {
+  const q = "(max-width: 700px)";
+  const [on, setOn] = useState(() => typeof matchMedia !== "undefined" && matchMedia(q).matches);
+  useEffect(() => { const m = matchMedia(q), f = () => setOn(m.matches); m.addEventListener("change", f); return () => m.removeEventListener("change", f); }, []);
+  return on;
+}
+
+/** A phone tab from the URL; an unknown `#insights/x` keeps the current one. */
+const ALL_TABS = TABS.map(([t]) => t);
+const tabOf = (t?: string) => (t && ALL_TABS.includes(t) ? t : undefined);
+
 export function Insights() {
   const now = useNow(60_000);
   const s = useStore((x) => x);
@@ -38,7 +51,16 @@ export function Insights() {
   const scouted = useScout();
   const [focus, setFocus] = useState<GraphFocus | null>(null);
   const [period, setPeriod] = useState<7 | 30 | 84>(30);
-  const showOnGraph = (f: GraphFocus) => { setFocus(f); setTimeout(() => document.querySelector(".master")?.scrollIntoView({ behavior: "smooth" }), 50); };
+  // On a phone the section bar is tabs: one section at a time (#insights/<tab> opens one directly).
+  const phone = usePhone();
+  const [tab, setTab] = useState<string>(() => tabOf(readRoute()[1]) ?? "week");
+  // Tabs with something in them (SectionBar finds out after render; until then assume all, so a phone never paints the whole page first).
+  const [tabs, setTabs] = useState<string[]>(ALL_TABS);
+  const onTabs = useCallback((ts: string[]) => setTabs((p) => (p.join() === ts.join() ? p : ts)), []);
+  // The open tab: one with content (else the first), and none — the whole page — when there is only one.
+  const shown = phone && tabs.length >= 2 ? (tabs.includes(tab) ? tab : tabs[0]) : undefined;
+  useEffect(() => { const on = () => { const t = tabOf(readRoute()[1]); if (t) setTab(t); }; addEventListener("hashchange", on); return () => removeEventListener("hashchange", on); }, []);
+  const showOnGraph = (f: GraphFocus) => { setFocus(f); setTab("timeline"); if (phone) history.replaceState(null, "", "#insights/timeline"); setTimeout(() => document.querySelector(".master")?.scrollIntoView({ behavior: "smooth" }), 50); };
   const report = useMemo(() => notice(s.entries, s.goals, now, s.settings.bodyKg, { workouts: s.workouts, supplements: s.supplements, settings: s.settings }), [s.entries, s.goals, now, s.settings, s.workouts, s.supplements]);
   // Show a section only once there's something in it; list the rest in one line each, so a new
   // account sees a short page instead of ten empty panels (owner: "looks really complex").
@@ -62,7 +84,7 @@ export function Insights() {
   const nothing = s.entries.length === 0;
 
   return (
-    <div className="inst">
+    <div className="inst" data-tab={nothing ? undefined : shown}>
       <header>
         <div>
           <h1>Insights</h1>
@@ -77,20 +99,19 @@ export function Insights() {
       </header>
       {nothing && <div className="needs">Nothing logged yet. Log food, drinks and supplements for a few days and this fills in — or load sample data in Settings to see what it will look like.</div>}
       <Tip />
-      {!nothing && <SectionBar version={`${s.entries.length}-${period}`} />}
+      {!nothing && <SectionBar version={`${s.entries.length}-${period}-${tab}`} tab={phone ? shown ?? tab : null} onTabs={onTabs} onTab={(t) => { setTab(t); history.replaceState(null, "", `#insights/${t}`); window.scrollTo(0, 0); }} />}
       {!nothing && <Glance now={now} trendDays={period} report={report} />}
-      {!nothing && <div className="gl"><Top days={gdays} /></div>}
+      {!nothing && <div className="gl" data-sec="week"><Top days={gdays} /></div>}
       {!nothing && <MasterGraph data={data} supplements={s.supplements} focus={focus} days={gdays} />}
       {!nothing && <Mind days={gdays} now={now} period={period} />}
       {!nothing && <Connections days={gdays} />}
-      {!nothing && <Noticed report={report} />}
-      {!nothing && <WorthALook items={scouted} onShow={showOnGraph} />}
+      {!nothing && <div data-sec="connections" className="sec-wrap"><Noticed report={report} /><WorthALook items={scouted} onShow={showOnGraph} /></div>}
       {!nothing && <Body days={gdays} period={period} now={now} />}
       {!nothing && (has.sets || has.supps) && <>
-        <div className="gl-group" id="ins-training"><h2>Training &amp; stack</h2><span>what you trained, what you took</span></div>
-        <div className="gl"><TrainingLoad now={now} period={period} /><SuppMatrix days={gdays} period={period} /></div>
+        <div className="gl-group" id="ins-training" data-sec="training"><h2>Training &amp; stack</h2><span>what you trained, what you took</span></div>
+        <div className="gl" data-sec="training"><TrainingLoad now={now} period={period} /><SuppMatrix days={gdays} period={period} /></div>
       </>}
-      <div className="pgrid">
+      <div className="pgrid" data-sec="training">
         {has.strength && <Strength now={now} />}
         <DoseEffects />
         <Experiments />
@@ -103,8 +124,8 @@ export function Insights() {
         )}
       </div>
       {!nothing && <>
-        <div className="gl-group" id="ins-data"><h2>Your data</h2><span>how complete the picture is, and how the numbers are made</span></div>
-        <div className="gl"><Coverage days={gdays} /><Methods /></div>
+        <div className="gl-group" id="ins-data" data-sec="data"><h2>Your data</h2><span>how complete the picture is, and how the numbers are made</span></div>
+        <div className="gl" data-sec="data"><Coverage days={gdays} /><Methods /></div>
       </>}
     </div>
   );

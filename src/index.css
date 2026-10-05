@@ -760,3 +760,39 @@ a { color: inherit; }
 .inst .p h2 { font-size: 14.5px; justify-content: flex-start; gap: 12px; }
 .inst .p h3 { font-family: var(--f-mono); font-size: 10.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--i-dim); font-weight: 400; }
 .inst .p .needs, .inst .needs { border-style: solid; border-color: var(--i-line); background: var(--i-panel-2); }
+
+/* Insights on a phone (owner, 5 Oct: "pls make the phone layout"): the section bar is tabs, one section
+   at a time. data-tab is only set at phone width, so the laptop keeps the whole page. */
+.inst[data-tab="week"] [data-sec]:not([data-sec="week"]),
+.inst[data-tab="timeline"] [data-sec]:not([data-sec="timeline"]),
+.inst[data-tab="mind"] [data-sec]:not([data-sec="mind"]),
+.inst[data-tab="connections"] [data-sec]:not([data-sec="connections"]),
+.inst[data-tab="sleep"] [data-sec]:not([data-sec="sleep"]),
+.inst[data-tab="intake"] [data-sec]:not([data-sec="intake"]),
+.inst[data-tab="training"] [data-sec]:not([data-sec="training"]),
+.inst[data-tab="data"] [data-sec]:not([data-sec="data"]) { display: none !important; }
+.inst .sec-wrap { display: grid; gap: 16px; }
+.lanes-t { display: flex; justify-content: space-between; align-items: center; width: 100%; background: none; border: 0; padding: 0 0 4px; color: inherit; font: inherit; cursor: pointer; }
+.lanes-t .dimt { font-family: var(--f-mono); font-size: 10.5px; }
+@media (max-width: 700px) {
+  .inst { padding-inline: 12px; }
+  .gl-group { flex-wrap: wrap; gap: 2px 10px; }
+  .gp { padding: 12px 12px 10px; }
+  /* vitals: one row per measure — name, this week, vs usual, status — and the sparkline under it */
+  .gl-vt thead { display: none; }
+  .gl-vt tbody tr:not(.grp) { display: grid; grid-template-columns: minmax(0, 1fr) auto auto auto; column-gap: 10px; align-items: center; padding: 7px 0 5px; border-bottom: 1px solid var(--i-line); }
+  .inst .gl-vt tbody tr:not(.grp) td { border: 0; height: auto; padding: 0; }
+  .gl-vt td.sp { grid-column: 1 / -1; grid-row: 2; width: auto; min-width: 0; padding-top: 4px !important; }
+  .gl-vt tbody tr:not(.grp) td:nth-child(4) { display: none; }
+  .gl-vt tr.grp, .gl-vt tr.grp td { display: block; }
+  /* the week strip fits without scrolling */
+  .inst .gl-days th, .inst .gl-days td { padding: 3px 2px; font-size: 11px; }
+  .inst .gl-days tbody th { font-size: 9px; letter-spacing: .03em; }
+  .gl-days td.out::before { margin-right: 2px; width: 5px; height: 5px; }
+  /* patterns: the full name on its own line */
+  .pt-row { grid-template-columns: minmax(50px, 1fr) auto auto; row-gap: 3px; }
+  .pt-row .nm { grid-column: 1 / -1; white-space: normal; }
+  /* top cards and the explorer's pairs breathe a little less */
+  .top-cards { grid-template-columns: minmax(0, 1fr); }
+  .gl-pair { grid-template-columns: minmax(0, 1fr) 54px 40px; gap: 8px; }
+}

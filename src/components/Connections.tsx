@@ -24,8 +24,8 @@ export function Connections({ days }: { days: GlanceDay[] }) {
   if (!ready.length && !pairs.length && !days.some((d) => d.mood != null)) return null;
   return (
     <>
-      <div className="gl-group" id="ins-connections"><h2>Connections</h2><span>what goes with better or worse days · every comparison in one place</span></div>
-      <div className="gl">
+      <div className="gl-group" id="ins-connections" data-sec="connections"><h2>Connections</h2><span>what goes with better or worse days · every comparison in one place</span></div>
+      <div className="gl" data-sec="connections">
         <Forest rows={rows} />
         <Explorer days={days} pairs={pairs} />
       </div>

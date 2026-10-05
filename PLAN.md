@@ -447,7 +447,11 @@ email get Dev tools (`#dev`): raw entry editor, generate/remove sample, wipe acc
       you can change (late caffeine, drinks, training, sleep, each supplement; never weekends), ranked by size,
       each with a 14-day (training 21, supplement-pause 10) test that becomes a real Experiment. Experiments can
       now judge sleep (`ai/apply` judge: the next morning's rating is that day's night; DayFacts.sleep).
-   g. [ ] Phone layout of Insights (owner, 5 Oct: *"pls make the phone layout after ur finished w this"*; light
-      theme not wanted yet).
+   g. [x] Phone layout of Insights (owner, 5 Oct: *"pls make the phone layout after ur finished w this"*; light
+      theme not wanted yet). Under 700 px the section bar becomes tabs, one section at a time (one 14,200 px
+      page → 1,000–5,100 px per tab). The tab lives in the URL (`#insights/mind`, survives a reload; Today's
+      noticed line opens `#insights/connections`). Tabs only for sections with content; the whole page when
+      there's only one. Vitals rows stack with the sparkline underneath; Training load labels every other
+      week; the timeline's lane list starts folded. e2e/phone.cjs.
    Defaults picked: dark only (the app is dark only, owner 29 Sept); wearable rows hidden until a wearable
    is connected, never sample data mixed into real numbers.

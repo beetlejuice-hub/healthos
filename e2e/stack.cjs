@@ -19,7 +19,7 @@ const { chromium, APP, OUT, handle } = require('./harness.cjs');
       check('empty account: no training, stack or coverage panels', await pg.locator('.gl-load, .gl-supps, .gl-cover').count() === 0);
       await pg.goto(APP + '#settings'); await pg.getByRole('button', { name: /Load sample/ }).click(); await pg.waitForTimeout(300);
     }
-    await pg.goto(APP + '#insights'); await pg.waitForTimeout(800);
+    await pg.goto(APP + '#insights/training'); await pg.waitForTimeout(800);
     const load = await pg.locator('.gl-load').innerText();
     check(name + ': training load names most and least trained muscles', /(average|averages) 10\+ hard sets|No muscle averages/.test(load) && /Least: /.test(load));
     check(name + ': a cell per muscle per week (10 × 6)', await pg.locator('.gl-load rect[rx="3"]').count() === 60);
@@ -34,7 +34,7 @@ const { chromium, APP, OUT, handle } = require('./harness.cjs');
     check(name + ': 12 weeks shows 12 weeks of load', await pg.locator('.gl-load rect[rx="3"]').count() === 120);
     check(name + ': page never scrolls sideways', await pg.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth));
     await pg.getByRole('button', { name: '30 days', exact: true }).click(); await pg.waitForTimeout(200);
-    for (const c of ['load', 'supps', 'cover', 'methods']) await pg.locator('.gl-' + c).screenshot({ path: OUT + `stack-${c}-${name}.png` });
+    for (const c of ['load', 'supps', 'cover', 'methods']) { await pg.goto(APP + '#insights/' + (c === 'load' || c === 'supps' ? 'training' : 'data')); await pg.locator('.gl-' + c).screenshot({ path: OUT + `stack-${c}-${name}.png` }); }
     await ctx.close();
   }
   console.log('errors: ' + JSON.stringify(errs)); await b.close();

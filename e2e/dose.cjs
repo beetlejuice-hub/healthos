@@ -34,7 +34,7 @@ const { chromium, APP, OUT, handle } = require('./harness.cjs');
     m.doseLog[1].at = new Date('2026-09-28T12:00:00').getTime();
     for (let i = 0; i < 3; i++) { const at = new Date('2026-09-28T21:30:00').getTime() + i * D; s.entries.push({ id: 'n' + i, kind: 'supp', at, suppId: 'mag', status: 'taken', slot: 'evening' }); }
     localStorage.setItem(k, JSON.stringify(s)); });
-  await pg.goto(APP + '#insights'); await pg.reload(); await pg.waitForTimeout(500);
+  await pg.goto(APP + '#insights/training'); await pg.reload(); await pg.waitForTimeout(500);
   const sec = pg.locator('#doses');
   const txt = await sec.innerText();
   check(`Insights: Magnesium 400 mg vs 200 mg, needs more days on 200 (${(txt.match(/needs \d+ more days? on [\d ]+mg/) || [''])[0]})`, /Magnesium · 400 mg \(20 days\) vs 200 mg \(4 days\)/i.test(txt) && /needs 1 more day on 200 mg/i.test(txt));

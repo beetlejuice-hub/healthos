@@ -325,7 +325,7 @@ function NoticedLine() {
   if (!top || hidden === key) return null;
   const hide = (e: React.MouseEvent) => { e.preventDefault(); setHidden(key); try { localStorage.setItem("healthos.noticed.hidden", key); } catch { /* private mode */ } };
   return (
-    <a className="noticed-line" href={`#insights`} onClick={() => setTimeout(() => document.getElementById(`n-${top.id}`)?.scrollIntoView({ behavior: "smooth" }), 150)}>
+    <a className="noticed-line" href={`#insights/connections`} onClick={() => setTimeout(() => document.getElementById(`n-${top.id}`)?.scrollIntoView({ behavior: "smooth" }), 150)}>
       <span><small>Noticed</small>{top.title}.</span>
       <button type="button" aria-label="Hide this" onClick={hide}>✕</button>
     </a>
