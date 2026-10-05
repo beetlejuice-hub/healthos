@@ -424,8 +424,11 @@ email get Dev tools (`#dev`): raw entry editor, generate/remove sample, wipe acc
    a. [x] Master graph feelings: each feeling its own lane, at the top. ≤ 4 days: every check-in, joined within
       4 h, the day's range behind. Zoomed out: the daily average joined day to day, a thin bar for the day's
       lowest–highest (feelgraph dailyFeel + test). Alcohol drawn only while some is in you.
-   b. [ ] Smarter engine: "before your best and worst days" (what the evening/night before held, with ranges,
-      and words from your notes), mood trend line.
-   c. [ ] Nicer UI: section bar to jump around the page.
+   b. [x] Smarter engine: `lib/patterns.ts` (+ test), `components/Patterns.tsx` — "before your best and worst
+      days": bottom/top fifth of days by mood vs every other day, on that morning's sleep rating, caffeine at bed,
+      drinks, training, calories the day before, each with its 95% range; words that keep showing up in notes on
+      those days (2+ days, 2× as common). Mood course: 7-day average line + 4-week trend with its range.
+   c. [x] Nicer UI: `components/SectionBar.tsx` — pinned bar under the top nav, jumps to each section present,
+      marks where you are.
    Defaults picked: dark only (the app is dark only, owner 29 Sept); wearable rows hidden until a wearable
    is connected, never sample data mixed into real numbers.

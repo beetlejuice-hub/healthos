@@ -6,6 +6,7 @@ import { Glance } from "../components/Glance";
 import { Mind } from "../components/Mind";
 import { Connections } from "../components/Connections";
 import { Body } from "../components/Body";
+import { SectionBar } from "../components/SectionBar";
 import { Coverage, Methods, SuppMatrix, TrainingLoad } from "../components/Stack";
 import { glanceDays } from "../lib/glance";
 import { LineChart } from "../components/Charts";
@@ -74,6 +75,7 @@ export function Insights() {
         </div>
       </header>
       {nothing && <div className="needs">Nothing logged yet. Log food, drinks and supplements for a few days and this fills in — or load sample data in Settings to see what it will look like.</div>}
+      {!nothing && <SectionBar version={`${s.entries.length}-${period}`} />}
       {!nothing && <Glance now={now} trendDays={period} report={report} />}
       {!nothing && <Weekly now={now} />}
       {!nothing && <MasterGraph data={data} supplements={s.supplements} focus={focus} days={gdays} />}
@@ -83,7 +85,7 @@ export function Insights() {
       {!nothing && <WorthALook items={scouted} onShow={showOnGraph} />}
       {!nothing && <Body days={gdays} period={period} now={now} />}
       {!nothing && (has.sets || has.supps) && <>
-        <div className="gl-group"><h2>Training &amp; stack</h2><span>what you trained, what you took</span></div>
+        <div className="gl-group" id="ins-training"><h2>Training &amp; stack</h2><span>what you trained, what you took</span></div>
         <div className="gl"><TrainingLoad now={now} period={period} /><SuppMatrix days={gdays} period={period} /></div>
       </>}
       <div className="pgrid">
@@ -99,7 +101,7 @@ export function Insights() {
         )}
       </div>
       {!nothing && <>
-        <div className="gl-group"><h2>Your data</h2><span>how complete the picture is, and how the numbers are made</span></div>
+        <div className="gl-group" id="ins-data"><h2>Your data</h2><span>how complete the picture is, and how the numbers are made</span></div>
         <div className="gl"><Coverage days={gdays} /><Methods /></div>
       </>}
     </div>

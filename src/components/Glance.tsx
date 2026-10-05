@@ -30,7 +30,7 @@ export function Glance({ now, trendDays, report }: { now: number; trendDays: num
   const shown = stats.filter((m) => m.week != null || m.trend.some((v) => v != null));
   if (!shown.length) return null;
   return (
-    <div className="gl">
+    <div className="gl" id="ins-glance">
       <WeekCard stats={shown} week={week} today={today} report={report} />
       <Vitals stats={shown} trendDays={trendDays} />
     </div>

@@ -32,6 +32,13 @@ const { chromium, APP, OUT, handle } = require('./harness.cjs');
     check(name + ': period switch reaches the sparklines', /Daily, last 7 days/i.test(await pg.locator('.gl-vt thead').innerText()));
     await pg.getByRole('button', { name: '30 days', exact: true }).click(); await pg.waitForTimeout(150);
     check(name + ': page never scrolls sideways', await pg.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth));
+    const secs = await pg.locator('.secbar button').allInnerTexts();
+    check(name + ': section bar lists the page (' + secs.join(', ') + ')', secs.includes('This week') && secs.includes('Timeline') && secs.includes('Connections') && secs.includes('Your data'));
+    await pg.locator('.secbar button', { hasText: 'Connections' }).click(); await pg.waitForTimeout(900);
+    const top = await pg.locator('#ins-connections').evaluate((el) => el.getBoundingClientRect().top);
+    check(name + ` : jumping to Connections brings it to the top (${Math.round(top)} px)`, top >= 0 && top < 200);
+    check(name + ': the bar stays pinned and marks it', await pg.locator('.secbar').isVisible() && await pg.locator('.secbar button[aria-current="true"]').innerText() === 'Connections');
+    await pg.evaluate(() => window.scrollTo(0, 0)); await pg.waitForTimeout(200);
     await pg.locator('.gl').first().screenshot({ path: OUT + `glance-${name}.png` });
     await ctx.close();
   }

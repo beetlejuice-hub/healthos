@@ -23,6 +23,9 @@ const { chromium, APP, OUT, handle } = require('./harness.cjs');
     check(name + ': course says days above your average', /\d+ of \d+ days above your average of \d\.\d/.test(course) && /Best: \w{3} \d+ \w{3}/.test(course));
     const bars = await pg.locator('.gl-course path.up, .gl-course path.down').count();
     check(name + ` : one bar per rated day (${bars})`, bars >= 15 && bars <= 30);
+    check(name + ': course has the 4-week trend and a 7-day average line', /Last 4 weeks: (rising|falling|steady)/.test(course) && await pg.locator('.gl-course path.roll').count() === 1);
+    const pt = await pg.locator('.gl-patterns').innerText();
+    check(name + ': patterns compare the lowest and best days with the rest', /Your lowest days/.test(pt) && /Your best days/.test(pt) && /Sleep rating that morning|Drinks the night before|Calories the day before/.test(pt));
     const rh = await pg.locator('.gl-rhythm').innerText();
     check(name + ': rhythm names a best time', /Best: (Mon|Tue|Wed|Thu|Fri|Sat|Sun) \d\d:00–\d\d:00/.test(rh));
     check(name + ': heatmap has 42 cells', await pg.locator('.gl-rhythm rect').count() === 42);
@@ -32,6 +35,7 @@ const { chromium, APP, OUT, handle } = require('./harness.cjs');
     await pg.getByRole('button', { name: '30 days', exact: true }).click(); await pg.waitForTimeout(200);
     await pg.locator('.gl-course').screenshot({ path: OUT + `mind-course-${name}.png` });
     await pg.locator('.gl-rhythm').screenshot({ path: OUT + `mind-rhythm-${name}.png` });
+    await pg.locator('.gl-patterns').screenshot({ path: OUT + `mind-patterns-${name}.png` });
     await ctx.close();
   }
   console.log('errors: ' + JSON.stringify(errs)); await b.close();

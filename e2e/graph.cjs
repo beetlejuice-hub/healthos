@@ -31,7 +31,7 @@ const { chromium, APP, OUT, handle } = require('./harness.cjs');
     check(`[${vw}] each feeling has its own lane, first (${lanes.join(' ')})`, lanes.slice(0, 3).join() === 'mood,energy,stress' && lanes.includes('slept') && !lanes.includes('feel'));
     await pg.locator('.master').scrollIntoViewIfNeeded();
     // Point at Thursday 15:00's check-in (mood row; energy is the first feeling → its dot carries the note ring).
-    await cv.evaluate((el) => el.scrollIntoView({ block: 'start' })); await pg.waitForTimeout(100); // the feeling lanes sit at the top
+    await cv.evaluate((el) => { el.scrollIntoView({ block: 'start' }); window.scrollBy(0, -140); }); await pg.waitForTimeout(100); // the feeling lanes sit at the top; clear of the pinned bars
     const [t0, t1] = (await cv.getAttribute('data-view')).split(',').map(Number);
     const [ftop, fh] = (await cv.getAttribute('data-feel')).split(',').map(Number);
     const box = await cv.boundingBox(), [LEFT, RIGHT] = (await cv.getAttribute('data-plot')).split(',').map(Number);

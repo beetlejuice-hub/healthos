@@ -10,6 +10,8 @@ import { useStore } from "../lib/store";
 import type { GlanceDay } from "../lib/glance";
 import { BLOCKS, WEEKDAYS, moodCourse, moodRhythm, stepOf, type CourseDay } from "../lib/mind";
 import { atMinute, dayLabel, DAY } from "../lib/time";
+import { rolling7, weeklyTrend } from "../lib/patterns";
+import { Patterns } from "./Patterns";
 
 const f1 = (v: number) => v.toFixed(1);
 const sg = (v: number) => `${v >= 0 ? "+" : "−"}${Math.abs(v).toFixed(1)}`;
@@ -23,16 +25,17 @@ export function Mind({ days, now, period }: { days: GlanceDay[]; now: number; pe
   if (!course.rated && !rhythm.n) return null;
   return (
     <>
-      <div className="gl-group"><h2>Mind</h2><span>how you felt, when, and around what</span></div>
+      <div className="gl-group" id="ins-mind"><h2>Mind</h2><span>how you felt, when, and around what</span></div>
       <div className="gl">
-        {course.rated > 0 && <CoursePanel course={course} />}
+        {course.rated > 0 && <CoursePanel course={course} roll={rolling7(days.map((d) => d.mood)).slice(-course.days.length)} trend={weeklyTrend(days, "mood")} />}
         {rhythm.n > 0 && <RhythmPanel rhythm={rhythm} days={rhythmDays} />}
+        <Patterns days={days} />
       </div>
     </>
   );
 }
 
-function CoursePanel({ course }: { course: ReturnType<typeof moodCourse> }) {
+function CoursePanel({ course, roll, trend }: { course: ReturnType<typeof moodCourse>; roll: (number | null)[]; trend: ReturnType<typeof weeklyTrend> }) {
   const [ref, w] = useWidth<HTMLDivElement>();
   const list = course.days, base = course.base!;
   const L = 60, R = 8, top = 10, mh = 150, cw = (w - L - R) / list.length, ext = 3, y0 = top + mh / 2;
@@ -48,13 +51,13 @@ function CoursePanel({ course }: { course: ReturnType<typeof moodCourse> }) {
   return (
     <section className="gp gl-course" aria-label="Mood course">
       <header className="gp-h"><div><span className="gp-k">Mood course</span><h2>Each day against your average</h2>
-        <p className="gp-ans"><b>{course.above} of {course.rated}</b> days above your average of {f1(base)}. Best: {dayLabel(noon(best.day))} ({f1(best.mood!)}{best.trained ? ", trained" : ""}). Lowest: {dayLabel(noon(low.day))} ({f1(low.mood!)}{low.drinksBefore ? ", after drinks" : ""}).</p></div>
+        <p className="gp-ans"><b>{course.above} of {course.rated}</b> days above your average of {f1(base)}. Best: {dayLabel(noon(best.day))} ({f1(best.mood!)}{best.trained ? ", trained" : ""}). Lowest: {dayLabel(noon(low.day))} ({f1(low.mood!)}{low.drinksBefore ? ", after drinks" : ""}).{trend && <> Last 4 weeks: <b>{trend.clear ? (trend.perWeek > 0 ? "rising" : "falling") : "steady"}</b> ({sg(trend.perWeek)} a week, 95% range {sg(trend.lo)} to {sg(trend.hi)}).</>}</p></div>
         <span className="gp-meta">{list.length} days · {list.reduce((a, d) => a + d.checkins, 0)} check-ins</span></header>
       <div ref={ref} className="gl-chart">
         <svg viewBox={`0 0 ${w} ${H}`} width={w} height={H} role="img" aria-label="Daily mood against your average, with energy, stress, sleep and events">
           {[-2, -1, 1, 2].map((v) => <g key={v}><line x1={L} x2={w - R} y1={ys(v)} y2={ys(v)} className="grid" /><text x={L - 6} y={ys(v) + 3.5} textAnchor="end">{v > 0 ? `+${v}` : `−${-v}`}</text></g>)}
           {list.map((d, j) => d.weekend ? <rect key={`w${j}`} x={L + j * cw} y={top} width={cw} height={mh} className="wkend" /> : null)}
-          <line x1={L} x2={w - R} y1={y0} y2={y0} className="axis" /><text x={L - 6} y={y0 + 4} textAnchor="end" className="v">avg {f1(base)}</text>
+          <line x1={L} x2={w - R} y1={y0} y2={y0} className="axis" />
           {shown.map(([, name], k) => <text key={name} x={L - 6} y={sy + k * (sh + 4) + 9.5} textAnchor="end" className="c">{name}</text>)}
           <text x={L - 6} y={evY + 4} textAnchor="end" className="c">Events</text>
           {list.map((d, j) => {
@@ -76,9 +79,10 @@ function CoursePanel({ course }: { course: ReturnType<typeof moodCourse> }) {
               </g>
             );
           })}
+          <path d={roll.reduce((acc, v, j) => (v == null ? acc : acc + `${acc && roll[j - 1] != null ? "L" : "M"}${(L + (j + .5) * cw).toFixed(1)},${ys(v - base).toFixed(1)}`), "")} className="roll" /><text x={L - 6} y={y0 + 4} textAnchor="end" className="v">avg {f1(base)}</text>
         </svg>
       </div>
-      <footer className="gp-f"><span className="lgd"><i style={{ background: "var(--g-now)" }} />above your average</span><span className="lgd"><i style={{ background: "var(--g-down)" }} />below</span>
+      <footer className="gp-f"><span className="lgd"><i style={{ background: "var(--g-now)" }} />above your average</span><span className="lgd"><i style={{ background: "var(--g-down)" }} />below</span><span className="lgd"><i className="ln" style={{ background: "var(--i-ink)" }} />7-day average</span>
         {shown.map(([, name, color]) => <span key={name} className="lgd"><i style={{ background: color }} />{name.toLowerCase()} (stronger = higher)</span>)}
         <span>● trained</span><span>◆ drinks the night before</span><span>✕ caffeine after 14:00</span><span>✎ a note</span><span className="gl-dim">shaded: weekends</span></footer>
     </section>

@@ -306,7 +306,7 @@ export function MasterGraph({ data, supplements, focus, days }: { data: Lanes; s
   const presets: [string, number][] = [["1D", DAY], ["3D", 3 * DAY], ["7D", 7 * DAY], ["30D", 30 * DAY], ["90D", 90 * DAY], ["All", maxT - minT]];
 
   return (
-    <section className="master" aria-label="Master graph">
+    <section className="master" id="ins-timeline" aria-label="Master graph">
       <div className="mg-main">
         <div className="mg-bar">
           <h2 className="mg-title">Everything, on one timeline</h2>
