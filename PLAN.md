@@ -430,5 +430,9 @@ email get Dev tools (`#dev`): raw entry editor, generate/remove sample, wipe acc
       those days (2+ days, 2× as common). Mood course: 7-day average line + 4-week trend with its range.
    c. [x] Nicer UI: `components/SectionBar.tsx` — pinned bar under the top nav, jumps to each section present,
       marks where you are.
+   d. [ ] Mood on the master graph, 4 versions (owner, 5 Oct: *"make like 4 creative, different versions"*):
+      https://claude.ai/artifact/8ecXyjYDcbno3hEe3HyM8z — A life chart (above/below your average), B horizon
+      strips, C feeling ribbon (height mood, thickness energy, colour stress), D beads & pixels. My pick: C, with
+      A's day bars past a week. Waiting for the owner's pick.
    Defaults picked: dark only (the app is dark only, owner 29 Sept); wearable rows hidden until a wearable
    is connected, never sample data mixed into real numbers.
