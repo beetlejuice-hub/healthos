@@ -418,5 +418,14 @@ email get Dev tools (`#dev`): raw entry editor, generate/remove sample, wipe acc
       coverage + test), methods. Replaces Sets per muscle + Supplements. Noticed moved under Connections
       (still the home of weight/burn/caffeine-habit findings; Today's link still lands on it).
    6. [ ] Phone layout of the same page (after the owner checks desktop).
+   **Owner, 5 Oct: *"keep working on insights page, come up w new ideas, better graphs, nicer ui, smarter engine
+   ...make it better..also change the mood plotting on the master graph"*.** Round 2 (claimed — MasterGraph,
+   feelgraph, new lib/patterns.ts, Mind, Insights):
+   a. [x] Master graph feelings: each feeling its own lane, at the top. ≤ 4 days: every check-in, joined within
+      4 h, the day's range behind. Zoomed out: the daily average joined day to day, a thin bar for the day's
+      lowest–highest (feelgraph dailyFeel + test). Alcohol drawn only while some is in you.
+   b. [ ] Smarter engine: "before your best and worst days" (what the evening/night before held, with ranges,
+      and words from your notes), mood trend line.
+   c. [ ] Nicer UI: section bar to jump around the page.
    Defaults picked: dark only (the app is dark only, owner 29 Sept); wearable rows hidden until a wearable
    is connected, never sample data mixed into real numbers.

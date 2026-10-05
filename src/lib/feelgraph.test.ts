@@ -24,3 +24,14 @@ describe("feelings on the graph: only what you rated", () => {
     expect(feelText(checks[0])).toBe("energy 7 · mood 6");
   });
 });
+
+import { dailyFeel } from "./feelgraph";
+describe("dailyFeel", () => {
+  it("gives each day its average at noon, with the day's lowest and highest", () => {
+    const at = (d: number, h: number) => new Date(2026, 9, d, h).getTime();
+    const out = dailyFeel([{ at: at(1, 9), mood: 4 }, { at: at(1, 15), mood: 8 }, { at: at(1, 20), energy: 3 }, { at: at(2, 10), mood: 6 }], "mood");
+    expect(out).toHaveLength(2);
+    expect(out[0]).toMatchObject({ day: "2026-10-01", mean: 6, lo: 4, hi: 8, n: 2, at: at(1, 12) });
+    expect(out[1]).toMatchObject({ mean: 6, n: 1 });
+  });
+});

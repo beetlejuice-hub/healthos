@@ -49,3 +49,15 @@ export function latestCheck(checks: Check[], t: number, within = 3 * 3_600_000):
 }
 
 export const feelText = (c: Check) => (["energy", "mood", "focus", "stress"] as const).filter((k) => c[k] != null).map((k) => `${k} ${c[k]}`).join(" · ");
+
+/**
+ * One point per day for a feeling: the day's average at noon, with its lowest and highest check-in.
+ * What the master graph draws once zoomed out past a few days, when single check-ins turn to noise.
+ */
+export function dailyFeel(checks: Check[], k: FeelK): { day: string; at: number; mean: number; lo: number; hi: number; n: number }[] {
+  return dayRanges(checks, k).map((r) => {
+    const vs = checks.filter((c) => c[k] != null && localDay(c.at) === r.day).map((c) => c[k]!);
+    const d = new Date(r.from); d.setHours(12, 0, 0, 0);
+    return { day: r.day, at: d.getTime(), mean: vs.reduce((a, b) => a + b, 0) / vs.length, lo: r.lo, hi: r.hi, n: vs.length };
+  });
+}

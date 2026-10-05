@@ -28,9 +28,10 @@ const { chromium, APP, OUT, handle } = require('./harness.cjs');
     await pg.goto(APP + '#insights'); await pg.reload(); await pg.waitForSelector('.master'); await pg.waitForTimeout(400);
     const cv = pg.locator('.mg-canvas');
     const lanes = (await cv.getAttribute('data-lanes')).split(',');
-    check(`[${vw}] feelings share one lane (${lanes.join(' ')})`, lanes.filter((x) => x === 'feel').length === 1 && !lanes.some((x) => ['energy', 'mood', 'stress'].includes(x)) && lanes.includes('slept'));
+    check(`[${vw}] each feeling has its own lane, first (${lanes.join(' ')})`, lanes.slice(0, 3).join() === 'mood,energy,stress' && lanes.includes('slept') && !lanes.includes('feel'));
     await pg.locator('.master').scrollIntoViewIfNeeded();
     // Point at Thursday 15:00's check-in (mood row; energy is the first feeling → its dot carries the note ring).
+    await cv.evaluate((el) => el.scrollIntoView({ block: 'start' })); await pg.waitForTimeout(100); // the feeling lanes sit at the top
     const [t0, t1] = (await cv.getAttribute('data-view')).split(',').map(Number);
     const [ftop, fh] = (await cv.getAttribute('data-feel')).split(',').map(Number);
     const box = await cv.boundingBox(), [LEFT, RIGHT] = (await cv.getAttribute('data-plot')).split(',').map(Number);
@@ -41,6 +42,10 @@ const { chromium, APP, OUT, handle } = require('./harness.cjs');
     const read = await pg.locator('.readout').innerText();
     check(`[${vw}] pointing at a check-in reads it, note and all`, /Check-in · Fri 2 Oct 15:00/.test(read) && /energy 4 · mood 4 · stress 8/.test(read) && /“deadline at work”/.test(read) && /work/.test(read));
     await pg.locator('.master').screenshot({ path: OUT + `graph-${vw}.png` });
+    // Zoomed out, each feeling turns into a daily-average line: the canvas must still draw and the readout still work.
+    await pg.getByRole('button', { name: '30D', exact: true }).click(); await pg.waitForTimeout(150);
+    await pg.locator('.master').screenshot({ path: OUT + `graph-30d-${vw}.png` });
+    await pg.getByRole('button', { name: '3D', exact: true }).click(); await pg.waitForTimeout(150);
     // Overview: tap near its left edge → the window jumps back toward the start.
     const ov = pg.locator('.mg-overview'), ob = await ov.boundingBox();
     const before = Number((await ov.getAttribute('data-window')).split(',')[0]);
