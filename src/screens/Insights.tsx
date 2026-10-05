@@ -5,11 +5,11 @@ import { MasterGraph } from "../components/MasterGraph";
 import { Glance } from "../components/Glance";
 import { Mind } from "../components/Mind";
 import { Connections } from "../components/Connections";
+import { Body } from "../components/Body";
 import { glanceDays } from "../lib/glance";
-import { Bars, LineChart } from "../components/Charts";
-import { averageOver, byDay, againstGoals, add, macrosOf, split, ZERO } from "../lib/nutrition";
+import { LineChart } from "../components/Charts";
 import { e1rmHistory, setsPerMuscle, suggestNext } from "../lib/training";
-import { mean, median, type Range } from "../lib/stats";
+import type { Range } from "../lib/stats";
 import { addDays, dayLabel, localDay, DAY } from "../lib/time";
 import type { EntryOf } from "../lib/types";
 import { useNow } from "./Today";
@@ -19,13 +19,10 @@ import { useScout, WorthALook } from "../components/Scout";
 import { Experiments } from "../components/Ai";
 import { Weekly } from "../components/Weekly";
 import type { GraphFocus } from "../components/MasterGraph";
-import { CAF_SLEEP } from "../lib/caffeine-sleep";
 import { DOSE_MIN_DAYS, doseCompare } from "../lib/dose";
 
-const f0 = (v: number) => Math.round(v).toLocaleString("en-GB");
 const f1 = (v: number) => v.toFixed(1);
 const sgn = (v: number, f = f1) => `${v >= 0 ? "+" : "−"}${f(Math.abs(v))}`;
-const hm = (m: number) => `${String(Math.floor(m / 60)).padStart(2, "0")}:${String(Math.round(m) % 60).padStart(2, "0")}`;
 
 export function Insights() {
   const now = useNow(60_000);
@@ -55,8 +52,6 @@ export function Insights() {
     };
   }, [s.entries, facts]);
   const locked: [string, string][] = [
-    !has.food && ["Nutrition", "log food on a few days to see averages against your goals"],
-    !has.caffeine && ["Caffeine and alcohol", "log drinks to see what's left in you at bedtime"],
     !has.strength && ["Strength", "log the same exercise in two workouts"],
     !has.sets && ["Sets per muscle", "log a workout"],
     !has.supps && ["Supplements", "tick your stack on Today"],
@@ -85,9 +80,8 @@ export function Insights() {
       {!nothing && <MasterGraph data={data} supplements={s.supplements} focus={focus} days={gdays} />}
       {!nothing && <Mind days={gdays} now={now} period={period} />}
       {!nothing && <Connections days={gdays} />}
+      {!nothing && <Body days={gdays} period={period} now={now} />}
       <div className="pgrid">
-        {has.food && <Nutrition now={now} />}
-        {has.caffeine && <CaffeineAlcohol facts={facts} />}
         {has.strength && <Strength now={now} />}
         {has.sets && <Muscles now={now} />}
         {has.supps && <Supplements facts={facts} today={today} />}
@@ -164,73 +158,6 @@ function CompareBars({ c }: { c: Extract<NonNullable<Report["found"][number]["ch
         </div>
       ))}
     </div>
-  );
-}
-
-/* ------------------------------------------------------------------ nutrition */
-
-function Nutrition({ now }: { now: number }) {
-  const entries = useStore((s) => s.entries);
-  const goals = useStore((s) => s.goals);
-  const bodyKg = useStore((s) => s.settings.bodyKg);
-  const today = localDay(now);
-  const intake = useMemo(() => byDay(entries), [entries]);
-  const todays = entries.filter((e) => localDay(e.at) === today).reduce((a, e) => { const m = macrosOf(e); return m ? add(a, m) : a; }, ZERO);
-  const days = Array.from({ length: 30 }, (_, i) => addDays(today, -30 + i));
-  const av = averageOver(days, intake);
-  const hist: [number, number | null][] = days.map((d, i) => { const x = intake.get(d); return [i, x?.logged ? x.totals.kcal : null]; });
-  const onGoal = days.filter((d) => { const x = intake.get(d); return x?.logged && Math.abs(x.totals.kcal - goals.kcal) <= 200; }).length;
-  const pHit = days.filter((d) => { const x = intake.get(d); return x?.logged && x.totals.p >= goals.p; }).length;
-  const sp = split(av.avg), gsp = split(goals);
-  const colors = { kcal: "var(--kcal)", p: "var(--pro)", c: "var(--carb)", f: "var(--fat)" } as const;
-  const names = { kcal: "Calories", p: "Protein", c: "Carbs", f: "Fat" } as const;
-  return (
-    <section className="p">
-      <h2>Nutrition <span>goals: settings</span></h2>
-      <div className="sub"><h3>Today so far</h3><div className="bars">
-        {againstGoals(todays, goals).map((r) => (
-          <div className="mb" key={r.key}><span>{names[r.key]}</span><div className="trk"><i style={{ width: `${Math.min(100, r.pct * 100)}%`, background: colors[r.key] }} /></div>
-            <span className="val"><b>{f0(r.value)}</b> / {f0(r.goal)}{r.key === "kcal" ? " kcal" : " g"} · {f0(r.left)} left</span></div>
-        ))}
-      </div></div>
-      <div className="sub"><h3>Last 30 days · {av.loggedDays} logged, {30 - av.loggedDays} not logged (left out)</h3>
-        <Bars label="Calories per day, last 30 days" pts={hist} lo={0} hi={Math.max(goals.kcal * 1.3, ...hist.map((h) => h[1] ?? 0))} xs={[0, 29]} color="var(--kcal)" targets={[[goals.kcal, `goal ${f0(goals.kcal)}`]]} yfmt={(v) => (v >= 1000 ? `${(v / 1000).toFixed(1)}k` : String(Math.round(v)))} xlabels={[[0, dayLabel(now - 30 * DAY).slice(4)], [29, dayLabel(now - DAY).slice(4)]]} />
-      </div>
-      {av.loggedDays > 0 ? (
-        <div className="tw"><table><tbody>
-          <tr><th>30 days, logged days</th><th className="n">Average</th><th className="n">Goal</th><th className="n">Days on goal</th></tr>
-          <tr><td>Calories</td><td className="n">{f0(av.avg.kcal)} kcal</td><td className="n">{f0(goals.kcal)}</td><td className="n">{onGoal}/{av.loggedDays} within ±200</td></tr>
-          <tr><td>Protein</td><td className="n">{f0(av.avg.p)} g · {f1(av.avg.p / bodyKg)} g/kg</td><td className="n">{goals.p}</td><td className="n">{pHit}/{av.loggedDays} ≥ goal</td></tr>
-          <tr><td>Split P / C / F</td><td className="n">{Math.round(sp.p * 100)} / {Math.round(sp.c * 100)} / {Math.round(sp.f * 100)}%</td><td className="n">{Math.round(gsp.p * 100)} / {Math.round(gsp.c * 100)} / {Math.round(gsp.f * 100)}%</td><td /></tr>
-        </tbody></table></div>
-      ) : <div className="needs">Log food on a few days to see averages against your goals.</div>}
-    </section>
-  );
-}
-
-/* ------------------------------------------------------------------ caffeine & alcohol */
-
-function CaffeineAlcohol({ facts }: { facts: DayFacts[] }) {
-  const { lowBelowMg: low, higherFromMg: high } = CAF_SLEEP;
-  const last30 = facts.slice(-31, -1);
-  const has = last30.some((d) => d.caffeineMg > 0);
-  const lastCoffee = last30.map((d) => d.lastCaffeineMin).filter((v): v is number => v != null);
-  const possible = last30.filter((d) => d.caffeineAtBed >= low && d.caffeineAtBed < high).length, higher = last30.filter((d) => d.caffeineAtBed >= high).length;
-  const alcWeeks = [0, 1, 2, 3].map((k) => facts.slice(-1 - 7 * (k + 1), -1 - 7 * k).reduce((a, d) => a + d.alcoholG, 0));
-  return (
-    <section className="p">
-      <h2>Caffeine and alcohol <span>last 30 days</span></h2>
-      {has ? <>
-        <div className="sub"><h3>Caffeine left at planned bedtime, per night · {low} and {high} mg lines</h3>
-          <Bars label="Caffeine left at bedtime each night" pts={last30.map((d, i) => [i, d.caffeineAtBed])} lo={0} hi={Math.max(high * 1.4, ...last30.map((d) => d.caffeineAtBed))} xs={[0, last30.length - 1]} color="var(--caf)" targets={[[low, `${low} mg`], [high, `${high} mg`]]} />
-        </div>
-        <ul className="notes">
-          <li>Average <b>{f0(mean(last30.map((d) => d.caffeineMg)))} mg</b> a day; median last caffeine at <b>{lastCoffee.length ? hm(median(lastCoffee)) : "—"}</b>.</li>
-          <li>Median left at bedtime: <b>{f0(median(last30.map((d) => d.caffeineAtBed)))} mg</b>. {low}–{high} mg (could affect sleep a little for some people) on <b>{possible}</b> nights; {high}+ mg on <b>{higher}</b> of {last30.length}.</li>
-          <li>Alcohol per week, last 4 weeks (newest first): <b>{alcWeeks.map((g) => `${f0(g)} g`).join(" · ")}</b>. One drink ≈ 14 g.</li>
-        </ul>
-      </> : <div className="needs">Log drinks for a few days to see your caffeine pattern and how much is left at bedtime.</div>}
-    </section>
   );
 }
 

@@ -326,8 +326,17 @@ a { color: inherit; }
 .gl-pair i { font-style: normal; color: var(--i-dim); } .gl-pair em { font-style: normal; font-size: 11px; color: var(--i-dim); margin-left: 6px; }
 .gl-pair .rbar { height: 6px; border-radius: 3px; background: var(--i-line); overflow: hidden; } .gl-pair .rbar i { display: block; height: 100%; background: var(--i-ink-2); }
 .gl-pair b { text-align: right; font-variant-numeric: tabular-nums; color: var(--i-ink); font-weight: 600; }
-@media (max-width: 1080px) { .gl-week, .gl-vitals, .gl-course, .gl-rhythm, .gl-forest, .gl-explore { grid-column: 1 / -1; } }
-@media (max-width: 700px) { .gp-h { flex-wrap: wrap; } .gp-meta { text-align: left; } }
+.gl-sleep { grid-column: span 6; } .gl-caf, .gl-drinks { grid-column: span 3; } .gl-kcal, .gl-weight { grid-column: span 6; }
+.gl-chart .avgl { stroke: var(--i-ink-2); stroke-dasharray: 4 3; }
+.gl-chart .goal { stroke: var(--g-now); stroke-width: 1.5; }
+.gl-chart .tierhi { fill: var(--caf); opacity: .1; } .gl-chart .tiermid { fill: var(--caf); opacity: .05; }
+.gl-chart .cafdot { fill: var(--caf); stroke: var(--i-panel); stroke-width: 1.2; }
+.gl-chart .wdot { fill: var(--wt); fill-opacity: .7; } .gl-chart .wavg { fill: none; stroke: var(--g-now); stroke-width: 2; stroke-linejoin: round; }
+.gl-chart .wtrend { stroke: var(--g-now); stroke-width: 2; stroke-dasharray: 4 4; } .gl-chart .wnow { fill: var(--g-now); stroke: var(--i-panel); stroke-width: 2; }
+.gl-chart .proj { fill: var(--i-ink); opacity: .03; }
+@media (max-width: 1080px) { .gl-week, .gl-vitals, .gl-course, .gl-rhythm, .gl-forest, .gl-explore, .gl-sleep, .gl-kcal, .gl-weight { grid-column: 1 / -1; } }
+@media (max-width: 1080px) { .gl-caf, .gl-drinks { grid-column: span 6; } }
+@media (max-width: 700px) { .gp-h { flex-wrap: wrap; } .gp-meta { text-align: left; } .gl-caf, .gl-drinks { grid-column: 1 / -1; } }
 .pgrid { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 16px; }
 .p { grid-column: span 6; border: 1px solid var(--i-line); border-radius: 8px; background: var(--i-panel); padding: 14px; display: grid; gap: 12px; align-content: start; min-width: 0; }
 .p.w12 { grid-column: 1 / -1; } .p.w4 { grid-column: span 4; } .p.w8 { grid-column: span 8; }
