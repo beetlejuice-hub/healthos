@@ -453,5 +453,7 @@ email get Dev tools (`#dev`): raw entry editor, generate/remove sample, wipe acc
       noticed line opens `#insights/connections`). Tabs only for sections with content; the whole page when
       there's only one. Vitals rows stack with the sparkline underneath; Training load labels every other
       week; the timeline's lane list starts folded. e2e/phone.cjs.
+   h. [ ] (claimed 5 Oct — Insights.tsx, SectionBar.tsx, LineChart/Strength, index.css) Phone: swipe between
+      Insights tabs; readable axis labels on the older mini-charts (Strength, Noticed trend) at phone width.
    Defaults picked: dark only (the app is dark only, owner 29 Sept); wearable rows hidden until a wearable
    is connected, never sample data mixed into real numbers.
