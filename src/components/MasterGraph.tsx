@@ -4,7 +4,7 @@ import { buckets, valueAt, type Point } from "../lib/series";
 import { atMinute, clock, dayLabel, localDay, DAY, HOUR, MIN } from "../lib/time";
 import type { Supplement } from "../lib/types";
 import type { GlanceDay } from "../lib/glance";
-import { dailyFeel, dayRanges, feelRuns, feelText, latestCheck, nearestCheck, type Check, type FeelK } from "../lib/feelgraph";
+import { feelRuns, feelText, latestCheck, lifeBars, nearestCheck, ribbonRuns, ribbonWidth, stressMix, type Check, type FeelK } from "../lib/feelgraph";
 import { CAF_SLEEP } from "../lib/caffeine-sleep";
 
 /**
@@ -14,20 +14,24 @@ import { CAF_SLEEP } from "../lib/caffeine-sleep";
  * time; ⌘/Ctrl + wheel zooms. Canvas, because a year of data is too many SVG nodes.
  */
 
-/** "feel": one of the four feelings, each in its own lane (owner, 5 Oct: "change the mood plotting"). "chips": sleep ratings. */
+/** "feel": the How you felt lane — owner, 5 Oct, picked versions C (feeling ribbon) + A (life chart) of the four. "chips": sleep ratings. */
 type Kind = "series" | "daily" | "sticks" | "blocks" | "ticks" | "wearable" | "feel" | "chips";
 type Lane = { id: string; name: string; unit: string; color: string; h: number; kind: Kind; pts?: Point[]; lo?: number; hi?: number; area?: boolean; overlay?: boolean };
 
-const cssVar = (v: string) => getComputedStyle(document.documentElement).getPropertyValue(v).trim() || "#888";
+/** A colour token; Insights tokens live on the screen, so read them there. */
+const cssVar = (v: string) => getComputedStyle(document.querySelector(".app") ?? document.documentElement).getPropertyValue(v).trim() || "#888";
 const RIGHT = 46, TOP = 22, GAP = 7;
 /** The label column: room for each lane's value at the cursor on a laptop, narrower on a phone. */
 const leftFor = (w: number) => (w >= 640 ? 136 : 96);
+/** Calm end of the stress colour (a cool grey-blue); the tense end is the heart-rate red. */
+const CALM = "#56717c";
+const mixHex = (a: string, b: string, f: number) => { const p = (h: string) => { const n = parseInt(h.replace("#", "").slice(0, 6), 16); return [n >> 16, (n >> 8) & 255, n & 255]; }; const [x, y] = [p(a), p(b)]; return `rgb(${x.map((v, i) => Math.round(v * (1 - f) + y[i] * f)).join(",")})`; };
 
 /** "Show on graph" from a scout pattern: these lanes, on top of each other, these days highlighted. */
 export type GraphFocus = { key: string; lanes: string[]; days: string[] };
 
 export function MasterGraph({ data, supplements, focus, days }: { data: Lanes; supplements: Supplement[]; focus?: GraphFocus | null; /** Per-day numbers for the readout's "the day" and "last night" (lib/glance). */ days?: GlanceDay[] }) {
-  const C = useMemo(() => ({ ok: cssVar("--ok"), caf: cssVar("--caf"), alc: cssVar("--alc"), kcal: cssVar("--kcal"), gym: cssVar("--gym"), supp: cssVar("--supp"), wt: cssVar("--wt"), mood: cssVar("--mood"), hr: cssVar("--hr"), line: cssVar("--i-line"), ink: cssVar("--i-ink"), ink2: cssVar("--i-ink-2"), dim: cssVar("--i-dim") }), []);
+  const C = useMemo(() => ({ up: cssVar("--g-now"), down: cssVar("--g-down"), line2: cssVar("--i-line-2"), ok: cssVar("--ok"), caf: cssVar("--caf"), alc: cssVar("--alc"), kcal: cssVar("--kcal"), gym: cssVar("--gym"), supp: cssVar("--supp"), wt: cssVar("--wt"), mood: cssVar("--mood"), hr: cssVar("--hr"), line: cssVar("--i-line"), ink: cssVar("--i-ink"), ink2: cssVar("--i-ink-2"), dim: cssVar("--i-dim") }), []);
   const lanes: Lane[] = useMemo(() => {
     const range = (pts: Point[], pad: number, floor?: [number, number]): [number, number] => {
       if (!pts.length) return floor ?? [0, 1];
@@ -37,10 +41,7 @@ export function MasterGraph({ data, supplements, focus, days }: { data: Lanes; s
     const alcHi = Math.max(20, Math.ceil(Math.max(0, ...data.alcohol.map((p) => p[1])) / 10) * 10);
     const [wLo, wHi] = range(data.weight, 0.5, [70, 90]);
     return [
-      { id: "mood", name: "Mood", unit: "you · 1–10", color: C.mood, h: 46, kind: "feel", pts: data.mood, lo: 0.5, hi: 10.5, overlay: true },
-      { id: "energy", name: "Energy", unit: "you · 1–10", color: C.gym, h: 46, kind: "feel", pts: data.energy, lo: 0.5, hi: 10.5, overlay: true },
-      { id: "stress", name: "Stress", unit: "you · 1–10", color: C.hr, h: 46, kind: "feel", pts: data.stress, lo: 0.5, hi: 10.5, overlay: true },
-      { id: "focus", name: "Focus", unit: "you · 1–10", color: C.supp, h: 46, kind: "feel", pts: data.focus, lo: 0.5, hi: 10.5, overlay: true },
+      { id: "feel", name: "How you felt", unit: "you · 1–10", color: C.mood, h: 112, kind: "feel", pts: data.mood, lo: 0.5, hi: 10.5 },
       { id: "slept", name: "Sleep rating", unit: "/10", color: C.ok, h: 22, kind: "chips", pts: data.sleep, lo: 1, hi: 10 },
       { id: "hr", name: "Heart rate", unit: "bpm", color: C.hr, h: 24, kind: "wearable" },
       { id: "sleep", name: "Sleep stages", unit: "", color: C.hr, h: 24, kind: "wearable" },
@@ -54,7 +55,7 @@ export function MasterGraph({ data, supplements, focus, days }: { data: Lanes; s
     ];
   }, [data, supplements.length, C]);
 
-  const [on, setOn] = useState<Record<string, boolean>>({ caf: true, alc: true, meals: true, gym: true, supps: false, wt: true, energy: true, mood: true, focus: false, stress: true, slept: true, kcal: false });
+  const [on, setOn] = useState<Record<string, boolean>>({ caf: true, alc: true, meals: true, gym: true, supps: false, wt: true, feel: true, slept: true, kcal: false });
   const [over, setOver] = useState<Record<string, boolean>>({ energy: false });
   const [view, setView] = useState({ t1: data.to + 90 * MIN, span: 3 * DAY });
   const [hover, setHover] = useState<number | null>(null);
@@ -67,10 +68,11 @@ export function MasterGraph({ data, supplements, focus, days }: { data: Lanes; s
   // and the view widened to cover the days that show it.
   useEffect(() => {
     if (!focus) return;
-    const want = new Set(focus.lanes);
+    const FEEL = new Set(["mood", "energy", "focus", "stress"]);
+    const want = new Set(focus.lanes.map((id) => (FEEL.has(id) ? "feel" : id)));
     setOn(Object.fromEntries(lanes.map((l) => [l.id, want.has(l.id)])));
     const series = focus.lanes.find((id) => lanes.find((l) => l.id === id)?.kind === "series");
-    setOver(series ? Object.fromEntries(focus.lanes.filter((id) => id !== series && lanes.find((l) => l.id === id)?.overlay).map((id) => [id, true])) : {});
+    setOver(series ? Object.fromEntries([...want].filter((id) => id !== series && lanes.find((l) => l.id === id)?.overlay).map((id) => [id, true])) : {});
     const firstDay = focus.days.length ? atMinute([...focus.days].sort()[0], 0) : data.to - 14 * DAY;
     setView(clampView(data.to + 90 * MIN, Math.max(7 * DAY, data.to - firstDay + 2 * DAY)));
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -92,7 +94,7 @@ export function MasterGraph({ data, supplements, focus, days }: { data: Lanes; s
   const host = visible.find((l) => l.kind === "series");
   const drawn = visible.filter((l) => !(over[l.id] && host && l.id !== host.id));
   const overlays = host ? visible.filter((l) => over[l.id] && l.id !== host.id) : [];
-  // Each feeling that's on has its own lane; the first one's position is what tests and "on top" read.
+  // The How you felt lane's position is what pointing (and the tests) read.
   let y = TOP; const layout = drawn.map((l) => { const r = { l, y }; y += l.h + GAP; return r; });
   const H = y + 4;
   const feelLanes = layout.filter((r) => r.l.kind === "feel");
@@ -101,8 +103,8 @@ export function MasterGraph({ data, supplements, focus, days }: { data: Lanes; s
   // The check-in under the finger or cursor (within ~14 px), when pointing inside the Feelings lane.
   const pwNow = Math.max(10, w - LEFT - RIGHT);
   const overFeel = hoverY != null ? feelLanes.find((r) => hoverY >= r.y - 4 && hoverY <= r.y + r.l.h + 4) : undefined;
-  const hovered: Check | null = hover != null && overFeel
-    ? nearestCheck(data.checks.filter((c) => c[overFeel.l.id as FeelK] != null), hover, (14 / pwNow) * view.span) : null;
+  const hovered: Check | null = hover != null && overFeel && view.span <= 7 * DAY
+    ? nearestCheck(data.checks.filter((c) => c.mood != null), hover, (14 / pwNow) * view.span) : null;
 
   /** What a lane reads at time t, for the label column (null: nothing to say). */
   const laneValue = (l: Lane, t: number): string | null => {
@@ -111,7 +113,7 @@ export function MasterGraph({ data, supplements, focus, days }: { data: Lanes; s
     if (l.id === "wt" || l.id === "kcal") { const v = valueAt(l.pts ?? [], t); return v && t - v[0] < 3 * DAY ? (l.id === "wt" ? v[1].toFixed(1) : Math.round(v[1]).toLocaleString("en-GB")) : null; }
     if (l.id === "slept") { const v = valueAt(l.pts ?? [], t); return v && t - v[0] < DAY ? String(v[1]) : null; }
     if (l.id === "meals") { const m = [...data.meals].reverse().find((x) => x.at <= t && x.at > t - 5 * HOUR); return m ? String(Math.round(m.kcal)) : null; }
-    if (l.kind === "feel") { const k = l.id as FeelK, c = hovered ?? latestCheck(data.checks, t); return c && t - c.at < 6 * HOUR && c[k] != null ? String(c[k]) : null; }
+    if (l.kind === "feel") { const c = hovered ?? latestCheck(data.checks, t); return c && t - c.at < 6 * HOUR && c.mood != null ? `mood ${c.mood}` : null; }
     return null;
   };
 
@@ -192,30 +194,40 @@ export function MasterGraph({ data, supplements, focus, days }: { data: Lanes; s
       else if (l.kind === "sticks") data.meals.forEach((m) => { if (m.at < t0 || m.at > view.t1) return; const x = X(m.at), bh = Math.min(l.h, (m.kcal / 1100) * l.h), bw = view.span <= 3 * DAY ? 4 : 2; ctx.fillStyle = l.color; ctx.fillRect(x - bw / 2, top + l.h - bh, bw, bh); if (view.span <= 3 * DAY) { ctx.fillStyle = C.ink2; ctx.textAlign = "left"; ctx.fillText(String(Math.round(m.kcal)), x + 4, top + l.h - bh + 5); } });
       else if (l.kind === "blocks") data.workouts.forEach((b) => { if (b.end < t0 || b.start > view.t1) return; const x0 = X(b.start), x1 = X(b.end); ctx.fillStyle = l.color; ctx.globalAlpha = .85; ctx.fillRect(x0, top + 3, Math.max(2, x1 - x0), l.h - 6); ctx.globalAlpha = 1; if (x1 - x0 > 50) { ctx.fillStyle = "#1a1a12"; ctx.textAlign = "left"; ctx.fillText(b.name, x0 + 4, top + l.h / 2); } });
       else if (l.kind === "feel") {
-        // Zoomed in (≤ 4 days): every check-in as a dot, joined only within 4 h, the day's range behind.
-        // Zoomed out: one point per day (its average) joined day to day, with a thin bar from the day's
-        // lowest to highest check-in — single check-ins are noise at that scale, the trend isn't.
-        const k = l.id as FeelK, Y = (v: number) => yOf(top + 4, l.h - 8, 0.5, 10.5, v);
-        [3, 5.5, 8].forEach((v) => { ctx.strokeStyle = C.line; ctx.setLineDash([1, 4]); ctx.beginPath(); ctx.moveTo(LEFT, Y(v)); ctx.lineTo(w - RIGHT, Y(v)); ctx.stroke(); ctx.setLineDash([]); });
-        if (view.span <= 4 * DAY) {
-          for (const r of dayRanges(data.checks, k)) {
-            if (r.to < t0 || r.from > view.t1 || r.hi === r.lo) continue;
-            ctx.fillStyle = l.color; ctx.globalAlpha = .12; ctx.beginPath(); ctx.roundRect(X(r.from) - 5, Y(r.hi) - 5, X(r.to) - X(r.from) + 10, Y(r.lo) - Y(r.hi) + 10, 5); ctx.fill(); ctx.globalAlpha = 1;
+        if (view.span <= 7 * DAY) {
+          // C · feeling ribbon: height = mood, thickness = energy, colour = stress (calm grey → tense red).
+          // Joined within a day only, so a night is a gap; notes ringed.
+          const Y = (v: number) => yOf(top + 4, l.h - 8, 0.5, 10.5, v), col = (s?: number) => { const m = stressMix(s); return m == null ? C.ink2 : mixHex(CALM, C.hr, m); };
+          [2, 5, 8].forEach((v) => { ctx.strokeStyle = C.line; ctx.setLineDash([1, 4]); ctx.beginPath(); ctx.moveTo(LEFT, Y(v)); ctx.lineTo(w - RIGHT, Y(v)); ctx.stroke(); ctx.setLineDash([]); ctx.fillStyle = C.dim; ctx.textAlign = "left"; ctx.font = "9px IBM Plex Mono, monospace"; ctx.fillText(String(v), LEFT + 3, Y(v) - 5); ctx.font = "10px IBM Plex Mono, monospace"; });
+          for (const run of ribbonRuns(data.checks)) {
+            if (run[run.length - 1].at < t0 - DAY || run[0].at > view.t1 + DAY) continue;
+            for (let i = 1; i < run.length; i++) {
+              const a = run[i - 1], b = run[i], x1 = X(a.at), x2 = X(b.at), y1 = Y(a.mood!), y2 = Y(b.mood!), w1 = ribbonWidth(a.energy) / 2, w2 = ribbonWidth(b.energy) / 2, xm = (x1 + x2) / 2;
+              const g = ctx.createLinearGradient(x1, 0, x2, 0); g.addColorStop(0, col(a.stress)); g.addColorStop(1, col(b.stress)); ctx.fillStyle = g;
+              ctx.beginPath(); ctx.moveTo(x1, y1 - w1); ctx.bezierCurveTo(xm, y1 - w1, xm, y2 - w2, x2, y2 - w2); ctx.lineTo(x2, y2 + w2); ctx.bezierCurveTo(xm, y2 + w2, xm, y1 + w1, x1, y1 + w1); ctx.closePath(); ctx.fill();
+            }
+            for (const c of run) { const x = X(c.at), y = Y(c.mood!), r = ribbonWidth(c.energy) / 2 + .5; ctx.fillStyle = col(c.stress); ctx.beginPath(); ctx.arc(x, y, r, 0, 7); ctx.fill(); if (c.note) { ctx.strokeStyle = C.ink; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.arc(x, y, r + 4, 0, 7); ctx.stroke(); ctx.lineWidth = 1; } }
           }
-          drawSeries(l, top + 4, l.h - 8, false);
-          if (k === "mood") for (const c of data.checks) if (c.note && c.mood != null && c.at >= t0 && c.at <= view.t1) { ctx.strokeStyle = C.ink; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.arc(X(c.at), Y(c.mood), 6, 0, 7); ctx.stroke(); ctx.lineWidth = 1; }
+          if (hovered?.mood != null) { const x = X(hovered.at), y = Y(hovered.mood), r = ribbonWidth(hovered.energy) / 2 + 7; ctx.strokeStyle = C.ink; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(x, y, r, 0, 7); ctx.stroke(); ctx.lineWidth = 1; }
         } else {
-          const days = dailyFeel(data.checks, k).filter((d) => d.at >= t0 - 2 * DAY && d.at <= view.t1 + 2 * DAY);
-          const barW = Math.max(1.5, Math.min(6, (pw / (view.span / DAY)) * .35));
-          ctx.fillStyle = l.color; ctx.globalAlpha = .22;
-          for (const d of days) if (d.hi > d.lo) ctx.fillRect(X(d.at) - barW / 2, Y(d.hi), barW, Y(d.lo) - Y(d.hi));
-          ctx.globalAlpha = 1; ctx.strokeStyle = l.color; ctx.lineWidth = 1.75; ctx.lineJoin = "round"; ctx.beginPath();
-          days.forEach((d, i) => { const gap = i && d.at - days[i - 1].at > 1.5 * DAY; if (!i || gap) ctx.moveTo(X(d.at), Y(d.mean)); else ctx.lineTo(X(d.at), Y(d.mean)); });
-          ctx.stroke(); ctx.lineWidth = 1; ctx.fillStyle = l.color;
-          const r = view.span <= 30 * DAY ? 2.6 : 1.8;
-          days.forEach((d) => { ctx.beginPath(); ctx.arc(X(d.at), Y(d.mean), r, 0, 7); ctx.fill(); });
+          // A · life chart: each day's mood above or below your own average, energy and stress underneath.
+          const { base, days } = lifeBars(data.checks), mh = l.h - 30, y0 = top + mh / 2, ext = 3, Y = (dv: number) => y0 - (Math.max(-ext, Math.min(ext, dv)) / ext) * (mh / 2 - 4);
+          [-2, -1, 1, 2].forEach((v) => { ctx.strokeStyle = C.line; ctx.setLineDash([1, 4]); ctx.beginPath(); ctx.moveTo(LEFT, Y(v)); ctx.lineTo(w - RIGHT, Y(v)); ctx.stroke(); ctx.setLineDash([]); ctx.fillStyle = C.dim; ctx.textAlign = "left"; ctx.font = "9px IBM Plex Mono, monospace"; ctx.fillText(v > 0 ? `+${v}` : `−${-v}`, LEFT + 3, Y(v) - 5); ctx.font = "10px IBM Plex Mono, monospace"; });
+          ctx.strokeStyle = C.line2; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(LEFT, y0); ctx.lineTo(w - RIGHT, y0); ctx.stroke(); ctx.lineWidth = 1;
+          if (base != null) { ctx.fillStyle = C.ink2; ctx.textAlign = "right"; ctx.font = "9px IBM Plex Mono, monospace"; ctx.fillText(`0 = your avg ${base.toFixed(1)}`, w - RIGHT - 3, top + 6); ctx.font = "10px IBM Plex Mono, monospace"; }
+          const inV = days.filter((d) => d.at >= t0 - DAY && d.at <= view.t1 + DAY), bw = Math.max(1.5, (pw / (view.span / DAY)) * .7);
+          for (const d of inV) {
+            const x = X(d.at) - bw / 2, y = Y(d.dev), r = Math.min(3, bw / 2, Math.abs(y - y0));
+            ctx.fillStyle = d.dev >= 0 ? C.up : C.down; ctx.beginPath();
+            if (d.dev >= 0) { ctx.moveTo(x, y0); ctx.lineTo(x, y + r); ctx.quadraticCurveTo(x, y, x + r, y); ctx.lineTo(x + bw - r, y); ctx.quadraticCurveTo(x + bw, y, x + bw, y + r); ctx.lineTo(x + bw, y0); }
+            else { ctx.moveTo(x, y0); ctx.lineTo(x, y - r); ctx.quadraticCurveTo(x, y, x + r, y); ctx.lineTo(x + bw - r, y); ctx.quadraticCurveTo(x + bw, y, x + bw, y - r); ctx.lineTo(x + bw, y0); }
+            ctx.fill();
+            if (d.note && bw >= 5) { ctx.fillStyle = C.ink; ctx.beginPath(); ctx.arc(x + bw / 2, d.dev >= 0 ? y - 5 : y + 5, 1.7, 0, 7); ctx.fill(); }
+          }
+          // energy and stress, day averages, in a strip at the bottom
+          const sy = top + mh + 4, sh = 22, SY = (v: number) => sy + sh - ((v - 1) / 9) * sh;
+          ([["energy", C.gym], ["stress", C.hr]] as const).forEach(([k, c]) => { ctx.strokeStyle = c; ctx.lineWidth = 1.5; ctx.beginPath(); let prev: number | null = null; for (const d of inV) { const v = d[k]; if (v == null) { prev = null; continue; } const x = X(d.at), y = SY(v); if (prev != null && d.at - prev <= 1.6 * DAY) ctx.lineTo(x, y); else ctx.moveTo(x, y); prev = d.at; } ctx.stroke(); ctx.lineWidth = 1; });
         }
-        if (hovered && hovered[k] != null) { const hx = X(hovered.at); ctx.strokeStyle = C.ink; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(hx, Y(hovered[k]!), 8, 0, 7); ctx.stroke(); ctx.lineWidth = 1; }
       }
       else if (l.kind === "chips") (l.pts ?? []).forEach(([at, v]) => {
         if (at < t0 - HOUR || at > view.t1) return;
@@ -328,7 +340,10 @@ export function MasterGraph({ data, supplements, focus, days }: { data: Lanes; s
           onPointerDown={(e) => { e.currentTarget.setPointerCapture(e.pointerId); ovMove(e.clientX, true); }}
           onPointerMove={(e) => { if (ovDrag.current) ovMove(e.clientX, false); }}
           onPointerUp={() => { ovDrag.current = null; }} onPointerCancel={() => { ovDrag.current = null; }} />
-        <div className="mg-bar"><span className="hint-i">Point at a check-in dot to read it · drag the chart or the overview to move · ⌘/Ctrl + wheel to zoom · tick lanes on and off; "on top" draws a line over {host?.name.toLowerCase() ?? "the first lane"} with its own axis.</span></div>
+        <div className="mg-bar mg-key">{view.span <= 7 * DAY
+          ? <span className="hint-i"><b>How you felt</b> · height = mood · thickness = energy (thin = drained) · colour = stress <i className="sw" style={{ background: CALM }} />calm → <i className="sw" style={{ background: C.hr }} />tense · ring = a note</span>
+          : <span className="hint-i"><b>How you felt</b> · each day's mood above <i className="sw" style={{ background: C.up }} /> or below <i className="sw" style={{ background: C.down }} /> your own average · <i className="sw ln" style={{ background: C.gym }} />energy and <i className="sw ln" style={{ background: C.hr }} />stress underneath · dot = a note · zoom to a week or less for each check-in</span>}</div>
+        <div className="mg-bar"><span className="hint-i">Point at a check-in to read it · drag the chart or the overview to move · ⌘/Ctrl + wheel to zoom · tick lanes on and off; "on top" draws a line over {host?.name.toLowerCase() ?? "the first lane"} with its own axis.</span></div>
       </div>
       <aside className="mg-side">
         <div className="legend">

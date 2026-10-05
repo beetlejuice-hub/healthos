@@ -28,7 +28,8 @@ const { chromium, APP, OUT, handle } = require('./harness.cjs');
     await pg.goto(APP + '#insights'); await pg.reload(); await pg.waitForSelector('.master'); await pg.waitForTimeout(400);
     const cv = pg.locator('.mg-canvas');
     const lanes = (await cv.getAttribute('data-lanes')).split(',');
-    check(`[${vw}] each feeling has its own lane, first (${lanes.join(' ')})`, lanes.slice(0, 3).join() === 'mood,energy,stress' && lanes.includes('slept') && !lanes.includes('feel'));
+    check(`[${vw}] one How you felt lane, first (${lanes.join(' ')})`, lanes[0] === 'feel' && lanes.includes('slept') && !lanes.some((x) => ['mood', 'energy', 'stress'].includes(x)));
+    check(`[${vw}] up close the key explains the ribbon`, /thickness = energy/.test(await pg.locator('.mg-key').innerText()));
     await pg.locator('.master').scrollIntoViewIfNeeded();
     // Point at Thursday 15:00's check-in (mood row; energy is the first feeling → its dot carries the note ring).
     await cv.evaluate((el) => { el.scrollIntoView({ block: 'start' }); window.scrollBy(0, -140); }); await pg.waitForTimeout(100); // the feeling lanes sit at the top; clear of the pinned bars
@@ -44,6 +45,7 @@ const { chromium, APP, OUT, handle } = require('./harness.cjs');
     await pg.locator('.master').screenshot({ path: OUT + `graph-${vw}.png` });
     // Zoomed out, each feeling turns into a daily-average line: the canvas must still draw and the readout still work.
     await pg.getByRole('button', { name: '30D', exact: true }).click(); await pg.waitForTimeout(150);
+    check(`[${vw}] past a week the key switches to the life chart`, /above .* or below .* your own average/.test(await pg.locator('.mg-key').innerText()));
     await pg.locator('.master').screenshot({ path: OUT + `graph-30d-${vw}.png` });
     await pg.getByRole('button', { name: '3D', exact: true }).click(); await pg.waitForTimeout(150);
     // Overview: tap near its left edge → the window jumps back toward the start.

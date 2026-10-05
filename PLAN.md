@@ -430,9 +430,12 @@ email get Dev tools (`#dev`): raw entry editor, generate/remove sample, wipe acc
       those days (2+ days, 2× as common). Mood course: 7-day average line + 4-week trend with its range.
    c. [x] Nicer UI: `components/SectionBar.tsx` — pinned bar under the top nav, jumps to each section present,
       marks where you are.
-   d. [ ] Mood on the master graph, 4 versions (owner, 5 Oct: *"make like 4 creative, different versions"*):
+   d. [x] Mood on the master graph, 4 versions (owner, 5 Oct: *"make like 4 creative, different versions"*):
       https://claude.ai/artifact/8ecXyjYDcbno3hEe3HyM8z — A life chart (above/below your average), B horizon
       strips, C feeling ribbon (height mood, thickness energy, colour stress), D beads & pixels. My pick: C, with
-      A's day bars past a week. Waiting for the owner's pick.
+      A's day bars past a week. **Owner, 5 Oct: *"Ok do A and C as you recommended"*** → built: one "How you felt"
+      lane (MasterGraph; feelgraph ribbonRuns/ribbonWidth/stressMix/lifeBars + tests). ≤ 7 days: C ribbon, joined
+      within a day. Past a week: A day bars vs your average + energy/stress lines. Key under the chart switches
+      with zoom. Scout "show on graph" for any feeling opens this lane. --g-now/--g-down now also on :root.
    Defaults picked: dark only (the app is dark only, owner 29 Sept); wearable rows hidden until a wearable
    is connected, never sample data mixed into real numbers.

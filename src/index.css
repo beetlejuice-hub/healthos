@@ -11,6 +11,7 @@
   --i-bg: #0d1012; --i-panel: #12171a; --i-panel-2: #171e22; --i-line: #222b2f; --i-line-2: #2c373c; --i-ink: #dce3e5; --i-ink-2: #93a0a4; --i-dim: #5b676b;
   /* meaning, shared */
   --caf: #f0b27a; --alc: #b48ead; --kcal: #9fc2ff; --pro: #f29b8b; --carb: #e8c77f; --fat: #9fd7c7;
+  --g-now: #3987e5; --g-down: #e66767;
   --ok: #a8dcc0; --warn: #f0b27a; --gym: #ffd166; --supp: #c7a8f0; --wt: #8fb3c9; --mood: #68c3e0; --hr: #ef7d6d;
   --f-sans: "Figtree", system-ui, sans-serif; --f-serif: "Newsreader", Georgia, serif;
   --f-cond: "Barlow Condensed", "Arial Narrow", sans-serif; --f-bar: "Barlow", system-ui, sans-serif;
@@ -215,6 +216,8 @@ a { color: inherit; }
 .scrub { flex: 1 1 180px; display: flex; align-items: center; gap: 8px; min-width: 160px; }
 .scrub input { flex: 1; accent-color: var(--i-ink-2); }
 .hint-i { font-size: 11.5px; color: var(--i-dim); }
+.mg-key .hint-i { color: var(--i-ink-2); } .mg-key b { color: var(--i-ink); font-weight: 600; }
+.mg-key i.sw { display: inline-block; width: 9px; height: 9px; border-radius: 2px; margin: 0 4px 0 2px; vertical-align: -1px; } .mg-key i.sw.ln { height: 2px; width: 12px; vertical-align: 2px; }
 .mg-canvas { display: block; width: 100%; touch-action: pan-y; cursor: grab; }
 .mg-overview { display: block; width: 100%; touch-action: pan-y; cursor: ew-resize; border-top: 1px solid var(--i-line); }
 .mg-side { border-left: 1px solid var(--i-line); display: grid; align-content: start; min-width: 0; }

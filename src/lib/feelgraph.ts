@@ -61,3 +61,39 @@ export function dailyFeel(checks: Check[], k: FeelK): { day: string; at: number;
     return { day: r.day, at: d.getTime(), mean: vs.reduce((a, b) => a + b, 0) / vs.length, lo: r.lo, hi: r.hi, n: vs.length };
   });
 }
+
+/* ---- the "How you felt" lane (owner, 5 Oct, picked versions A + C of the mood prototypes) ---- */
+
+/** Feeling ribbon (C): thickness from energy, 2 px drained … 17 px charged; a middle width when not rated. */
+export const ribbonWidth = (energy?: number) => 2 + (energy ?? 5) * 1.5;
+/** Ribbon colour position from stress: 0 = calm … 1 = tense; null when not rated. */
+export const stressMix = (stress?: number) => (stress == null ? null : Math.max(0, Math.min(1, (stress - 2) / 7)));
+
+/** Check-ins with a mood, in runs that the ribbon joins: one run per local day, so nights stay gaps. */
+export function ribbonRuns(checks: Check[]): Check[][] {
+  const out: Check[][] = [];
+  for (const c of [...checks].filter((x) => x.mood != null).sort((a, b) => a.at - b.at)) {
+    const run = out[out.length - 1];
+    if (run && localDay(run[run.length - 1].at) === localDay(c.at)) run.push(c); else out.push([c]);
+  }
+  return out;
+}
+
+/**
+ * Life chart (A), past a week: each day's mood as distance from your own average (every mood check-in
+ * given), with that day's energy and stress averages riding underneath, and whether you wrote a note.
+ */
+export function lifeBars(checks: Check[]): { base: number | null; days: { day: string; at: number; dev: number; mood: number; energy: number | null; stress: number | null; note: boolean }[] } {
+  const rated = checks.filter((c) => c.mood != null);
+  if (!rated.length) return { base: null, days: [] };
+  const base = rated.reduce((a, c) => a + c.mood!, 0) / rated.length;
+  const avg = (cs: Check[], k: FeelK) => { const v = cs.flatMap((c) => (c[k] == null ? [] : [c[k]!])); return v.length ? v.reduce((a, b) => a + b, 0) / v.length : null; };
+  const by = new Map<string, Check[]>();
+  for (const c of checks) by.set(localDay(c.at), [...(by.get(localDay(c.at)) ?? []), c]);
+  const days = [...by.entries()].flatMap(([day, cs]) => {
+    const mood = avg(cs, "mood"); if (mood == null) return [];
+    const d = new Date(Math.min(...cs.map((c) => c.at))); d.setHours(12, 0, 0, 0);
+    return [{ day, at: d.getTime(), dev: mood - base, mood, energy: avg(cs, "energy"), stress: avg(cs, "stress"), note: cs.some((c) => !!c.note?.trim()) }];
+  }).sort((a, b) => a.at - b.at);
+  return { base, days };
+}
