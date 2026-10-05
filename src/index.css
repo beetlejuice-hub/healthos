@@ -339,6 +339,17 @@ a { color: inherit; }
 .gl-chart .proj { fill: var(--i-ink); opacity: .03; }
 .gl-chart .roll { fill: none; stroke: var(--i-ink); stroke-width: 2; stroke-linejoin: round; opacity: .85; }
 .gl-patterns { grid-column: 1 / -1; }
+.gl-top { grid-column: 1 / -1; scroll-margin-top: 104px; }
+.top-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; }
+.top-card { display: grid; gap: 6px; align-content: start; padding: 12px 14px; border: 1px solid var(--i-line); border-radius: 8px; background: var(--i-panel-2); min-width: 0; }
+.top-card h3 { margin: 0; font-size: 14px; font-weight: 600; line-height: 1.35; }
+.top-v { font-size: 24px; font-weight: 600; font-variant-numeric: tabular-nums; letter-spacing: -.01em; }
+.top-card.good .top-v { color: var(--g-good-t); } .top-card.bad .top-v { color: var(--g-bad-t); }
+.top-v small { font-size: 11.5px; font-weight: 400; color: var(--i-ink-2); margin-left: 6px; letter-spacing: 0; }
+.top-ev { margin: 0; font-size: 11.5px; color: var(--i-dim); }
+.top-try { display: grid; gap: 2px; text-align: left; margin-top: 4px; padding: 8px 10px; border: 1px solid var(--i-line-2); border-radius: 8px; background: var(--i-panel); color: var(--i-ink); font-size: 12.5px; cursor: pointer; }
+.top-try:hover { border-color: var(--i-ink-2); } .top-try small { color: var(--i-ink-2); font-size: 11.5px; }
+.top-run { margin: 4px 0 0; font-size: 12px; color: var(--i-ink); border-left: 2px solid var(--g-now); padding-left: 8px; }
 .tipbox { position: fixed; z-index: 60; pointer-events: none; display: grid; gap: 1px; max-width: 290px; padding: 8px 10px; border-radius: 7px; background: var(--i-ink); color: var(--i-bg); font-family: var(--f-plex); font-size: 12px; line-height: 1.45; box-shadow: 0 10px 28px -12px rgba(0,0,0,.6); }
 .tipbox b { font-weight: 600; } .tipbox span { color: color-mix(in srgb, var(--i-bg) 78%, var(--i-ink)); }
 [data-tip] { cursor: default; }

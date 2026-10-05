@@ -7,7 +7,7 @@
 import { useEffect, useState } from "react";
 
 const SECTIONS: [string, string][] = [
-  ["ins-glance", "This week"], ["ins-timeline", "Timeline"], ["ins-mind", "Mind"], ["ins-connections", "Connections"],
+  ["ins-glance", "This week"], ["ins-top", "Try"], ["ins-timeline", "Timeline"], ["ins-mind", "Mind"], ["ins-connections", "Connections"],
   ["ins-sleep", "Sleep"], ["ins-intake", "Intake & body"], ["ins-training", "Training & stack"], ["ins-data", "Your data"],
 ];
 

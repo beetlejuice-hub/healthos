@@ -8,6 +8,7 @@ import { Connections } from "../components/Connections";
 import { Body } from "../components/Body";
 import { SectionBar } from "../components/SectionBar";
 import { Tip } from "../components/Tip";
+import { Top } from "../components/Top";
 import { Coverage, Methods, SuppMatrix, TrainingLoad } from "../components/Stack";
 import { glanceDays } from "../lib/glance";
 import { LineChart } from "../components/Charts";
@@ -78,6 +79,7 @@ export function Insights() {
       <Tip />
       {!nothing && <SectionBar version={`${s.entries.length}-${period}`} />}
       {!nothing && <Glance now={now} trendDays={period} report={report} />}
+      {!nothing && <div className="gl"><Top days={gdays} /></div>}
       {!nothing && <MasterGraph data={data} supplements={s.supplements} focus={focus} days={gdays} />}
       {!nothing && <Mind days={gdays} now={now} period={period} />}
       {!nothing && <Connections days={gdays} />}

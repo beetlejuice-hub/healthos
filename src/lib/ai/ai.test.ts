@@ -48,6 +48,21 @@ describe("experiments: before vs during", () => {
     expect(judge(x, base, addDays(x.start, 3)).state).toBe("running");
     expect(judge({ ...x, start: "2026-08-03" }, base, "2026-09-20").state).toBe("too-few");
   });
+  it("sleep is judged on the next morning's rating: each night belongs to the day before it", () => {
+    let k = 0; const slept = base.map((d) => ({ ...d, sleep: 6 + ((k++ * 7) % 5) / 4 })); // 6.0–7.0, no trend
+    const sx = { ...x, measure: "sleep" };
+    // Better from the first night of the protocol: mornings after the start day.
+    const better = slept.map((d) => (d.day > sx.start ? { ...d, sleep: d.sleep + 1.5 } : d));
+    expect(judge(sx, better, addDays(sx.start, 25)).state).toBe("better");
+    expect(judge(sx, slept, addDays(sx.start, 25)).state).toBe("no-clear-change");
+    // The start day's own morning (the night before it began) counts as "before", not "during".
+    const v = judge(sx, slept, addDays(sx.start, 25));
+    expect(v.n[0]).toBe(14); expect(v.n[1]).toBe(25);
+    // A great night just before the start (rated on the start day's morning) is "before": it can't flatter the protocol.
+    const flat = base.map((d) => ({ ...d, sleep: d.day === sx.start ? 10 : 6 }));
+    const f = judge(sx, flat, addDays(sx.start, 25));
+    expect(f.before!).toBeGreaterThan(6); expect(f.during).toBe(6);
+  });
 });
 
 describe("what the AI sees", () => {

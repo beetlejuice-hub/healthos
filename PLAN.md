@@ -443,5 +443,11 @@ email get Dev tools (`#dev`): raw entry editor, generate/remove sample, wipe acc
       `data-tip` (hover, tap, focus) replacing the browser's title tooltips on all new panels; Noticed, Worth a
       look, Strength, doses, experiments, stack check restyled to the new panels (scoped CSS); Strength full
       width; the duplicate "Your week" block taken off.
+   f. [x] "Look at these first" (`lib/top.ts` + test, `components/Top.tsx`): clear comparisons → one card per lever
+      you can change (late caffeine, drinks, training, sleep, each supplement; never weekends), ranked by size,
+      each with a 14-day (training 21, supplement-pause 10) test that becomes a real Experiment. Experiments can
+      now judge sleep (`ai/apply` judge: the next morning's rating is that day's night; DayFacts.sleep).
+   g. [ ] Phone layout of Insights (owner, 5 Oct: *"pls make the phone layout after ur finished w this"*; light
+      theme not wanted yet).
    Defaults picked: dark only (the app is dark only, owner 29 Sept); wearable rows hidden until a wearable
    is connected, never sample data mixed into real numbers.

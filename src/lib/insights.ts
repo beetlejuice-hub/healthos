@@ -107,6 +107,8 @@ export type DayFacts = {
   weekend: boolean;
   /** The biggest single meal: food logged within 45 minutes counts as one meal. Null if no food. */
   bigMealKcal: number | null;
+  /** The sleep rating given that morning (last night's), if any. */
+  sleep: number | null;
 };
 
 /** Food entries within 45 minutes of each other are one meal; the largest meal's kcal. */
@@ -127,6 +129,8 @@ export function dailyFacts(entries: Entry[], workouts: Workout[], settings: Sett
   const byDay = new Map<string, Entry[]>();
   for (const e of entries) { const d = localDay(e.at); byDay.set(d, [...(byDay.get(d) ?? []), e]); }
   const trainedDays = new Set(workouts.map((w) => localDay(w.startedAt)));
+  const sleepBy = new Map<string, number>();
+  for (const e of of(entries, "sleep")) if (e.rating != null && !sleepBy.has(localDay(e.at))) sleepBy.set(localDay(e.at), e.rating);
   const out: DayFacts[] = [];
   for (let day = fromDay; day <= toDay; day = addDays(day, 1)) {
     const es = byDay.get(day) ?? [];
@@ -155,6 +159,7 @@ export function dailyFacts(entries: Entry[], workouts: Workout[], settings: Sett
       bigMealKcal: biggestMeal(foods),
       volumeKg: of(es, "set").reduce((a, x) => a + x.kg * x.reps, 0),
       weekend: [0, 6].includes(new Date(atMinute(day, 12 * 60)).getDay()),
+      sleep: sleepBy.get(day) ?? null,
     });
   }
   return out;
