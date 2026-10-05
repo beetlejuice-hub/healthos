@@ -42,3 +42,16 @@ describe("tierOfMg", () => {
     expect(tierOfMg(29)).toBe("low"); expect(tierOfMg(30)).toBe("possible"); expect(tierOfMg(100)).toBe("higher");
   });
 });
+
+import { coverage } from "./body";
+describe("coverage", () => {
+  it("fills each day by how fully it was logged", () => {
+    const c = coverage([day(0, { checkins: 1, kcal: 2000 }), day(1, { checkins: 3, sleep: 7, drinks: 0, stackAnswered: true }), day(2, { checkins: 5, trained: true })]);
+    const row = (n: string) => c.find((r) => r.name === n)!;
+    expect(row("Check-ins").fill.map((v) => +v.toFixed(2))).toEqual([0.33, 1, 1]);
+    expect(row("Food").days).toBe(1);
+    expect(row("Drinks & coffee").fill).toEqual([0, 1, 0]); // 0 drinks logged still counts as logged
+    expect(row("Supplements").days).toBe(1);
+    expect(row("Workouts").fill).toEqual([0, 0, 1]);
+  });
+});

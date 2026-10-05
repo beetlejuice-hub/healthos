@@ -40,3 +40,18 @@ export function drinkWeeks(days: GlanceDay[], weeks: number): DrinkWeek[] {
   }
   return out;
 }
+
+export type Stream = { name: string; /** 0–1 per day: how fully it was logged (1 of 3 check-ins = 0.33). */ fill: number[]; days: number };
+/** What was logged, day by day: one row per kind, and how many days have any of it. */
+export function coverage(days: GlanceDay[]): Stream[] {
+  const rows: [string, (d: GlanceDay) => number][] = [
+    ["Check-ins", (d) => Math.min(1, d.checkins / 3)],
+    ["Sleep rating", (d) => (d.sleep != null ? 1 : 0)],
+    ["Food", (d) => (d.kcal != null ? 1 : 0)],
+    ["Drinks & coffee", (d) => (d.drinks != null ? 1 : 0)],
+    ["Weight", (d) => (d.weight != null ? 1 : 0)],
+    ["Supplements", (d) => (d.stackAnswered ? 1 : 0)],
+    ["Workouts", (d) => (d.trained ? 1 : 0)],
+  ];
+  return rows.map(([name, f]) => { const fill = days.map(f); return { name, fill, days: fill.filter((v) => v > 0).length }; });
+}

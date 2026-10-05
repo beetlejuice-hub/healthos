@@ -334,7 +334,11 @@ a { color: inherit; }
 .gl-chart .wdot { fill: var(--wt); fill-opacity: .7; } .gl-chart .wavg { fill: none; stroke: var(--g-now); stroke-width: 2; stroke-linejoin: round; }
 .gl-chart .wtrend { stroke: var(--g-now); stroke-width: 2; stroke-dasharray: 4 4; } .gl-chart .wnow { fill: var(--g-now); stroke: var(--i-panel); stroke-width: 2; }
 .gl-chart .proj { fill: var(--i-ink); opacity: .03; }
-@media (max-width: 1080px) { .gl-week, .gl-vitals, .gl-course, .gl-rhythm, .gl-forest, .gl-explore, .gl-sleep, .gl-kcal, .gl-weight { grid-column: 1 / -1; } }
+.gl-load, .gl-supps { grid-column: span 6; } .gl-cover, .gl-methods { grid-column: 1 / -1; }
+.gl-methods dl { margin: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px 22px; }
+.gl-methods dl > div { display: grid; gap: 3px; align-content: start; }
+.gl-methods dt { font-weight: 600; color: var(--i-ink); } .gl-methods dd { margin: 0; color: var(--i-ink-2); font-size: 12.5px; }
+@media (max-width: 1080px) { .gl-week, .gl-vitals, .gl-course, .gl-rhythm, .gl-forest, .gl-explore, .gl-sleep, .gl-kcal, .gl-weight, .gl-load, .gl-supps { grid-column: 1 / -1; } }
 @media (max-width: 1080px) { .gl-caf, .gl-drinks { grid-column: span 6; } }
 @media (max-width: 700px) { .gp-h { flex-wrap: wrap; } .gp-meta { text-align: left; } .gl-caf, .gl-drinks { grid-column: 1 / -1; } }
 .pgrid { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 16px; }

@@ -1,14 +1,15 @@
 import { useMemo, useState } from "react";
 import { useStore } from "../lib/store";
-import { adherence, dailyFacts, lanes, type DayFacts } from "../lib/insights";
+import { dailyFacts, lanes } from "../lib/insights";
 import { MasterGraph } from "../components/MasterGraph";
 import { Glance } from "../components/Glance";
 import { Mind } from "../components/Mind";
 import { Connections } from "../components/Connections";
 import { Body } from "../components/Body";
+import { Coverage, Methods, SuppMatrix, TrainingLoad } from "../components/Stack";
 import { glanceDays } from "../lib/glance";
 import { LineChart } from "../components/Charts";
-import { e1rmHistory, setsPerMuscle, suggestNext } from "../lib/training";
+import { e1rmHistory, suggestNext } from "../lib/training";
 import type { Range } from "../lib/stats";
 import { addDays, dayLabel, localDay, DAY } from "../lib/time";
 import type { EntryOf } from "../lib/types";
@@ -53,7 +54,7 @@ export function Insights() {
   }, [s.entries, facts]);
   const locked: [string, string][] = [
     !has.strength && ["Strength", "log the same exercise in two workouts"],
-    !has.sets && ["Sets per muscle", "log a workout"],
+    !has.sets && ["Training load", "log a workout"],
     !has.supps && ["Supplements", "tick your stack on Today"],
   ].filter((x): x is [string, string] => !!x);
   const nothing = s.entries.length === 0;
@@ -75,16 +76,18 @@ export function Insights() {
       {nothing && <div className="needs">Nothing logged yet. Log food, drinks and supplements for a few days and this fills in — or load sample data in Settings to see what it will look like.</div>}
       {!nothing && <Glance now={now} trendDays={period} report={report} />}
       {!nothing && <Weekly now={now} />}
-      {!nothing && <Noticed report={report} />}
-      {!nothing && <WorthALook items={scouted} onShow={showOnGraph} />}
       {!nothing && <MasterGraph data={data} supplements={s.supplements} focus={focus} days={gdays} />}
       {!nothing && <Mind days={gdays} now={now} period={period} />}
       {!nothing && <Connections days={gdays} />}
+      {!nothing && <Noticed report={report} />}
+      {!nothing && <WorthALook items={scouted} onShow={showOnGraph} />}
       {!nothing && <Body days={gdays} period={period} now={now} />}
+      {!nothing && (has.sets || has.supps) && <>
+        <div className="gl-group"><h2>Training &amp; stack</h2><span>what you trained, what you took</span></div>
+        <div className="gl"><TrainingLoad now={now} period={period} /><SuppMatrix days={gdays} period={period} /></div>
+      </>}
       <div className="pgrid">
         {has.strength && <Strength now={now} />}
-        {has.sets && <Muscles now={now} />}
-        {has.supps && <Supplements facts={facts} today={today} />}
         <DoseEffects />
         <Experiments />
         <StackCheckPanel />
@@ -95,6 +98,10 @@ export function Insights() {
           </section>
         )}
       </div>
+      {!nothing && <>
+        <div className="gl-group"><h2>Your data</h2><span>how complete the picture is, and how the numbers are made</span></div>
+        <div className="gl"><Coverage days={gdays} /><Methods /></div>
+      </>}
     </div>
   );
 }
@@ -203,52 +210,7 @@ function Strength({ now: nowMs }: { now: number }) {
   );
 }
 
-function Muscles({ now }: { now: number }) {
-  const entries = useStore((s) => s.entries);
-  const sets = entries.filter((e): e is EntryOf<"set"> => e.kind === "set");
-  const wk = setsPerMuscle(sets.filter((s) => s.at > now - 7 * DAY));
-  const avg = setsPerMuscle(sets.filter((s) => s.at > now - 28 * DAY));
-  const muscles = Object.keys({ ...avg, ...wk }).sort((a, b) => (avg[b] ?? 0) - (avg[a] ?? 0));
-  return (
-    <section className="p w4">
-      <h2>Sets per muscle <span>last 7 days</span></h2>
-      {muscles.length ? <div className="bars">{muscles.map((m) => { const v = wk[m] ?? 0, a = (avg[m] ?? 0) / 4; return (
-        <div className="mb" key={m}><span>{m}</span><div className="trk"><i style={{ width: `${Math.min(100, (v / 20) * 100)}%`, background: v >= 10 ? "var(--gym)" : "var(--i-dim)" }} /><i style={{ left: "50%", width: 1, background: "var(--i-ink-2)", opacity: .5 }} /></div><span className="val"><b>{f1(v)}</b> · 4wk avg {f1(a)}</span></div>
-      ); })}</div> : <div className="needs">No sets logged yet.</div>}
-      <p className="muted" style={{ margin: 0, fontSize: 12 }}>Marker at 10 sets, the low end of the common 10–20 sets/week guideline. Secondary muscles count half.</p>
-    </section>
-  );
-}
-
 /* ------------------------------------------------------------------ supplements */
-
-function Supplements({ facts, today }: { facts: DayFacts[]; today: string }) {
-  const entries = useStore((s) => s.entries);
-  const supps = useStore((s) => s.supplements);
-  const active = supps.filter((s) => s.active);
-  const days = Array.from({ length: 30 }, (_, i) => addDays(today, -29 + i));
-  const a = adherence(entries, supps, days.slice(0, -1));
-  const byDayFact = new Map(facts.map((f) => [f.day, f]));
-  return (
-    <section className="p">
-      <h2>Supplements <span>last 30 days</span></h2>
-      {active.length ? <>
-        <div style={{ display: "grid", gridTemplateColumns: "auto minmax(0,1fr)", gap: "0 12px" }}>
-          <div>{active.map((s) => <div key={s.id} className="muted" style={{ height: 16, fontSize: 12, lineHeight: "12px", whiteSpace: "nowrap" }}>{s.name}</div>)}</div>
-          <div style={{ overflowX: "auto" }}>
-            <svg viewBox={`0 0 ${days.length * 11} ${active.length * 16}`} width={days.length * 11} height={active.length * 16} role="img" aria-label="Supplements taken each day">
-              {active.map((s, i) => days.map((d, k) => { const on = byDayFact.get(d)?.taken.has(s.id); return <rect key={d + s.id} x={k * 11} y={i * 16} width="9" height="12" rx="2" fill={on ? "var(--supp)" : "var(--i-line)"} fillOpacity={on ? .85 : 1} />; }))}
-            </svg>
-          </div>
-        </div>
-        <div className="tw"><table><tbody>
-          <tr><th>Supplement</th><th>When</th><th className="n">Taken</th><th className="n">Rate</th></tr>
-          {a.map((x) => { const s = supps.find((y) => y.id === x.suppId)!; return <tr key={x.suppId}><td>{s.name} {s.dose}</td><td>{s.slot}</td><td className="n">{x.taken}/{x.due} days</td><td className="n">{Math.round((x.taken / Math.max(1, x.due)) * 100)}%</td></tr>; })}
-        </tbody></table></div>
-      </> : <div className="needs">Add your stack in Log → Stack.</div>}
-    </section>
-  );
-}
 
 function RangeCell({ r, f = f1, unit = "" }: { r: Range; f?: (v: number) => string; unit?: string }) {
   return <>{sgn(r.value, f)}{unit} <span className="dimt">[{sgn(r.lo, f)}, {sgn(r.hi, f)}]</span></>;

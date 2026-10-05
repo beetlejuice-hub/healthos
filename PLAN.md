@@ -408,12 +408,15 @@ email get Dev tools (`#dev`): raw entry editor, generate/remove sample, wipe acc
       still collecting listed, chance note; explorer with strongest clear pairs (two feelings from the same
       check-in never count). Noticed stays for now: it also carries weight/TDEE/caffeine-habit findings and
       Today links into it — fold it in during phase 5.
-   5. [ ] Sleep, intake & body, training & stack, coverage, methods — wearable panels show only with data.
+   5. [x] Sleep, intake & body, training & stack, coverage, methods — wearable panels show only with data.
       5a [x] `lib/body.ts` (+ test), `components/Body.tsx`: sleep rating night by night (with late caffeine,
       drinks, training marked; with/without from Connections), caffeine left at bedtime in 30/100 mg tiers,
       drinks per week ("–" under 4 logged days, not 0), calories & macros vs goal (unlogged days left out),
       weight trend (lib/tdee fit, 95% range, carried 3 weeks ahead). Replaces Nutrition + Caffeine and alcohol.
-      5b [ ] training load heat table, supplements matrix, coverage, methods, fold Noticed in.
+      5b [x] `components/Stack.tsx`: hard sets per muscle week by week (the muscle map's counter), each
+      supplement day by day (taken / not / stack not ticked, dose changes marked), coverage (`lib/body`
+      coverage + test), methods. Replaces Sets per muscle + Supplements. Noticed moved under Connections
+      (still the home of weight/burn/caffeine-habit findings; Today's link still lands on it).
    6. [ ] Phone layout of the same page (after the owner checks desktop).
    Defaults picked: dark only (the app is dark only, owner 29 Sept); wearable rows hidden until a wearable
    is connected, never sample data mixed into real numbers.
