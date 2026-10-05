@@ -403,8 +403,11 @@ email get Dev tools (`#dev`): raw entry editor, generate/remove sample, wipe acc
    3. [x] Mind — `lib/mind.ts` (+ test), `components/Mind.tsx`: mood course vs your average (life-chart, with
       energy/stress/sleep strips and events), mood by weekday × 3-hour block (a check-in before 06:00 counts
       as the evening before). Under the master chart.
-   4. [ ] Connections — one forest plot for every with/without comparison (replaces Noticed cards, What moves
-      what, Does it do anything), explorer with strongest pairs.
+   4. [x] Connections — `lib/connections.ts` (+ test), `components/Connections.tsx`: one forest plot for every
+      with/without comparison incl. each supplement (replaces What moves what + Does it do anything), comparisons
+      still collecting listed, chance note; explorer with strongest clear pairs (two feelings from the same
+      check-in never count). Noticed stays for now: it also carries weight/TDEE/caffeine-habit findings and
+      Today links into it — fold it in during phase 5.
    5. [ ] Sleep, intake & body, training & stack, coverage, methods — wearable panels show only with data.
    6. [ ] Phone layout of the same page (after the owner checks desktop).
    Defaults picked: dark only (the app is dark only, owner 29 Sept); wearable rows hidden until a wearable

@@ -1,14 +1,15 @@
 import { useMemo, useState } from "react";
 import { useStore } from "../lib/store";
-import { adherence, dailyFacts, lanes, pairs, suppEffects, type DayFacts, type Pair } from "../lib/insights";
+import { adherence, dailyFacts, lanes, type DayFacts } from "../lib/insights";
 import { MasterGraph } from "../components/MasterGraph";
 import { Glance } from "../components/Glance";
 import { Mind } from "../components/Mind";
+import { Connections } from "../components/Connections";
 import { glanceDays } from "../lib/glance";
 import { Bars, LineChart } from "../components/Charts";
 import { averageOver, byDay, againstGoals, add, macrosOf, split, ZERO } from "../lib/nutrition";
 import { e1rmHistory, setsPerMuscle, suggestNext } from "../lib/training";
-import { mean, median, slope, strength, type Range } from "../lib/stats";
+import { mean, median, type Range } from "../lib/stats";
 import { addDays, dayLabel, localDay, DAY } from "../lib/time";
 import type { EntryOf } from "../lib/types";
 import { useNow } from "./Today";
@@ -51,18 +52,14 @@ export function Insights() {
       strength: [...workoutsPerExercise.values()].some((w) => w.size >= 2),
       sets: kinds.has("set"),
       supps: kinds.has("supp"),
-      effects: suppEffects(facts, s.supplements).some((e) => e.diff),
-      pairs: pairs(facts).some((p) => p.r),
     };
-  }, [s.entries, s.supplements, facts]);
+  }, [s.entries, facts]);
   const locked: [string, string][] = [
     !has.food && ["Nutrition", "log food on a few days to see averages against your goals"],
     !has.caffeine && ["Caffeine and alcohol", "log drinks to see what's left in you at bedtime"],
     !has.strength && ["Strength", "log the same exercise in two workouts"],
     !has.sets && ["Sets per muscle", "log a workout"],
     !has.supps && ["Supplements", "tick your stack on Today"],
-    !has.effects && ["Does it do anything?", "needs 5+ days both on and off a supplement, plus how you felt the next day"],
-    !has.pairs && ["What moves what", "needs 10+ days with both the cause and next-day feeling logged"],
   ].filter((x): x is [string, string] => !!x);
   const nothing = s.entries.length === 0;
 
@@ -87,15 +84,14 @@ export function Insights() {
       {!nothing && <WorthALook items={scouted} onShow={showOnGraph} />}
       {!nothing && <MasterGraph data={data} supplements={s.supplements} focus={focus} days={gdays} />}
       {!nothing && <Mind days={gdays} now={now} period={period} />}
+      {!nothing && <Connections days={gdays} />}
       <div className="pgrid">
         {has.food && <Nutrition now={now} />}
         {has.caffeine && <CaffeineAlcohol facts={facts} />}
         {has.strength && <Strength now={now} />}
         {has.sets && <Muscles now={now} />}
         {has.supps && <Supplements facts={facts} today={today} />}
-        {has.effects && <SuppEffects facts={facts} />}
         <DoseEffects />
-        {has.pairs && <WhatMovesWhat facts={facts} />}
         <Experiments />
         <StackCheckPanel />
         {locked.length > 0 && (
@@ -331,27 +327,6 @@ function RangeCell({ r, f = f1, unit = "" }: { r: Range; f?: (v: number) => stri
   return <>{sgn(r.value, f)}{unit} <span className="dimt">[{sgn(r.lo, f)}, {sgn(r.hi, f)}]</span></>;
 }
 
-function SuppEffects({ facts }: { facts: DayFacts[] }) {
-  const supps = useStore((s) => s.supplements);
-  const effects = suppEffects(facts, supps).filter((e) => e.metric === "energy" || e.metric === "mood");
-  return (
-    <section className="p">
-      <h2>Does it do anything? <span>next day, on vs off</span></h2>
-      <p className="muted" style={{ margin: 0, fontSize: 12.5 }}>Your ratings the day after taking each supplement vs the day after not taking it. To really test one, pause it for 2–3 weeks in Log → Stack. Without "off" days there's nothing to compare against.</p>
-      {effects.some((e) => e.diff) && <p className="muted" style={{ margin: 0, fontSize: 12.5 }}>This table runs {effects.filter((e) => e.diff).length} comparisons, so about {Math.max(1, Math.round(effects.filter((e) => e.diff).length * 0.05))} could look "clear" by chance alone. Trust a result that stays clear after a planned off block.</p>}
-      <div className="tw"><table><tbody>
-        <tr><th>Supplement</th><th>Next-day</th><th className="n">Difference [95% range]</th><th className="n">On / off days</th><th className="n" /></tr>
-        {effects.map((e) => { const s = supps.find((x) => x.id === e.suppId)!; return (
-          <tr key={e.suppId + e.metric}><td>{s.name}</td><td>{e.metric}</td>
-            <td className="n">{e.diff ? <RangeCell r={e.diff} unit=" pts" /> : <span className="dimt">needs {e.need} more {e.off < e.on ? "off" : "on"} days</span>}</td>
-            <td className="n">{e.on} / {e.off}</td>
-            <td className="n">{e.diff ? <span className={`tag ${e.diff.clear ? "s" : "w"}`}>{e.diff.clear ? "clear" : "unclear"}</span> : null}</td></tr>
-        ); })}
-      </tbody></table></div>
-    </section>
-  );
-}
-
 /** Higher vs lower dose (lib/dose): shown once a supplement has been taken at two doses. */
 function DoseEffects() {
   const entries = useStore((s) => s.entries);
@@ -379,45 +354,6 @@ function DoseEffects() {
           </div>
         );
       })}
-    </section>
-  );
-}
-
-/* ------------------------------------------------------------------ correlations */
-
-function Scatter({ p, color }: { p: Pair; color: string }) {
-  const w = 160, h = 90, pad = 6;
-  const xmn = Math.min(...p.xs), xmx = Math.max(...p.xs), ymn = Math.min(...p.ys), ymx = Math.max(...p.ys);
-  const X = (v: number) => pad + ((v - xmn) / (xmx - xmn || 1)) * (w - pad * 2), Y = (v: number) => 4 + (1 - (v - ymn) / (ymx - ymn || 1)) * (h - pad - 4);
-  const sl = slope(p.xs, p.ys), mx = mean(p.xs), my = mean(p.ys);
-  return (
-    <svg viewBox={`0 0 ${w} ${h}`} width={w} height={h} aria-hidden="true">
-      {p.xs.map((x, i) => <circle key={i} cx={X(x)} cy={Y(p.ys[i])} r="1.9" fill={color} fillOpacity=".5" />)}
-      {Number.isFinite(sl) && <line x1={pad} y1={Y(my + sl * (xmn - mx))} x2={w - pad} y2={Y(my + sl * (xmx - mx))} stroke="var(--i-ink)" strokeOpacity=".7" strokeWidth="1.2" />}
-    </svg>
-  );
-}
-
-function WhatMovesWhat({ facts }: { facts: DayFacts[] }) {
-  const list = pairs(facts);
-  const color = (id: string) => (id.startsWith("caf") ? "var(--caf)" : id.startsWith("alc") ? "var(--alc)" : id.startsWith("kcal") ? "var(--kcal)" : "var(--gym)");
-  return (
-    <section className="p w12">
-      <h2>What moves what <span>cause today → effect tomorrow · last 90 days</span></h2>
-      <div className="tw"><table><tbody>
-        <tr><th /><th>Pair and size of the effect</th><th className="n">r [95% range]</th><th className="n">n</th><th className="n">Verdict</th></tr>
-        {list.map((p) => (
-          <tr key={p.id}>
-            <td style={{ width: 170 }}>{p.r ? <Scatter p={p} color={color(p.id)} /> : null}</td>
-            <td><b>{p.cause}</b> → {p.effect}
-              <div className="muted" style={{ fontSize: 12 }}>{p.r ? (p.id === "train-mood" ? `${sgn(mean(p.ys.filter((_, i) => p.xs[i] === 1)) - mean(p.ys.filter((_, i) => p.xs[i] === 0)))} pts after training days` : `${sgn(slope(p.xs, p.ys) * (p.unitX === "mg" ? 10 : p.unitX === "kcal" ? 500 : p.unitX === "g" ? 14 : 1), (v) => v.toFixed(2))} pts per ${p.unitX === "mg" ? "10 mg" : p.unitX === "kcal" ? "500 kcal" : p.unitX === "g" ? "drink (14 g)" : p.unitX}`) : `needs ${p.need} more days with both logged`}</div></td>
-            <td className="n">{p.r ? <RangeCell r={p.r} f={(v) => v.toFixed(2)} /> : "—"}</td>
-            <td className="n">{p.xs.length}</td>
-            <td className="n">{p.r ? <span className={`tag ${p.r.clear ? "s" : "w"}`}>{strength(p.r)}</span> : null}</td>
-          </tr>
-        ))}
-      </tbody></table></div>
-      <p className="muted" style={{ margin: 0, fontSize: 12 }}>A correlation isn't proof of cause: late caffeine and alcohol often land on the same nights. Once a wearable is connected, sleep, HRV and resting heart rate join this table.</p>
     </section>
   );
 }

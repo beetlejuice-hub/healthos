@@ -32,6 +32,8 @@ export type GlanceDay = {
   weight: number | null;
   trained: boolean; lateCaffeine: boolean; note: boolean;
   checkins: number;
+  /** Supplements ticked "taken" that day; `stackAnswered`: any supplement was ticked or skipped (so an untaken one was really not taken). */
+  taken?: string[]; stackAnswered?: boolean;
 };
 
 const of = <K extends Entry["kind"]>(entries: Entry[], k: K) => entries.filter((e): e is EntryOf<K> => e.kind === k);
@@ -52,6 +54,7 @@ export function glanceDays(entries: Entry[], workouts: Workout[], settings: Sett
     weight: weight.get(f.day)?.kg ?? null,
     trained: f.trained, lateCaffeine: f.lateCaffeineMg > 0, note: notes.has(f.day),
     checkins: checks.get(f.day) ?? 0,
+    taken: [...f.taken], stackAnswered: f.stackAnswered,
   }));
 }
 

@@ -4,7 +4,8 @@
  * Numbers from lib/mind; this file only draws.
  */
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useMemo } from "react";
+import { useWidth } from "./useWidth";
 import { useStore } from "../lib/store";
 import type { GlanceDay } from "../lib/glance";
 import { BLOCKS, WEEKDAYS, moodCourse, moodRhythm, stepOf, type CourseDay } from "../lib/mind";
@@ -13,13 +14,6 @@ import { atMinute, dayLabel, DAY } from "../lib/time";
 const f1 = (v: number) => v.toFixed(1);
 const sg = (v: number) => `${v >= 0 ? "+" : "−"}${Math.abs(v).toFixed(1)}`;
 const noon = (d: string) => atMinute(d, 12 * 60);
-
-/** The element's width, kept current. */
-function useWidth<T extends HTMLElement>(): [React.RefObject<T | null>, number] {
-  const ref = useRef<T>(null), [w, setW] = useState(600);
-  useEffect(() => { const el = ref.current; if (!el) return; const ro = new ResizeObserver(() => setW(Math.max(260, el.clientWidth))); ro.observe(el); return () => ro.disconnect(); }, []);
-  return [ref, w];
-}
 
 export function Mind({ days, now, period }: { days: GlanceDay[]; now: number; period: number }) {
   const entries = useStore((s) => s.entries);
