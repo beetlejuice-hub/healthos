@@ -481,3 +481,9 @@ email get Dev tools (`#dev`): raw entry editor, generate/remove sample, wipe acc
    most lifts done in both of the last two 2-week blocks have their best e1RM down 2%+ (2+ lifts). Slow and
    dropping together cancel → keep, and it says so. One tap sets the goal (carbs move with it, ±38 g) or keeps
    it; the answer is stored (`settings.checkins`) and the card stays away for 14 days. e2e/checkin.cjs.
+42. [x] **Workout home: his plan instead of the starter split; day cards redone** (6 Oct — `lib/store.ts`
+   upgradeStarter, `components/DayCard.tsx`). Owner, 6 Oct, on Upper A/Lower A…: *"This part should be replaced w
+   the saved workouts...also make ui look better"*. New accounts start on Push · Pull · Mixed; a split still exactly
+   the old starter becomes it when loaded or synced (any changed split stays). Day cards: day number, up next,
+   exercises · sets · ~minutes, cardio, main-muscle tags; the up-next day lists every exercise with sets × reps,
+   today's first-lift suggestion and a full-width Start. e2e/plan.cjs (starter on the server), workout.cjs.

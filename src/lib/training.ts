@@ -98,6 +98,18 @@ export const mainMuscle = (exercise: string): string | null => {
 };
 
 /**
+ * A split day at a glance: exercises, sets, about how long the lifting takes (each set ~40 s plus its
+ * rest, rounded to 5 min), the cardio's minutes when it says them, and the main muscles in order.
+ */
+export function dayStats(t: { exercises: { name: string; sets: number; restSec: number }[]; cardio?: string }) {
+  const sets = t.exercises.reduce((a, e) => a + e.sets, 0);
+  const sec = t.exercises.reduce((a, e) => a + e.sets * (40 + e.restSec), 0);
+  const cardioMin = Number(t.cardio?.match(/(\d+)\s*min/)?.[1] ?? 0) || null;
+  const muscles = [...new Set(t.exercises.map((e) => mainMuscle(e.name)).filter((m): m is string => !!m))];
+  return { exercises: t.exercises.length, sets, liftMin: Math.max(5, Math.round(sec / 300) * 5), cardioMin, muscles };
+}
+
+/**
  * Same muscle, different exercise (owner, 6 Oct: "choose like same muscle, diff exercise"): other
  * exercises with the same main muscle, in the list's order (compound lifts first), leaving out `skip`
  * (today's plan). For a machine that's taken, or a change.

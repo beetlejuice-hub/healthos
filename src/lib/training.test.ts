@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { exerciseHistory, mainMuscle, nextTemplate, sameMuscle, sessionPlan, templateProblems, tidyWorkouts, e1rm, e1rmHistory, setsPerMuscle, suggestNext, volume } from "./training";
+import { dayStats, exerciseHistory, mainMuscle, nextTemplate, sameMuscle, sessionPlan, templateProblems, tidyWorkouts, e1rm, e1rmHistory, setsPerMuscle, suggestNext, volume } from "./training";
 
 describe("e1rm — Epley", () => {
   it("estimates a one-rep max", () => {
@@ -122,5 +122,15 @@ describe("same muscle, different exercise", () => {
     expect(sameMuscle("Pec deck", [], 3)).toEqual(["Bench press", "Incline DB press", "Dips"]);
     expect(sameMuscle("Squat")).not.toContain("Squat");
     expect(sameMuscle("Made-up lift")).toEqual([]);
+  });
+});
+
+describe("a split day at a glance", () => {
+  it("counts exercises and sets, estimates the lifting time, reads the cardio minutes, lists main muscles once", () => {
+    const d = { exercises: [{ name: "Squat", sets: 3, restSec: 150 }, { name: "DB bench press", sets: 3, restSec: 120 }, { name: "Leg extension", sets: 3, restSec: 60 }], cardio: "20 min stairmaster" };
+    // 9 sets × 40 s + 3×150 + 3×120 + 3×60 s = 360 + 990 = 1350 s ≈ 22.5 min → 25
+    expect(dayStats(d)).toEqual({ exercises: 3, sets: 9, liftMin: 25, cardioMin: 20, muscles: ["Quads", "Chest"] });
+    expect(dayStats({ exercises: [] })).toMatchObject({ exercises: 0, sets: 0, liftMin: 5, cardioMin: null, muscles: [] });
+    expect(dayStats({ exercises: [], cardio: "stairmaster, easy" }).cardioMin).toBeNull();
   });
 });

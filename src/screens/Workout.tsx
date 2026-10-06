@@ -3,6 +3,7 @@ import { act, newId, useStore } from "../lib/store";
 import { EXERCISES, e1rm, exerciseHistory, isBest, mainMuscle, nextTemplate, restLeft, sameMuscle, sessionPlan, sessionSummary, suggestNext, templateProblems, volume, type Suggestion } from "../lib/training";
 import { PROGRAMS, asSplit, asTemplate } from "../lib/programs";
 import { MuscleMap } from "../components/MuscleMap";
+import { DayCard } from "../components/DayCard";
 import { dayLabel } from "../lib/time";
 import type { EntryOf, Template, Workout } from "../lib/types";
 
@@ -42,21 +43,12 @@ function Pick() {
   if (editing) return <TemplateEditor t={editing === "new" ? null : editing} onClose={() => setEditing(null)} />;
   return (
     <div className="cockpit">
-      <div className="top"><h1>Workout</h1><div className="meta">{templates.length} day split</div></div>
+      <div className="top"><h1>Workout</h1><div className="meta">{templates.length}-day split</div></div>
       {ordered.map((t) => {
         const last = [...workouts].reverse().find((w) => w.template === t.name && w.endedAt);
         const first = t.exercises[0], sug = first ? suggestNext(lastSets(sets, first.name), first.reps) : null;
-        return (
-          <div className={`tile tpl ${t === next ? "next" : ""}`} key={t.id}>
-            {t === next && <span className="k" style={{ color: "var(--gym)" }}>Up next</span>}
-            <h2>{t.name}</h2>
-            <p>{t.exercises.map((e) => e.name).join(" · ")}{t.cardio ? `, then ${t.cardio}` : ""}<br />{last ? `Last: ${dayLabel(last.startedAt)}` : "Not done yet"}{sug ? ` · ${first.name} ${sug.kg} kg × ${sug.reps}` : ""}</p>
-            <div className="tpl-acts">
-              <button type="button" className="kbtn" onClick={() => setEditing(t)}>Edit</button>
-              <button type="button" className={t === next ? "go" : "go alt"} onClick={() => act.startWorkout(t.name)}>Start</button>
-            </div>
-          </div>
-        );
+        return <DayCard key={t.id} t={t} dayNo={templates.indexOf(t) + 1} next={t === next} lastAt={last?.startedAt ?? null}
+          sug={sug ? { exercise: first.name, kg: sug.kg, reps: sug.reps } : null} onEdit={() => setEditing(t)} onStart={() => act.startWorkout(t.name)} />;
       })}
       <div className="grid2">
         <button type="button" className="kbtn" onClick={() => setEditing("new")}>+ New day</button>

@@ -17,10 +17,8 @@ const { chromium, APP, OUT, handle } = require('./harness.cjs');
   const curName = async () => (await pg.locator('.tile.cur .ex b').innerText()).trim();
   const logSets = async (n) => { for (let k = 0; k < n; k++) { await pg.getByRole('button', { name: 'Log set' }).click(); await pg.waitForTimeout(60); } await pg.waitForTimeout(950); }; // the big button waits a beat before "Next"
   await pg.goto(APP + '#workout'); await pg.waitForSelector('text=Premade workouts');
-  await pg.getByRole('button', { name: /Push · Pull · Mixed \+ cardio/ }).click();
-  await pg.getByRole('button', { name: 'Make this my split…' }).click(); await pg.getByRole('button', { name: 'Replace my split' }).click(); await pg.waitForTimeout(200);
-  check('the split shows the cardio after each day', /then 20 min stairmaster/.test(await pg.locator('.tile.tpl', { hasText: 'Push + Quads' }).innerText()));
-  await pg.locator('.tile.tpl', { hasText: 'Push + Quads' }).getByRole('button', { name: 'Start' }).click(); await pg.waitForTimeout(200);
+  check('a new account starts on the plan, cardio shown after each day', /20 min stairmaster/.test(await pg.locator('.dcard', { hasText: 'Push + Quads' }).innerText()) && /20 min incline walk/.test(await pg.locator('.dcard', { hasText: 'Pull + Hamstrings' }).innerText()));
+  await pg.locator('.dcard', { hasText: 'Push + Quads' }).getByRole('button', { name: 'Start' }).click(); await pg.waitForTimeout(200);
   check('starts on the first exercise, cardio listed at the end of the session', await curName() === 'Squat' && /Then: 20 min stairmaster/.test(await pg.locator('.tile.plan').innerText()));
 
   // Squat rack taken: swap, one tap, same muscle.
@@ -31,7 +29,15 @@ const { chromium, APP, OUT, handle } = require('./harness.cjs');
   await pg.locator('.addex .picks button', { hasText: 'Hack squat' }).click(); await pg.waitForTimeout(150);
   check('tap → swapped', await curName() === 'Hack squat');
 
-  await logSets(3);
+  // Owner, 6 Oct: "set the kg, and reps w the + - and it saves so i can just hit log … or keep same and hit again".
+  await pg.getByRole('button', { name: 'More weight' }).click(); await pg.getByRole('button', { name: 'More weight' }).click();
+  await pg.getByRole('button', { name: 'Log set' }).click(); await pg.waitForTimeout(80);
+  const kgNow = await pg.getByRole('textbox', { name: 'Weight in kg' }).inputValue(), repsNow = +(await pg.getByRole('textbox', { name: 'Reps', exact: true }).inputValue());
+  await pg.getByRole('button', { name: 'Fewer reps' }).click();
+  await pg.getByRole('button', { name: 'Log set' }).click(); await pg.waitForTimeout(80);
+  await pg.getByRole('button', { name: 'Log set' }).click(); await pg.waitForTimeout(950);
+  const hs = (await st()).entries.filter((e) => e.kind === 'set' && e.exercise === 'Hack squat').map((e) => `${e.kg}x${e.reps}`);
+  check(`kg and reps stay set between sets: change, keep, log again (${hs.join(', ')})`, kgNow === '25' && hs.length === 3 && hs[0] === `25x${repsNow}` && hs[1] === `25x${repsNow - 1}` && hs[2] === hs[1]);
   check('3 sets → "Next" plus a pick of the others', /Next: DB bench press/i.test(await pg.locator('.tile.cur').innerText()) && (await pg.locator('.tile.cur .picks button').allInnerTexts()).includes('Lateral raise'));
   await pg.screenshot({ path: OUT + 'session-pick.png' });
   await pg.locator('.tile.cur .picks button', { hasText: 'Lateral raise' }).click(); await pg.waitForTimeout(150);
@@ -64,11 +70,11 @@ const { chromium, APP, OUT, handle } = require('./harness.cjs');
   await pg.getByRole('button', { name: /Finish/ }).click(); await pg.waitForTimeout(150);
   const fin = pg.getByRole('button', { name: /^(Finish|Save|Done)/ }).last(); await fin.click().catch(() => {}); await pg.waitForTimeout(300);
   await pg.goto(APP + '#workout'); await pg.waitForTimeout(300);
-  if (await pg.locator('.tile.tpl').count()) {
-    await pg.locator('.tile.tpl', { hasText: 'Pull + Hamstrings' }).getByRole('button', { name: 'Edit' }).click();
+  if (await pg.locator('.dcard').count()) {
+    await pg.locator('.dcard', { hasText: 'Pull + Hamstrings' }).getByRole('button', { name: /^Edit/ }).click();
     await pg.getByLabel('Cardio after (optional)').fill('25 min incline walk');
     await pg.getByRole('button', { name: 'Save day' }).click(); await pg.waitForTimeout(200);
-    check('cardio after a day is yours to change', (await st()).templates.find((t) => t.name === 'Pull + Hamstrings').cardio === '25 min incline walk' && /then 25 min incline walk/.test(await pg.locator('.tile.tpl', { hasText: 'Pull + Hamstrings' }).innerText()));
+    check('cardio after a day is yours to change', (await st()).templates.find((t) => t.name === 'Pull + Hamstrings').cardio === '25 min incline walk' && /25 min incline walk/.test(await pg.locator('.dcard', { hasText: 'Pull + Hamstrings' }).innerText()));
   } else check('back on the split after finishing', false);
   console.log('errors: ' + JSON.stringify(errs)); await b.close();
 })().catch((e) => { console.log('CRASH ' + e.message); process.exit(1); });

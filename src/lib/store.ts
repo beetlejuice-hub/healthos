@@ -6,6 +6,7 @@
  * (phone ↔ laptop) plugs in through `setRemote` and never blocks the screen.
  */
 
+import { PROGRAMS, asSplit } from "./programs";
 import { useSyncExternalStore } from "react";
 import type { Drink, Entry, Food, Goals, Supplement, Template, Workout } from "./types";
 import { DEFAULT_GOALS, slotOf, slotsOf, slotTime } from "./types";
@@ -97,7 +98,8 @@ export const normalizeStack = (list: Supplement[]): Supplement[] =>
     return { ...s, slot: slots[0], slots: slots.length > 1 ? slots : undefined, at: slotTime(slots[0]) };
   });
 
-const DEFAULT_TEMPLATES: Template[] = [
+/** The split every account started with before 6 Oct, kept to recognise one nobody has changed. */
+const STARTER_TEMPLATES: Template[] = [
   { id: "upper-a", name: "Upper A", exercises: [
     { name: "Bench press", sets: 3, reps: 6, restSec: 150 }, { name: "Barbell row", sets: 3, reps: 8, restSec: 120 },
     { name: "Overhead press", sets: 3, reps: 6, restSec: 150 }, { name: "Lat pulldown", sets: 3, reps: 10, restSec: 90 }] },
@@ -111,6 +113,13 @@ const DEFAULT_TEMPLATES: Template[] = [
     { name: "Deadlift", sets: 3, reps: 5, restSec: 180 }, { name: "Front squat", sets: 3, reps: 6, restSec: 150 },
     { name: "Leg curl", sets: 3, reps: 12, restSec: 90 }] },
 ];
+
+/** The split a new account starts with: the owner's plan (owner, 6 Oct: the starter split "should be replaced w the saved workouts"). */
+const DEFAULT_TEMPLATES: Template[] = asSplit(PROGRAMS.find((p) => p.id === "ppm")!);
+
+const dayKey = (t: Template[]) => JSON.stringify(t.map((d) => [d.name, d.exercises.map((e) => [e.name, e.sets, e.reps, e.restSec])]));
+/** A split still exactly as the old starter left it becomes the owner's plan; any split someone changed is theirs and stays. */
+export const upgradeStarter = (t: Template[]): Template[] => (dayKey(t) === dayKey(STARTER_TEMPLATES) ? asSplit(PROGRAMS.find((p) => p.id === "ppm")!) : t);
 
 const EMPTY: State = {
   entries: [], foods: [], drinks: [], supplements: DEFAULT_STACK, templates: DEFAULT_TEMPLATES, workouts: [],
@@ -126,7 +135,7 @@ function load(): State {
     const raw = localStorage.getItem(KEY);
     if (!raw) return EMPTY;
     const s = JSON.parse(raw) as Partial<State>;
-    return { ...EMPTY, ...s, supplements: normalizeStack(s.supplements ?? EMPTY.supplements), settings: { ...DEFAULT_SETTINGS, ...s.settings }, goals: { ...DEFAULT_GOALS, ...s.goals }, profile: { ...EMPTY_PROFILE, ...s.profile }, scout: s.scout ?? {}, ai: { ...EMPTY_AI, ...s.ai } };
+    return { ...EMPTY, ...s, templates: upgradeStarter(s.templates ?? EMPTY.templates), supplements: normalizeStack(s.supplements ?? EMPTY.supplements), settings: { ...DEFAULT_SETTINGS, ...s.settings }, goals: { ...DEFAULT_GOALS, ...s.goals }, profile: { ...EMPTY_PROFILE, ...s.profile }, scout: s.scout ?? {}, ai: { ...EMPTY_AI, ...s.ai } };
   } catch {
     return EMPTY;
   }
@@ -156,7 +165,7 @@ function commit(next: State, fromServer = false) {
 }
 
 /** Apply the server's copy without queuing it to be sent back. */
-export const applyFromServer = (next: State) => commit(next, true);
+export const applyFromServer = (next: State) => commit({ ...next, templates: upgradeStarter(next.templates) }, true);
 
 /** Kept on the device outside the state (a half-built meal, a dismissed card). A reset clears them too. */
 export const DEVICE_KEYS = ["healthos.basket", "healthos.noticed.hidden"];

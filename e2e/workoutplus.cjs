@@ -66,7 +66,7 @@ const { chromium, APP, OUT, handle } = require('./harness.cjs');
   // Make a program your split: asks first.
   await pg.getByRole('button', { name: /Upper \/ Lower/ }).click();
   await pg.getByRole('button', { name: 'Make this my split…' }).click();
-  check('replacing the split says what goes', /Your 4 days \(Upper A, Lower A, Upper B, Lower B\) are replaced by these 4/.test(await pg.locator('.premade').innerText()));
+  check('replacing the split says what goes', /Your 3 days \(Push \+ Quads, Pull \+ Hamstrings, Mixed\) are replaced by these 4/.test(await pg.locator('.premade').innerText()));
   await pg.getByRole('button', { name: 'Replace my split' }).click(); await pg.waitForTimeout(150);
   check('the split is now Upper 1 … Lower 2', (await st()).templates.map((t) => t.name).join(',') === 'Upper 1,Lower 1,Upper 2,Lower 2');
   console.log('errors:', JSON.stringify(errs));
