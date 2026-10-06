@@ -4,7 +4,7 @@ import { MUSCLES, MUSCLE_GROUPS, isBest, muscleWeek, restLeft, sessionSummary } 
 
 describe("premade workouts", () => {
   it("only use exercises the app knows (history, suggestions and the muscle map understand them)", () => {
-    const unknown = PROGRAMS.flatMap((p) => p.days.flatMap((d) => d.exercises.map((e) => e.name))).filter((n) => !MUSCLES[n]);
+    const unknown = PROGRAMS.flatMap((p) => p.days.flatMap((d) => d.exercises.flatMap((e) => [e.name, ...(e.or ? [e.or] : [])]))).filter((n) => !MUSCLES[n]);
     expect(unknown).toEqual([]);
   });
   it("day names are unique within a program, and a split is a copy (editing it can't change the library)", () => {
@@ -12,6 +12,23 @@ describe("premade workouts", () => {
     const s = asSplit(PROGRAMS[0]);
     s[0].exercises[0].sets = 99;
     expect(PROGRAMS[0].days[0].exercises[0].sets).not.toBe(99);
+  });
+  it("the owner's plan (6 Oct), as he wrote it: 3 lifting days, 3 sets each, cardio after, his rules", () => {
+    const p = PROGRAMS.find((x) => x.id === "ppm")!;
+    expect(p.days.map((d) => [d.name, d.exercises.map((e) => e.name), d.after])).toEqual([
+      ["Push + Quads", ["Squat", "DB bench press", "DB shoulder press", "Leg extension", "Lateral raise", "Rope pushdown"], "20 min stairmaster"],
+      ["Pull + Hamstrings", ["Romanian deadlift", "Lat pulldown", "Seated cable row", "Leg curl", "Face pull", "Incline DB curl"], "20 min incline walk"],
+      ["Mixed", ["Incline DB press", "Chest-supported row", "Bulgarian split squat", "Pec deck", "Lateral raise", "Hammer curl", "Overhead tricep extension"], "20 min stairmaster"],
+    ]);
+    expect(p.days.every((d) => d.exercises.every((e) => e.sets === 3))).toBe(true);
+    expect(p.days[0].exercises[0].or).toBe("Hack squat");
+    expect(p.other!.map((o) => o.name)).toEqual(["Cardio", "Rest days"]);
+    expect(p.rules!.join(" ")).toMatch(/1–2 reps short of failure.*add weight.*6–8 weeks.*under 0\.3 kg a week → 150 kcal less.*0\.7 kg a week, or lifts dropping → 150 kcal more/);
+  });
+  it("as your split it's plain, editable days: no swap or cardio notes carried into what's saved", () => {
+    const s = asSplit(PROGRAMS.find((x) => x.id === "ppm")!);
+    expect(s.map((d) => Object.keys(d).sort())).toEqual(Array(3).fill(["exercises", "id", "name"]));
+    expect(s.flatMap((d) => d.exercises.map((e) => Object.keys(e).sort().join()))).toEqual(Array(19).fill("name,reps,restSec,sets"));
   });
 });
 

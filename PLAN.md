@@ -459,7 +459,10 @@ email get Dev tools (`#dev`): raw entry editor, generate/remove sample, wipe acc
       phone instead of shrinking to ~6; the first/last date labels sit inside the plot.
    Defaults picked: dark only (the app is dark only, owner 29 Sept); wearable rows hidden until a wearable
    is connected, never sample data mixed into real numbers.
-39. [ ] **Owner's 4-day plan as a premade program** (claimed 6 Oct — `lib/programs.ts`, `lib/training.ts`, Workout
+39. [x] **Owner's 4-day plan as a premade program** (6 Oct — `lib/programs.ts`, `lib/training.ts`, Workout
    `Premade`). Owner, 6 Oct: *"make a workout plan for this, make sure its easily customizable"* — Push + Quads,
    Pull + Hamstrings/Glutes, Mixed, a cardio day; 3 sets 1–2 short of failure, double progression, deload every
    6–8 weeks; weigh-ins, waist, photos, ±150 kcal every 2 weeks. "Make this my split" then edit any day.
+   Built as "Push · Pull · Mixed + cardio": reps are the top of each range, his swap (squat or hack squat)
+   and the cardio after each day show on the card; the cardio day, rest days and rules show under it. Added
+   Pec deck, Chest-supported row, Incline DB curl, Rope pushdown to the exercise list. e2e/plan.cjs.

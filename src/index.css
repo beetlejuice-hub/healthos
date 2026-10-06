@@ -727,6 +727,9 @@ a { color: inherit; }
 .prog-day { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px; align-items: center; padding-top: 8px; border-top: 1px solid #ffffff0f; }
 .prog-day p { margin: 2px 0 0; font-size: 12.5px; color: var(--k-ink-2); line-height: 1.4; }
 .prog-day b { font-size: 15px; }
+.prog-day i { font-style: normal; color: var(--k-ink); }
+.prog-other { grid-template-columns: minmax(0, 1fr); }
+.prog-rules { margin: 4px 0 0; padding: 8px 0 0 18px; border-top: 1px solid #ffffff0f; display: grid; gap: 4px; font-size: 12.5px; color: var(--k-ink-2); line-height: 1.4; }
 .premade .s, .finish .s { margin: 0; font-size: 12.5px; color: var(--k-ink-2); }
 
 /* ---- Muscle map (MuscleMap.tsx) ---- */

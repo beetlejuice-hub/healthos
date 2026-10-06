@@ -6,14 +6,37 @@
 
 import type { Template } from "./types";
 
-type Ex = Template["exercises"][number];
-const ex = (name: string, sets: number, reps: number, restSec: number): Ex => ({ name, sets, reps, restSec });
+/** An exercise in a program; `or` names a swap the program allows ("Squat or hack squat"). */
+type Ex = Template["exercises"][number] & { or?: string };
+const ex = (name: string, sets: number, reps: number, restSec: number, or?: string): Ex => ({ name, sets, reps, restSec, ...(or ? { or } : {}) });
 
-export type Program = { id: string; name: string; who: string; perWeek: string; days: Template[] };
+/** A lifting day; `after` is the cardio that follows it ("20 min stairmaster"). */
+export type ProgramDay = { id: string; name: string; exercises: Ex[]; after?: string };
 
-const day = (pid: string, name: string, exercises: Ex[]): Template => ({ id: `${pid}:${name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`, name, exercises });
+/**
+ * `other`: days without lifting (a cardio day, rest days) — shown with the program, not part of the split.
+ * `rules`: how to run it (sets, progression, deloads, what to track).
+ */
+export type Program = { id: string; name: string; who: string; perWeek: string; days: ProgramDay[]; other?: { name: string; what: string }[]; rules?: string[] };
+
+const day = (pid: string, name: string, exercises: Ex[], after?: string): ProgramDay => ({ id: `${pid}:${name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`, name, exercises, ...(after ? { after } : {}) });
 
 export const PROGRAMS: Program[] = [
+  // Owner, 6 Oct: his plan, as written. Reps are the top of each range — the number that says "add weight".
+  { id: "ppm", name: "Push · Pull · Mixed + cardio", who: "Lose fat, keep the muscle · 3 lifting days + 1 cardio day", perWeek: "4× a week, in order", days: [
+    day("ppm", "Push + Quads", [ex("Squat", 3, 8, 150, "Hack squat"), ex("DB bench press", 3, 10, 120), ex("DB shoulder press", 3, 10, 90), ex("Leg extension", 3, 15, 60), ex("Lateral raise", 3, 15, 60), ex("Rope pushdown", 3, 12, 60)], "20 min stairmaster"),
+    day("ppm", "Pull + Hamstrings", [ex("Romanian deadlift", 3, 10, 150), ex("Lat pulldown", 3, 10, 90), ex("Seated cable row", 3, 12, 90), ex("Leg curl", 3, 12, 60), ex("Face pull", 3, 15, 60), ex("Incline DB curl", 3, 12, 60)], "20 min incline walk"),
+    day("ppm", "Mixed", [ex("Incline DB press", 3, 10, 120), ex("Chest-supported row", 3, 12, 90), ex("Bulgarian split squat", 3, 10, 90), ex("Pec deck", 3, 15, 60), ex("Lateral raise", 3, 15, 60), ex("Hammer curl", 3, 12, 60), ex("Overhead tricep extension", 3, 12, 60)], "20 min stairmaster"),
+  ], other: [
+    { name: "Cardio", what: "40–45 min stairmaster plus incline walk — or intervals, at most once a week" },
+    { name: "Rest days", what: "Walking, abs" },
+  ], rules: [
+    "3 sets per exercise, each ending 1–2 reps short of failure.",
+    "The reps shown are the top of the range: when every set reaches them, add weight next time.",
+    "A lighter week every 6–8 weeks.",
+    "Weigh in most mornings and go by the weekly average; measure your waist weekly; photos every 2 weeks.",
+    "Every 2 weeks: losing under 0.3 kg a week → 150 kcal less. Over 0.7 kg a week, or lifts dropping → 150 kcal more.",
+  ] },
   { id: "fullbody", name: "Full body A/B", who: "Beginner · simplest to stick to", perWeek: "3× a week, alternating", days: [
     day("fullbody", "Full body A", [ex("Squat", 3, 5, 180), ex("Bench press", 3, 5, 150), ex("Barbell row", 3, 8, 120), ex("Plank", 3, 1, 60)]),
     day("fullbody", "Full body B", [ex("Deadlift", 2, 5, 180), ex("Overhead press", 3, 6, 150), ex("Lat pulldown", 3, 10, 90), ex("Lunges", 3, 10, 90)]),
@@ -44,7 +67,12 @@ export const PROGRAMS: Program[] = [
   ] },
 ];
 
+/** A program day as a plain split day: a fresh copy, without the program's swap and cardio notes. */
+export function asTemplate(d: ProgramDay): Template {
+  return { id: d.id, name: d.name, exercises: d.exercises.map(({ name, sets, reps, restSec }) => ({ name, sets, reps, restSec })) };
+}
+
 /** A fresh copy of a program's days, to become your split (past workouts keep their own names). */
 export function asSplit(p: Program): Template[] {
-  return p.days.map((d) => ({ ...d, exercises: d.exercises.map((e) => ({ ...e })) }));
+  return p.days.map(asTemplate);
 }

@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { act, newId, useStore } from "../lib/store";
 import { EXERCISES, e1rm, exerciseHistory, isBest, nextTemplate, restLeft, sessionPlan, sessionSummary, suggestNext, templateProblems, volume, type Suggestion } from "../lib/training";
-import { PROGRAMS, asSplit } from "../lib/programs";
+import { PROGRAMS, asSplit, asTemplate } from "../lib/programs";
 import { MuscleMap } from "../components/MuscleMap";
 import { dayLabel } from "../lib/time";
 import type { EntryOf, Template, Workout } from "../lib/types";
@@ -96,10 +96,13 @@ function Premade({ templates }: { templates: Template[] }) {
             {open === p.id && <div className="prog-body">
               {p.days.map((d) => (
                 <div key={d.id} className="prog-day">
-                  <div><b>{d.name}</b><p>{d.exercises.map((e) => `${e.name} ${e.sets}×${e.reps === 1 ? "hold" : e.reps}`).join(" · ")}</p></div>
-                  <button type="button" className="kbtn pri" onClick={() => act.startWorkout(d.name, Date.now(), d.exercises)}>Start</button>
+                  <div><b>{d.name}</b><p>{d.exercises.map((e) => `${e.name}${e.or ? ` (or ${e.or.toLowerCase()})` : ""} ${e.sets}×${e.reps === 1 ? "hold" : e.reps}`).join(" · ")}{d.after && <>, <i>then {d.after}</i></>}</p></div>
+                  <button type="button" className="kbtn pri" onClick={() => act.startWorkout(d.name, Date.now(), asTemplate(d).exercises)}>Start</button>
                 </div>
               ))}
+              {p.other?.map((o) => <div key={o.name} className="prog-day prog-other"><div><b>{o.name}</b><p>{o.what}</p></div></div>)}
+              {p.rules && <ul className="prog-rules">{p.rules.map((r) => <li key={r}>{r}</li>)}</ul>}
+              <p className="s">Yours to change: make it your split, then press Edit on any day to swap an exercise, change sets, reps or rest, reorder, or add your own.</p>
               {isMine ? <p className="s">This is your split.</p>
                 : confirm === p.id
                   ? <div className="grid2"><button type="button" className="kbtn" onClick={() => setConfirm(null)}>Cancel</button><button type="button" className="kbtn pri" onClick={() => { act.setTemplates(asSplit(p)); setConfirm(null); setOpen(null); }}>Replace my split</button></div>
