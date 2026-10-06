@@ -496,3 +496,7 @@ email get Dev tools (`#dev`): raw entry editor, generate/remove sample, wipe acc
    caffeine card, check-in), so nothing you could do on Today went away; the Now card shows two due items and
    "+ N more", so the buttons stay near the first screen; "Rate it" isn't repeated next to the check-in; the old
    five chips and the header sentence are gone (the pad and the numbers replace them). e2e/today2.cjs.
+44. [x] **One look across the app** (6 Oct — index.css). Owner: "do" (to: Log and Settings in Today's black). Log,
+   Settings, AI and Dev take Workout's black and yellow from the app root, so every card, input and the tab bar
+   follow; screen titles and card headings in the condensed caps. Log → Food's two buttons shortened so they
+   don't wrap ("+ Your own food", "+ From a label").

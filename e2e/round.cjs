@@ -37,7 +37,7 @@ const { chromium, APP, OUT, handle } = require('./harness.cjs');
 
   // Make your own food from ingredients.
   await pg.getByLabel('Search food').fill('');
-  await pg.getByRole('button', { name: '+ Make your own food' }).click();
+  await pg.getByRole('button', { name: '+ Your own food' }).click();
   await pg.getByLabel('Type what you ate').fill('200g chicken breast cooked, 1 bowl rice, 1 tbsp olive oil'); await pg.getByRole('button', { name: 'Add', exact: true }).click();
   await pg.getByRole('button', { name: 'Save as a meal…' }).click();
   await pg.getByLabel('Meal name').fill('Chicken rice bowl'); await pg.getByLabel('Makes how many pieces?').fill('2'); await pg.getByRole('button', { name: 'Save meal' }).click();

@@ -128,7 +128,7 @@ const SALAMI = [['Salami', 380, 22, 1, 32], ['Salami', 400, 24, 1, 33], ['salami
     // No key: the app says how to turn it on, and nothing breaks.
     const off = await open(false);
     await off.pg.goto(APP + '#ai'); await off.pg.waitForTimeout(200);
-    check('AI off: the steps to add the key', /The AI is off[\s\S]*ANTHROPIC_API_KEY/.test(await off.pg.locator('.ai-screen').innerText()));
+    check('AI off: the steps to add the key', /The AI is off[\s\S]*ANTHROPIC_API_KEY/i.test(await off.pg.locator('.ai-screen').innerText()));
     await off.pg.goto(APP + '#log/food'); await off.pg.waitForTimeout(100);
     check('AI off: no photo button', await off.pg.getByRole('button', { name: '📷 Photo' }).count() === 0);
     await off.ctx.close();

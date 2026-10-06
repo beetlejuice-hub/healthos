@@ -29,10 +29,20 @@ a { color: inherit; }
 
 .app { min-height: 100dvh; display: grid; grid-template-rows: 1fr auto; }
 .screen { padding-top: env(safe-area-inset-top, 0px); min-width: 0; }
-.app.r-log, .app.r-settings, .app.r-ai { background: linear-gradient(180deg, var(--c-bg-top) 0, var(--c-bg) 360px); }
-.app.r-today { background: var(--k-bg); }
-.app.r-today .tabs { --tab-bg: var(--k-bg); }
-.r-today .tabs a.on i { background: var(--gym); }
+/* Every screen in Workout's black and yellow (owner, 6 Oct: Today's look, then "do" for the rest). The
+   palette is set on the app root, so cards, inputs and the tab bar of Log, Settings, AI and Dev follow it. */
+.app.r-today, .app.r-log, .app.r-settings, .app.r-ai, .app.r-dev {
+  --c-bg: #0f1012; --c-bg-top: #0f1012; --c-card: #1a1c20; --c-card-2: #23262b; --c-track: #2d3036;
+  --c-ink: #f3f3f1; --c-ink-2: #a2a4a9; --c-dim: #7c7f86;
+  background: var(--k-bg); font-family: var(--f-bar);
+}
+.app.r-today .tabs, .app.r-log .tabs, .app.r-settings .tabs, .app.r-ai .tabs, .app.r-dev .tabs { --tab-bg: var(--k-bg); }
+.r-today .tabs a.on i, .r-log .tabs a.on i, .r-settings .tabs a.on i, .r-ai .tabs a.on i { background: var(--gym); }
+.app:is(.r-log, .r-settings, .r-ai, .r-dev) .calm > .head { padding: 0 2px 2px; align-items: flex-end; }
+.app:is(.r-log, .r-settings, .r-ai, .r-dev) .calm > .head > span:first-child { font-family: var(--f-cond); font-size: 38px; font-weight: 700; line-height: 1; text-transform: uppercase; color: var(--c-ink); }
+.app:is(.r-log, .r-settings, .r-ai, .r-dev) .calm > .head > a { padding: 12px 4px; font-size: 13.5px; font-weight: 600; }
+.app:is(.r-log, .r-settings, .r-ai, .r-dev) .card h3 { font-family: var(--f-cond); font-size: 20px; font-weight: 700; letter-spacing: .02em; text-transform: uppercase; color: var(--c-ink); }
+.app:is(.r-log, .r-settings, .r-ai, .r-dev) .card h3 span { font-family: var(--f-bar); font-size: 12.5px; letter-spacing: 0; text-transform: none; color: var(--c-ink-2); font-weight: 500; }
 .app.r-workout { background: var(--k-bg); color: var(--k-ink); font-family: var(--f-bar); }
 .app.r-insights { background: var(--i-bg); color: var(--i-ink); font-family: var(--f-plex); }
 

@@ -312,8 +312,8 @@ function FoodTab({ done }: { done: (m: string) => void }) {
           <span>{d.name}<small>{[d.caffeineMg ? `${d.caffeineMg} mg caffeine` : "", d.alcoholG ? `${d.alcoholG} g alcohol` : "", d.kcal > 5 ? `${d.kcal} kcal` : ""].filter(Boolean).join(" · ") || "drink"}</small></span><span className="r">+</span></div>)}</div>
       </>}
       <div className="row2">
-        <button type="button" className="pill-btn" onClick={() => { setCrafting(true); window.scrollTo({ top: 0, behavior: "smooth" }); }}>+ Make your own food</button>
-        <button type="button" className="pill-btn" onClick={() => setCustom(true)}>+ Enter label values</button>
+        <button type="button" className="pill-btn" onClick={() => { setCrafting(true); window.scrollTo({ top: 0, behavior: "smooth" }); }}>+ Your own food</button>
+        <button type="button" className="pill-btn" onClick={() => setCustom(true)}>+ From a label</button>
       </div>
       <p className="note">Count it, don't weigh it: “2 eggs” is close enough, and the weekly numbers even out. The same food from many brands shows as one typical row; anything you log comes back first, with the amount you had.</p>
     </div>
