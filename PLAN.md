@@ -474,6 +474,10 @@ email get Dev tools (`#dev`): raw entry editor, generate/remove sample, wipe acc
    in any order and "+ Add". Swap and Add offer the same main muscle in one tap (`sameMuscle`, not what's already
    planned). Days carry "Cardio after" (editable); once the sets are done a cardio tile asks Done/Skip, saved on
    the workout (`Workout.cardio`) where watch data can land later. e2e/session.cjs.
-41. [ ] **Two-week check-in** (claimed 6 Oct — new `lib/checkin.ts`, a card on Today). Owner, 6 Oct: "ok" to the
+41. [x] **Two-week check-in** (6 Oct — `lib/checkin.ts`, `components/CheckIn.tsx` on Today). Owner, 6 Oct: "ok" to the
    ±150 kcal rule run from the weight trend, offering to update the calorie goal. Not wanted: deload reminder
    ("not sure"), waist/photos ("NO").
+   This week's average weight (per-day averages, 3+ days) against the week two weeks before; "lifts dropping" =
+   most lifts done in both of the last two 2-week blocks have their best e1RM down 2%+ (2+ lifts). Slow and
+   dropping together cancel → keep, and it says so. One tap sets the goal (carbs move with it, ±38 g) or keeps
+   it; the answer is stored (`settings.checkins`) and the card stays away for 14 days. e2e/checkin.cjs.

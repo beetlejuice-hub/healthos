@@ -56,6 +56,8 @@ export type Settings = {
   usualDrink: Drink | null;
   /** Which reminders to send, once notifications are on (Settings → Notifications). */
   notify?: { checkins: boolean; supps: boolean; weigh: boolean };
+  /** Two-week check-ins answered (lib/checkin): when, the rate then, and the calorie goal before/after. */
+  checkins?: { at: number; lossPerWeek: number; kcalBefore: number; kcalAfter: number }[];
 };
 
 export type State = {

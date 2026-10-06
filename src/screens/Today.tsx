@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { CheckInCard } from "../components/CheckIn";
 import { act, offerUndo, useStore } from "../lib/store";
 import { DRINKS } from "../lib/drinks";
 import { nowItems } from "../lib/today";
@@ -80,6 +81,7 @@ export function Today() {
       <AiQuestions />
       <NextAnswer />
       <WorkoutRunning now={now} />
+      <CheckInCard now={now} />
       <StackAlert />
       <NoticedLine />
       <ScoutLine />

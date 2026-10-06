@@ -464,6 +464,10 @@ a { color: inherit; }
 .p td.src a { display: block; }
 .noticed-line.alert { border: 1px solid color-mix(in srgb, var(--hr) 45%, transparent); }
 .noticed-line.running { border: 1px solid color-mix(in srgb, var(--gym) 40%, transparent); }
+.noticed-line.checkin { grid-template-columns: minmax(0, 1fr); gap: 10px; border: 1px solid color-mix(in srgb, var(--c-ink) 18%, transparent); line-height: 1.45; }
+.noticed-line.checkin .sub { margin-top: 4px; text-transform: none; letter-spacing: 0; font-size: 12px; }
+.noticed-line.checkin .acts { display: flex; justify-content: flex-end; gap: 8px; }
+.noticed-line.checkin .acts .pill-btn:not(.pri) { background: var(--c-card-2); color: var(--c-ink); padding: 6px 14px; border-radius: 999px; }
 .noticed-line .sub { text-transform: none; letter-spacing: 0; font-size: 11.5px; margin-top: 2px; }
 .noticed-line .acts { display: flex; gap: 6px; }
 
