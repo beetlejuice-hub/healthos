@@ -25,6 +25,9 @@ Work like an owner, not a ticket-taker.
   sensible default, say which one you picked, keep going.
 - Big features: write the plan first (why, what it looks like, how it's built, how it's tested,
   phases, open questions), then start phase 1 right away with the defaults.
+- Design work goes on a Design canvas artifact first (owner, 6 Oct: *"i did not know u had that canvas
+  thingy, its awesome, u should use that always"*): a few directions side by side at phone size, in
+  the app's real colours and fonts, the chosen one clickable — then build what he picks.
 - Talk like a colleague: short updates while working, results first, no jargon, no padding. Keep
   `PLAN.md` current, claim work there before building it, commit messages say why.
 
