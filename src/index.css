@@ -711,6 +711,13 @@ a { color: inherit; }
 /* ---- Workout: bests, finish sheet, premade programs ---- */
 .best { margin: 0; padding: 8px 12px; border-radius: 12px; background: color-mix(in srgb, var(--gym) 16%, transparent); color: var(--gym); font-weight: 600; font-size: 14px; animation: fs-pop .3s cubic-bezier(.3, 1.6, .5, 1); }
 .alldone { margin: 0; height: 64px; display: grid; place-items: center; border-radius: 18px; background: color-mix(in srgb, var(--ok) 12%, transparent); color: var(--ok); font-family: var(--f-cond); font-size: 22px; font-weight: 600; letter-spacing: .03em; text-transform: uppercase; }
+.cockpit .picks { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.cockpit .picks .s { flex-basis: 100%; }
+.cockpit .picks button { min-height: 40px; padding: 0 14px; border: 0; border-radius: 999px; background: var(--k-btn); color: var(--k-ink); font-size: 14px; }
+.cockpit .picks button.add { background: none; box-shadow: inset 0 0 0 1px var(--k-btn); color: var(--k-ink-2); }
+.cockpit .cardio b { font-size: 20px; }
+.cockpit .cardio-row { display: flex; justify-content: space-between; gap: 8px; color: var(--k-ink-2); font-size: 14px; padding-top: 6px; }
+.cockpit .linkb { background: none; border: 0; padding: 0; color: var(--k-ink); text-decoration: underline; font: inherit; }
 .fin-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
 .fin-stats div { display: grid; gap: 2px; background: var(--k-tile-2); border-radius: 14px; padding: 12px; }
 .fin-stats b { font-family: var(--f-cond); font-size: 30px; font-weight: 700; line-height: 1; font-variant-numeric: tabular-nums; }

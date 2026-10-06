@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { act, newId, useStore } from "../lib/store";
-import { EXERCISES, e1rm, exerciseHistory, isBest, nextTemplate, restLeft, sessionPlan, sessionSummary, suggestNext, templateProblems, volume, type Suggestion } from "../lib/training";
+import { EXERCISES, e1rm, exerciseHistory, isBest, mainMuscle, nextTemplate, restLeft, sameMuscle, sessionPlan, sessionSummary, suggestNext, templateProblems, volume, type Suggestion } from "../lib/training";
 import { PROGRAMS, asSplit, asTemplate } from "../lib/programs";
 import { MuscleMap } from "../components/MuscleMap";
 import { dayLabel } from "../lib/time";
@@ -50,7 +50,7 @@ function Pick() {
           <div className={`tile tpl ${t === next ? "next" : ""}`} key={t.id}>
             {t === next && <span className="k" style={{ color: "var(--gym)" }}>Up next</span>}
             <h2>{t.name}</h2>
-            <p>{t.exercises.map((e) => e.name).join(" · ")}<br />{last ? `Last: ${dayLabel(last.startedAt)}` : "Not done yet"}{sug ? ` · ${first.name} ${sug.kg} kg × ${sug.reps}` : ""}</p>
+            <p>{t.exercises.map((e) => e.name).join(" · ")}{t.cardio ? `, then ${t.cardio}` : ""}<br />{last ? `Last: ${dayLabel(last.startedAt)}` : "Not done yet"}{sug ? ` · ${first.name} ${sug.kg} kg × ${sug.reps}` : ""}</p>
             <div className="tpl-acts">
               <button type="button" className="kbtn" onClick={() => setEditing(t)}>Edit</button>
               <button type="button" className={t === next ? "go" : "go alt"} onClick={() => act.startWorkout(t.name)}>Start</button>
@@ -97,7 +97,7 @@ function Premade({ templates }: { templates: Template[] }) {
               {p.days.map((d) => (
                 <div key={d.id} className="prog-day">
                   <div><b>{d.name}</b><p>{d.exercises.map((e) => `${e.name}${e.or ? ` (or ${e.or.toLowerCase()})` : ""} ${e.sets}×${e.reps === 1 ? "hold" : e.reps}`).join(" · ")}{d.after && <>, <i>then {d.after}</i></>}</p></div>
-                  <button type="button" className="kbtn pri" onClick={() => act.startWorkout(d.name, Date.now(), asTemplate(d).exercises)}>Start</button>
+                  <button type="button" className="kbtn pri" onClick={() => act.startWorkout(d.name, Date.now(), asTemplate(d).exercises, d.after)}>Start</button>
                 </div>
               ))}
               {p.other?.map((o) => <div key={o.name} className="prog-day prog-other"><div><b>{o.name}</b><p>{o.what}</p></div></div>)}
@@ -120,8 +120,9 @@ function TemplateEditor({ t, onClose }: { t: Template | null; onClose: () => voi
   const templates = useStore((s) => s.templates);
   const [name, setName] = useState(t?.name ?? "");
   const [ex, setEx] = useState<Template["exercises"]>(() => (t?.exercises ?? []).map((e) => ({ ...e })));
+  const [cardio, setCardio] = useState(t?.cardio ?? "");
   const [tried, setTried] = useState(false);
-  const draft = { name: name.trim(), exercises: ex.map((e) => ({ ...e, name: e.name.trim() })) };
+  const draft = { name: name.trim(), exercises: ex.map((e) => ({ ...e, name: e.name.trim() })), ...(cardio.trim() ? { cardio: cardio.trim() } : {}) };
   const problems = templateProblems(draft, templates.filter((x) => x.id !== t?.id));
   const upd = (i: number, patch: Partial<Template["exercises"][number]>) => setEx(ex.map((e, k) => (k === i ? { ...e, ...patch } : e)));
   const move = (i: number, d: -1 | 1) => { const j = i + d; if (j < 0 || j >= ex.length) return; const c = [...ex]; [c[i], c[j]] = [c[j], c[i]]; setEx(c); };
@@ -150,6 +151,7 @@ function TemplateEditor({ t, onClose }: { t: Template | null; onClose: () => voi
         </div>
       ))}
       <button type="button" className="kbtn" onClick={() => setEx([...ex, { name: "", sets: 3, reps: 10, restSec: 90 }])}>+ Add exercise</button>
+      <div className="tile"><label className="kfield">Cardio after (optional)<input value={cardio} placeholder="20 min stairmaster" onChange={(e) => setCardio(e.target.value)} /></label></div>
       {tried && problems.length > 0 && <div className="tile"><ul className="kprob">{problems.map((p) => <li key={p}>{p}</li>)}</ul></div>}
       <button type="button" className="go" onClick={save}>Save day</button>
       {t && <button type="button" className="kbtn danger" onClick={() => { if (confirm(`Delete ${t.name}? Past workouts stay in your history.`)) { act.setTemplates(templates.filter((x) => x.id !== t.id)); onClose(); } }}>Delete this day</button>}
@@ -170,9 +172,11 @@ function Session({ w }: { w: Workout }) {
   const [adding, setAdding] = useState<"add" | "swap" | null>(null);
   const [newEx, setNewEx] = useState("");
   const [showHist, setShowHist] = useState(false);
+  // One-tap choices for a swap or an add: the same muscle as the exercise you're on, not already in today's plan.
+  const alts = adding && plan[i] ? sameMuscle(plan[i].name, plan.map((e) => e.name)) : [];
   // Add or swap an exercise for today only; the saved split doesn't change.
-  const applyEx = () => {
-    const name = newEx.trim(); if (!name) return;
+  const applyEx = (picked?: string) => {
+    const name = (picked ?? newEx).trim(); if (!name) return;
     if (adding === "swap" && plan[i]) act.updateWorkout(w.id, { plan: plan.map((e, k) => (k === i ? { ...e, name } : e)) });
     else { act.updateWorkout(w.id, { plan: [...plan, { name, sets: 3, reps: 10, restSec: 90 }] }); setI(plan.length); }
     setAdding(null); setNewEx("");
@@ -181,8 +185,9 @@ function Session({ w }: { w: Workout }) {
     <div className="tile addex">
       <ExerciseList />
       <span className="k">{adding === "swap" ? `Swap ${plan[i]?.name} for` : "Add an exercise"}</span>
-      <input list="exercises" autoFocus value={newEx} placeholder="Exercise" aria-label="Exercise to add" onChange={(e) => setNewEx(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") applyEx(); }} />
-      <div className="grid2"><button type="button" className="kbtn" onClick={() => setAdding(null)}>Cancel</button><button type="button" className="kbtn pri" disabled={!newEx.trim()} onClick={applyEx}>{adding === "swap" ? "Swap" : "Add"}</button></div>
+      {alts.length > 0 && <div className="picks" aria-label="Same muscle, another exercise"><span className="s">Same muscle{adding === "add" && plan[i] ? ` as ${plan[i].name}` : ""} ({mainMuscle(plan[i]?.name ?? "")?.toLowerCase()}):</span>{alts.map((n) => <button type="button" key={n} onClick={() => applyEx(n)}>{n}</button>)}</div>}
+      <input list="exercises" autoFocus={!alts.length} value={newEx} placeholder="Or type any exercise" aria-label="Exercise to add" onChange={(e) => setNewEx(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") applyEx(); }} />
+      <div className="grid2"><button type="button" className="kbtn" onClick={() => setAdding(null)}>Cancel</button><button type="button" className="kbtn pri" disabled={!newEx.trim()} onClick={() => applyEx()}>{adding === "swap" ? "Swap" : "Add"}</button></div>
     </div>
   );
   const note = (
@@ -235,6 +240,12 @@ function Session({ w }: { w: Workout }) {
     if (after < cur.sets || i < plan.length - 1) setRest(cur.restSec);
   };
   const exDone = cur && mine.length >= cur.sets;
+  // What's left today, and the default next: the first unfinished one after this, else before it.
+  const open = plan.map((_, k) => k).filter((k) => k !== i && done(plan[k].name).length < plan[k].sets);
+  const next = open.find((k) => k > i) ?? open[0];
+  const allDone = exDone && next == null;
+  const cardio = w.cardio;
+  const setCardio = (done?: boolean) => act.updateWorkout(w.id, { cardio: { what: cardio!.what, ...(done == null ? {} : { done, at: Date.now() }) } });
   const fmt = (s: number) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
 
   if (!cur) return (
@@ -278,9 +289,16 @@ function Session({ w }: { w: Workout }) {
             one deliberate tap away. */}
         {best && best.exercise === cur.name && now - best.at < 20_000 && <p className="best" role="status">New best · {best.kg} kg × {best.reps} · est. 1RM {best.e1rm} kg</p>}
         {!exDone && <button type="button" className="go" onClick={log}>Log set</button>}
-        {exDone && i < plan.length - 1 && <button type="button" className="go" onClick={() => settled() && setI(i + 1)}>Next: {plan[i + 1].name}</button>}
+        {exDone && next != null && <button type="button" className="go" onClick={() => settled() && setI(next)}>Next: {plan[next].name}</button>}
         {/* Finishing never sits where "Log set" was: it's at the bottom, and asks first. */}
-        {exDone && i === plan.length - 1 && <p className="alldone" role="status">✓ All planned sets done</p>}
+        {allDone && <p className="alldone" role="status">✓ All planned sets done</p>}
+        {/* Owner, 6 Oct: "finish all 3, choose another exercise" — any of today's others, or something new. */}
+        {exDone && !adding && (open.length > 1 || next == null) && <div className="picks" aria-label="Or pick another">
+          <span className="s">{next == null ? "Another one?" : "Or:"}</span>
+          {open.filter((k) => k !== next).map((k) => <button type="button" key={k} onClick={() => settled() && setI(k)}>{plan[k].name}</button>)}
+          <button type="button" className="add" onClick={() => { setAdding("add"); setNewEx(""); }}>+ Add</button>
+        </div>}
+
         {exDone && <button type="button" className="kbtn" onClick={log}>+ Extra set of {cur.name}</button>}
         <div className="sets">
           {Array.from({ length: Math.max(cur.sets, mine.length) }, (_, k) => {
@@ -297,6 +315,17 @@ function Session({ w }: { w: Workout }) {
         </div>
       </div>
 
+      {addBox}
+      {cardio && allDone && (
+        <div className="tile cardio">
+          <span className="k">Then cardio</span>
+          <b>{cardio.what}</b>
+          {cardio.done == null
+            ? <div className="grid2"><button type="button" className="kbtn" onClick={() => setCardio(false)}>Skip</button><button type="button" className="go" onClick={() => setCardio(true)}>Done</button></div>
+            : <p className="s">{cardio.done ? "✓ Done" : "Skipped"} · <button type="button" className="linkb" onClick={() => setCardio()}>undo</button></p>}
+          <span className="s">Your watch will add the time and heart rate once it's connected.</span>
+        </div>
+      )}
       <div className={`tile rest ${rest > 0 ? "" : "idle"}`}>
         <div><span className="k">Rest</span><output>{rest > 0 ? fmt(rest) : "Go"}</output></div>
         <div className="bt">
@@ -311,7 +340,6 @@ function Session({ w }: { w: Workout }) {
         <div className="tile" style={{ gap: 2 }}><span className="k" style={{ color: "var(--hr)" }}>Heart rate</span><span className="big" style={{ color: "var(--k-dim)" }}>–</span><span className="s">Connect a wearable</span></div>
       </div>
 
-      {addBox}
       <div className="tile plan">
         <span className="k">Session</span>
         {plan.map((e, k) => (
@@ -320,6 +348,7 @@ function Session({ w }: { w: Workout }) {
             <span>{done(e.name).length}/{e.sets} · {e.reps} reps</span>
           </div>
         ))}
+        {cardio && <div className="cardio-row"><span>Then: {cardio.what}</span><span>{cardio.done ? "✓ done" : cardio.done === false ? "skipped" : "after the sets"}</span></div>}
         {!adding && <button type="button" className="kbtn" onClick={() => { setAdding("add"); setNewEx(""); }}>+ Add exercise</button>}
       </div>
       {note}

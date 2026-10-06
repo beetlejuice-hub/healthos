@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { exerciseHistory, nextTemplate, sessionPlan, templateProblems, tidyWorkouts, e1rm, e1rmHistory, setsPerMuscle, suggestNext, volume } from "./training";
+import { exerciseHistory, mainMuscle, nextTemplate, sameMuscle, sessionPlan, templateProblems, tidyWorkouts, e1rm, e1rmHistory, setsPerMuscle, suggestNext, volume } from "./training";
 
 describe("e1rm — Epley", () => {
   it("estimates a one-rep max", () => {
@@ -107,5 +107,20 @@ describe("your own split", () => {
     expect(h.map((x) => x.workoutId)).toEqual(["b", "a"]);
     expect(h[1].sets).toEqual([{ kg: 100, reps: 5 }, { kg: 90, reps: 8 }]);
     expect(h[0].best).toBeCloseTo(122.5, 5);
+  });
+});
+
+describe("same muscle, different exercise", () => {
+  it("names the main muscle, the first on a tie", () => {
+    expect(mainMuscle("Romanian deadlift")).toBe("Hamstrings");
+    expect(mainMuscle("Dips")).toBe("Chest");
+    expect(mainMuscle("Made-up lift")).toBeNull();
+  });
+  it("offers other exercises for that muscle, compounds first, not what's already planned today", () => {
+    expect(sameMuscle("Squat")).toEqual(["Front squat", "Leg press", "Hack squat", "Bulgarian split squat", "Lunges", "Leg extension"]);
+    expect(sameMuscle("Leg curl", ["Romanian deadlift"])).toEqual(["Seated leg curl"]);
+    expect(sameMuscle("Pec deck", [], 3)).toEqual(["Bench press", "Incline DB press", "Dips"]);
+    expect(sameMuscle("Squat")).not.toContain("Squat");
+    expect(sameMuscle("Made-up lift")).toEqual([]);
   });
 });

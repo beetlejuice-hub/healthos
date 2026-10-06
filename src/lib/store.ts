@@ -246,12 +246,14 @@ export const act = {
     commit({ ...state, workouts: state.workouts.filter((w) => !t.drop.includes(w.id)).map((w) => (ends.has(w.id) ? { ...w, endedAt: ends.get(w.id)! } : w)) });
   },
   /** `exercises`: a premade day that isn't in your split (lib/programs). */
-  startWorkout(template: string, at = Date.now(), exercises?: Template["exercises"]): Workout {
+  startWorkout(template: string, at = Date.now(), exercises?: Template["exercises"], cardio?: string): Workout {
     act.tidyWorkouts(at, true);
     // The session gets its own copy of the plan, so adding or swapping an exercise today
     // never changes the saved split (and editing the split never changes a running session).
-    const plan = (exercises ?? state.templates.find((t) => t.name === template)?.exercises ?? []).map((e) => ({ ...e }));
-    const w: Workout = { id: newId(), template, startedAt: at, endedAt: null, plan };
+    const day = state.templates.find((t) => t.name === template);
+    const plan = (exercises ?? day?.exercises ?? []).map((e) => ({ ...e }));
+    const what = (exercises ? cardio : day?.cardio)?.trim();
+    const w: Workout = { id: newId(), template, startedAt: at, endedAt: null, plan, ...(what ? { cardio: { what } } : {}) };
     commit({ ...state, workouts: [...state.workouts, w] });
     return w;
   },

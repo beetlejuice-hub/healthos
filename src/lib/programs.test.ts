@@ -25,9 +25,10 @@ describe("premade workouts", () => {
     expect(p.other!.map((o) => o.name)).toEqual(["Cardio", "Rest days"]);
     expect(p.rules!.join(" ")).toMatch(/1–2 reps short of failure.*add weight.*6–8 weeks.*under 0\.3 kg a week → 150 kcal less.*0\.7 kg a week, or lifts dropping → 150 kcal more/);
   });
-  it("as your split it's plain, editable days: no swap or cardio notes carried into what's saved", () => {
+  it("as your split: editable days that keep their cardio, without the program's swap notes", () => {
     const s = asSplit(PROGRAMS.find((x) => x.id === "ppm")!);
-    expect(s.map((d) => Object.keys(d).sort())).toEqual(Array(3).fill(["exercises", "id", "name"]));
+    expect(s.map((d) => Object.keys(d).sort())).toEqual(Array(3).fill(["cardio", "exercises", "id", "name"]));
+    expect(s.map((d) => d.cardio)).toEqual(["20 min stairmaster", "20 min incline walk", "20 min stairmaster"]);
     expect(s.flatMap((d) => d.exercises.map((e) => Object.keys(e).sort().join()))).toEqual(Array(19).fill("name,reps,restSec,sets"));
   });
 });

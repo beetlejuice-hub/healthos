@@ -67,9 +67,9 @@ export const PROGRAMS: Program[] = [
   ] },
 ];
 
-/** A program day as a plain split day: a fresh copy, without the program's swap and cardio notes. */
+/** A program day as a split day: a fresh copy with its cardio, without the program's swap notes. */
 export function asTemplate(d: ProgramDay): Template {
-  return { id: d.id, name: d.name, exercises: d.exercises.map(({ name, sets, reps, restSec }) => ({ name, sets, reps, restSec })) };
+  return { id: d.id, name: d.name, exercises: d.exercises.map(({ name, sets, reps, restSec }) => ({ name, sets, reps, restSec })), ...(d.after ? { cardio: d.after } : {}) };
 }
 
 /** A fresh copy of a program's days, to become your split (past workouts keep their own names). */

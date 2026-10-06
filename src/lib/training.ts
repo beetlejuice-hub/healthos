@@ -91,6 +91,22 @@ export const MUSCLES: Record<string, Record<string, number>> = {
 /** Every exercise the app knows (for suggestions while typing); your own names work too. */
 export const EXERCISES = Object.keys(MUSCLES).sort();
 
+/** An exercise's main muscle: the one it works most (the first, on a tie — Dips → Chest). */
+export const mainMuscle = (exercise: string): string | null => {
+  const m = MUSCLES[exercise]; if (!m) return null;
+  return Object.entries(m).reduce((a, b) => (b[1] > a[1] ? b : a))[0];
+};
+
+/**
+ * Same muscle, different exercise (owner, 6 Oct: "choose like same muscle, diff exercise"): other
+ * exercises with the same main muscle, in the list's order (compound lifts first), leaving out `skip`
+ * (today's plan). For a machine that's taken, or a change.
+ */
+export function sameMuscle(exercise: string, skip: string[] = [], max = 6): string[] {
+  const main = mainMuscle(exercise); if (!main) return [];
+  return Object.keys(MUSCLES).filter((n) => n !== exercise && !skip.includes(n) && mainMuscle(n) === main).slice(0, max);
+}
+
 /** Hard sets per muscle in the given sets. Unknown exercises are counted under their own name. */
 export function setsPerMuscle(sets: { exercise: string }[]): Record<string, number> {
   const out: Record<string, number> = {};

@@ -466,12 +466,14 @@ email get Dev tools (`#dev`): raw entry editor, generate/remove sample, wipe acc
    Built as "Push · Pull · Mixed + cardio": reps are the top of each range, his swap (squat or hack squat)
    and the cardio after each day show on the card; the cardio day, rest days and rules show under it. Added
    Pec deck, Chest-supported row, Incline DB curl, Rope pushdown to the exercise list. e2e/plan.cjs.
-40. [ ] **Workout session: pick next, same-muscle swaps, cardio after** (claimed 6 Oct — `screens/Workout.tsx` Session
+40. [x] **Workout session: pick next, same-muscle swaps, cardio after** (6 Oct — `screens/Workout.tsx` Session
    + TemplateEditor, `lib/training.ts`, `lib/types.ts` Template/Workout). Owner, 6 Oct: *"i liked the current ui of
    the workout part so pls keep that … quick choose an excercise, start set, finish all 3, choose another exercise
    (from premade or add, or choose like same muscle, diff exercise), and then the cardio - will be connected w
-   watch."* Same screen; adds a pick-next row, one-tap same-muscle swaps, a cardio step (done/skip; a watch fills
-   it later).
+   watch."* Same screen. After an exercise's sets: "Next" (the first one not done yet) plus the day's others to pick
+   in any order and "+ Add". Swap and Add offer the same main muscle in one tap (`sameMuscle`, not what's already
+   planned). Days carry "Cardio after" (editable); once the sets are done a cardio tile asks Done/Skip, saved on
+   the workout (`Workout.cardio`) where watch data can land later. e2e/session.cjs.
 41. [ ] **Two-week check-in** (claimed 6 Oct — new `lib/checkin.ts`, a card on Today). Owner, 6 Oct: "ok" to the
    ±150 kcal rule run from the weight trend, offering to update the calorie goal. Not wanted: deload reminder
    ("not sure"), waist/photos ("NO").

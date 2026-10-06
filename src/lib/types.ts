@@ -119,6 +119,9 @@ export type Workout = {
   restUntil?: number | null;
   /** How it felt, in your words. */
   note?: string;
+  /** Cardio after the lifting (copied from the day at start). `done`: you ticked it (true) or skipped it
+   * (false); unset = not yet. A watch will fill in time and heart rate once one is connected. */
+  cardio?: { what: string; done?: boolean; at?: number };
 };
 
 /** A saved split day: "Upper A" → bench, row, OHP, pulldown, with the reps you aim for. */
@@ -126,6 +129,8 @@ export type Template = {
   id: string;
   name: string;
   exercises: { name: string; sets: number; reps: number; restSec: number }[];
+  /** Cardio after the lifting, in your words: "20 min stairmaster". */
+  cardio?: string;
 };
 
 export type Goals = Macros;
