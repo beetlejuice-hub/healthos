@@ -34,6 +34,11 @@ describe("topCards", () => {
     expect(t[0].protocol).toBeNull();
     expect(t[0].title).toBe("Training goes with higher stress (+0.8)");
   });
+  it("drinks keep their timing and read as a sentence", () => {
+    const t = topCards([c("drinks-energy", "Energy", "Drinks the night before", "energy", -2.1), c("drinks-mood", "Mood", "Drinks the night before", "mood", -1.6)], []);
+    expect(t[0].title).toBe("Drinking the night before goes with lower energy (−2.1) and lower mood (−1.6)");
+    expect(topCards([c("drinks-sleep", "Sleep", "Drinks that evening", "that night's sleep rating", -0.8)], [])[0].title).toBe("Drinking that evening goes with lower sleep rating that night (−0.8)");
+  });
   it("caps at five and returns nothing when nothing is clear", () => {
     expect(topCards(rows.map((r) => ({ ...r, diff: { ...r.diff!, clear: false } })), [MAG])).toEqual([]);
   });

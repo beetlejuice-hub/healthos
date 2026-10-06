@@ -2,6 +2,16 @@
 // tab shows only its own section, the tab lives in the URL, and a laptop still shows the whole page.
 const { chromium, APP, OUT, handle } = require('./harness.cjs');
 
+// A one-finger swipe on `sel`, dx/dy px over ms milliseconds, as real touch events.
+const swipe = (pg, sel, dx, dy = 0, ms = 150) => pg.evaluate(async ([sel, dx, dy, ms]) => {
+  const el = document.querySelector(sel), r = el.getBoundingClientRect(), x = r.left + r.width / 2, y = r.top + Math.min(r.height / 2, 120);
+  const t = (cx, cy) => new Touch({ identifier: 1, target: el, clientX: cx, clientY: cy });
+  el.dispatchEvent(new TouchEvent('touchstart', { bubbles: true, touches: [t(x, y)], changedTouches: [t(x, y)] }));
+  await new Promise((res) => setTimeout(res, ms));
+  el.dispatchEvent(new TouchEvent('touchend', { bubbles: true, touches: [], changedTouches: [t(x + dx, y + dy)] }));
+}, [sel, dx, dy, ms]).then(() => pg.waitForTimeout(250));
+const hash = (pg) => pg.evaluate(() => location.hash);
+
 const visibleSecs = (pg) => pg.evaluate(() => [...new Set([...document.querySelectorAll('[data-sec]')].filter((e) => e.offsetParent).map((e) => e.dataset.sec))].sort());
 
 (async () => {
@@ -55,6 +65,27 @@ const visibleSecs = (pg) => pg.evaluate(() => [...new Set([...document.querySele
       const labs = await pg.locator('.gl-load svg text').evaluateAll((ts) => ts.filter((t) => /^\d+ \w{3}$/.test(t.textContent)).map((t) => t.getBBox()).map((r) => [r.x, r.x + r.width]));
       check(`phone: Training load week labels don't overlap (${labs.length})`, labs.length >= 2 && labs.every((r, i) => !i || r[0] >= labs[i - 1][1] + 2));
       await pg.locator('.gl-load').screenshot({ path: OUT + 'phone-load.png' });
+      const sizes = await pg.locator('.mini-chart svg text').evaluateAll((ts) => ts.map((t) => t.getBoundingClientRect().height).filter((h) => h > 0)); // on-screen ones (Noticed's are on another tab)
+      check(`phone: small-chart labels are readable, not shrunk (smallest ${Math.min(...sizes).toFixed(1)} px tall)`, sizes.length > 0 && Math.min(...sizes) >= 9);
+      // Swipe between tabs.
+      await pg.goto(APP + '#insights/week'); await pg.waitForTimeout(400);
+      await swipe(pg, '.gl-week', -140);
+      check('phone: swipe left on This week opens Timeline', await hash(pg) === '#insights/timeline' && JSON.stringify(await visibleSecs(pg)) === '["timeline"]');
+      await swipe(pg, '.mg-canvas', -140);
+      check('phone: dragging the timeline itself pans it, not the tab', await hash(pg) === '#insights/timeline');
+      await swipe(pg, '.secbar', 140);
+      check('phone: scrolling the tab bar doesn\'t switch tab', await hash(pg) === '#insights/timeline');
+      await swipe(pg, '.master', 140, 0);
+      check('phone: swipe right elsewhere on Timeline goes back to This week', await hash(pg) === '#insights/week');
+      await swipe(pg, '.gl-week', 140);
+      check('phone: swipe right on the first tab stays put', await hash(pg) === '#insights/week');
+      await swipe(pg, '.gl-week', -110, 90);
+      check('phone: a diagonal scroll is not a swipe', await hash(pg) === '#insights/week');
+      await swipe(pg, '.gl-week', -140, 0, 1200);
+      check('phone: a slow drag is not a swipe', await hash(pg) === '#insights/week');
+      await pg.goto(APP + '#insights/data'); await pg.waitForTimeout(400);
+      await swipe(pg, '.gl-cover', -140);
+      check('phone: swipe left on the last tab stays put', await hash(pg) === '#insights/data');
       await pg.waitForTimeout(2000); // let the sample sync up before the laptop signs in
     }
     await ctx.close();

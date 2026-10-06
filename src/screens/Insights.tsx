@@ -1,5 +1,6 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { readRoute } from "../lib/nav";
+import { swipeTo } from "../lib/swipe";
 import { useStore } from "../lib/store";
 import { dailyFacts, lanes } from "../lib/insights";
 import { MasterGraph } from "../components/MasterGraph";
@@ -15,7 +16,7 @@ import { glanceDays } from "../lib/glance";
 import { LineChart } from "../components/Charts";
 import { e1rmHistory, suggestNext } from "../lib/training";
 import type { Range } from "../lib/stats";
-import { addDays, dayLabel, localDay, DAY } from "../lib/time";
+import { addDays, atMinute, dayLabel, localDay, DAY } from "../lib/time";
 import type { EntryOf } from "../lib/types";
 import { useNow } from "./Today";
 import { notice, WINDOW_DAYS, type Report } from "../lib/findings";
@@ -59,6 +60,29 @@ export function Insights() {
   const onTabs = useCallback((ts: string[]) => setTabs((p) => (p.join() === ts.join() ? p : ts)), []);
   // The open tab: one with content (else the first), and none — the whole page — when there is only one.
   const shown = phone && tabs.length >= 2 ? (tabs.includes(tab) ? tab : tabs[0]) : undefined;
+  const openTab = useCallback((t: string) => { setTab(t); history.replaceState(null, "", `#insights/${t}`); window.scrollTo(0, 0); }, []);
+  // Swipe sideways to the next or previous tab — but not on anything that already drags sideways
+  // (the timeline, its overview, the tab bar, wide tables) or on a form control.
+  const inst = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const el = inst.current; if (!el || !shown) return;
+    let start: { x: number; y: number; t: number } | null = null;
+    const sideways = (n: Element | null): boolean => {
+      for (; n && n !== el; n = n.parentElement) {
+        if (n.matches("canvas, input, select, textarea, [role=slider], .secbar")) return true;
+        if (n.scrollWidth > n.clientWidth + 1 && /auto|scroll/.test(getComputedStyle(n).overflowX)) return true;
+      }
+      return false;
+    };
+    const down = (e: TouchEvent) => { start = e.touches.length === 1 && !sideways(e.target as Element) ? { x: e.touches[0].clientX, y: e.touches[0].clientY, t: e.timeStamp } : null; };
+    const up = (e: TouchEvent) => {
+      if (!start) return; const p = e.changedTouches[0];
+      const next = swipeTo(tabs, shown, p.clientX - start.x, p.clientY - start.y, e.timeStamp - start.t); start = null;
+      if (next) openTab(next);
+    };
+    el.addEventListener("touchstart", down, { passive: true }); el.addEventListener("touchend", up, { passive: true });
+    return () => { el.removeEventListener("touchstart", down); el.removeEventListener("touchend", up); };
+  }, [shown, tabs, openTab]);
   useEffect(() => { const on = () => { const t = tabOf(readRoute()[1]); if (t) setTab(t); }; addEventListener("hashchange", on); return () => removeEventListener("hashchange", on); }, []);
   const showOnGraph = (f: GraphFocus) => { setFocus(f); setTab("timeline"); if (phone) history.replaceState(null, "", "#insights/timeline"); setTimeout(() => document.querySelector(".master")?.scrollIntoView({ behavior: "smooth" }), 50); };
   const report = useMemo(() => notice(s.entries, s.goals, now, s.settings.bodyKg, { workouts: s.workouts, supplements: s.supplements, settings: s.settings }), [s.entries, s.goals, now, s.settings, s.workouts, s.supplements]);
@@ -84,7 +108,7 @@ export function Insights() {
   const nothing = s.entries.length === 0;
 
   return (
-    <div className="inst" data-tab={nothing ? undefined : shown}>
+    <div className="inst" ref={inst} data-tab={nothing ? undefined : shown}>
       <header>
         <div>
           <h1>Insights</h1>
@@ -99,7 +123,7 @@ export function Insights() {
       </header>
       {nothing && <div className="needs">Nothing logged yet. Log food, drinks and supplements for a few days and this fills in — or load sample data in Settings to see what it will look like.</div>}
       <Tip />
-      {!nothing && <SectionBar version={`${s.entries.length}-${period}-${tab}`} tab={phone ? shown ?? tab : null} onTabs={onTabs} onTab={(t) => { setTab(t); history.replaceState(null, "", `#insights/${t}`); window.scrollTo(0, 0); }} />}
+      {!nothing && <SectionBar version={`${s.entries.length}-${period}-${tab}`} tab={phone ? shown ?? tab : null} onTabs={onTabs} onTab={openTab} />}
       {!nothing && <Glance now={now} trendDays={period} report={report} />}
       {!nothing && <div className="gl" data-sec="week"><Top days={gdays} /></div>}
       {!nothing && <MasterGraph data={data} supplements={s.supplements} focus={focus} days={gdays} />}
@@ -151,7 +175,7 @@ function Noticed({ report }: { report: Report }) {
               const ys = c.pts.map((p) => p[1]);
               const lo = Math.floor(Math.min(...ys) - 0.3), hi = Math.ceil(Math.max(...ys) + 0.3);
               return <LineChart label={f.title} h={120} lo={lo} hi={hi} xs={[0, days - 1]} yfmt={(v) => v.toFixed(1)}
-                xlabels={[[0, c.firstDay.slice(5)], [days - 1, "today"]]}
+                xlabels={[[0, dayLabel(atMinute(c.firstDay, 720)).slice(4)], [days - 1, "today"]]}
                 series={[{ pts: c.pts, color: "var(--wt)", dots: true, line: false, dotOpacity: 0.8 }, { pts: c.fit, color: "var(--i-ink)", width: 1.5, end: true }]} />;
             })()}
             {f.chart?.kind === "compare" && <CompareBars c={f.chart} />}

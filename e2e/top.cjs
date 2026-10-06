@@ -23,16 +23,20 @@ const { chromium, APP, OUT, handle } = require('./harness.cjs');
     await pg.goto(APP + '#insights'); await pg.waitForSelector('.top-card', { timeout: 8000 }).catch(() => {}); await pg.waitForTimeout(300);
     const cards = await pg.locator('.top-card').allInnerTexts();
     check(name + `: ranked cards for what you can change (${cards.length})`, cards.length >= 1 && cards.length <= 5 && cards.every((t) => /goes with/.test(t)));
-    check(name + ': the sample\'s planted late-caffeine effect comes first', /^.*\n?Caffeine after 14:00 goes with lower energy next day/m.test(cards[0]));
+    // The sample plants both late caffeine and drinks; which is bigger depends on the day, so check the order, not the winner.
+    check(name + ': the sample\'s planted late-caffeine effect has a card', cards.some((t) => /Caffeine after 14:00 goes with lower energy next day/.test(t)));
+    const sizes = cards.map((t) => Math.abs(parseFloat(((t.match(/([−-]?\d+\.\d)\s*points/) || [, 'NaN'])[1]).replace('−', '-'))));
+    check(name + `: biggest difference first (${sizes.join(', ')})`, sizes.every((v, i) => !isNaN(v) && (!i || v <= sizes[i - 1])));
+    check(name + ': titles read as sentences (no "Drinks goes")', !cards.some((t) => /Drinks goes/.test(t)));
     check(name + ': weekends never get a card', !cards.some((t) => /Weekend/.test(t)));
     if (name === 'laptop') {
-      const btn = pg.locator('.top-card').first().locator('.top-try');
+      const caf = pg.locator('.top-card', { hasText: 'Caffeine after 14:00 goes with' }), btn = caf.locator('.top-try');
       check('the card offers a two-week test', /Try 14 days:\s*No caffeine after 14:00/.test(await btn.innerText()));
       await btn.click(); await pg.waitForTimeout(300);
-      check('starting it marks the card running', /Running · day 1 of 14/.test(await pg.locator('.top-card').first().innerText()));
+      check('starting it marks the card running', /Running · day 1 of 14/.test(await caf.innerText()));
       check('and it appears in Experiments', /No caffeine after 14:00/.test(await pg.locator('#experiments').innerText()));
       await pg.reload(); await pg.waitForSelector('.top-card', { timeout: 8000 }).catch(() => {}); await pg.waitForTimeout(300);
-      check('still running after a reload', /Running · day 1 of 14/.test(await pg.locator('.top-card').first().innerText()));
+      check('still running after a reload', /Running · day 1 of 14/.test(await caf.innerText()));
     }
     check(name + ': page never scrolls sideways', await pg.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth));
     await pg.locator('.gl-top').screenshot({ path: OUT + `top-${name}.png` });

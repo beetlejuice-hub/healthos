@@ -453,7 +453,9 @@ email get Dev tools (`#dev`): raw entry editor, generate/remove sample, wipe acc
       noticed line opens `#insights/connections`). Tabs only for sections with content; the whole page when
       there's only one. Vitals rows stack with the sparkline underneath; Training load labels every other
       week; the timeline's lane list starts folded. e2e/phone.cjs.
-   h. [ ] (claimed 5 Oct — Insights.tsx, SectionBar.tsx, LineChart/Strength, index.css) Phone: swipe between
-      Insights tabs; readable axis labels on the older mini-charts (Strength, Noticed trend) at phone width.
+   h. [x] Phone: swipe left/right between Insights tabs (lib/swipe: a quick, mostly-sideways flick of 60+ px;
+      never on the timeline, the tab bar, wide tables or form controls; stops at the ends). The small line
+      charts (Strength, Noticed trends, Log weight) draw at their real width, so labels stay 10.5 px on a
+      phone instead of shrinking to ~6; the first/last date labels sit inside the plot.
    Defaults picked: dark only (the app is dark only, owner 29 Sept); wearable rows hidden until a wearable
    is connected, never sample data mixed into real numbers.

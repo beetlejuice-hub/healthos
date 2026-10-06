@@ -44,7 +44,8 @@ export function topCards(rows: Comparison[], supplements: Supplement[], max = 5)
     cs.sort((a, b) => Math.abs(better(b)!.d) - Math.abs(better(a)!.d));
     const top = cs[0], d = better(top)!.d, good = d > 0;
     const outs = cs.slice(0, 2).map((c) => `${c.diff!.value > 0 ? "higher" : "lower"} ${c.outcome.replace("that night's sleep rating", "sleep rating that night")} (${c.diff!.value >= 0 ? "+" : "−"}${Math.abs(c.diff!.value).toFixed(1)})`);
-    const what = top.what.replace(/ that day$| the night before$/, "").replace(/^Trained$/, "Training");
+    // "Trained that day" → "Training"; drinks keep their timing (it's the night before, not that day): "Drinking the night before".
+    const what = /^Drinks /.test(top.what) ? top.what.replace(/^Drinks/, "Drinking") : top.what.replace(/ that day$| the night before$/, "").replace(/^Trained$/, "Training");
     const title = `${what} goes with ${outs.join(" and ")}`;
     return { lever, title, effect: d, outcome: top.outcome, rows: cs, protocol: protocolFor(lever, good, top, supplements) };
   });

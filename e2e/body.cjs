@@ -20,11 +20,11 @@ const { chromium, APP, OUT, handle } = require('./harness.cjs');
       await pg.goto(APP + '#settings'); await pg.getByRole('button', { name: /Load sample/ }).click(); await pg.waitForTimeout(300);
     }
     // Morning sleep ratings for the last 30 days (the sample has none) — once the synced data is in.
-    await pg.goto(APP + '#insights'); await pg.waitForSelector('.gl-week');
+    await pg.goto(APP + '#insights'); await pg.waitForSelector('.gl-week'); await pg.waitForTimeout(2000); // let the sample finish syncing, so the app's own save can't overwrite what's injected next
     await pg.evaluate(() => { const k = 'healthos.v1:u-test', s = JSON.parse(localStorage.getItem(k)); const t = new Date(); t.setHours(7, 40, 0, 0);
       for (let d = 30; d >= 0; d--) if (!s.entries.some((e) => e.id === 'sl' + d)) s.entries.push({ id: 'sl' + d, kind: 'sleep', at: t.getTime() - d * 864e5, rating: 5 + (d % 4) });
       s.entries.sort((a, b) => a.at - b.at); localStorage.setItem(k, JSON.stringify(s)); });
-    await pg.goto(APP + '#insights/sleep'); await pg.reload(); await pg.waitForTimeout(800);
+    await pg.goto(APP + '#insights/sleep'); await pg.reload(); await pg.waitForSelector('.gl-sleep', { timeout: 10000 }).catch(() => {}); await pg.waitForTimeout(300);
     const sleep = await pg.locator('.gl-sleep').innerText();
     check(name + ': sleep rating night by night', /You rated your sleep \d\.\d\/10 on average over \d+ nights/.test(sleep));
     check(name + ': a bar per rated night', await pg.locator('.gl-sleep path').count() >= 25);
