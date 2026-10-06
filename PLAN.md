@@ -487,9 +487,12 @@ email get Dev tools (`#dev`): raw entry editor, generate/remove sample, wipe acc
    the old starter becomes it when loaded or synced (any changed split stays). Day cards: day number, up next,
    exercises · sets · ~minutes, cardio, main-muscle tags; the up-next day lists every exercise with sets × reps,
    today's first-lift suggestion and a full-width Start. e2e/plan.cjs (starter on the server), workout.cjs.
-43. [ ] **Today, redesigned** (claimed 6 Oct — `screens/Today.tsx`, new `components/TodayParts.tsx`, `lib/moment.ts`,
+43. [x] **Today, redesigned** (6 Oct — `screens/Today.tsx`, new `components/TodayParts.tsx`, `lib/moment.ts`,
    index.css). Owner, 6 Oct, on the canvas (claude.ai/artifact/WdwHwicDrKX2PuaZcErHY9, page Final): *"I LOVE THIS!!
    build this pls"*. Four live numbers; a Now card that follows the clock (morning: sleep, weigh-in, morning stack;
    day: check-in; evening: evening stack, caffeine at bed, the day in numbers) holding whatever is due; six fixed
    one-tap buttons (Coffee logs the usual, Food, Drink, Stack, Feel, Weigh); below: stack, caffeine, food, from
-   your data. Workout's black/yellow look. No workout widget.
+   your data. Workout's black/yellow look. No workout widget. Built from the same parts as before (HowNow, nowItems, Stack,
+   caffeine card, check-in), so nothing you could do on Today went away; the Now card shows two due items and
+   "+ N more", so the buttons stay near the first screen; "Rate it" isn't repeated next to the check-in; the old
+   five chips and the header sentence are gone (the pad and the numbers replace them). e2e/today2.cjs.

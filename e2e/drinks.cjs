@@ -49,7 +49,7 @@ const DB = {
   check('500 ml can = 160 mg caffeine', /500 ml\s*235 kcal · 160 mg/.test(await pg.locator('.sizes .pill-btn').first().innerText()));
 
   await pg.goto(APP + '#today'); await pg.waitForTimeout(200);
-  check('Today counts the drink\'s kcal', /95 kcal/.test(await pg.locator('.sum').innerText()) || /95/.test(await pg.locator('body').innerText()));
+  check('Today counts the drink\'s kcal', /\b95\b/.test(await pg.locator('#fuel').innerText()) || /95/.test(await pg.locator('body').innerText()));
   console.log('errors:', JSON.stringify(errs));
   await b.close();
 })().catch((e) => { console.log('CRASH', e.message); process.exit(1); });

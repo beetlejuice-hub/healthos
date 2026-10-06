@@ -8,7 +8,7 @@ import { StackAlert } from "../components/StackCheck";
 import { ScoutLine } from "../components/Scout";
 import { AiQuestions, MorningRead, NightRead } from "../components/Ai";
 import { caffeineAt, latestDoseFor } from "../lib/caffeine";
-import { bedtimeVerdict, CAF_SLEEP, personalSleep, ratedNights, tonightsBed, type Personal } from "../lib/caffeine-sleep";
+import { bedtimeVerdict, CAF_SLEEP, personalSleep, ratedNights, tierOf, tonightsBed, type Personal } from "../lib/caffeine-sleep";
 import { caffeineDoses } from "../lib/insights";
 import { add, byDay, macrosOf, ZERO } from "../lib/nutrition";
 import { atMinute, clock, dayLabel, localDay, MIN } from "../lib/time";
@@ -17,6 +17,8 @@ import type { Drink, Entry, EntryOf, Slot } from "../lib/types";
 import { answerSlot, SLOTS, slotsOf } from "../lib/types";
 import { parseFat } from "../lib/bodyfat";
 import { HowNow } from "../components/HowNow";
+import { DataCard, EveningRead, NowCard, Pad, Status, UsualPicker, useStackCount } from "../components/TodayParts";
+import { dayNumbers, momentOf } from "../lib/moment";
 
 /**
  * The current time, re-read on every render and re-rendered every `ms` while open. Read fresh
@@ -30,6 +32,8 @@ export function useNow(ms = 30_000) {
 }
 
 const fmt = (n: number) => Math.round(n).toLocaleString("en-GB");
+/** Due items shown in the Now card before "+ N more". */
+const NOW_MAX = 2;
 
 /** caffeineAt already counts under 10 mg as none (CLEAR_MG), so 0 means cleared. */
 const mgText = (mg: number) => (mg === 0 ? "none" : `${mg} mg`);
@@ -39,6 +43,10 @@ export function Today() {
   const s = useStore((x) => x);
   const day = localDay(now);
   const [dismissed, setDismissed] = useState<string[]>([]);
+  const [pickUsual, setPickUsual] = useState(false);
+  const [allDue, setAllDue] = useState(false);
+  const moment = momentOf(now);
+  const stack = useStackCount(now);
 
   // "Another one now" is phrased around the drink you'd actually have next: your usual one if chosen.
   const coffeeMg = s.settings.usualDrink?.caffeineMg || s.settings.coffeeMg;
@@ -61,34 +69,13 @@ export function Today() {
     offerUndo(ids, `${status === "taken" ? "Ticked" : "Skipped"} ${suppIds.length} supplement${suppIds.length > 1 ? "s" : ""}`);
   };
 
-  return (
-    <div className="calm">
-      <div className="head">
-        <span>{dayLabel(now)} · {clock(now)}</span>
-        <a href="#settings">Settings</a>
-      </div>
-      <p className="sum">
-        {todays.some((e) => e.kind === "food") ? <>{fmt(totals.kcal)} kcal in{usual ? `, usual day ${fmt(usual)}` : ""}. </> : <>Nothing eaten logged yet. </>}
-        {doses.some((d) => d.at > now - 24 * 60 * MIN)
-          ? cafNow === 0 ? <>Today's caffeine has cleared out.</> : <>There's <em>{cafNow} mg</em> of caffeine in you, falling to {mgText(cafBed)} by {clock(bed)}.</>
-          : <>No caffeine logged today.</>}
-      </p>
-
-      <HowNow now={now} />
-      <NightRead />
-      <MorningRead />
-      <DayChips now={now} />
-      <AiQuestions />
-      <NextAnswer />
-      <WorkoutRunning now={now} />
-      <CheckInCard now={now} />
-      <StackAlert />
-      <NoticedLine />
-      <ScoutLine />
-
-      <div className="h"><span>Now</span><span>{shown.length ? `${shown.length} to do` : "all clear"}</span></div>
-      {shown.length === 0 && <p className="empty-ok">Nothing needs you right now.</p>}
-      {shown.map((it) => (
+  // The Now card's items: what's due, as before, minus "rate it" (the check-in sits in the card itself).
+  // Two at a time, so the one-tap buttons stay near the first screen; the rest one tap away.
+  const due = shown.filter((it) => it.kind !== "feel");
+  const listed = allDue ? due : due.slice(0, NOW_MAX);
+  const itemsList = due.length > 0 && (
+    <div className="t2-items">
+      {listed.map((it) => (
         <div key={it.id} className={`item ${it.kind.startsWith("supp") || it.kind === "restock" ? "supp" : it.kind === "caffeine" ? (it.tone === "notice" ? "warn" : "caf") : it.kind}`}>
           <span className="ic" aria-hidden="true">{it.kind.startsWith("supp") ? "✓" : it.kind === "caffeine" ? (it.tone === "notice" ? "!" : "☾") : it.kind === "food" ? "+" : it.kind === "weight" ? "kg" : it.kind === "restock" ? "↻" : "~"}</span>
           <div><b>{it.title}</b><p>{it.body}</p></div>
@@ -107,23 +94,55 @@ export function Today() {
               {it.out.length === 0 && <button type="button" className="pill-btn" onClick={() => act.setSupplements(s.supplements.map((x) => (it.low.includes(x.id) ? { ...x, active: true, status: undefined } : x)))}>Bought more</button>}
               {it.out.length === 0 && <button type="button" className="pill-btn" onClick={() => act.setSupplements(s.supplements.map((x) => (it.low.includes(x.id) ? { ...x, active: false, status: "out" } : x)))}>It's out</button>}
             </>}
-            {it.kind === "feel" && <button type="button" className="pill-btn pri" onClick={() => document.getElementById("feel")?.scrollIntoView({ behavior: "smooth" })}>Rate it</button>}
           </div>
         </div>
       ))}
+      {due.length > NOW_MAX && <button type="button" className="t2-more" onClick={() => setAllDue(!allDue)}>{allDue ? "Show fewer" : `+ ${due.length - NOW_MAX} more due`}</button>}
+    </div>
+  );
+  // Evening puts the stack and what's due first; the check-in is usually done by then (one line).
+  const feelNow = <HowNow now={now} />;
 
-      <Fuel totals={totals} goals={s.goals} />
-      <CaffeineCard doses={doses} now={now} bed={bed} halfLife={s.settings.halfLifeMin} cafNow={cafNow} cafBed={cafBed} personal={personal} coffeeMg={coffeeMg} />
+  return (
+    <div className="calm today2">
+      <div className="t2-head">
+        <div><span>{dayLabel(now)} · {clock(now)}</span><h1>Today</h1></div>
+        <a href="#settings">Settings</a>
+      </div>
+
+      <Status kcal={totals.kcal} goalKcal={s.goals.kcal} protein={totals.p} goalP={s.goals.p} cafNow={cafNow} cafBed={cafBed} bed={bed} stack={stack} />
+
+      <NowCard moment={moment}>
+        {moment === "evening" ? <>{itemsList}{feelNow}</> : <>{feelNow}{itemsList}</>}
+        <NightRead />
+        <MorningRead />
+        <AiQuestions />
+        <WorkoutRunning now={now} />
+        <CheckInCard now={now} />
+        <StackAlert />
+        {moment === "evening" && <EveningRead cafBed={cafBed} bed={bed} tier={tierOf(cafBed)} day={dayNumbers(s.entries, now)} />}
+      </NowCard>
+
+      <Pad now={now} stack={stack} onPickUsual={() => setPickUsual(true)} />
+      {pickUsual && <UsualPicker onDone={() => setPickUsual(false)} />}
+
       <Stack now={now} />
+      <CaffeineCard doses={doses} now={now} bed={bed} halfLife={s.settings.halfLifeMin} cafNow={cafNow} cafBed={cafBed} personal={personal} coffeeMg={coffeeMg} />
+      <Fuel totals={totals} goals={s.goals} usual={usual} />
+      <DataCard>
+        <NoticedLine />
+        <ScoutLine />
+        <NextAnswer />
+      </DataCard>
     </div>
   );
 }
 
-function Fuel({ totals, goals }: { totals: { kcal: number; p: number; c: number; f: number }; goals: { kcal: number; p: number; c: number; f: number } }) {
+function Fuel({ totals, goals, usual }: { totals: { kcal: number; p: number; c: number; f: number }; goals: { kcal: number; p: number; c: number; f: number }; usual: number | null }) {
   const pct = Math.min(1, totals.kcal / goals.kcal);
   return (
-    <div className="card">
-      <h3>Fuel <span>goal {fmt(goals.kcal)} kcal</span></h3>
+    <div className="card" id="fuel">
+      <h3>Food <span>goal {fmt(goals.kcal)} kcal{usual ? ` · usual day ${fmt(usual)}` : ""}</span></h3>
       <div className="fuel">
         <div className="ring">
           <svg viewBox="0 0 112 112" width="112" height="112" aria-hidden="true">
@@ -166,7 +185,7 @@ function CaffeineCard({ doses, now, bed, halfLife, cafNow, cafBed, personal, cof
   const pmg = probe != null ? Math.round(caffeineAt(doses, probe, halfLife)) : 0;
   const px = probe != null ? x(probe) : 0;
   return (
-    <div className="card">
+    <div className="card" id="caffeine">
       <h3>Caffeine <span>{mgText(cafNow)} now · {mgText(cafBed)} at {clock(bed)}</span></h3>
       <svg viewBox={`0 0 ${W} ${H}`} width="100%" role="img" aria-label={`Caffeine in your body today: ${cafNow} mg now, ${cafBed} mg at your planned bedtime`}
         style={{ touchAction: "pan-y", cursor: "crosshair" }} onPointerMove={onMove} onPointerDown={onMove} onPointerLeave={() => setProbe(null)}>
@@ -365,37 +384,6 @@ function WeighIn({ lastKg }: { lastKg: number | null }) {
   );
 }
 
-/**
- * Today at a glance, five chips: what's in, what's missing — one tap to fill a gap. No streaks,
- * no guilt: a missing chip is just a shortcut (owner: "hard to be consistent … the app should make
- * me want to do it").
- */
-function DayChips({ now }: { now: number }) {
-  const entries = useStore((x) => x.entries);
-  const supplements = useStore((x) => x.supplements);
-  const day = localDay(now);
-  const todays = entries.filter((e) => localDay(e.at) === day);
-  const kcal = todays.reduce((a, e) => a + (e.kind === "food" ? e.macros.kcal : 0), 0);
-  const drinks = todays.filter((e) => e.kind === "drink").length;
-  const active = supplements.filter((x) => x.active).flatMap((s) => slotsOf(s).map((slot) => `${s.id}|${slot}`));
-  const ticked = new Set(todays.flatMap((e) => (e.kind === "supp" ? [`${e.suppId}|${answerSlot(e, supplements.find((x) => x.id === e.suppId))}`] : []))).size;
-  const weighed = todays.some((e) => e.kind === "weight"), rated = todays.some((e) => e.kind === "feel");
-  const scrollTo = (id: string) => document.getElementById(id)?.scrollIntoView({ behavior: "smooth" });
-  const chips: [string, boolean, () => void][] = [
-    [kcal ? `Food ${fmt(kcal)} kcal` : "Food", kcal > 0, () => go("log", "food")],
-    [drinks ? `Drinks ${drinks}` : "Drinks", drinks > 0, () => go("log", "drink")],
-    [`Stack ${Math.min(ticked, active.length)}/${active.length}`, active.length > 0 && ticked >= active.length, () => scrollTo("stack")],
-    [weighed ? "Weighed" : "Weight", weighed, () => go("log", "body")],
-    [rated ? "Rated" : "Rating", rated, () => scrollTo("feel")],
-  ];
-  const doneN = chips.filter((c) => c[1]).length;
-  return (
-    <div className="daychips" aria-label="Today at a glance">
-      {chips.map(([label, ok, onTap]) => <button key={label} type="button" className={ok ? "ok" : ""} onClick={onTap}>{ok ? "✓ " : "+ "}{label}</button>)}
-      <span className="dc-sum">{doneN === 5 ? "Today's picture is complete." : `${5 - doneN} tap${5 - doneN > 1 ? "s" : ""} to complete today's picture`}</span>
-    </div>
-  );
-}
 
 /** The nearest answer Noticed is working towards, and what it still needs — progress you can see. */
 function NextAnswer() {

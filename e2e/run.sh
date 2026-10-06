@@ -9,7 +9,7 @@ server=$!
 trap 'kill $server 2>/dev/null' EXIT
 sleep 1
 fail=0
-for suite in e2e/features.cjs e2e/search.cjs e2e/noticed.cjs e2e/stackcheck.cjs e2e/simple.cjs e2e/workout.cjs e2e/morning.cjs e2e/scout.cjs e2e/round.cjs e2e/ai.cjs e2e/sync.cjs e2e/drinks.cjs e2e/scan.cjs e2e/reset.cjs e2e/fixes.cjs e2e/between.cjs e2e/bodyfat.cjs e2e/hownow.cjs e2e/push.cjs e2e/searchpass.cjs e2e/now.cjs e2e/cafsleep.cjs e2e/earlier.cjs e2e/night.cjs e2e/slider.cjs e2e/workoutplus.cjs e2e/muscles.cjs e2e/dose.cjs e2e/labelphoto.cjs e2e/graph.cjs e2e/glance.cjs e2e/mind.cjs e2e/connections.cjs e2e/body.cjs e2e/stack.cjs e2e/top.cjs e2e/phone.cjs e2e/plan.cjs e2e/session.cjs e2e/checkin.cjs; do
+for suite in e2e/features.cjs e2e/search.cjs e2e/noticed.cjs e2e/stackcheck.cjs e2e/simple.cjs e2e/workout.cjs e2e/morning.cjs e2e/scout.cjs e2e/round.cjs e2e/ai.cjs e2e/sync.cjs e2e/drinks.cjs e2e/scan.cjs e2e/reset.cjs e2e/fixes.cjs e2e/between.cjs e2e/bodyfat.cjs e2e/hownow.cjs e2e/push.cjs e2e/searchpass.cjs e2e/now.cjs e2e/cafsleep.cjs e2e/earlier.cjs e2e/night.cjs e2e/slider.cjs e2e/workoutplus.cjs e2e/muscles.cjs e2e/dose.cjs e2e/labelphoto.cjs e2e/graph.cjs e2e/glance.cjs e2e/mind.cjs e2e/connections.cjs e2e/body.cjs e2e/stack.cjs e2e/top.cjs e2e/phone.cjs e2e/plan.cjs e2e/session.cjs e2e/checkin.cjs e2e/today2.cjs; do
   echo "== $suite"
   out=$(node "$suite") || fail=1
   echo "$out"

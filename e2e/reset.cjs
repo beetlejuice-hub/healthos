@@ -60,7 +60,7 @@ const local = (pg) => pg.evaluate((uid) => JSON.parse(localStorage.getItem(`heal
 
   // The engines start from nothing: Today has no caffeine, Body has no weigh-ins.
   await phone.pg.goto(APP + '#today'); await phone.pg.waitForTimeout(300);
-  check('Today: no caffeine counted', /No caffeine logged today/.test(await phone.pg.locator('.sum').innerText()));
+  check('Today: no caffeine counted', /Caffeine\s*0\s*mg/i.test(await phone.pg.locator('.t2-status').innerText()));
   await phone.pg.screenshot({ path: OUT + 'reset-today.png', fullPage: true });
 
   // Laptop back online: it sees the reset before sending, so its queued weigh-in never goes up.

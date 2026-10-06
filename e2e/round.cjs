@@ -17,7 +17,7 @@ const { chromium, APP, OUT, handle } = require('./harness.cjs');
   await pg.getByRole('button', { name: 'Sign in' }).click(); await pg.waitForSelector('text=Settings');
 
   await pg.goto(APP + '#today'); await pg.waitForTimeout(200);
-  check('Today shows five chips with what\'s missing', await pg.locator('.daychips button').count() === 5 && /5 taps to complete/.test(await pg.locator('.daychips').innerText()));
+  check('Today shows the six one-tap buttons', JSON.stringify(await pg.locator('.t2-pad button b').allInnerTexts()) === '["Coffee","Food","Drink","Stack","Feel","Weigh"]');
   check('Today shows the next answer it\'s working towards', /Next answer[\s\S]*needs/i.test(await pg.locator('.nextanswer').innerText()));
 
   // It's 15:00; log the 11:00 coffee from the sentence.
@@ -48,6 +48,7 @@ const { chromium, APP, OUT, handle } = require('./harness.cjs');
   await pg.getByRole('button', { name: 'Running low' }).click(); await pg.getByRole('button', { name: 'Done' }).click();
   check('row says running low', /running low/.test(await pg.locator('.supp-row').filter({ hasText: 'Saffron' }).innerText()));
   await pg.goto(APP + '#today'); await pg.waitForTimeout(200);
+  if (await pg.locator('.t2-more').count()) await pg.locator('.t2-more').click(); // the Now card shows two due items, the rest one tap away
   check('Today reminds to buy more', await pg.getByText('Running low: Saffron').count() === 1);
   await pg.getByRole('button', { name: "It's out" }).click(); await pg.waitForTimeout(100);
   check('then: out of Saffron, Restocked button', await pg.getByText('Out of Saffron').count() === 1);
