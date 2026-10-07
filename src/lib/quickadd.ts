@@ -29,6 +29,11 @@ const UNIT_WORDS: Record<string, string[]> = {
   handful: ["handful"], handfuls: ["handful"], marek: ["handful"],
   scoop: ["scoop"], scoops: ["scoop"], cup: ["bowl", "glass"], cups: ["bowl", "glass"], bogre: ["glass", "bowl"],
   serving: ["serving", "portion"], servings: ["serving", "portion"], portion: ["portion", "serving"], portions: ["portion", "serving"], adag: ["portion", "serving"],
+  // Your hand as the measure (owner, 7 Oct: "i am not really measuring my food"): a palm of meat or fish,
+  // a fist of rice or pasta, a cupped hand of nuts, a thumb of butter or oil.
+  palm: ["palm-size"], palms: ["palm-size"], tenyer: ["palm-size"], tenyernyi: ["palm-size"],
+  fist: ["fist"], fists: ["fist"], okol: ["fist"], okolnyi: ["fist"],
+  cupped: ["handful"], thumb: ["thumb"], thumbs: ["thumb"], huvelykujj: ["thumb"], huvelykujjnyi: ["thumb"],
 };
 const GRAM_WORDS = new Set(["g", "gr", "gram", "grams", "gramm", "ml"]);
 const FILLER = new Set(["of", "some", "x"]);
@@ -135,13 +140,16 @@ export function readAmount(tokens: string[]): Amount {
   const sizeTok = toks.find((t) => SIZES[t] != null);
   const size = sizeTok ? SIZES[sizeTok] : 1;
   toks = toks.filter((t) => SIZES[t] == null);
-  // Amounts after the name: "chicken breast 200g", "rice 150 g", "eggs x3".
+  // Amounts after the name: "chicken breast 200g", "rice 150 g", "eggs x3", "eggs 3".
   let tail: { grams?: number; count?: number } = {};
   const last = toks.at(-1) ?? "", prev = toks.at(-2) ?? "";
   const tg = last.match(/^(\d+(?:[.,]\d+)?)(g|gr|ml)$/), tx = last.match(/^x(\d+)$/) ?? last.match(/^(\d+)x$/);
   if (toks.length > 1 && tg) { tail = { grams: Number(tg[1].replace(",", ".")) }; toks = toks.slice(0, -1); }
   else if (toks.length > 2 && GRAM_WORDS.has(last) && /^\d+([.,]\d+)?$/.test(prev)) { tail = { grams: Number(prev.replace(",", ".")) }; toks = toks.slice(0, -2); }
   else if (toks.length > 1 && tx) { tail = { count: Number(tx[1]) }; toks = toks.slice(0, -1); }
+  // A plain count after the name: "scrambled eggs 3", "beer 2". Only 1–12 and whole, so a number that is part
+  // of a name stays in it ("hell 500", "milk 1.5").
+  else if (toks.length > 1 && /^\d{1,2}$/.test(last) && +last >= 1 && +last <= 12 && readNumber(toks[0]) == null) { tail = { count: Number(last) }; toks = toks.slice(0, -1); }
   let count: number | null = null, grams: number | null = null, unitWant: string[] | null = null;
   // "200g rice"
   const glued = toks[0]?.match(/^(\d+(?:[.,]\d+)?)(g|gr|ml)$/);
@@ -151,7 +159,7 @@ export function readAmount(tokens: string[]): Amount {
     if (n != null) { count = n; toks = toks.slice(1); }
     if (toks[0] === "x") toks = toks.slice(1);
     if (count != null && toks[0] && GRAM_WORDS.has(toks[0])) { grams = count; count = null; toks = toks.slice(1); }
-    else if (toks[0] && UNIT_WORDS[toks[0]]) { unitWant = UNIT_WORDS[toks[0]]; toks = toks.slice(1); }
+    else if (toks[0] && UNIT_WORDS[toks[0]]) { unitWant = UNIT_WORDS[toks[0]]; toks = toks.slice(toks[0] === "cupped" && /^hands?$/.test(toks[1] ?? "") ? 2 : 1); }
   }
   if (tail.grams != null && grams == null && count == null) grams = tail.grams;
   if (tail.count != null && count == null) count = tail.count;

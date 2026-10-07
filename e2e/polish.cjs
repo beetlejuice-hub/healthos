@@ -23,5 +23,13 @@ const { chromium, APP, OUT, handle } = require('./harness.cjs');
   check(`a weigh-in reads as a date (${row.replace(/\s+/g, ' ')})`, /Wed 7 Oct · 08:00/.test(row) && !/2026-10-07/.test(row));
   await pg.goto(APP + '#settings'); await pg.waitForTimeout(300);
   await pg.screenshot({ path: OUT + 'polish-settings-360.png' });
+  // Owner, 7 Oct: "i am not really measuring my food, just like 1 serving, 3 eggs, 1 plate". Typed, not weighed.
+  await pg.goto(APP + '#log/food'); await pg.waitForTimeout(300);
+  await pg.getByLabel('Type what you ate').fill('scrambled eggs 3, tuna in oil, a fist of rice, thumb of butter, 1 palm chicken breast');
+  await pg.getByRole('button', { name: 'Add', exact: true }).click(); await pg.waitForTimeout(500);
+  const basket = (await pg.locator('.basket').innerText()).replace(/\s+/g, ' ');
+  check(`typed by count and by hand, all five found (${basket.slice(0, 160)}…)`, ['Scrambled eggs', '3 eggs', 'Tuna, canned in oil', 'White rice, cooked', '1 fist', 'Butter', '1 thumb', 'Chicken breast, cooked', '1 palm-size'].every((t) => basket.includes(t)) && !/Couldn't find/.test(await pg.locator('.card').first().innerText()));
+  check('the hint says you can use your hand', /a palm of chicken, a fist of rice/.test(await pg.locator('#log, body').first().innerText()));
+  await pg.locator('.basket').screenshot({ path: OUT + 'polish-basket.png' });
   console.log('errors: ' + JSON.stringify(errs)); await b.close();
 })().catch((e) => { console.log('CRASH ' + e.message); process.exit(1); });

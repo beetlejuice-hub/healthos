@@ -162,3 +162,44 @@ describe("how it was made (owner, 2 Oct: '1 cooked salmon' came out 420 kcal)", 
     expect(p.line?.food.per100.kcal).toBe(140);
   });
 });
+
+describe("logging without weighing (owner, 7 Oct: \"i am not really measuring my food, just like 1 serving, 3 eggs, 1 plate\")", () => {
+  const one = (t: string) => parseMeal(t)[0];
+  const line = (t: string) => { const p = one(t); return p.line ? `${p.line.food.name} · ${p.line.count} ${p.line.unit ?? "g"} = ${Math.round(gramsOf(p.line))} g` : p.drink ? `drink ${p.drink.drink.name} ×${p.drink.count}` : "none"; };
+  it("his breakfast, as he wrote it", () => {
+    expect(parseMeal("3 scrambled eggs, small can of tuna, cheese, 2 toast with butter").map((p) => p.line?.food.name))
+      .toEqual(["Scrambled eggs", "Tuna, canned in water", "Cheese, Trappista / Gouda", "Toast (white)", "Butter"]);
+  });
+  it("the count after the name: 'scrambled eggs 3', 'kifli 2', 'beer 2'", () => {
+    expect(line("scrambled eggs 3")).toBe("Scrambled eggs · 3 egg = 183 g");
+    expect(line("kifli 2")).toBe("Kifli · 2 kifli = 80 g");
+    expect(line("beer 2")).toBe("drink Beer 500 ml, 5% ×2");
+  });
+  it("…but a number that is part of a name stays in the name", () => {
+    expect(line("hell 500")).toMatch(/^drink Hell Energy 500 ml ×1$/);
+    expect(line("milk 1.5")).toMatch(/^Milk 1\.5% · 1 glass/);
+    expect(line("chicken breast 200")).not.toMatch(/× ?200|200 breast/);
+  });
+  it("tuna in oil is its own food; plain 'tuna' stays in water but asks", () => {
+    expect(line("tuna in oil")).toMatch(/^Tuna, canned in oil/);
+    const t = one("tuna");
+    expect(t.line?.food.name).toBe("Tuna, canned in water");
+    expect(t.unsure).toBe(true);
+    expect(t.alternatives.map((f) => f.name)).toContain("Tuna, canned in oil (drained)");
+  });
+  it("your hand as the measure: palm, fist, cupped hand, thumb", () => {
+    expect(line("1 palm chicken breast")).toBe("Chicken breast, cooked · 1 palm-size = 100 g");
+    expect(line("a palm of salmon")).toMatch(/^Salmon, cooked · 1 palm-size = 100 g$/);
+    expect(line("a fist of rice")).toBe("White rice, cooked · 1 fist = 150 g");
+    expect(line("2 fists pasta")).toBe("Pasta, cooked · 2 fist = 280 g");
+    expect(line("a cupped hand of almonds")).toBe("Almonds · 1 handful = 30 g");
+    expect(line("thumb of butter")).toBe("Butter · 1 thumb = 10 g");
+    expect(line("2 thumbs peanut butter")).toBe("Peanut butter · 2 thumb = 32 g");
+  });
+  it("every everyday food that is meat or fish has a palm; every cooked starch a fist; every fat a thumb", () => {
+    const has = (name: string, unit: string) => unitsOf(BASIC_FOODS.find((f) => f.name === name)!).some((u) => u.name === unit);
+    for (const n of ["Chicken breast, cooked", "Chicken thigh, cooked", "Turkey breast, cooked", "Beef steak, cooked", "Pork loin, cooked", "Salmon, cooked", "Cod, cooked"]) expect(has(n, "palm-size"), n).toBe(true);
+    for (const n of ["White rice, cooked", "Brown rice, cooked", "Pasta, cooked", "Potatoes, boiled", "Sweet potato, baked", "Lentils, cooked", "Chickpeas, cooked", "Kidney beans, cooked"]) expect(has(n, "fist"), n).toBe(true);
+    for (const n of ["Butter", "Olive oil", "Sunflower oil", "Peanut butter", "Mayonnaise", "Cheese, Trappista / Gouda"]) expect(has(n, "thumb"), n).toBe(true);
+  });
+});

@@ -315,7 +315,7 @@ function FoodTab({ done }: { done: (m: string) => void }) {
         <button type="button" className="pill-btn" onClick={() => { setCrafting(true); window.scrollTo({ top: 0, behavior: "smooth" }); }}>+ Your own food</button>
         <button type="button" className="pill-btn" onClick={() => setCustom(true)}>+ From a label</button>
       </div>
-      <p className="note">Count it, don't weigh it: “2 eggs” is close enough, and the weekly numbers even out. The same food from many brands shows as one typical row; anything you log comes back first, with the amount you had.</p>
+      <p className="note">Count it, don't weigh it: “3 eggs”, “1 can of tuna”, “2 toast with butter” — or use your hand: a palm of chicken, a fist of rice, a cupped hand of nuts, a thumb of butter. Close enough; the weekly numbers even out. Anything you log comes back first, with the amount you had.</p>
     </div>
   </>;
 }

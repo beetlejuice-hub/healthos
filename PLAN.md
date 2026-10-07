@@ -508,3 +508,8 @@ email get Dev tools (`#dev`): raw entry editor, generate/remove sample, wipe acc
 46. [x] **Rest day on Today** (7 Oct — `programs.ts` restDay, the evening card). Owner: "go". From 19:00 with no
    workout today, while the split is still a program's days, the evening card says "Rest day · walking, abs" (the
    program's own words). Not before 19:00 (you may still train), not after a workout, gone if the split changes.
+47. [x] **Logging food without weighing** (7 Oct — `quickadd.ts`, `foods-basic.ts`, Log hint). Owner: "i am not really
+   measuring my food, just like 1 serving, 3 eggs, 1 plate". His breakfast typed as he said it already worked (≈720
+   kcal, P 54). Fixed: a count after the name ("scrambled eggs 3", "beer 2"; 1–12 only, so "hell 500" and "milk 1.5"
+   keep their numbers); tuna in oil as its own food, plain "tuna" stays in water but is marked to check. Added hand
+   sizes: palm (cooked meat/fish ≈100 g), fist (cooked starch ≈1 cup), cupped hand (≈30 g nuts), thumb (≈1 tbsp fat).
