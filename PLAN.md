@@ -513,3 +513,20 @@ email get Dev tools (`#dev`): raw entry editor, generate/remove sample, wipe acc
    kcal, P 54). Fixed: a count after the name ("scrambled eggs 3", "beer 2"; 1–12 only, so "hell 500" and "milk 1.5"
    keep their numbers); tuna in oil as its own food, plain "tuna" stays in water but is marked to check. Added hand
    sizes: palm (cooked meat/fish ≈100 g), fist (cooked starch ≈1 cup), cupped hand (≈30 g nuts), thumb (≈1 tbsp fat).
+48. [ ] **Fitbit Charge 6 → HealthOS** (claimed 7 Oct — new `lib/band.ts`, `worker/band.ts` BandHub, Settings card,
+   MasterGraph wearable lanes, wrangler.jsonc). Owner, 7 Oct: "charge6 yes, can we have continous data". The old
+   Fitbit Web API shuts off 30 Oct 2026; this uses the **Google Health API** (`health.googleapis.com/v4`,
+   `users/me/dataTypes/{type}/dataPoints`, read-only scopes googlehealth.activity_and_fitness / sleep /
+   health_metrics_and_measurements), shapes taken from Google's own CLI (github.com/google-health-api/google-health-cli).
+   - **Why:** the timeline's empty Heart rate and Sleep rows, real bedtime for caffeine, HRV and resting HR for Insights,
+     heart rate in workouts.
+   - **How:** owner signs in with Google once (Settings → Connect); the Worker keeps the refresh token in a per-account
+     Durable Object (like PushHub), pulls every 15 min and when the app opens (the band itself syncs to the phone every
+     ~15–30 min), keeps heart rate per minute, sleep sessions with stages, daily resting HR and HRV; the app reads them
+     from /api/band/data. Secrets GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET set by the owner in Cloudflare (7 Oct).
+   - **Phases:** 1) connect, pull, timeline lanes; 2) real bedtime, resting HR + HRV in Insights, heart rate in workouts;
+     3) live heart rate over Bluetooth on the Workout screen (Chrome/Android/laptop, or Bluefy on iPhone); webhooks
+     (need a project-level subscriber + cloud-platform scope) only if 15-min pulls feel slow.
+   - **Tested:** parsers against the documented shapes; the Worker flow (sign-in, token refresh, paging, alarm) against a
+     fake Google; the app against a fake /api/band. Not testable here: the real Google sign-in — the owner's first tap is
+     the real test.
