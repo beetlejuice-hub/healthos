@@ -689,6 +689,12 @@ a { color: inherit; }
 .hn-reward { margin: 0; font-size: 13.5px; color: var(--ok); }
 /* Settings → Notifications */
 .notif { display: grid; gap: 10px; }
+.band { display: grid; gap: 10px; }
+.band-facts { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; font-size: 14px; }
+.band-facts li { display: grid; grid-template-columns: 9.5em minmax(0, 1fr); gap: 8px; }
+.band-facts li.wide { display: block; }
+.band-facts .nw { white-space: nowrap; }
+.band-facts b { color: var(--c-ink-2); font-weight: 500; }
 .notif-kinds { display: grid; gap: 8px; }
 .notif-kind { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 10px; align-items: start; font-size: 14px; }
 .notif-kind input { width: 20px; height: 20px; margin-top: 1px; accent-color: var(--mood); }

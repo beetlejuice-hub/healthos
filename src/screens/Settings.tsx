@@ -6,6 +6,7 @@ import { AboutMe } from "../components/StackCheck";
 import { AiSettings } from "../components/Ai";
 import { ResetAll } from "../components/ResetAll";
 import { Notifications } from "../components/Notifications";
+import { Band } from "../components/Band";
 
 const hhmm = (m: number) => `${String(Math.floor(m / 60)).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}`;
 
@@ -52,6 +53,7 @@ export function Settings({ tester, email }: { tester: boolean; email: string }) 
       <AiSettings />
 
       <Notifications />
+      <Band />
 
       <div className="card">
         <h3>Sleep and body</h3>

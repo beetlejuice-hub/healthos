@@ -4,6 +4,7 @@
  *   GET /api/food?q=zabpehely  →  { foods: Food[], sources: { off, usda } }
  *   GET /api/food?barcode=5449000014535  →  { status: "found", scanned } | { status: "missing" | "error" }
  *   POST /api/ai, GET /api/ai/usage  →  the in-app AI (worker/ai.ts)
+ *   /api/band/*, GET /api/google/callback  →  the Fitbit band via Google (worker/band.ts)
  *
  * Searching server-side means one call from the phone, no browser cross-site limits, and a
  * 1-day cache so repeat searches are instant. Set a free USDA key with
@@ -15,12 +16,15 @@ import { searchAll } from "../src/lib/foodsearch";
 import { lookupBarcode, normalizeGtin } from "../src/lib/barcode";
 import { handleAi, whoIs, type AiEnv } from "./ai";
 import { PushHub } from "./push";
+import { BandHub, type BandEnv } from "./band";
+import { authUrl, readState, signState } from "../src/lib/band";
 
-/** The Durable Object class must be exported from the Worker's entry point. */
-export { PushHub };
+/** The Durable Object classes must be exported from the Worker's entry point. */
+export { PushHub, BandHub };
 
 type DOStub = { fetch: (r: Request) => Promise<Response> };
-type Env = AiEnv & { ASSETS: { fetch: (r: Request) => Promise<Response> }; USDA_KEY?: string; PUSH?: { idFromName: (n: string) => unknown; get: (id: unknown) => DOStub } };
+type DONamespace = { idFromName: (n: string) => unknown; get: (id: unknown) => DOStub };
+type Env = AiEnv & BandEnv & { ASSETS: { fetch: (r: Request) => Promise<Response> }; USDA_KEY?: string; PUSH?: DONamespace; BAND?: DONamespace };
 type Ctx = { waitUntil: (p: Promise<unknown>) => void };
 declare const caches: { default: { match: (r: Request) => Promise<Response | undefined>; put: (r: Request, res: Response) => Promise<void> } } | undefined;
 
@@ -73,6 +77,34 @@ export async function handlePush(req: Request, env: Env, f: typeof fetch = fetch
 }
 
 /**
+ * The Fitbit band (PLAN 48), through Google. Signed in only, each account its own BandHub:
+ *   POST /api/band/start → { url }: Google's "allow HealthOS to read…" page; the state names you, signed.
+ *   GET /api/google/callback?code&state → Google sends you back here; keeps the sign-in, back to Settings.
+ *   GET /api/band/status, GET /api/band/data?from&to, POST /api/band/sync, POST /api/band/disconnect.
+ */
+export async function handleBand(req: Request, env: Env, f: typeof fetch = fetch): Promise<Response> {
+  const url = new URL(req.url);
+  if (!env.BAND || !env.GOOGLE_CLIENT_ID || !env.GOOGLE_CLIENT_SECRET) return json({ error: "the band isn't set up on this server" }, 503);
+  const hub = (id: string) => env.BAND!.get(env.BAND!.idFromName(id));
+  const redirect = `${url.origin}/api/google/callback`;
+  if (url.pathname === "/api/google/callback") {
+    const back = (ok: boolean, why = "") => Response.redirect(`${url.origin}/#settings/band-${ok ? "ok" : "failed"}${why ? `?why=${encodeURIComponent(why)}` : ""}`, 302);
+    const user = await readState(url.searchParams.get("state") ?? "", env.GOOGLE_CLIENT_SECRET);
+    if (!user) return back(false, "the link expired — try again");
+    const code = url.searchParams.get("code");
+    if (!code) return back(false, url.searchParams.get("error") === "access_denied" ? "you said no on Google's page" : "Google didn't say yes");
+    const r = await hub(user).fetch(new Request("https://band/connect", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ code, redirect }) }));
+    return r.ok ? back(true) : back(false, ((await r.json().catch(() => ({}))) as { error?: string }).error ?? "Google refused");
+  }
+  const op = url.pathname.replace(/^\/api\/band\/?/, "");
+  if (!["start", "status", "data", "sync", "disconnect"].includes(op)) return json({ error: "not found" }, 404);
+  const user = await whoIs(req, env, { fetch: (u, i) => f(u, i), now: Date.now });
+  if (!user) return json({ error: "sign in first" }, 401);
+  if (op === "start") return json({ url: authUrl(env.GOOGLE_CLIENT_ID, await signState(user.id, env.GOOGLE_CLIENT_SECRET), redirect) });
+  return hub(user.id).fetch(new Request(`https://band/${op}${url.search}`, { method: req.method === "POST" ? "POST" : "GET", headers: { "content-type": "application/json" }, body: req.method === "POST" ? "{}" : undefined }));
+}
+
+/**
  * /now — the "How now?" check-in on its own. The same app page, but announcing itself as "How now?"
  * (title, icon, manifest), so "Add to Home Screen" from here makes a separate one-tap icon.
  */
@@ -90,6 +122,7 @@ export default {
     if (url.pathname === "/api/food") return handleFood(req, env, ctx);
     if (url.pathname === "/api/ai" || url.pathname === "/api/ai/usage") return handleAi(req, env);
     if (url.pathname.startsWith("/api/push/")) return handlePush(req, env);
+    if (url.pathname.startsWith("/api/band/") || url.pathname === "/api/google/callback") return handleBand(req, env);
     if (url.pathname === "/now" || url.pathname === "/now/") {
       const page = await env.ASSETS.fetch(new Request(new URL("/", req.url)));
       return new Response(nowPage(await page.text()), { headers: { "content-type": "text/html; charset=utf-8", "cache-control": "no-cache" } });

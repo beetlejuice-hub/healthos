@@ -530,3 +530,12 @@ email get Dev tools (`#dev`): raw entry editor, generate/remove sample, wipe acc
    - **Tested:** parsers against the documented shapes; the Worker flow (sign-in, token refresh, paging, alarm) against a
      fake Google; the app against a fake /api/band. Not testable here: the real Google sign-in — the owner's first tap is
      the real test.
+   - **Phase 1 built (7 Oct):** Settings → Band (Connect / last pull, latest HR, last night, resting HR / Pull now /
+     Disconnect, which deletes what was pulled / Reconnect when Google drops the sign-in); the timeline's Heart rate
+     lane (per-minute average line, min–max band, gaps where the band was off) and Sleep stages lane (awake/REM/light/
+     deep rows), readout "Night before" from the band. First pull 2 days back, then the last 12 h every 15 min; more
+     than 20 pages in one pull is reported in the card, not dropped silently. Tests: lib/band.test.ts (9),
+     worker/band.test.ts (16), e2e/band.cjs (19).
+   - **Open:** Google's exact HRV field name and max page size aren't documented where we can read them — check the
+     first real pull's status. A Google project in "Testing" drops the sign-in after 7 days (the card then says
+     Reconnect); publishing the project avoids that.

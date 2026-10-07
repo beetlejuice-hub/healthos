@@ -15,6 +15,8 @@
   },
   // Notifications: one Durable Object per account (worker/push.ts) — SQLite-backed, so it's on the
   // free plan, and created by `wrangler deploy` itself; nothing to set up in the dashboard.
-  "durable_objects": { "bindings": [{ "name": "PUSH", "class_name": "PushHub" }] },
-  "migrations": [{ "tag": "v1-push", "new_sqlite_classes": ["PushHub"] }]
+  // The Fitbit band: one per account too (worker/band.ts). Needs the GOOGLE_CLIENT_ID and
+  // GOOGLE_CLIENT_SECRET secrets (set by the owner in Cloudflare); without them /api/band/* says 503.
+  "durable_objects": { "bindings": [{ "name": "PUSH", "class_name": "PushHub" }, { "name": "BAND", "class_name": "BandHub" }] },
+  "migrations": [{ "tag": "v1-push", "new_sqlite_classes": ["PushHub"] }, { "tag": "v2-band", "new_sqlite_classes": ["BandHub"] }]
 }

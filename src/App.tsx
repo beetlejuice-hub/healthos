@@ -13,6 +13,7 @@ import { UndoToast } from "./components/UndoToast";
 import { act } from "./lib/store";
 import { useScoutUnseen } from "./components/Scout";
 import { AiScreen, useAiAuto, useAiUnread } from "./components/Ai";
+import { startBand } from "./lib/band-client";
 
 /**
  * Four screens, one job each (owner, 29 Sept): Today = what needs you now; Log = add things;
@@ -30,6 +31,10 @@ export function App() {
     window.addEventListener("hashchange", on);
     return () => window.removeEventListener("hashchange", on);
   }, []);
+
+  // The band's heart rate and sleep: pulled on open and every 15 minutes (lib/band-client).
+  const signedIn = !!auth.session;
+  useEffect(() => { if (signedIn) startBand(); }, [signedIn]);
 
   // Forgotten workouts close themselves: on open, when the app comes back, and every few minutes.
   useEffect(() => {
