@@ -539,3 +539,14 @@ email get Dev tools (`#dev`): raw entry editor, generate/remove sample, wipe acc
    - **Open:** Google's exact HRV field name and max page size aren't documented where we can read them — check the
      first real pull's status. A Google project in "Testing" drops the sign-in after 7 days (the card then says
      Reconnect); publishing the project avoids that.
+   - **First real data (7 Oct):** owner connected, heart rate on the timeline — "the app really took the info and
+     added to chart..fck yeah". Card times confused him ("date doesnt match even after clicking pull now"): fixed to
+     "Newest reading · N min ago" vs "Checked Google", and Pull now says what it found.
+49. [ ] **Band data, audited · a chart that shows effects** (claimed 7 Oct — worker/band.ts, lib/band*.ts, MasterGraph,
+   new lib/hreffect.ts). Owner, 7 Oct: "next is going to be a really close look on how the app handles data, and also
+   the design of the chart, we'll have to make it better for the eye and to be better to notice things like bpm average
+   moves up when taking in coffeine or working out - this needs a long testing session".
+   - **Phases:** 1) data audit: every step band → Google → Worker → app → chart, each fault fixed with a test that
+     fails without the fix; 2) chart options on a Design canvas first, owner picks; 3) heart rate after coffee and after
+     workouts vs his own usual at that time of day — a pure function, tested on fake data with a planted effect (found)
+     and none planted (not found); "goes with", never "causes"; 4) the long testing session on his real data.
