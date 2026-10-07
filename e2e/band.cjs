@@ -16,6 +16,10 @@ const { chromium, APP, OUT, handle } = require('./harness.cjs');
     hr.push([t, avg, avg - 4, avg + 5]);
   }
   hr[hr.length - 1][1] = 72;
+  // Ten days ago, an hour at 66 — only reachable by scrolling the timeline back (PLAN 49: older weeks load then).
+  const OLD = new Date('2026-09-27T15:00:00').getTime();
+  for (let t = OLD; t < OLD + 3600_000; t += MIN) hr.unshift([t, 66, 64, 69]);
+  hr.sort((a, b) => a[0] - b[0]);
   const at = (d, h, m) => new Date(2026, 9, d, h, m).getTime();
   const night = { id: 'n1', start: at(6, 23, 40), end: at(7, 7, 10), asleepMin: 412, awakeMin: 38, toFallAsleepMin: 12, nap: false, stageMin: { deep: 70, light: 240, rem: 102, awake: 38 },
     stages: [['light', 23, 52, 0, 30], ['deep', 0, 30, 1, 40], ['light', 1, 40, 3, 0], ['rem', 3, 0, 3, 45], ['awake', 3, 45, 3, 55], ['light', 3, 55, 5, 30], ['rem', 5, 30, 6, 40], ['light', 6, 40, 7, 10]]
@@ -33,7 +37,7 @@ const { chromium, APP, OUT, handle } = require('./harness.cjs');
     if (!server.configured) return r.fulfill({ status: 503, contentType: 'application/json', body: JSON.stringify({ error: "the band isn't set up on this server" }) });
     const body = op === 'start' ? { url: 'https://accounts.google.com/o/oauth2/v2/auth?client_id=cid&state=s' }
       : op === 'disconnect' ? (server.connected = false, { ok: true })
-      : op === 'data' ? { hr: server.connected ? hr : [], sleep: server.connected ? [night] : [], rhr: server.connected ? { '2026-10-07': 54 } : {}, hrv: {}, ...status() }
+      : op === 'data' ? { hr: server.connected ? hr.filter((m) => m[0] >= +u.searchParams.get('from') && m[0] <= +u.searchParams.get('to')) : [], sleep: server.connected ? [night] : [], rhr: server.connected ? { '2026-10-07': 54 } : {}, hrv: {}, ...status() }
       : status();
     r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(body) });
   });
@@ -48,7 +52,7 @@ const { chromium, APP, OUT, handle } = require('./harness.cjs');
   await pg.fill('input[type=email]', 'lukacsarnold9+healthtest@gmail.com'); await pg.fill('input[type=password]', 'secret123');
   await pg.getByRole('button', { name: 'Sign in' }).click(); await pg.waitForSelector('text=Settings');
   await pg.evaluate(() => { const k = 'healthos.v1:u-test', s = JSON.parse(localStorage.getItem(k) || '{}');
-    s.entries = [{ id: 'c1', kind: 'drink', at: new Date(2026, 9, 7, 8, 10).getTime(), name: 'Coffee', ml: 250, caffeineMg: 95, alcoholG: 0, kcal: 2 }]; localStorage.setItem(k, JSON.stringify(s)); });
+    s.entries = [{ id: 'c0', kind: 'drink', at: new Date(2026, 8, 20, 8, 10).getTime(), name: 'Coffee', ml: 250, caffeineMg: 95, alcoholG: 0, kcal: 2 }, { id: 'c1', kind: 'drink', at: new Date(2026, 9, 7, 8, 10).getTime(), name: 'Coffee', ml: 250, caffeineMg: 95, alcoholG: 0, kcal: 2 }]; localStorage.setItem(k, JSON.stringify(s)); });
 
   // 1. Not connected: what it reads, read-only promise, one button.
   await pg.goto(APP + '#settings'); await pg.reload();
@@ -72,6 +76,8 @@ const { chromium, APP, OUT, handle } = require('./harness.cjs');
   await card.getByRole('button', { name: 'Pull now' }).click();
   await pg.waitForFunction(() => /Nothing newer|New readings/.test(document.querySelector('.card.band')?.textContent ?? ''), null, { timeout: 5000 }).catch(() => {});
   check('Pull now with nothing new: says so, and what to do', /Nothing newer from Google yet — the band last sent at 12:58\. Open the Fitbit app/.test(await card.innerText()));
+  const pullFrom = +new URLSearchParams(calls.filter((c) => c.op === 'data').at(-1).search).get('from');
+  check(`Pull now loads only the last hours, not the week again (from ${new Date(pullFrom).toTimeString().slice(0, 5)})`, Math.abs(pullFrom - (NOW - 12 * 3600_000)) < 120_000);
   hr.push([NOW, 80, 78, 83]);
   await card.getByRole('button', { name: 'Pull now' }).click();
   await pg.waitForFunction(() => /New readings/.test(document.querySelector('.card.band')?.textContent ?? ''), null, { timeout: 5000 }).catch(() => {});
@@ -112,6 +118,19 @@ const { chromium, APP, OUT, handle } = require('./harness.cjs');
   check(`heart-rate line drawn (${hrDrawn} red pixels)`, hrDrawn > 200);
   await pg.mouse.move(0, 0);
   await cv.screenshot({ path: OUT + 'band-graph.png' });
+  // Scroll back past the week held: the older week loads, and 27 Sep 15:30 reads 66.
+  const firstFrom = +new URLSearchParams(calls.find((c) => c.op === 'data').search).get('from');
+  const before = calls.filter((c) => c.op === 'data').length;
+  await pg.getByRole('button', { name: '30D', exact: true }).click();
+  await pg.waitForTimeout(800);
+  const older = calls.filter((c) => c.op === 'data').slice(before);
+  check(`scrolling back loads the week before what's held (${older.length} call)`, older.length >= 1 && +new URLSearchParams(older[0].search).get('to') === firstFrom);
+  const [u0, u1] = (await cv.getAttribute('data-view')).split(',').map(Number);
+  const box2 = await cv.boundingBox();
+  await pg.mouse.move(box2.x + LEFT + ((OLD + 30 * MIN - u0) / (u1 - u0)) * (box2.width - LEFT - RIGHT), box2.y + 40); await pg.waitForTimeout(150);
+  const ro3 = await pg.locator('.readout').innerText();
+  check(`…and its heart rate shows (${ro3.split('\n')[0]} → ${(ro3.match(/Heart rate\s*(.+)/) || [])[1]})`, /Heart rate\s*66 bpm/.test(ro3));
+  await pg.mouse.move(0, 0);
 
   // 4. Google said no.
   await pg.goto(APP + '#settings/band-failed?why=you%20said%20no%20on%20Google%27s%20page'); await pg.reload();

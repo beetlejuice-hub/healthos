@@ -4,7 +4,7 @@ import { swipeTo } from "../lib/swipe";
 import { useStore } from "../lib/store";
 import { dailyFacts, lanes } from "../lib/insights";
 import { MasterGraph } from "../components/MasterGraph";
-import { useBand } from "../lib/band-client";
+import { loadBandBefore, useBand } from "../lib/band-client";
 import { Glance } from "../components/Glance";
 import { Mind } from "../components/Mind";
 import { Connections } from "../components/Connections";
@@ -128,7 +128,7 @@ export function Insights() {
       {!nothing && <SectionBar version={`${s.entries.length}-${period}-${tab}`} tab={phone ? shown ?? tab : null} onTabs={onTabs} onTab={openTab} />}
       {!nothing && <Glance now={now} trendDays={period} report={report} />}
       {!nothing && <div className="gl" data-sec="week"><Top days={gdays} /></div>}
-      {!nothing && <MasterGraph data={data} supplements={s.supplements} focus={focus} days={gdays} band={band} />}
+      {!nothing && <MasterGraph data={data} supplements={s.supplements} focus={focus} days={gdays} band={band} onView={loadBandBefore} />}
       {!nothing && <Mind days={gdays} now={now} period={period} />}
       {!nothing && <Connections days={gdays} />}
       {!nothing && <div data-sec="connections" className="sec-wrap"><Noticed report={report} /><WorthALook items={scouted} onShow={showOnGraph} /></div>}

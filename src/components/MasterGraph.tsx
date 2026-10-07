@@ -45,7 +45,7 @@ const mixHex = (a: string, b: string, f: number) => { const p = (h: string) => {
 /** "Show on graph" from a scout pattern: these lanes, on top of each other, these days highlighted. */
 export type GraphFocus = { key: string; lanes: string[]; days: string[] };
 
-export function MasterGraph({ data, supplements, focus, days, band }: { data: Lanes; supplements: Supplement[]; focus?: GraphFocus | null; /** Per-day numbers for the readout's "the day" and "last night" (lib/glance). */ days?: GlanceDay[]; /** The Fitbit's minutes and nights (lib/band-client); null = not connected. */ band?: BandData | null }) {
+export function MasterGraph({ data, supplements, focus, days, band, onView }: { data: Lanes; supplements: Supplement[]; focus?: GraphFocus | null; /** Per-day numbers for the readout's "the day" and "last night" (lib/glance). */ days?: GlanceDay[]; /** The Fitbit's minutes and nights (lib/band-client); null = not connected. */ band?: BandData | null; /** The view now starts at t (to load older band weeks). */ onView?: (t0: number) => void }) {
   const C = useMemo(() => ({ up: cssVar("--g-now"), down: cssVar("--g-down"), line2: cssVar("--i-line-2"), ok: cssVar("--ok"), caf: cssVar("--caf"), alc: cssVar("--alc"), kcal: cssVar("--kcal"), gym: cssVar("--gym"), supp: cssVar("--supp"), wt: cssVar("--wt"), mood: cssVar("--mood"), hr: cssVar("--hr"), line: cssVar("--i-line"), ink: cssVar("--i-ink"), ink2: cssVar("--i-ink-2"), dim: cssVar("--i-dim") }), []);
   const lanes: Lane[] = useMemo(() => {
     const range = (pts: Point[], pad: number, floor?: [number, number]): [number, number] => {
@@ -102,6 +102,8 @@ export function MasterGraph({ data, supplements, focus, days, band }: { data: La
   }, [focus?.key]);
 
   const minT = data.from, maxT = data.to + 90 * MIN;
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => { onView?.(view.t1 - view.span); }, [view.t1, view.span]);
   const clampView = (t1: number, span: number) => {
     const s = Math.max(3 * HOUR, Math.min(span, maxT - minT + 3 * HOUR));
     return { span: s, t1: Math.max(minT + s, Math.min(maxT, t1)) };

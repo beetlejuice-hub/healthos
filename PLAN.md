@@ -550,3 +550,15 @@ email get Dev tools (`#dev`): raw entry editor, generate/remove sample, wipe acc
      fails without the fix; 2) chart options on a Design canvas first, owner picks; 3) heart rate after coffee and after
      workouts vs his own usual at that time of day — a pure function, tested on fake data with a planted effect (found)
      and none planted (not found); "goes with", never "causes"; 4) the long testing session on his real data.
+   - **Phase 1 done (7 Oct):** server — a phone that didn't sync for over 12 h lost the readings in between (pull now
+     starts an hour before the newest kept, up to 7 days); a minute cut by the pull window replaced its full average
+     with a partial one (window starts on a whole minute); old days were only pruned if a pull ran exactly 120 days later
+     (now the 120–180 day range each pull). App — loaded the whole week (~10k minutes) every 15 min (now only the last
+     hours, merged); scrolling the timeline back past a week showed no heart rate though the server keeps 120 days (older
+     weeks load as you scroll); Export JSON now includes the band's data (for the testing session). Each with a test
+     that fails without the fix.
+50. [ ] **Idea, not now — heart rate per Tempo task.** Owner, 7 Oct: "i have the other app Tempo, and i plan to either
+   from this app or that app to pull info so i can see what heart rate, etc i had from what task, so like i can see that
+   work made me stressed, a walk lowered the avg heartbeat… not to do now, just noting for future".
+51. [ ] **Idea, not now — a deep dive on everything the data can show.** Owner, 7 Oct: "in future we'll have to dive
+   deeep of what we can check w all the data we have, like what sympotms, and just like interesting connections".

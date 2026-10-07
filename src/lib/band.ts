@@ -132,6 +132,27 @@ export function mergeMinutes(kept: HrMinute[], fresh: HrMinute[]): HrMinute[] {
   return [...m.values()].sort((a, b) => a[0] - b[0]);
 }
 
+/** What the app holds of the band (lib/band-client): minutes, nights, daily resting HR and HRV, and from when. */
+export type BandData = { hr: HrMinute[]; sleep: SleepSession[]; rhr: Record<string, number>; hrv: Record<string, number> };
+
+/** Fold a newly loaded window into what the app holds: minutes and nights replace their old selves, nothing is lost. */
+export function mergeBand(prev: BandData | null, got: BandData): BandData {
+  if (!prev) return got;
+  const nights = new Map(prev.sleep.map((n) => [n.id, n]));
+  for (const n of got.sleep) nights.set(n.id, n);
+  return { hr: mergeMinutes(prev.hr, got.hr), sleep: [...nights.values()].sort((a, b) => a.start - b.start), rhr: { ...prev.rhr, ...got.rhr }, hrv: { ...prev.hrv, ...got.hrv } };
+}
+
+/**
+ * Where a refresh starts loading: a week back the first time; after that only the last 12 hours (late uploads
+ * fill in) or from an hour before the newest minute held, whichever is earlier — never before what's held.
+ */
+export function refreshFrom(held: { hr: HrMinute[]; from: number } | null, now: number, days = 7): number {
+  if (!held) return now - days * 86_400_000;
+  const last = held.hr.at(-1)?.[0] ?? held.from;
+  return Math.max(held.from, Math.min(last - 3600_000, now - 12 * 3600_000));
+}
+
 /** Last night's real bedtime and wake time: the main (non-nap) sleep that ended most recently before `now`. */
 export function lastNight(sessions: SleepSession[], now: number): SleepSession | null {
   return sessions.filter((s) => !s.nap && s.end <= now && now - s.end < 36 * 3600_000).sort((a, b) => b.end - a.end)[0] ?? null;

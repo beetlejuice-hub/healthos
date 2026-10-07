@@ -7,6 +7,7 @@ import { AiSettings } from "../components/Ai";
 import { ResetAll } from "../components/ResetAll";
 import { Notifications } from "../components/Notifications";
 import { Band } from "../components/Band";
+import { bandExport } from "../lib/band-client";
 
 const hhmm = (m: number) => `${String(Math.floor(m / 60)).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}`;
 
@@ -17,8 +18,11 @@ export function Settings({ tester, email }: { tester: boolean; email: string }) 
   const hasSample = useStore((s) => s.entries.some((e) => e.id.startsWith("sample:")));
   const num = (v: string) => Number(v.replace(",", ".")) || 0;
 
-  const exportJson = () => {
-    const blob = new Blob([JSON.stringify(getState(), null, 2)], { type: "application/json" });
+  // The band's data lives on the server, not in the app's store: added here so the file has everything.
+  const exportJson = async () => {
+    const mine = getState();
+    const band = await bandExport().catch(() => null);
+    const blob = new Blob([JSON.stringify({ ...mine, ...(band ? { band } : {}) }, null, 2)], { type: "application/json" });
     const a = document.createElement("a");
     a.href = URL.createObjectURL(blob); a.download = `healthos-${new Date().toISOString().slice(0, 10)}.json`; a.click();
     setTimeout(() => URL.revokeObjectURL(a.href), 1000);
@@ -76,9 +80,9 @@ export function Settings({ tester, email }: { tester: boolean; email: string }) 
       <div className="card">
         <h3>Your data <span>synced to your account</span></h3>
         <p className="note">Everything you log is saved on this device first and synced to your account, so it's on your phone and laptop. Export gives you all of it as one file.</p>
-        <button type="button" className="pill-btn" onClick={exportJson}>Export JSON</button>
+        <button type="button" className="pill-btn" onClick={() => void exportJson()}>Export JSON</button>
       </div>
-      <ResetAll onExport={exportJson} />
+      <ResetAll onExport={() => void exportJson()} />
       <p className="note" style={{ textAlign: "center" }}>Version {__BUILD__.commit} · built {new Date(__BUILD__.at).toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}</p>
     </div>
   );

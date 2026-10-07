@@ -22,8 +22,16 @@ export const PULL_EVERY_MS = 15 * 60_000;
 export const PULL_GAP_MS = 20_000;
 const DAY = 86_400_000;
 const KEEP_DAYS = 120;
-/** First pull: two days back. After that, the last 12 h again each time — the band can upload hours late. */
-const FIRST_MS = 2 * DAY, AGAIN_MS = 12 * 3600_000;
+/**
+ * First pull: two days back. After that, the last 12 h again each time (the band can upload hours late) — or
+ * from an hour before the newest reading kept, if that's older: a phone off for a day uploads a day at once.
+ * Never more than 7 days (what the band itself holds). Always from a whole minute, so no minute is half-read.
+ */
+const FIRST_MS = 2 * DAY, AGAIN_MS = 12 * 3600_000, MAX_BACK_MS = 7 * DAY;
+export function hrFrom(now: number, first: boolean, latest: number | undefined): number {
+  const from = first ? now - FIRST_MS : Math.max(now - MAX_BACK_MS, Math.min(now - AGAIN_MS, (latest ?? now) - 3600_000));
+  return Math.floor(from / 60_000) * 60_000;
+}
 /** Pages per kind per pull. Cloudflare allows 50 outside calls per run; this keeps one pull under ~25. */
 const MAX_PAGES = 20;
 
@@ -98,12 +106,13 @@ export class BandHub {
     const first = prev.lastOk == null;
     let latest = prev.latest;
     try {
-      const hr = readHeartRate(await this.list("heart-rate", sampleFilter("heart_rate", now - (first ? FIRST_MS : AGAIN_MS)), 10000, errors));
+      const hr = readHeartRate(await this.list("heart-rate", sampleFilter("heart_rate", hrFrom(now, first, prev.latest)), 10000, errors));
       const byDay = new Map<string, HrMinute[]>();
       for (const m of perMinute(hr)) { const k = utcDay(m[0]); const a = byDay.get(k); if (a) a.push(m); else byDay.set(k, [m]); }
       for (const [day, mins] of byDay) await this.storage.put(`hr:${day}`, mergeMinutes((await this.storage.get<HrMinute[]>(`hr:${day}`)) ?? [], mins));
       if (hr.length) latest = Math.max(latest ?? 0, hr[hr.length - 1].t);
-      await this.storage.delete(`hr:${utcDay(now - KEEP_DAYS * DAY)}`);
+      // Older days go, including any a pause in pulling skipped over.
+      for (let d = KEEP_DAYS; d <= KEEP_DAYS + 60; d++) await this.storage.delete(`hr:${utcDay(now - d * DAY)}`);
     } catch (e) { errors.push(String((e as Error).message)); }
     try {
       const fresh = readSleep(await this.list("sleep", sleepFilter(utcDay(now - (first ? 14 : 3) * DAY)), 25, errors));

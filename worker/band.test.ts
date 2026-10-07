@@ -44,7 +44,11 @@ function google(opts: { hr?: unknown[]; pageSize?: number; expireAccessOnce?: bo
       const type = url.pathname.split("/")[5];
       if (type === opts.failType) return new Response("boom", { status: 500 });
       if (type === "heart-rate") {
-        const all = opts.hr ?? [], size = opts.pageSize ?? 1000, at = Number(url.searchParams.get("pageToken") || 0);
+        // Like Google: only samples inside the filter's time range.
+        const f = url.searchParams.get("filter") ?? "", from = f.match(/>= "([^"]+)"/)?.[1], to = f.match(/< "([^"]+)"/)?.[1];
+        const tOf = (p: unknown) => Date.parse((p as { heartRate: { sampleTime: { physicalTime: string } } }).heartRate.sampleTime.physicalTime);
+        const all = (opts.hr ?? []).filter((p) => (!from || tOf(p) >= Date.parse(from)) && (!to || tOf(p) < Date.parse(to)));
+        const size = opts.pageSize ?? 1000, at = Number(url.searchParams.get("pageToken") || 0);
         return Response.json({ dataPoints: all.slice(at, at + size), ...(at + size < all.length ? { nextPageToken: String(at + size) } : {}) });
       }
       if (type === "sleep") return Response.json({ dataPoints: [{ name: "users/me/dataTypes/sleep/dataPoints/n1", sleep: { interval: { startTime: "2026-10-06T21:40:00Z", endTime: "2026-10-07T05:10:00Z" }, summary: { minutesAsleep: 412 } } }] });
@@ -124,6 +128,41 @@ describe("BandHub", () => {
     expect(kept.length).toBe(27);
     expect(kept[0]).toEqual([t, 60, 60, 60]);
     expect(kept.at(-1)).toEqual([t + 26 * 60_000, 98, 98, 98]);
+  });
+
+  it("a minute cut by the start of the pull window isn't replaced by its partial average", async () => {
+    const m0 = Date.UTC(2026, 9, 7, 2, 0);
+    const opts = { hr: [hrPoint(m0 + 5_000, 60), hrPoint(m0 + 45_000, 70)] as unknown[] };
+    const { h, st, at } = setup(google(opts));
+    await connect(h);
+    await h.alarm();
+    expect(st.m.get("hr:2026-10-07")).toEqual([[m0, 65, 60, 70]]);
+    at(m0 + 30_000 + 12 * 3600_000); // the 12-hour window now starts at 02:00:30
+    await h.alarm();
+    expect(st.m.get("hr:2026-10-07")).toEqual([[m0, 65, 60, 70]]);
+  });
+
+  it("readings uploaded late (phone off for a day) are still fetched", async () => {
+    const opts = { hr: [hrPoint(T0 - 60_000, 61)] as unknown[] };
+    const { h, st, at } = setup(google(opts));
+    await connect(h);
+    await h.alarm();
+    // 20 hours with no sync, then the band uploads all of it at once.
+    for (let k = 1; k <= 20 * 60; k += 30) opts.hr.push(hrPoint(T0 + k * 60_000, 70));
+    at(T0 + 20 * 3600_000 + 120_000);
+    await h.alarm();
+    const kept = [...((st.m.get("hr:2026-10-07") as number[][]) ?? []), ...((st.m.get("hr:2026-10-08") as number[][]) ?? [])];
+    expect(kept.length).toBe(1 + 40);
+    expect(kept.some((m) => m[0] === T0 + 3600_000 + 60_000)).toBe(true); // 11:01, more than 12 h before the second pull
+  });
+
+  it("old days are deleted even after a pause, not just the one exactly 120 days back", async () => {
+    const { h, st } = setup();
+    await connect(h);
+    for (const d of [125, 130, 160, 119]) st.m.set(`hr:${new Date(T0 - d * 86_400_000).toISOString().slice(0, 10)}`, [[0, 1, 1, 1]]);
+    await h.alarm();
+    const days = [...st.m.keys()].filter((k) => k.startsWith("hr:"));
+    expect(days).toEqual([`hr:${new Date(T0 - 119 * 86_400_000).toISOString().slice(0, 10)}`]);
   });
 
   it("more pages than one pull may take: keeps what it got and says so", async () => {

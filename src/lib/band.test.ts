@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { authUrl, BAND_SCOPES, dailyFilter, lastNight, mergeMinutes, perMinute, readDaily, readHeartRate, readHrv, readSleep, readState, sampleFilter, signState, sleepFilter } from "./band";
+import { authUrl, BAND_SCOPES, dailyFilter, lastNight, mergeBand, mergeMinutes, refreshFrom, perMinute, readDaily, readHeartRate, readHrv, readSleep, readState, sampleFilter, signState, sleepFilter } from "./band";
 
 // Shapes as Google's CLI reads them (pkg/output/simplify.go): the type object holds sampleTime / interval / date.
 const hr = (t: string, bpm: unknown) => ({ name: `users/me/dataTypes/heart-rate/dataPoints/${t}`, dataSource: { device: { displayName: "Charge 6" } }, heartRate: { sampleTime: { physicalTime: t, utcOffset: "7200s" }, beatsPerMinute: bpm } });
@@ -75,5 +75,26 @@ describe("asking Google", () => {
     expect(await readState(st, "other", now)).toBeNull();
     expect(await readState(st, "secret", now + 16 * 60_000)).toBeNull();
     expect(await readState("junk", "secret", now)).toBeNull();
+  });
+});
+
+describe("what the app holds", () => {
+  const H = 3600_000, now = Date.UTC(2026, 9, 7, 16, 0);
+  it("first load: a week; then only the last 12 h, or from an hour before the newest minute if that's older", () => {
+    expect(refreshFrom(null, now)).toBe(now - 7 * 86_400_000);
+    const from = now - 7 * 86_400_000;
+    expect(refreshFrom({ hr: [[now - 5 * 60_000, 70, 70, 70]], from }, now)).toBe(now - 12 * H);
+    expect(refreshFrom({ hr: [[now - 20 * H, 70, 70, 70]], from }, now)).toBe(now - 21 * H);
+    expect(refreshFrom({ hr: [], from: now - 2 * H }, now)).toBe(now - 2 * H); // never before what's held
+  });
+  it("merging a new window keeps the old minutes and nights, replaces re-sent ones", () => {
+    const n = (id: string, start: number) => ({ id, start, end: start + H, asleepMin: 50, awakeMin: 0, toFallAsleepMin: 0, nap: false, stageMin: {}, stages: [] });
+    const a = { hr: [[1, 60, 60, 60], [2, 61, 61, 61]] as [number, number, number, number][], sleep: [n("x", 0)], rhr: { "2026-10-06": 55 }, hrv: {} };
+    const b = { hr: [[2, 65, 64, 66], [3, 70, 70, 70]] as [number, number, number, number][], sleep: [{ ...n("x", 0), asleepMin: 55 }, n("y", 5 * H)], rhr: { "2026-10-07": 54 }, hrv: { "2026-10-07": 40 } };
+    const m = mergeBand(a, b);
+    expect(m.hr).toEqual([[1, 60, 60, 60], [2, 65, 64, 66], [3, 70, 70, 70]]);
+    expect(m.sleep.map((s) => [s.id, s.asleepMin])).toEqual([["x", 55], ["y", 50]]);
+    expect(m.rhr).toEqual({ "2026-10-06": 55, "2026-10-07": 54 });
+    expect(mergeBand(null, b)).toBe(b);
   });
 });
