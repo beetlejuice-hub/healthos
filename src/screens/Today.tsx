@@ -19,6 +19,7 @@ import { parseFat } from "../lib/bodyfat";
 import { HowNow } from "../components/HowNow";
 import { DataCard, EveningRead, NowCard, Pad, Status, UsualPicker, useStackCount } from "../components/TodayParts";
 import { dayNumbers, momentOf } from "../lib/moment";
+import { restDay } from "../lib/programs";
 
 /**
  * The current time, re-read on every render and re-rendered every `ms` while open. Read fresh
@@ -120,7 +121,7 @@ export function Today() {
         <WorkoutRunning now={now} />
         <CheckInCard now={now} />
         <StackAlert />
-        {moment === "evening" && <EveningRead cafBed={cafBed} bed={bed} tier={tierOf(cafBed)} day={dayNumbers(s.entries, now)} />}
+        {moment === "evening" && <EveningRead cafBed={cafBed} bed={bed} tier={tierOf(cafBed)} day={dayNumbers(s.entries, now)} rest={restDay(s.templates, s.workouts, now)} />}
       </NowCard>
 
       <Pad now={now} stack={stack} onPickUsual={() => setPickUsual(true)} />

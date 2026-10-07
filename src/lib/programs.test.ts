@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { PROGRAMS, asSplit } from "./programs";
+import { PROGRAMS, asSplit, restDay } from "./programs";
 import { MUSCLES, MUSCLE_GROUPS, isBest, muscleWeek, restLeft, sessionSummary } from "./training";
 
 describe("premade workouts", () => {
@@ -74,5 +74,23 @@ describe("the muscle map", () => {
   it("every muscle any known exercise trains is on the map", () => {
     const named = new Set(Object.values(MUSCLES).flatMap((m) => Object.keys(m)));
     expect([...named].filter((m) => !(MUSCLE_GROUPS as readonly string[]).includes(m))).toEqual([]);
+  });
+});
+
+describe("the plan's rest day (Today, evening)", () => {
+  const plan = asSplit(PROGRAMS.find((p) => p.id === "ppm")!);
+  const at = (d: number, hm: string) => new Date(`2026-10-0${d}T${hm}:00`).getTime();
+  it("from 19:00 with no workout today, the plan's words", () => {
+    expect(restDay(plan, [{ startedAt: at(6, "18:00") }], at(7, "20:30"))).toBe("Walking, abs");
+    expect(restDay(plan, [], at(8, "01:00"))).toBe("Walking, abs"); // after midnight, still that evening
+  });
+  it("not before 19:00 (you may still train), not after a workout today, not at 01:00 after one that evening", () => {
+    expect(restDay(plan, [], at(7, "18:59"))).toBeNull();
+    expect(restDay(plan, [{ startedAt: at(7, "17:30") }], at(7, "21:00"))).toBeNull();
+    expect(restDay(plan, [{ startedAt: at(7, "22:00") }], at(8, "01:00"))).toBeNull();
+  });
+  it("only for a split that is still the plan's days, and a plan that says what rest days are", () => {
+    expect(restDay([...plan.slice(0, 2), { name: "Arms" }], [], at(7, "21:00"))).toBeNull();
+    expect(restDay(asSplit(PROGRAMS.find((p) => p.id === "ppl")!), [], at(7, "21:00"))).toBeNull();
   });
 });

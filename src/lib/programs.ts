@@ -76,3 +76,19 @@ export function asTemplate(d: ProgramDay): Template {
 export function asSplit(p: Program): Template[] {
   return p.days.map(asTemplate);
 }
+
+/**
+ * The plan's rest day, for Today's evening card (owner, 7 Oct: "go" to "Rest day · walk, abs"). Only when your
+ * split is still a program's days (by name) and that program says what rest days are; only from 19:00, when a
+ * day without a workout is a rest day rather than one you haven't trained in yet. The program's own words.
+ */
+export function restDay(templates: { name: string }[], workouts: { startedAt: number }[], now: number, eveningFrom = 19): string | null {
+  const d = new Date(now);
+  if (d.getHours() < eveningFrom && d.getHours() >= 5) return null;
+  // After midnight it is still the evening of the day that's ending.
+  const start = new Date(now); if (start.getHours() < 5) start.setDate(start.getDate() - 1); start.setHours(5, 0, 0, 0);
+  if (workouts.some((w) => w.startedAt >= start.getTime() && w.startedAt <= now)) return null;
+  const names = templates.map((t) => t.name).join("|");
+  const p = PROGRAMS.find((x) => x.days.map((day) => day.name).join("|") === names);
+  return p?.other?.find((o) => /^rest/i.test(o.name))?.what ?? null;
+}

@@ -59,14 +59,15 @@ export function NowCard({ moment, children }: { moment: Moment; children: ReactN
   );
 }
 
-/** Evening: caffeine at bed in words, and the day in numbers. */
-export function EveningRead({ cafBed, bed, tier, day }: { cafBed: number; bed: number; tier: "low" | "possible" | "higher"; day: { kcal: number | null; protein: number | null; mood: number | null } }) {
+/** Evening: a rest day from your plan, caffeine at bed in words, and the day in numbers. */
+export function EveningRead({ cafBed, bed, tier, day, rest }: { cafBed: number; bed: number; tier: "low" | "possible" | "higher"; day: { kcal: number | null; protein: number | null; mood: number | null }; rest: string | null }) {
   const nums: [string, string][] = [];
   if (day.kcal != null) nums.push([fmt(day.kcal), "kcal today"]);
   if (day.protein != null) nums.push([`${fmt(day.protein)} g`, "protein"]);
   if (day.mood != null) nums.push([day.mood.toFixed(1), "mood, avg"]);
   return (
     <div className="t2-evening">
+      {rest && <p className="t2-rest"><b>Rest day</b> · {rest.toLowerCase()}</p>}
       <p className="t2-bedcaf">Caffeine at {clock(bed)}: <b>{cafBed === 0 ? "none" : `about ${cafBed} mg`}</b> · <b className={`tier ${tier}`}>{tier === "low" ? "low" : tier === "possible" ? "possible effect" : "higher chance"}</b></p>
       {nums.length > 0 && <div className="t2-daynums">{nums.map(([v, k]) => <span key={k}><b>{v}</b>{k}</span>)}</div>}
     </div>

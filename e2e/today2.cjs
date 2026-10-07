@@ -84,9 +84,14 @@ const { chromium, APP, OUT, handle } = require('./harness.cjs');
   check('21:20: the Now card is "Before bed"', /Before bed/i.test(ev) && await pg.locator('.t2-now.m-evening').count() === 1);
   check(`caffeine at bed, with the word for it (${(await pg.locator('.t2-bedcaf').innerText())})`, /Caffeine at 23:00: (none|about \d+ mg) · (low|possible effect|higher chance)/.test(await pg.locator('.t2-bedcaf').innerText()));
   check(`the day in numbers (${(await pg.locator('.t2-daynums').innerText()).replace(/\s+/g, ' ')})`, /1,241\s*kcal today/.test(await pg.locator('.t2-daynums').innerText()) && /78 g\s*protein/.test(await pg.locator('.t2-daynums').innerText()) && /7\.0\s*mood, avg/.test(await pg.locator('.t2-daynums').innerText()));
+  check(`a rest day from the plan, no workout today (${await pg.locator('.t2-rest').innerText().catch(() => 'none')})`, /Rest day · walking, abs/.test(await pg.locator('.t2-rest').innerText().catch(() => '')));
   check('the evening stack comes before the check-in', await pg.evaluate(() => { const c = document.querySelector('.t2-now'); const i = c.querySelector('.t2-items'), f = c.querySelector('#feel'); return !!i && !!f && !!(i.compareDocumentPosition(f) & Node.DOCUMENT_POSITION_FOLLOWING); }));
   check('21:20: nothing scrolls sideways', !(await sideways(pg)));
   await pg.screenshot({ path: OUT + 'today2-evening.png' });
+  // Trained this evening: no rest-day line.
+  await pg.evaluate(() => { const k = 'healthos.v1:u-test', s = JSON.parse(localStorage.getItem(k)); s.workouts = [...(s.workouts || []), { id: 'wk', template: 'Push + Quads', startedAt: new Date(2026, 9, 6, 19, 30).getTime(), endedAt: new Date(2026, 9, 6, 20, 30).getTime() }]; localStorage.setItem(k, JSON.stringify(s)); });
+  await pg.reload(); await pg.waitForSelector('text=Settings'); await pg.waitForTimeout(400);
+  check('after a workout today, no rest-day line', await pg.locator('.t2-rest').count() === 0 && await pg.locator('.t2-now.m-evening').count() === 1);
   await ctx.close();
   console.log('errors: ' + JSON.stringify(errs)); await b.close();
 })().catch((e) => { console.log('CRASH ' + e.message); process.exit(1); });
