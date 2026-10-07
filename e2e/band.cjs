@@ -66,8 +66,17 @@ const { chromium, APP, OUT, handle } = require('./harness.cjs');
   check(`start asked by POST, signed in`, calls.some((c) => c.op === 'start' && c.method === 'POST' && /^Bearer /.test(c.auth)));
   check(`back from Google: "Connected", the address cleaned up (${await pg.evaluate(() => location.hash)})`, /Connected\. The first pull/.test(txt) && await pg.evaluate(() => location.hash) === '#settings');
   check(`card shows it working: last pull, latest HR, last night, resting HR\n      ${txt.replace(/\n/g, ' | ')}`,
-    /Last pull\s*12:56/.test(txt) && /Latest heart rate\s*72 bpm · 12:58/.test(txt) && /Last night\s*6 h 52 m asleep · 23:40–07:10/.test(txt) && /Resting heart rate\s*54 bpm/.test(txt));
+    /Checked Google\s*12:56/.test(txt) && /Newest reading\s*72 bpm · 12:58 · 2 min ago/.test(txt) && /band → Fitbit app → Google/.test(txt) && /Last night\s*6 h 52 m asleep · 23:40–07:10/.test(txt) && /Resting heart rate\s*54 bpm/.test(txt));
   check('connected: asked for a pull, then a week of data', calls.some((c) => c.op === 'sync' && c.method === 'POST') && calls.some((c) => c.op === 'data' && Math.abs(+new URLSearchParams(c.search).get('from') - (NOW - 7 * 86_400_000)) < 120_000));
+  // Owner, 7 Oct: "date doesnt match even after clicking pull now". Pull now says what it found.
+  await card.getByRole('button', { name: 'Pull now' }).click();
+  await pg.waitForFunction(() => /Nothing newer|New readings/.test(document.querySelector('.card.band')?.textContent ?? ''), null, { timeout: 5000 }).catch(() => {});
+  check('Pull now with nothing new: says so, and what to do', /Nothing newer from Google yet — the band last sent at 12:58\. Open the Fitbit app/.test(await card.innerText()));
+  hr.push([NOW, 80, 78, 83]);
+  await card.getByRole('button', { name: 'Pull now' }).click();
+  await pg.waitForFunction(() => /New readings/.test(document.querySelector('.card.band')?.textContent ?? ''), null, { timeout: 5000 }).catch(() => {});
+  const txt2 = await card.innerText();
+  check('Pull now with new readings: says up to when, and the card moves on', /New readings, up to 13:00\./.test(txt2) && /Newest reading\s*80 bpm · 13:00 · just now/.test(txt2));
   const cb = await card.boundingBox();
   check(`card fits the phone (${Math.round(cb.width)} px, page ${await pg.evaluate(() => document.documentElement.scrollWidth)})`, cb.x >= 0 && cb.x + cb.width <= 390 && await pg.evaluate(() => document.documentElement.scrollWidth) <= 390);
   await card.scrollIntoViewIfNeeded();
@@ -79,7 +88,7 @@ const { chromium, APP, OUT, handle } = require('./harness.cjs');
   const lanes = (await cv.getAttribute('data-lanes')).split(',');
   check(`timeline has heart rate and sleep lanes (${lanes.join(' ')})`, lanes.includes('hr') && lanes.includes('sleep'));
   const ro = await pg.locator('.readout').innerText();
-  check(`readout at now: heart rate 72, the band's night, resting HR\n      ${ro.replace(/\n/g, ' | ')}`, /Heart rate\s*72 bpm/.test(ro) && /Band\s*23:40–07:10 · 6 h 52 asleep/.test(ro) && /Deep · REM\s*70 · 102 min/.test(ro) && /Resting HR\s*54 bpm/.test(ro));
+  check(`readout at now: heart rate 80 (the pulled one), the band's night, resting HR\n      ${ro.replace(/\n/g, ' | ')}`, /Heart rate\s*80 bpm/.test(ro) && /Band\s*23:40–07:10 · 6 h 52 asleep/.test(ro) && /Deep · REM\s*70 · 102 min/.test(ro) && /Resting HR\s*54 bpm/.test(ro));
   const openLanes = async () => { if (await pg.locator('.lanes-t').getAttribute('aria-expanded') !== 'true') await pg.locator('.lanes-t').click(); };
   await openLanes();
   const leg = await pg.locator('.legend').innerText();

@@ -32,7 +32,7 @@ async function api<T>(op: string, post = false): Promise<T> {
 
 const pick = (j: BandStatus): BandStatus => ({ connected: j.connected, needsReconnect: j.needsReconnect, connectedAt: j.connectedAt, lastSync: j.lastSync, latest: j.latest, error: j.error });
 
-/** Ask the Worker to pull from Google (at most once a minute; it says no more often), then load the week. */
+/** Ask the Worker to pull from Google (at most once every 20 s; it says no more often), then load the week. */
 export async function refreshBand(now = Date.now()): Promise<void> {
   if (state.loading) return;
   set({ loading: true });
@@ -58,6 +58,9 @@ export async function disconnectBand(): Promise<void> {
   set({ status: { connected: false, needsReconnect: false, connectedAt: null, lastSync: null, latest: null, error: null }, data: null });
 }
 
+/** The newest reading the server has (ms), or null. For "Pull now" to say whether anything new came. */
+export const bandLatest = (): number | null => (state.status && state.status !== "off" ? state.status.latest : null);
+
 export function useBand(): State {
   return useSyncExternalStore((f) => { subs.add(f); return () => subs.delete(f); }, () => state, () => state);
 }
@@ -71,7 +74,7 @@ export function startBand(): void {
   setInterval(() => { if (document.visibilityState === "visible") void refreshBand(); }, 15 * 60_000);
   document.addEventListener("visibilitychange", () => {
     const s = state.status;
-    // Back to the app after a while: fresh numbers (the Worker refuses more than one pull a minute).
+    // Back to the app after a while: fresh numbers (the Worker refuses more than one pull every 20 s).
     if (document.visibilityState === "visible" && s && s !== "off" && s.connected && Date.now() - (s.lastSync ?? 0) > 5 * 60_000) void refreshBand();
   });
 }

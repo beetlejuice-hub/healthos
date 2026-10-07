@@ -19,6 +19,7 @@ type Auth = { refresh: string; access?: string; accessExp?: number; connectedAt:
 type Sync = { lastRun?: number; lastOk?: number; latest?: number; error?: string };
 
 export const PULL_EVERY_MS = 15 * 60_000;
+export const PULL_GAP_MS = 20_000;
 const DAY = 86_400_000;
 const KEEP_DAYS = 120;
 /** First pull: two days back. After that, the last 12 h again each time — the band can upload hours late. */
@@ -142,8 +143,8 @@ export class BandHub {
     if (path === "status") return json(await this.status());
     if (path === "sync") {
       const s = await this.sync();
-      // Opening the app pulls, but not more than once a minute.
-      if ((await this.status()).connected && !(s.lastRun && this.now() - s.lastRun < 60_000)) await this.pull();
+      // Opening the app or "Pull now" pulls, but not more than once every 20 s (a double tap, two devices).
+      if ((await this.status()).connected && !(s.lastRun && this.now() - s.lastRun < PULL_GAP_MS)) await this.pull();
       return json(await this.status());
     }
     if (path === "data") {

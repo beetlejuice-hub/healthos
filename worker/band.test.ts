@@ -178,16 +178,16 @@ describe("BandHub", () => {
     expect(await status(h)).toMatchObject({ lastSync: T0, error: "sleep 500" });
   });
 
-  it("sync from the app pulls, but not twice in a minute", async () => {
+  it("sync from the app pulls, but not twice within 20 seconds", async () => {
     const { h, g, at } = setup();
     await connect(h);
     await h.fetch(post("sync"));
     const n = g.health().length;
     expect(n).toBeGreaterThan(0);
-    at(T0 + 30_000);
+    at(T0 + 15_000);
     await h.fetch(post("sync"));
     expect(g.health().length).toBe(n);
-    at(T0 + 61_000);
+    at(T0 + 21_000);
     await h.fetch(post("sync"));
     expect(g.health().length).toBeGreaterThan(n);
   });

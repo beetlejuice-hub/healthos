@@ -4,12 +4,14 @@
  */
 
 import { useEffect, useRef, useState } from "react";
-import { disconnectBand, refreshBand, startConnect, useBand } from "../lib/band-client";
+import { bandLatest, disconnectBand, refreshBand, startConnect, useBand } from "../lib/band-client";
 import { lastNight } from "../lib/band";
 import { clock, dayLabel, localDay } from "../lib/time";
 
 /** "14:05" today, "Tue 6 Oct 23:10" before. */
 const ago = (t: number) => `${localDay(t) === localDay(Date.now()) ? "" : `${dayLabel(t)} `}${clock(t)}`;
+/** "just now", "6 min ago", "2 h ago" — how old the newest reading is, which is what "is it working?" needs. */
+const age = (t: number, now: number) => { const m = Math.floor((now - t) / 60_000); return m < 1 ? "just now" : m < 60 ? `${m} min ago` : `${Math.floor(m / 60)} h ago`; };
 const hm = (min: number) => `${Math.floor(min / 60)} h ${String(Math.round(min % 60)).padStart(2, "0")} m`;
 
 /** What Google's page sent back: #settings/band-ok or #settings/band-failed?why=… */
@@ -34,9 +36,18 @@ export function Band() {
     if (back.ok) { void refreshBand(); setTimeout(() => void refreshBand(), 20_000); }
   }, []);
 
+  // Owner, 7 Oct: "date doesnt match even after clicking pull now" — the newest reading is older than the pull,
+  // because the band sends through the Fitbit app every 15–30 min. So Pull now says what it found.
+  const pullNow = async () => {
+    const before = bandLatest();
+    await refreshBand();
+    const after = bandLatest();
+    if (after == null) return;
+    return after > (before ?? 0) ? `New readings, up to ${clock(after)}.` : `Nothing newer from Google yet — the band last sent at ${clock(after)}. Open the Fitbit app on your phone so it sends, then pull again.`;
+  };
   const run = async (f: () => Promise<unknown>, done?: string) => {
     setBusy(true); setMsg(null);
-    try { await f(); if (done) setMsg(done); } catch (e) { setMsg((e as Error).message); }
+    try { const said = await f(); if (typeof said === "string") setMsg(said); else if (done) setMsg(done); } catch (e) { setMsg((e as Error).message); }
     setBusy(false);
   };
 
@@ -60,15 +71,17 @@ export function Band() {
       </>}
       {s?.connected && <>
         <ul className="band-facts">
-          <li><b>Last pull</b><span>{s.lastSync ? ago(s.lastSync) : loading ? "pulling now…" : "waiting for the first one"}</span></li>
-          {lastHr && <li><b>Latest heart rate</b><span>{lastHr[1]} bpm · {ago(lastHr[0])}</span></li>}
+          {lastHr && <li><b>Newest reading</b><span>{lastHr[1]} bpm · {ago(lastHr[0])} · <span className="nw">{age(lastHr[0], Date.now())}</span></span></li>}
+          <li><b>Checked Google</b><span>{s.lastSync ? ago(s.lastSync) : loading ? "pulling now…" : "waiting for the first one"}</span></li>
           {night && <li><b>Last night</b><span>{night.asleepMin != null ? `${hm(night.asleepMin)} asleep` : "slept"} · <span className="nw">{clock(night.start)}–{clock(night.end)}</span></span></li>}
+          {data && data.sleep.length === 0 && s.lastSync && <li><b>Sleep</b><span>after your first night wearing it</span></li>}
           {rhr != null && <li><b>Resting heart rate</b><span>{rhr} bpm</span></li>}
           {s.lastSync && !lastHr && <li className="wide">No heart rate yet — open the Fitbit app so the band syncs to it.</li>}
         </ul>
+        {lastHr && <p className="note">Readings go band → Fitbit app → Google, usually every 15–30 minutes, so the newest is often a few minutes old. Opening the Fitbit app makes the band send now.</p>}
         {s.error && <p className="note">Some of the last pull didn't come through ({s.error}); the next one tries again.</p>}
         <div className="row2">
-          <button type="button" className="pill-btn" disabled={busy || loading} onClick={() => void run(() => refreshBand())}>{loading ? "Pulling…" : "Pull now"}</button>
+          <button type="button" className="pill-btn" disabled={busy || loading} onClick={() => void run(pullNow)}>{loading ? "Pulling…" : "Pull now"}</button>
           <button type="button" className="pill-btn" disabled={busy} onClick={() => { if (confirm("Disconnect the band? This deletes the heart rate and sleep HealthOS pulled from it.")) void run(disconnectBand, "Disconnected."); }}>Disconnect</button>
         </div>
       </>}
