@@ -51,7 +51,7 @@ const visibleSecs = (pg) => pg.evaluate(() => [...new Set([...document.querySele
         const secs = await visibleSecs(pg);
         check(`phone: ${label} tab shows only that section (${secs.join(', ')}), back at the top`, JSON.stringify(secs) === JSON.stringify([sec]) && await pg.evaluate(() => window.scrollY) === 0);
         check(`phone: ${label} → #insights/${sec}`, await pg.evaluate(() => location.hash) === `#insights/${sec}`);
-        check(`phone: ${label} never scrolls sideways`, await pg.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth));
+        check(`phone: ${label} never scrolls sideways`, await pg.evaluate(() => document.documentElement.scrollWidth <= (window.matchMedia('(max-width: 700px)').matches ? 390 : window.innerWidth)));
       }
       await pg.screenshot({ path: OUT + 'phone-data.png' });
       await pg.reload(); await pg.waitForSelector('.secbar', { timeout: 8000 }).catch(() => {}); await pg.waitForTimeout(500);

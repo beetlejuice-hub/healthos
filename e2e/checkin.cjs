@@ -43,6 +43,6 @@ const { chromium, APP, OUT, handle } = require('./harness.cjs');
   await card.getByRole('button', { name: 'OK' }).click(); await pg.waitForTimeout(200);
   s = await st();
   check('keeping changes nothing but is remembered', s.goals.kcal === 2450 && s.settings.checkins.length === 2);
-  check('nothing scrolls sideways', await pg.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth));
+  check('nothing scrolls sideways', await pg.evaluate(() => document.documentElement.scrollWidth <= (window.matchMedia('(max-width: 700px)').matches ? 390 : window.innerWidth)));
   console.log('errors: ' + JSON.stringify(errs)); await b.close();
 })().catch((e) => { console.log('CRASH ' + e.message); process.exit(1); });

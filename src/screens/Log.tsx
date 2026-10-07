@@ -864,7 +864,7 @@ function BodyTab({ done }: { done: (m: string) => void }) {
         <p className="note">{trend ? `Trend ${trend.perDay * 7 >= 0 ? "+" : "−"}${Math.abs(trend.perDay * 7).toFixed(2)} kg a week · trend weight ${trend.nowKg.toFixed(1)} kg` : `The trend line appears after 8 weigh-ins over 2 weeks (${pts.length} so far).`}</p>
       </div>}
       <BodyFatCard s={bf} />
-      <div className="list">{weights.map((w) => <div className="li" key={w.id}><span>{w.kg} kg{w.fatPct != null ? <em> · {w.fatPct}% fat</em> : null}<small>{localDay(w.at)} {clock(w.at)}</small></span><button type="button" className="x" aria-label="Delete" onClick={() => act.removeEntry(w.id)}>×</button></div>)}</div>
+      <div className="list">{weights.map((w) => <div className="li" key={w.id}><span>{w.kg} kg{w.fatPct != null ? <em> · {w.fatPct}% fat</em> : null}<small>{dayLabel(w.at)} · {clock(w.at)}</small></span><button type="button" className="x" aria-label="Delete" onClick={() => act.removeEntry(w.id)}>×</button></div>)}</div>
     </div>
   );
 }

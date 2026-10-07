@@ -64,7 +64,7 @@ const { chromium, APP, OUT, handle } = require('./harness.cjs');
   w = (await st()).workouts.find((x) => x.endedAt === null);
   check('undo', w.cardio.done === undefined && await pg.locator('.tile.cardio').getByRole('button', { name: 'Done' }).count() === 1);
   check('the split itself didn\'t change', JSON.stringify((await st()).templates[0].exercises.map((e) => e.name)) === '["Squat","DB bench press","DB shoulder press","Leg extension","Lateral raise","Rope pushdown"]');
-  check('nothing scrolls sideways', await pg.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth));
+  check('nothing scrolls sideways', await pg.evaluate(() => document.documentElement.scrollWidth <= (window.matchMedia('(max-width: 700px)').matches ? 390 : window.innerWidth)));
 
   // The cardio is part of the day you can edit.
   await pg.getByRole('button', { name: /Finish/ }).click(); await pg.waitForTimeout(150);

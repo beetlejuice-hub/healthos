@@ -20,7 +20,7 @@ const { chromium, APP, OUT, handle } = require('./harness.cjs');
     return { ctx, pg };
   };
   const st = (pg) => pg.evaluate(() => JSON.parse(localStorage.getItem('healthos.v1:u-test') || '{}'));
-  const sideways = (pg) => pg.evaluate(() => document.documentElement.scrollWidth > window.innerWidth);
+  const sideways = (pg) => pg.evaluate(() => document.documentElement.scrollWidth > 390); // not innerWidth: a mobile viewport widens itself to the content
   const tile = (pg, name) => pg.locator('.t2-tile', { hasText: name }).innerText();
 
   // Morning: start the day — sleep is asked, in the yellow card.

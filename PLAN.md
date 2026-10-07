@@ -500,3 +500,8 @@ email get Dev tools (`#dev`): raw entry editor, generate/remove sample, wipe acc
    Settings, AI and Dev take Workout's black and yellow from the app root, so every card, input and the tab bar
    follow; screen titles and card headings in the condensed caps. Log → Food's two buttons shortened so they
    don't wrap ("+ Your own food", "+ From a label").
+45. [x] **Last rough edges of the look** (7 Oct — Log.tsx, index.css). Weigh-ins read "Wed 7 Oct · 08:00", not
+   "2026-10-07 08:00"; a card's subtitle sits beside its title and wraps there (a title only wraps past ~60% of
+   the width); a long email no longer pushes Settings off a 360 px phone. The e2e width checks under mobile
+   emulation compared against a viewport that widens itself to the content, so they could never fail; they
+   now compare against the real width. e2e/polish.cjs.

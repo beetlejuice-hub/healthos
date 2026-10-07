@@ -42,7 +42,7 @@ const STARTER = [
   check('the cardio day and rest days', /Cardio\s*40–45 min stairmaster plus incline walk/.test(txt) && /Rest days\s*Walking, abs/.test(txt));
   check('and his rules', /1–2 reps short of failure/.test(txt) && /150 kcal less/.test(txt) && /lighter week every 6–8 weeks/.test(txt));
   check('says how to change it', /press Edit on any day/.test(txt));
-  check('nothing scrolls sideways', await pg.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth));
+  check('nothing scrolls sideways', await pg.evaluate(() => document.documentElement.scrollWidth <= (window.matchMedia('(max-width: 700px)').matches ? 390 : window.innerWidth)));
   await card.screenshot({ path: OUT + 'plan-card.png' });
 
   await card.getByRole('button', { name: 'Make this my split…' }).click();
