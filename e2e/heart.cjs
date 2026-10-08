@@ -62,9 +62,10 @@ function world({ days, everyMin = 1, seed = 1 }) {
   const geom = async (pg) => {
     const cv = pg.locator('.mg-canvas');
     const [t0, t1] = (await cv.getAttribute('data-view')).split(',').map(Number), [L, R] = (await cv.getAttribute('data-plot')).split(',').map(Number);
-    const [state, nc, ng, top, h] = (await cv.getAttribute('data-hr')).split(',');
+    const [state, nc, ng, top, h, range] = (await cv.getAttribute('data-hr')).split(',');
+    const [lo, hi] = (range || '').split('-').map(Number);
     const box = await cv.boundingBox();
-    return { cv, t0, t1, L, R, state, nc: +nc, ng: +ng, top: +top, h: +h, box, xOf: (t) => box.x + L + ((t - t0) / (t1 - t0)) * (box.width - L - R) };
+    return { cv, t0, t1, L, R, state, nc: +nc, ng: +ng, top: +top, h: +h, lo, hi, box, xOf: (t) => box.x + L + ((t - t0) / (t1 - t0)) * (box.width - L - R) };
   };
   /** Pixels in the lane by colour family (canvas pixels, devicePixelRatio 2). */
   const colours = (pg, top, h) => pg.locator('.mg-canvas').evaluate((el, [top, h]) => {
@@ -100,6 +101,25 @@ function world({ days, everyMin = 1, seed = 1 }) {
   const c1 = await colours(pg, g.top, g.h);
   check(`drawn: grey inside your usual, red above it (after coffee, the workout) (${JSON.stringify(c1)})`, c1.red > 300 && c1.grey > 300);
   await pg.screenshot({ path: OUT + 'heart-laptop.png', clip: { x: g.box.x, y: g.box.y + g.top - 30, width: g.box.width, height: g.h + 40 } });
+  // Owner, 8 Oct: the scale fits what's on screen, like TradingView — a workout in view is the new top;
+  // zoomed into a calm stretch, 60–80 fills the lane.
+  check(`fit: with the workout in view the top reaches its peak (${g.lo}–${g.hi})`, g.hi >= 140);
+  for (let k = 0; k < 4; k++) await pg.getByRole('button', { name: 'Zoom in' }).click();
+  await pg.waitForTimeout(200); g = await geom(pg);
+  check(`fit: zoomed into the early morning (${Math.round((g.t1 - g.t0) / 3600_000 * 10) / 10} h), the scale closes in (${g.lo}–${g.hi})`, g.hi <= 100 && g.hi - g.lo <= 40);
+  await pg.screenshot({ path: OUT + 'heart-fit-zoomed.png', clip: { x: g.box.x, y: g.box.y + g.top - 30, width: g.box.width, height: g.h + 40 } });
+  await pg.getByRole('button', { name: '1D', exact: true }).click();
+  await pg.getByRole('button', { name: 'Log', exact: true }).click(); await pg.waitForTimeout(200); g = await geom(pg);
+  check('log scale: switches, line still drawn', await pg.locator('.master').getAttribute('data-scale') === 'log' && (await colours(pg, g.top, g.h)).red > 300);
+  await pg.screenshot({ path: OUT + 'heart-log.png', clip: { x: g.box.x, y: g.box.y + g.top - 30, width: g.box.width, height: g.h + 40 } });
+  await pg.getByRole('button', { name: 'Fit', exact: true }).click();
+  // Full screen.
+  await pg.getByRole('button', { name: '⤢ Full screen' }).first().click(); await pg.waitForTimeout(300); g = await geom(pg);
+  const mb = await pg.locator('.master').boundingBox();
+  check(`full screen: covers the window, heart rate ~half of it (${Math.round(mb.width)}×${Math.round(mb.height)}, lane ${g.h} px)`, mb.x === 0 && mb.y === 0 && mb.width >= 1270 && mb.height >= 890 && g.h >= 0.4 * 900 - 2);
+  await pg.screenshot({ path: OUT + 'heart-big-laptop.png' });
+  await pg.keyboard.press('Escape'); await pg.waitForTimeout(200);
+  check('full screen: Esc closes it', !(await pg.locator('.master').getAttribute('class')).includes('big'));
   // C: after every coffee, after a workout.
   const card = pg.locator('#ins-heart');
   await card.scrollIntoViewIfNeeded(); await pg.waitForTimeout(300);
@@ -109,6 +129,11 @@ function world({ days, everyMin = 1, seed = 1 }) {
   check(`card: workouts and the way back down (${(ct.match(/\d workouts?\.[^\n]+/) || [])[0]})`, /2 workouts\. Back to your usual in \d+ min on average\./.test(ct));
   check('card: both charts drawn, the coffee one with a line per coffee', await card.locator('svg').count() === 2 && await card.locator('svg').first().locator('path').count() >= nCof + 1);
   await card.screenshot({ path: OUT + 'heart-card-laptop.png' });
+  await card.getByRole('button', { name: '⤢ Full screen' }).click(); await pg.waitForTimeout(300);
+  const hb = await pg.locator('.he-card').boundingBox(), sh = await pg.locator('.he-card svg').first().evaluate((e) => e.getBoundingClientRect().height);
+  check(`card full screen: covers the window, charts tall (${Math.round(hb.width)}×${Math.round(hb.height)}, chart ${Math.round(sh)} px)`, hb.x === 0 && hb.y === 0 && hb.width >= 1270 && sh >= 400);
+  await pg.screenshot({ path: OUT + 'heart-card-big.png' });
+  await pg.getByRole('button', { name: '✕ Close' }).click(); await pg.waitForTimeout(200);
   await ctx.close();
 
   // ---- phone
@@ -121,6 +146,11 @@ function world({ days, everyMin = 1, seed = 1 }) {
   await pg.locator('.mg-canvas').evaluate((el) => { el.scrollIntoView({ block: 'start' }); window.scrollBy(0, -120); }); await pg.waitForTimeout(150);
   g = await geom(pg);
   await pg.screenshot({ path: OUT + 'heart-phone.png', clip: { x: 0, y: Math.max(0, g.box.y + g.top - 30), width: 390, height: g.h + 40 } });
+  await pg.getByRole('button', { name: '⤢ Full screen' }).first().click(); await pg.waitForTimeout(400); g = await geom(pg);
+  const cvb = await pg.locator('.mg-canvas').boundingBox(), side = await pg.locator('.mg-side').boundingBox();
+  check(`phone full screen: heart rate lane ${g.h} px, chart full width (${Math.round(cvb.width)} px), side panel below it, nothing sticks out`, g.h >= 240 && cvb.width >= 380 && side.y >= cvb.y + cvb.height - 1 && await pg.evaluate(() => document.documentElement.scrollWidth) <= 390);
+  await pg.screenshot({ path: OUT + 'heart-big-phone.png' });
+  await pg.getByRole('button', { name: '✕ Close' }).click(); await pg.waitForTimeout(200);
   await pg.goto(APP + '#insights/heart'); await pg.waitForTimeout(600);
   const pc = pg.locator('#ins-heart .he-card');
   check(`phone: a Heart tab, the card fits (${Math.round((await pc.boundingBox())?.width ?? 0)} px, page ${await pg.evaluate(() => document.documentElement.scrollWidth)})`, await pc.isVisible() && (await pc.boundingBox()).width <= 390 && await pg.evaluate(() => document.documentElement.scrollWidth) <= 390 && !(await pg.locator('.master').isVisible()));

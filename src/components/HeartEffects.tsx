@@ -4,14 +4,14 @@
  * lib/hrusual (tested with planted effects); words say "goes with", and how sure.
  */
 
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { afterCoffee, afterWorkouts, usualByHour, usualReady, COFFEE_MIN_N, type AfterCoffee, type AfterWorkouts } from "../lib/hrusual";
 import { loadBandBefore, useBand } from "../lib/band-client";
 import { useWidth } from "./useWidth";
 import { localDay, DAY } from "../lib/time";
 
 type Pt = [number, number];
-const sgn = (v: number, d = 1) => `${v >= 0 ? "+" : "−"}${Math.abs(v).toFixed(d)}`;
+const sgn = (v: number, d = 1) => { const t = Math.abs(v).toFixed(d); return Number(t) === 0 ? `±${t}` : `${v > 0 ? "+" : "−"}${t}`; };
 const path = (pts: Pt[], X: (m: number) => number, Y: (v: number) => number) => pts.map(([m, v], i) => `${i ? "L" : "M"}${X(m).toFixed(1)} ${Y(v).toFixed(1)}`).join("");
 
 /** One small chart: thin lines, their average, zero, an optional strip and a marked point. */
@@ -71,6 +71,18 @@ export function HeartEffects({ now, doses, workouts }: { now: number; doses: { a
 /** Mounted only once there's data, so its width is measured from the start (the charts draw to it). */
 function HeartCard({ coffee, gym, usual }: { coffee: AfterCoffee; gym: AfterWorkouts; usual: boolean }) {
   const [ref, w] = useWidth<HTMLDivElement>();
+  // Full screen, like the timeline (owner, 8 Oct: "view it in big … other charts too").
+  const [big, setBig] = useState(false);
+  const [vh, setVh] = useState(() => (typeof window === "undefined" ? 800 : window.innerHeight));
+  useEffect(() => {
+    if (!big) return;
+    const prev = document.body.style.overflow; document.body.style.overflow = "hidden";
+    const key = (e: KeyboardEvent) => { if (e.key === "Escape") setBig(false); };
+    const size = () => setVh(window.innerHeight);
+    size(); window.addEventListener("keydown", key); window.addEventListener("resize", size);
+    return () => { document.body.style.overflow = prev; window.removeEventListener("keydown", key); window.removeEventListener("resize", size); };
+  }, [big]);
+  const chartH = (small: number) => (big ? Math.max(small, Math.round(vh * (w >= 680 ? 0.55 : 0.36))) : small);
   const two = w >= 680, cw = two ? Math.floor((w - 24) * 0.62) : w, gw = two ? w - 24 - cw : w;
   const c = coffee, g = gym;
   const cHi = Math.max(8, Math.ceil(Math.max(0, ...c.curve.map((p) => p[1]), ...c.each.flat().map((p) => p[1])) / 4) * 4);
@@ -80,18 +92,19 @@ function HeartCard({ coffee, gym, usual }: { coffee: AfterCoffee; gym: AfterWork
   return (
     <section className="he" id="ins-heart" data-sec="heart" aria-label="Heart rate after coffee and workouts">
       <div className="gl-group"><h2>Heart</h2><span>what your heart rate does after coffee and after training — against your own usual</span></div>
-      <div className="he-card" ref={ref}>
+      <div className={`he-card${big ? " big" : ""}`} ref={ref}>
+        <button type="button" className="ibtn he-big" aria-pressed={big} onClick={() => setBig(!big)}>{big ? "✕ Close" : "⤢ Full screen"}</button>
         <div className="he-row" style={{ gridTemplateColumns: two ? `${cw}px ${gw}px` : "1fr" }}>
           <div className="he-col">
             <h3>After coffee <span>bpm vs coffee-free days, same hours</span></h3>
-            {c.n > 0 && <Aligned width={cw} height={two ? 240 : 200} x={[-30, 180]} y={[cLo, cHi]} each={c.each} avg={c.curve} color="var(--caf)" strip={c.wobble || undefined}
+            {c.n > 0 && <Aligned width={cw} height={chartH(two ? 240 : 200)} x={[-30, 180]} y={[cLo, cHi]} each={c.each} avg={c.curve} color="var(--caf)" strip={c.wobble || undefined}
               mark={peak} xTicks={[[-30, "−30"], [0, "coffee"], [60, "60"], [120, "120"], [180, "180 min"]]} yTicks={[cLo, 0, Math.round(cHi / 2), cHi].filter((v, i, a) => a.indexOf(v) === i)}
               label={`Heart rate after ${c.n} coffees, each lined up at the coffee, against coffee-free days`} />}
             <p className="he-words" data-sure={c.sure}>{coffeeWords(c)}</p>
           </div>
           <div className="he-col">
             <h3>After a workout <span>coming back down</span></h3>
-            {g.n > 0 && <Aligned width={gw} height={two ? 240 : 180} x={[0, 90]} y={[-5, gHi]} each={g.each} avg={g.curve} color="var(--gym)"
+            {g.n > 0 && <Aligned width={gw} height={chartH(two ? 240 : 180)} x={[0, 90]} y={[-5, gHi]} each={g.each} avg={g.curve} color="var(--gym)"
               mark={g.backMin != null ? { m: g.backMin, text: `back in ${g.backMin} min` } : null} xTicks={[[0, "end"], [30, "30"], [60, "60"], [90, "90 min"]]} yTicks={[0, gHi / 2, gHi]}
               label={`Heart rate above your usual after ${g.n} workouts`} />}
             <p className="he-words">{workoutWords(g, usual)}</p>

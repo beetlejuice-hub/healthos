@@ -563,6 +563,19 @@ email get Dev tools (`#dev`): raw entry editor, generate/remove sample, wipe acc
      A (heart rate against your usual for the hour: band, warm/cool line, zoomed scale, workout peak written on) and B
      (a labelled window after each coffee and workout) on the timeline; C (every coffee lined up, averaged; recovery after
      workouts) as an Insights card. D (week heat ribbon) not now. Then the rest of Insights: audit, canvas, rebuild.
+   - **Built (8 Oct):** A + B on the timeline (lib/hrusual: usual per quarter hour from earlier days, workouts and the
+     hour after left out; coffee/workout windows), C as Insights → Heart (every coffee vs coffee-free days at the same
+     clock time, each against its own half hour before; recovery after workouts). Calibrated on planted worlds: the first
+     version said "likely" 6/12 with nothing planted (coffees share control days → uncertainty understated ~2×); now
+     resampled by day: "likely" 1/120, "clear" 0/120 with nothing; planted +6 "clear" 30/30, +3 found 23/30.
+     Owner, 8 Oct, mid-build: "make sure i can view it in big … like in tradingview charts": full screen for the
+     timeline (heart rate ~42 % of the screen) and the Heart card; every line lane's scale fits what's on screen
+     (workout in view = new top; zoomed into rest, 60–80 fills it); a Log switch for heart rate. Band card shows how
+     far apart Google's readings are ("my fitbit app shows heartbeat log every 15 minute, how do u get a number for
+     every minute??"); a 15-min band still draws a line.
+   - **Next (owner, 8 Oct):** "we will have to redesign the whole insights page … one by one we'll have to go through
+     the parts, full effort, 2-3 prototypes, different ideas, and ill let u know whats good and whats not..first
+     finish this". Then item 52.
 50. [ ] **Idea, not now — heart rate per Tempo task.** Owner, 7 Oct: "i have the other app Tempo, and i plan to either
    from this app or that app to pull info so i can see what heart rate, etc i had from what task, so like i can see that
    work made me stressed, a walk lowered the avg heartbeat… not to do now, just noting for future".

@@ -430,6 +430,11 @@ a { color: inherit; }
 .notes li::before { content: ""; position: absolute; left: 0; top: 8px; width: 5px; height: 1px; background: var(--i-dim); }
 .notes li b { color: var(--i-ink); font-weight: 500; }
 @media (max-width: 1100px) { .p, .p.w4, .p.w8 { grid-column: 1 / -1; } }
+/* Full screen (owner, 8 Oct: "make sure i can view it in big"): over everything, scrolls inside itself. */
+.master.big { position: fixed; inset: 0; z-index: 55; border: 0; border-radius: 0; overflow: auto; overscroll-behavior: contain; grid-template-columns: minmax(0, 1fr) 280px; align-content: start; padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px); }
+.master.big .mg-bar:first-child { position: sticky; top: 0; z-index: 2; background: var(--i-panel); }
+.mg-big { margin-left: auto; }
+@media (max-width: 820px) { .master.big { grid-template-columns: minmax(0, 1fr); } }
 @media (max-width: 820px) { .master { grid-template-columns: minmax(0, 1fr); } .mg-side { border-left: 0; border-top: 1px solid var(--i-line); } .mg-side .readout { order: -1; border-bottom: 1px solid var(--i-line); } }
 
 /* Noticed (findings) */
@@ -939,9 +944,13 @@ a { color: inherit; }
 
 /* Insights → Heart (canvas C, owner's pick 8 Oct): after coffee, after a workout. */
 .he { display: grid; gap: 14px; }
-.he-card { border: 1px solid var(--i-line); border-radius: 8px; background: var(--i-panel); padding: 16px; display: grid; gap: 12px; min-width: 0; }
+.he-card { position: relative; border: 1px solid var(--i-line); border-radius: 8px; background: var(--i-panel); padding: 16px; display: grid; gap: 12px; min-width: 0; }
+.he-big { position: absolute; top: 12px; right: 12px; }
+.he-card.big { position: fixed; inset: 0; z-index: 55; border: 0; border-radius: 0; overflow: auto; overscroll-behavior: contain; align-content: start; padding: calc(16px + env(safe-area-inset-top, 0px)) 20px calc(16px + env(safe-area-inset-bottom, 0px)); }
+.he-card.big .he-big { position: fixed; top: calc(12px + env(safe-area-inset-top, 0px)); }
 .he-row { display: grid; gap: 24px; min-width: 0; }
 .he-col { display: grid; gap: 8px; align-content: start; min-width: 0; }
+.he-col:first-child h3 { padding-right: 120px; }
 .he-col h3 { margin: 0; font-size: 14px; font-weight: 600; display: flex; flex-wrap: wrap; gap: 4px 8px; align-items: baseline; }
 .he-col h3 span { font-weight: 400; font-size: 12.5px; color: var(--i-ink-2); }
 .he-svg { display: block; max-width: 100%; overflow: visible; }

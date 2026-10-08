@@ -36,7 +36,7 @@ const STAGE_ROW: Record<string, number> = { awake: 0, restless: 0, rem: 1, light
 /** Below your usual: a cool blue, paired with the heart-rate red above it (canvas A, owner's pick 8 Oct). */
 const COOL = "#5f9be0";
 /** "+6" / "−3" — whole bpm with a real minus sign. */
-const sgnInt = (v: number) => `${v >= 0 ? "+" : "−"}${Math.abs(Math.round(v))}`;
+const sgnInt = (v: number) => { const r = Math.round(v); return r === 0 ? "±0" : `${r > 0 ? "+" : "−"}${Math.abs(r)}`; };
 const stageAt = (sleep: SleepSession[], t: number) => {
   const s = sleep.find((x) => x.start <= t && x.end >= t);
   if (!s) return null;
@@ -52,6 +52,15 @@ export function MasterGraph({ data, supplements, focus, days, band, onView }: { 
   const C = useMemo(() => ({ panel: cssVar("--i-panel"), up: cssVar("--g-now"), down: cssVar("--g-down"), line2: cssVar("--i-line-2"), ok: cssVar("--ok"), caf: cssVar("--caf"), alc: cssVar("--alc"), kcal: cssVar("--kcal"), gym: cssVar("--gym"), supp: cssVar("--supp"), wt: cssVar("--wt"), mood: cssVar("--mood"), hr: cssVar("--hr"), line: cssVar("--i-line"), ink: cssVar("--i-ink"), ink2: cssVar("--i-ink-2"), dim: cssVar("--i-dim") }), []);
   const [w, setW] = useState(900);
   const narrow = w < 640;
+  /** Full screen (owner, 8 Oct: "make sure i can view it in big"): lanes taller, heart rate about half the screen. */
+  const [big, setBig] = useState(false);
+  const [vh, setVh] = useState(() => (typeof window === "undefined" ? 800 : window.innerHeight));
+  /**
+   * The heart-rate scale. "fit" (default) fits whatever is on screen, like TradingView's auto scale (owner, 8 Oct:
+   * "if we are between 60-80 bpm … it looks volatile, but if i zoom out and have a 160 bpm, now that is the new
+   * peak"); "log" also squeezes the high end, so a workout in view doesn't flatten the resting range.
+   */
+  const [scale, setScale] = useState<"fit" | "log">("fit");
   /**
    * The heart-rate lane's numbers (lib/hrusual): your usual for each quarter hour from the days before today,
    * the 2 h after each coffee and each workout's window, a scale zoomed to your everyday range (workouts run off
@@ -89,11 +98,11 @@ export function MasterGraph({ data, supplements, focus, days, band, onView }: { 
       while (src[lo][0] < src[i][0] - 2 * MIN) sum -= src[lo++][1];
       hrPts.push([src[i][0], sum / (hi - lo)]);
     }
-    return [
+    const list: Lane[] = [
       { id: "feel", name: "How you felt", unit: "you · 1–10", color: C.mood, h: 112, kind: "feel", pts: data.mood, lo: 0.5, hi: 10.5 },
       { id: "slept", name: "Sleep rating", unit: "/10", color: C.ok, h: 22, kind: "chips", pts: data.sleep, lo: 1, hi: 10 },
       band?.hr.length
-        ? { id: "hr", name: "Heart rate", unit: "bpm", color: C.hr, h: narrow ? 116 : 140, kind: "hr", pts: hrPts, lo: heart?.lo, hi: heart?.hi, overlay: true }
+        ? { id: "hr", name: "Heart rate", unit: "bpm", color: C.hr, h: big ? Math.max(240, Math.round(vh * 0.42)) : narrow ? 116 : 140, kind: "hr", pts: hrPts, lo: heart?.lo, hi: heart?.hi, overlay: true }
         : { id: "hr", name: "Heart rate", unit: "bpm", color: C.hr, h: 24, kind: "wearable" },
       band?.sleep.length
         ? { id: "sleep", name: "Sleep stages", unit: "band", color: C.mood, h: 44, kind: "hyp" }
@@ -106,7 +115,18 @@ export function MasterGraph({ data, supplements, focus, days, band, onView }: { 
       { id: "wt", name: "Weight", unit: "kg", color: C.wt, h: 36, kind: "daily", pts: data.weight, lo: wLo, hi: wHi, overlay: true },
       { id: "kcal", name: "Calories per day", unit: "kcal", color: C.kcal, h: 36, kind: "daily", pts: data.kcalDay, lo: 0, hi: Math.max(3000, Math.ceil(Math.max(0, ...data.kcalDay.map((p) => p[1])) / 500) * 500), overlay: true },
     ];
-  }, [data, supplements.length, C, band, heart, narrow]);
+    return list.map((l) => (big && l.kind !== "hr" ? { ...l, h: Math.round(l.h * 1.5) } : l));
+  }, [data, supplements.length, C, band, heart, narrow, big, vh]);
+
+  // Full screen: no page scroll underneath, Esc closes, lanes follow the window's height.
+  useEffect(() => {
+    if (!big) return;
+    const prev = document.body.style.overflow; document.body.style.overflow = "hidden";
+    const key = (e: KeyboardEvent) => { if (e.key === "Escape") setBig(false); };
+    const size = () => setVh(window.innerHeight);
+    size(); window.addEventListener("keydown", key); window.addEventListener("resize", size);
+    return () => { document.body.style.overflow = prev; window.removeEventListener("keydown", key); window.removeEventListener("resize", size); };
+  }, [big]);
 
   const [on, setOn] = useState<Record<string, boolean>>({ hr: true, sleep: true, caf: true, alc: true, meals: true, gym: true, supps: false, wt: true, feel: true, slept: true, kcal: false });
   const [over, setOver] = useState<Record<string, boolean>>({ energy: false });
@@ -171,6 +191,36 @@ export function MasterGraph({ data, supplements, focus, days, band, onView }: { 
   const hovered: Check | null = hover != null && overFeel && view.span <= 7 * DAY
     ? nearestCheck(data.checks.filter((c) => c.mood != null), hover, (14 / pwNow) * view.span) : null;
 
+    // Each line lane's scale fits what's on screen (heart rate, weight, calories; caffeine and alcohol from 0).
+  const fitted = useMemo(() => {
+    const t0 = view.t1 - view.span;
+    const inView = (pts: Point[], pad = 0) => pts.filter((p) => p[0] >= t0 - pad && p[0] <= view.t1 + pad).map((p) => p[1]);
+    const fitOf = (l: Lane): [number, number] => {
+      const lo0 = l.lo ?? 0, hi0 = l.hi ?? 1;
+      if (l.kind === "hr") {
+        const v = inView(l.pts ?? []);
+        if (heart?.usual) for (let k = 0; k <= 48; k++) { const u = usualAt(heart.usual, t0 + (k / 48) * view.span); if (u) v.push(u.lo, u.hi); }
+        if (!v.length) return [lo0, hi0];
+        const mn = Math.min(...v), mx = Math.max(...v), pad = Math.max(2, (mx - mn) * 0.08);
+        let lo = Math.max(30, Math.floor((mn - pad) / 5) * 5), hi = Math.ceil((mx + pad) / 5) * 5;
+        if (hi - lo < 15) { const c = (lo + hi) / 2; lo = Math.floor((c - 7.5) / 5) * 5; hi = lo + 15; }
+        return [lo, hi];
+      }
+      if (l.kind === "daily") {
+        const v = inView(l.pts ?? [], 3 * DAY); if (!v.length) return [lo0, hi0];
+        if (l.id === "kcal") return [0, Math.max(1000, Math.ceil((Math.max(...v) * 1.1) / 500) * 500)];
+        let lo = Math.floor((Math.min(...v) - 0.4) * 2) / 2, hi = Math.ceil((Math.max(...v) + 0.4) * 2) / 2;
+        if (hi - lo < 1.5) { const c = (lo + hi) / 2; lo = Math.floor((c - 0.75) * 2) / 2; hi = lo + 1.5; }
+        return [lo, hi];
+      }
+      if (l.kind === "series") {
+        const v = inView(l.pts ?? []), top = Math.max(0, ...v), unit = l.id === "caf" ? 50 : 5;
+        return [0, Math.max(l.id === "caf" ? 100 : 10, Math.ceil((top * 1.1) / unit) * unit)];
+      }
+      return [lo0, hi0];
+    };
+    return new Map(lanes.map((l) => [l.id, fitOf(l)]));
+  }, [lanes, view, heart]);
   /** What a lane reads at time t, for the label column (null: nothing to say). */
   const laneValue = (l: Lane, t: number): string | null => {
     if (l.kind === "hr") { const v = valueAt((band?.hr ?? []) as unknown as Point[], t); return v && heart && t - v[0] < heart.join ? String(Math.round(v[1])) : null; }
@@ -214,8 +264,9 @@ export function MasterGraph({ data, supplements, focus, days, band, onView }: { 
     }
 
     const yOf = (top: number, h: number, lo: number, hi: number, v: number) => top + h - ((Math.max(lo, Math.min(hi, v)) - lo) / (hi - lo || 1)) * h;
+    const lim = (l: Lane): [number, number] => fitted.get(l.id) ?? [l.lo ?? 0, l.hi ?? 1];
     const drawSeries = (l: Lane, top: number, h: number, asOverlay: boolean) => {
-      const lo = l.lo ?? 0, hi = l.hi ?? 1, pts = l.pts ?? [];
+      const [lo, hi] = lim(l), pts = l.pts ?? [];
       if (l.kind === "hr") {
         // Heart rate drawn over another lane ("on top"): the plain line with its own scale.
         const Y = (v: number) => yOf(top, h, lo, hi, v), join = heart?.join ?? 5 * MIN;
@@ -260,9 +311,12 @@ export function MasterGraph({ data, supplements, focus, days, band, onView }: { 
     /** A + B (owner's pick, 8 Oct): heart rate against your usual for the hour, and a labelled window after each coffee and workout. */
     const drawHr = (l: Lane, top: number, h: number) => {
       if (!heart) return;
-      const { lo, hi, usual } = heart, Y = (v: number) => yOf(top + 3, h - 14, lo, hi, v);
+      const { usual } = heart, [lo, hi] = lim(l);
+      const Y = scale === "log"
+        ? (v: number) => top + 3 + (h - 14) * (1 - (Math.log(Math.max(lo, Math.min(hi, v))) - Math.log(lo)) / (Math.log(hi) - Math.log(lo) || 1))
+        : (v: number) => yOf(top + 3, h - 14, lo, hi, v);
       ctx.font = "9px IBM Plex Mono, monospace"; ctx.textAlign = "left";
-      const step = hi - lo > 70 ? 20 : 10;
+      const step = hi - lo <= 25 ? 5 : hi - lo <= 70 ? 10 : 20;
       for (let v = Math.ceil((lo + 1) / step) * step; v < hi; v += step) {
         const yy = Math.round(Y(v)) + .5; ctx.strokeStyle = C.line; ctx.setLineDash([1, 4]); ctx.beginPath(); ctx.moveTo(LEFT, yy); ctx.lineTo(w - RIGHT, yy); ctx.stroke(); ctx.setLineDash([]);
         ctx.fillStyle = C.dim; ctx.fillText(String(v), LEFT + 3, yy - 5);
@@ -428,14 +482,14 @@ export function MasterGraph({ data, supplements, focus, days, band, onView }: { 
         ctx.globalAlpha = 1;
         if (view.span <= 2 * DAY) { ctx.fillStyle = C.dim; ctx.font = "9.5px IBM Plex Mono, monospace"; ctx.textAlign = "left"; supplements.forEach((s, i) => ctx.fillText(s.name.split(" ")[0], LEFT + 3, top + i * rowH + rowH / 2)); }
       }
-      if (l.id === "caf") [CAF_SLEEP.lowBelowMg, CAF_SLEEP.higherFromMg].forEach((v) => { if (v > (l.hi ?? 0)) return; const yy = yOf(top, l.h, 0, l.hi ?? 1, v); ctx.strokeStyle = C.caf; ctx.globalAlpha = .45; ctx.setLineDash([2, 4]); ctx.beginPath(); ctx.moveTo(LEFT, yy); ctx.lineTo(w - RIGHT, yy); ctx.stroke(); ctx.setLineDash([]); ctx.globalAlpha = 1; ctx.fillStyle = C.caf; ctx.textAlign = "right"; ctx.font = "9px IBM Plex Mono, monospace"; ctx.fillText(`${v}`, w - RIGHT - 3, yy - 6); ctx.font = "10px IBM Plex Mono, monospace"; });
+      if (l.id === "caf") [CAF_SLEEP.lowBelowMg, CAF_SLEEP.higherFromMg].forEach((v) => { const top_ = lim(l)[1]; if (v > top_) return; const yy = yOf(top, l.h, 0, top_, v); ctx.strokeStyle = C.caf; ctx.globalAlpha = .45; ctx.setLineDash([2, 4]); ctx.beginPath(); ctx.moveTo(LEFT, yy); ctx.lineTo(w - RIGHT, yy); ctx.stroke(); ctx.setLineDash([]); ctx.globalAlpha = 1; ctx.fillStyle = C.caf; ctx.textAlign = "right"; ctx.font = "9px IBM Plex Mono, monospace"; ctx.fillText(`${v}`, w - RIGHT - 3, yy - 6); ctx.font = "10px IBM Plex Mono, monospace"; });
       if (host && l.id === host.id) overlays.forEach((o) => drawSeries(o, top, l.h, true));
       ctx.restore();
       // Sleep stage names in the right margin, where other lanes put their "on top" axis.
       if (l.kind === "hyp") { ctx.fillStyle = C.dim; ctx.font = "8.5px IBM Plex Mono, monospace"; ctx.textAlign = "left"; STAGES.forEach((n, i) => ctx.fillText(n === "rem" ? "REM" : n, w - RIGHT + 5, top + 2 + (i + .5) * (l.h - 4) / 4)); ctx.font = "10px IBM Plex Mono, monospace"; }
       // Axis values sit just inside the plot so they never collide with the lane's name.
-      if (l.lo != null && l.hi != null && l.kind !== "feel" && l.kind !== "hr") { ctx.textAlign = "left"; ctx.fillStyle = C.dim; ctx.font = "9px IBM Plex Mono, monospace"; ctx.fillText(String(l.hi), LEFT + 3, top + 5); ctx.fillText(String(l.lo), LEFT + 3, top + l.h - 4); ctx.font = "10px IBM Plex Mono, monospace"; }
-      if (host && l.id === host.id) overlays.forEach((o, k) => { ctx.textAlign = "left"; ctx.fillStyle = o.color; ctx.fillText(o.kind === "feel" ? "10" : `${o.hi}${o.unit}`, w - RIGHT + 5, top + 4 + k * 12); ctx.fillText(o.kind === "feel" ? "1" : String(o.lo), w - RIGHT + 5, top + l.h - 3 - k * 12); });
+      if (l.lo != null && l.hi != null && l.kind !== "feel" && l.kind !== "hr") { const [lo, hi] = lim(l); ctx.textAlign = "left"; ctx.fillStyle = C.dim; ctx.font = "9px IBM Plex Mono, monospace"; ctx.fillText(String(hi), LEFT + 3, top + 5); ctx.fillText(String(lo), LEFT + 3, top + l.h - 4); ctx.font = "10px IBM Plex Mono, monospace"; }
+      if (host && l.id === host.id) overlays.forEach((o, k) => { const [lo, hi] = lim(o); ctx.textAlign = "left"; ctx.fillStyle = o.color; ctx.fillText(o.kind === "feel" ? "10" : `${hi}${o.unit}`, w - RIGHT + 5, top + 4 + k * 12); ctx.fillText(o.kind === "feel" ? "1" : String(lo), w - RIGHT + 5, top + l.h - 3 - k * 12); });
     });
     // now + crosshair
     const nx = X(data.to); if (nx >= LEFT && nx <= w - RIGHT) { ctx.strokeStyle = C.ink2; ctx.setLineDash([2, 3]); ctx.beginPath(); ctx.moveTo(nx + .5, TOP - 6); ctx.lineTo(nx + .5, H - 4); ctx.stroke(); ctx.setLineDash([]); }
@@ -530,7 +584,7 @@ export function MasterGraph({ data, supplements, focus, days, band, onView }: { 
   const presets: [string, number][] = [["1D", DAY], ["3D", 3 * DAY], ["7D", 7 * DAY], ["30D", 30 * DAY], ["90D", 90 * DAY], ["All", maxT - minT]];
 
   return (
-    <section className="master" id="ins-timeline" data-sec="timeline" aria-label="Master graph">
+    <section className={`master${big ? " big" : ""}`} id="ins-timeline" data-sec="timeline" aria-label="Master graph" data-scale={scale}>
       <div className="mg-main">
         <div className="mg-bar">
           <h2 className="mg-title">Everything, on one timeline</h2>
@@ -541,10 +595,15 @@ export function MasterGraph({ data, supplements, focus, days, band, onView }: { 
           <button type="button" className="ibtn" aria-label="Zoom out" onClick={() => setView(clampView(view.t1 + view.span * .3, view.span * 1.6))}>－</button>
           <span className="range-lbl">{dayLabel(view.t1 - view.span)} {clock(view.t1 - view.span)} → {dayLabel(view.t1)} {clock(view.t1)}</span>
           <button type="button" className="ibtn" onClick={() => setView(clampView(maxT, view.span))}>Now</button>
+          {heart && <div className="iseg" role="group" aria-label="Heart-rate scale">
+            <button type="button" aria-pressed={scale === "fit"} onClick={() => setScale("fit")} title="Fit the scale to what's on screen">Fit</button>
+            <button type="button" aria-pressed={scale === "log"} onClick={() => setScale("log")} title="Log scale: high values squeezed, so a workout doesn't flatten the rest">Log</button>
+          </div>}
+          <button type="button" className="ibtn mg-big" aria-pressed={big} onClick={() => setBig(!big)}>{big ? "✕ Close" : "⤢ Full screen"}</button>
         </div>
         <canvas ref={cv} className="mg-canvas" aria-label="Master graph of every tracked metric over time"
           data-lanes={layout.map((r) => r.l.id).join(",")} data-plot={`${LEFT},${RIGHT}`} data-view={`${Math.round(view.t1 - view.span)},${Math.round(view.t1)}`} data-feel={feelRow ? `${feelRow.y},${feelRow.l.h}` : ""}
-          data-hr={heart ? `${heart.usual ? "usual" : "learning"},${heart.coffees.filter((c) => c.end >= view.t1 - view.span && c.at <= view.t1).length},${heart.gyms.filter((g) => g.end >= view.t1 - view.span && g.start <= view.t1).length},${layout.find((r) => r.l.kind === "hr")?.y ?? ""},${layout.find((r) => r.l.kind === "hr")?.l.h ?? ""}` : ""}
+          data-hr={heart ? `${heart.usual ? "usual" : "learning"},${heart.coffees.filter((c) => c.end >= view.t1 - view.span && c.at <= view.t1).length},${heart.gyms.filter((g) => g.end >= view.t1 - view.span && g.start <= view.t1).length},${layout.find((r) => r.l.kind === "hr")?.y ?? ""},${layout.find((r) => r.l.kind === "hr")?.l.h ?? ""},${(fitted.get("hr") ?? []).join("-")}` : ""}
           onPointerDown={(e) => { drag.current = { x: e.clientX, t1: view.t1 }; e.currentTarget.setPointerCapture(e.pointerId); setHover(tAt(e.clientX)); setHoverY(e.clientY - e.currentTarget.getBoundingClientRect().top); }}
           onPointerMove={(e) => { if (drag.current && Math.abs(e.clientX - drag.current.x) > 4) { const pw = e.currentTarget.getBoundingClientRect().width - LEFT - RIGHT; setView(clampView(drag.current.t1 - ((e.clientX - drag.current.x) / pw) * view.span, view.span)); } setHover(tAt(e.clientX)); setHoverY(e.clientY - e.currentTarget.getBoundingClientRect().top); }}
           onPointerUp={() => { drag.current = null; }} onPointerCancel={() => { drag.current = null; }} onPointerLeave={() => { if (!drag.current) setHover(null); }} />
