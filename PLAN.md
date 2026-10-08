@@ -631,3 +631,16 @@ email get Dev tools (`#dev`): raw entry editor, generate/remove sample, wipe acc
    the morning rating, caffeine at bedtime and drinks; the band's nights (stages, time asleep, awake, time to fall
    asleep), overnight heart rate per minute, and daily resting HR and HRV aren't on it at all.
    - **Phase 1:** 2–3 directions on the canvas, laptop + phone, from fake nights shaped like real Fitbit ones. He picks.
+   - **Canvas (8 Oct):** https://claude.ai/artifact/2ve7sdVsM3X9RcMTfL5jjR — from 30 fake Fitbit-shaped nights (cycles,
+     deep early, REM later; drink nights with a later, higher heart-rate low and lower HRV):
+     - **A · Night log** — every night a strip on one clock (18:00→11:00), stages as height + shade, coffee/drinks/
+       meals/workouts before bed, a tick at the heart-rate low; its numbers beside it (asleep, deep, REM, awake, low
+       HR, HRV, rating), white where outside your middle half. Shows rhythm, weekends, drifting lows.
+     - **B · Last night, in depth** — the evening (caffeine and alcohol in the body, workout, dinner, drinks) running
+       into the night's stages and heart rate asleep against the middle half of the last 30 nights at each time;
+       every number as a dot on your own range; "what was different" as computed facts; the last 14 nights small.
+     - **C · Trends + what goes with** — each measure over the nights as small multiples with your usual band; a grid
+       of evening things (drinks, caffeine at bed, training, late meal, late bed) × sleep measures, each cell the
+       difference and how sure; a cell opens to every night behind it.
+     - Stage colours: one blue ramp for asleep stages (passes the ordinal checks), awake near-white so the red
+       heart-rate line never reads as "awake".
