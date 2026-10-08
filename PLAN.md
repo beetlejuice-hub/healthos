@@ -644,3 +644,13 @@ email get Dev tools (`#dev`): raw entry editor, generate/remove sample, wipe acc
        difference and how sure; a cell opens to every night behind it.
      - Stage colours: one blue ramp for asleep stages (passes the ordinal checks), awake near-white so the red
        heart-rate line never reads as "awake".
+   - **Owner, 8 Oct, on the canvas:** "B and C I like, A too, but should be a bit more intuitive, like im not sure what
+     all this means. can add naps.. 2: YES [a regularity score]. 3. im not sure [C's grid in Findings]."
+     Done on the canvas the same evening: A now opens with a typical night in words, a regularity card, and last night
+     drawn large with every mark named (numbered on the phone); plain column names with ↑/↓ instead of "middle half".
+     Naps on every board (Fitbit records one by itself from about an hour). Regularity = the Sleep Regularity Index
+     (asleep/awake at the same clock time day to day, naps counted, 0–100; most adults 60–90) — a card on A, a 7-day
+     trend on C. Default for 3 until he says otherwise: the grid stays on Sleep; Findings links to it.
+   - **Tempo's idea 8** (sleep starts the day) asks for last night's wake time. Answered: live at
+     healthos.lukacsarnold9.workers.dev, code at github.com/beetlejuice-hub/healthos; the band data needs a sign-in, so
+     Tempo needs a small `/api/band/wake?day=` behind a shared key set in Cloudflare. Not built — waiting on his go.
