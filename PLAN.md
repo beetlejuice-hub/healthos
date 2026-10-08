@@ -557,8 +557,20 @@ email get Dev tools (`#dev`): raw entry editor, generate/remove sample, wipe acc
      hours, merged); scrolling the timeline back past a week showed no heart rate though the server keeps 120 days (older
      weeks load as you scroll); Export JSON now includes the band's data (for the testing session). Each with a test
      that fails without the fix.
+   - **Owner's pick (8 Oct, canvas https://claude.ai/artifact/41kypRN2TwXX8ikXX7j6qK):** "I FUCKING LOVE EVERY ONE OF
+     THESE!! … D is not the best.. THe rest is super.Pls implement and also check other parts of insights page and start
+     redesign it...I super like the new heart bpm view, the current one is not too visible, especially on phone". So:
+     A (heart rate against your usual for the hour: band, warm/cool line, zoomed scale, workout peak written on) and B
+     (a labelled window after each coffee and workout) on the timeline; C (every coffee lined up, averaged; recovery after
+     workouts) as an Insights card. D (week heat ribbon) not now. Then the rest of Insights: audit, canvas, rebuild.
 50. [ ] **Idea, not now — heart rate per Tempo task.** Owner, 7 Oct: "i have the other app Tempo, and i plan to either
    from this app or that app to pull info so i can see what heart rate, etc i had from what task, so like i can see that
    work made me stressed, a walk lowered the avg heartbeat… not to do now, just noting for future".
 51. [ ] **Idea, not now — a deep dive on everything the data can show.** Owner, 7 Oct: "in future we'll have to dive
    deeep of what we can check w all the data we have, like what sympotms, and just like interesting connections".
+52. [ ] **Everything the band can give** (after the Insights redesign). Owner, 8 Oct: "after the redesign we will have to
+   slowly change the data, every posssible data we can get from band to be added to app, and also things like calories
+   burned, etc". Google's API has ~40 types (from its CLI's registry): steps, distance, floors, active/basal/total
+   calories, active minutes, active zone minutes, time and calories per heart-rate zone, exercise (the band's own
+   workout detection), sedentary periods, SpO2 (+ daily), daily respiratory rate, VO2 max, nightly skin-temperature
+   change, HRV samples, ECG / irregular rhythm notifications. Calories burned also closes the loop with food logged.
