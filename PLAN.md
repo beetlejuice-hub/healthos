@@ -663,3 +663,9 @@ email get Dev tools (`#dev`): raw entry editor, generate/remove sample, wipe acc
      every night behind a cell). The old rating/caffeine/drinks panels stay below. Checked: 15 unit tests against known
      answers, e2e/sleep.cjs (25 checks: planted drink effect found, nothing else clear, laptop + phone), full suite 652
      PASS. Not checked: the owner's real nights (blocked from here) — first thing to look at when he opens it.
+55. [ ] **Insights → Heart, redesigned** (claimed 8 Oct — canvas first; then components/HeartEffects.tsx grows into a
+   Heart page, numbers in lib/hrusual.ts or a new lib/heart.ts). Owner, 8 Oct, after the Sleep page: "3" (design the
+   next Insights page; Heart picked as the default — most band data after Sleep, and he liked the heart views: "I super
+   like the new heart bpm view"). Today the page has only the after-coffee / after-workout card; resting heart rate,
+   HRV and the day's heart rate hour by hour aren't on it.
+   - **Phase 1:** 2–3 directions on the canvas, laptop + phone, from fake days shaped like real ones. He picks.
