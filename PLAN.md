@@ -669,3 +669,14 @@ email get Dev tools (`#dev`): raw entry editor, generate/remove sample, wipe acc
    like the new heart bpm view"). Today the page has only the after-coffee / after-workout card; resting heart rate,
    HRV and the day's heart rate hour by hour aren't on it.
    - **Phase 1:** 2–3 directions on the canvas, laptop + phone, from fake days shaped like real ones. He picks.
+   - **Canvas (8 Oct): https://claude.ai/artifact/LWJR8R4dYGBHhPS77rS8p4** — three directions, each laptop + phone,
+     from 30 fake Charge-6-shaped days (coffee, walks, workouts, drink evenings, stress check-ins; known effects
+     planted). **A · one day:** today hour by hour against your usual for each half hour (red above, blue below),
+     what you did on top, tiles, "what stood out today", this week day by day. **B · 30 days at a glance:** every
+     half hour of the month as a square (hourly on the phone), warmer above usual, workouts outlined, resting heart rate per day.
+     **C · recovery + what moves it:** resting HR, HRV and awake average each morning on one row of days, "the day
+     before" marks under them, a goes-with grid (drinks found: +3.9 bpm / −12.6 ms; nothing else clear), after
+     coffee (+4.7 bpm at 50 min vs coffee-free days at that time), around a check-in (+0.7 bpm per stress point,
+     planted 0.8), and coming back down after a workout. Checked: each board's numbers recomputed outside the
+     canvas, every board rendered in Chromium at its width with no label past its card; A's tiles, week card
+     and C agree (51 bpm resting, 47 ms HRV, 67 awake). Waiting on his pick.
