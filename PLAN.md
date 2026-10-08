@@ -657,3 +657,9 @@ email get Dev tools (`#dev`): raw entry editor, generate/remove sample, wipe acc
    - **Build (claimed 8 Oct, owner: "do 1")** — lib/sleep.ts (nights from the band, usual ranges, regularity, facts,
      what-goes-with with how sure), components/Sleep.tsx (B last night on top, A night log under it, C's grid at the
      bottom), Insights.tsx wiring, e2e/sleep.cjs. Body.tsx's rating/caffeine/drinks panels stay below for now.
+   - **Built (8 Oct, e9a0c48):** Insights → Sleep now opens on the band's nights — B last night (evening → stages →
+     heart rate asleep vs your usual, numbers on your range, what was different), the last 14 nights small, A the
+     night log (typical night in words, regularity, every night on one clock, tap to open), C what goes with (grid +
+     every night behind a cell). The old rating/caffeine/drinks panels stay below. Checked: 15 unit tests against known
+     answers, e2e/sleep.cjs (25 checks: planted drink effect found, nothing else clear, laptop + phone), full suite 652
+     PASS. Not checked: the owner's real nights (blocked from here) — first thing to look at when he opens it.
