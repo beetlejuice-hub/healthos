@@ -4,7 +4,7 @@ import { buckets, valueAt, type Point } from "../lib/series";
 import { atMinute, clock, dayLabel, localDay, DAY, HOUR, MIN } from "../lib/time";
 import type { Supplement } from "../lib/types";
 import type { GlanceDay } from "../lib/glance";
-import { feelRuns, feelText, latestCheck, lifeBars, nearestCheck, ribbonRuns, ribbonWidth, stressMix, type Check, type FeelK } from "../lib/feelgraph";
+import { feelRuns, feelText, latestCheck, nearestCheck, type Check, type FeelK } from "../lib/feelgraph";
 import { CAF_SLEEP } from "../lib/caffeine-sleep";
 import type { BandData } from "../lib/band-client";
 import { lastNight, type SleepSession } from "../lib/band";
@@ -17,18 +17,21 @@ import { coffeeWindows, everydayRange, minuteMap, usualAt, usualByHour, usualRea
  * time; ⌘/Ctrl + wheel zooms. Canvas, because a year of data is too many SVG nodes.
  */
 
-/** "feel": the How you felt lane — owner, 5 Oct, picked versions C (feeling ribbon) + A (life chart) of the four. "chips": sleep ratings. */
-/** "wearable": not connected yet (a placeholder). "hr": the band's heart rate per minute. "hyp": its sleep stages. */
-type Kind = "series" | "daily" | "sticks" | "blocks" | "ticks" | "wearable" | "feel" | "chips" | "hr" | "hyp";
+/**
+ * Panes (owner, 8 Oct, canvas A): each metric its own full-width pane, its name and its value at the crosshair
+ * inside it. "feel": the feelings as four rows, each its own 1–10 (the ribbon was "hard to read"). "chips":
+ * sleep ratings. "events": coffee, meals, drinks, supplements and workouts on one clock (canvas B's rail).
+ * "wearable": not connected yet (a placeholder). "hr": the band's heart rate per minute. "hyp": its sleep stages.
+ */
+type Kind = "series" | "daily" | "events" | "wearable" | "feel" | "chips" | "hr" | "hyp";
 type Lane = { id: string; name: string; unit: string; color: string; h: number; kind: Kind; pts?: Point[]; lo?: number; hi?: number; area?: boolean; overlay?: boolean };
 
 /** A colour token; Insights tokens live on the screen, so read them there. */
 const cssVar = (v: string) => getComputedStyle(document.querySelector(".app") ?? document.documentElement).getPropertyValue(v).trim() || "#888";
-const RIGHT = 46, TOP = 22, GAP = 7;
-/** The label column: room for each lane's value at the cursor on a laptop, narrower on a phone. */
-const leftFor = (w: number) => (w >= 640 ? 136 : 96);
-/** Calm end of the stress colour (a cool grey-blue); the tense end is the heart-rate red. */
-const CALM = "#56717c";
+/** Panes run the full width: names and values sit inside each pane's header strip, not in a label column. */
+const RIGHT = 46, TOP = 24, GAP = 6, HDR = 20, LEFT = 10;
+/** The four feelings, each its own row (colours checked for colour-blind separation on the dark panel). */
+const FEELINGS: [FeelK, string, string][] = [["mood", "Mood", "#3987e5"], ["energy", "Energy", "#c98500"], ["stress", "Stress", "#d55181"], ["focus", "Focus", "#93a0a4"]];
 /** Sleep stages, top to bottom like Fitbit's own chart: awake, REM, light, deep — deeper is darker. */
 const STAGES = ["awake", "rem", "light", "deep"] as const;
 const STAGE_ALPHA: Record<string, number> = { awake: .3, rem: .55, light: .7, deep: 1, asleep: .7, restless: .4 };
@@ -43,7 +46,6 @@ const stageAt = (sleep: SleepSession[], t: number) => {
   return s.stages.find((x) => x.start <= t && x.end > t)?.type ?? (s.stages.length ? "awake" : "asleep");
 };
 const hm = (min: number) => `${Math.floor(min / 60)} h ${String(Math.round(min % 60)).padStart(2, "0")}`;
-const mixHex = (a: string, b: string, f: number) => { const p = (h: string) => { const n = parseInt(h.replace("#", "").slice(0, 6), 16); return [n >> 16, (n >> 8) & 255, n & 255]; }; const [x, y] = [p(a), p(b)]; return `rgb(${x.map((v, i) => Math.round(v * (1 - f) + y[i] * f)).join(",")})`; };
 
 /** "Show on graph" from a scout pattern: these lanes, on top of each other, these days highlighted. */
 export type GraphFocus = { key: string; lanes: string[]; days: string[] };
@@ -99,24 +101,22 @@ export function MasterGraph({ data, supplements, focus, days, band, onView }: { 
       hrPts.push([src[i][0], sum / (hi - lo)]);
     }
     const list: Lane[] = [
-      { id: "feel", name: "How you felt", unit: "you · 1–10", color: C.mood, h: 112, kind: "feel", pts: data.mood, lo: 0.5, hi: 10.5 },
+      { id: "feel", name: "Feelings", unit: "1–10", color: C.mood, h: 4 * 30, kind: "feel", pts: data.mood, lo: 1, hi: 10 },
       { id: "slept", name: "Sleep rating", unit: "/10", color: C.ok, h: 22, kind: "chips", pts: data.sleep, lo: 1, hi: 10 },
       band?.hr.length
         ? { id: "hr", name: "Heart rate", unit: "bpm", color: C.hr, h: big ? Math.max(240, Math.round(vh * 0.42)) : narrow ? 116 : 140, kind: "hr", pts: hrPts, lo: heart?.lo, hi: heart?.hi, overlay: true }
-        : { id: "hr", name: "Heart rate", unit: "bpm", color: C.hr, h: 24, kind: "wearable" },
+        : { id: "hr", name: "Heart rate", unit: "bpm", color: C.hr, h: 4, kind: "wearable" },
       band?.sleep.length
         ? { id: "sleep", name: "Sleep stages", unit: "band", color: C.mood, h: 44, kind: "hyp" }
-        : { id: "sleep", name: "Sleep stages", unit: "", color: C.hr, h: 24, kind: "wearable" },
+        : { id: "sleep", name: "Sleep stages", unit: "", color: C.hr, h: 4, kind: "wearable" },
       { id: "caf", name: "Caffeine in body", unit: "mg", color: C.caf, h: 64, kind: "series", pts: data.caffeine, lo: 0, hi: cafHi, area: true, overlay: true },
       { id: "alc", name: "Alcohol in body", unit: "g", color: C.alc, h: 40, kind: "series", pts: data.alcohol, lo: 0, hi: alcHi, area: true, overlay: true },
-      { id: "meals", name: "Meals", unit: "kcal", color: C.kcal, h: 32, kind: "sticks" },
-      { id: "gym", name: "Workouts", unit: "", color: C.gym, h: 20, kind: "blocks" },
-      { id: "supps", name: "Supplements", unit: "", color: C.supp, h: Math.max(20, supplements.length * 7), kind: "ticks" },
+      { id: "events", name: "Events", unit: "", color: C.ink2, h: 56, kind: "events" },
       { id: "wt", name: "Weight", unit: "kg", color: C.wt, h: 36, kind: "daily", pts: data.weight, lo: wLo, hi: wHi, overlay: true },
       { id: "kcal", name: "Calories per day", unit: "kcal", color: C.kcal, h: 36, kind: "daily", pts: data.kcalDay, lo: 0, hi: Math.max(3000, Math.ceil(Math.max(0, ...data.kcalDay.map((p) => p[1])) / 500) * 500), overlay: true },
     ];
     return list.map((l) => (big && l.kind !== "hr" ? { ...l, h: Math.round(l.h * 1.5) } : l));
-  }, [data, supplements.length, C, band, heart, narrow, big, vh]);
+  }, [data, C, band, heart, narrow, big, vh]);
 
   // Full screen: no page scroll underneath, Esc closes, lanes follow the window's height.
   useEffect(() => {
@@ -128,7 +128,7 @@ export function MasterGraph({ data, supplements, focus, days, band, onView }: { 
     return () => { document.body.style.overflow = prev; window.removeEventListener("keydown", key); window.removeEventListener("resize", size); };
   }, [big]);
 
-  const [on, setOn] = useState<Record<string, boolean>>({ hr: true, sleep: true, caf: true, alc: true, meals: true, gym: true, supps: false, wt: true, feel: true, slept: true, kcal: false });
+  const [on, setOn] = useState<Record<string, boolean>>({ hr: true, sleep: true, caf: true, alc: true, events: true, wt: true, feel: true, slept: true, kcal: false });
   const [over, setOver] = useState<Record<string, boolean>>({ energy: false });
   const [view, setView] = useState({ t1: data.to + 90 * MIN, span: 3 * DAY });
   const [hover, setHover] = useState<number | null>(null);
@@ -136,14 +136,14 @@ export function MasterGraph({ data, supplements, focus, days, band, onView }: { 
   const drag = useRef<{ x: number; t1: number } | null>(null);
   // The lane list is long; on a phone it starts folded so the readout sits right under the chart.
   const [lanesOpen, setLanesOpen] = useState(() => typeof window === "undefined" || window.innerWidth > 700);
-  const LEFT = leftFor(w);
 
   // A pattern asked to be shown: only its lanes, the second drawn over the first where it can be,
   // and the view widened to cover the days that show it.
   useEffect(() => {
     if (!focus) return;
-    const FEEL = new Set(["mood", "energy", "focus", "stress"]);
-    const want = new Set(focus.lanes.map((id) => (FEEL.has(id) ? "feel" : id)));
+    // A pattern names old lanes too: the four feelings are one pane now, meals/workouts/stack are Events.
+    const ALIAS: Record<string, string> = { mood: "feel", energy: "feel", focus: "feel", stress: "feel", meals: "events", gym: "events", supps: "events" };
+    const want = new Set(focus.lanes.map((id) => ALIAS[id] ?? id));
     setOn(Object.fromEntries(lanes.map((l) => [l.id, want.has(l.id)])));
     const series = focus.lanes.find((id) => lanes.find((l) => l.id === id)?.kind === "series");
     setOver(series ? Object.fromEntries([...want].filter((id) => id !== series && lanes.find((l) => l.id === id)?.overlay).map((id) => [id, true])) : {});
@@ -180,7 +180,8 @@ export function MasterGraph({ data, supplements, focus, days, band, onView }: { 
   const drawn = visible.filter((l) => !(over[l.id] && host && l.id !== host.id));
   const overlays = host ? visible.filter((l) => over[l.id] && l.id !== host.id) : [];
   // The How you felt lane's position is what pointing (and the tests) read.
-  let y = TOP; const layout = drawn.map((l) => { const r = { l, y }; y += l.h + GAP; return r; });
+  // Each pane: a header strip (name, value at the crosshair), then its plot; `y` is the plot's top.
+  let y = TOP; const layout = drawn.map((l) => { const r = { l, y: y + HDR }; y += HDR + l.h + GAP; return r; });
   const H = y + 4;
   const feelLanes = layout.filter((r) => r.l.kind === "feel");
   const feelRow = feelLanes[0];
@@ -221,17 +222,39 @@ export function MasterGraph({ data, supplements, focus, days, band, onView }: { 
     };
     return new Map(lanes.map((l) => [l.id, fitOf(l)]));
   }, [lanes, view, heart]);
-  /** What a lane reads at time t, for the label column (null: nothing to say). */
-  const laneValue = (l: Lane, t: number): string | null => {
-    if (l.kind === "hr") { const v = valueAt((band?.hr ?? []) as unknown as Point[], t); return v && heart && t - v[0] < heart.join ? String(Math.round(v[1])) : null; }
-    if (l.kind === "hyp") return band ? stageAt(band.sleep, t) : null;
-    if (l.id === "caf") return `${Math.round(valueAt(data.caffeine, t)?.[1] ?? 0)}`;
-    if (l.id === "alc") { const v = valueAt(data.alcohol, t)?.[1] ?? 0; return v >= 0.05 ? v.toFixed(1) : "0"; }
-    if (l.id === "wt" || l.id === "kcal") { const v = valueAt(l.pts ?? [], t); return v && t - v[0] < 3 * DAY ? (l.id === "wt" ? v[1].toFixed(1) : Math.round(v[1]).toLocaleString("en-GB")) : null; }
-    if (l.id === "slept") { const v = valueAt(l.pts ?? [], t); return v && t - v[0] < DAY ? String(v[1]) : null; }
-    if (l.id === "meals") { const m = [...data.meals].reverse().find((x) => x.at <= t && x.at > t - 5 * HOUR); return m ? String(Math.round(m.kcal)) : null; }
-    if (l.kind === "feel") { const c = hovered ?? latestCheck(data.checks, t); return c && t - c.at < 6 * HOUR && c.mood != null ? `mood ${c.mood}` : null; }
-    return null;
+  /** What a pane's header says at time t: its value (bold) and a line of context. */
+  const paneText = (l: Lane, t: number): { v: string; sub: string } => {
+    const fmt0 = (n: number) => Math.round(n).toLocaleString("en-GB");
+    if (l.kind === "wearable") return { v: "", sub: l.id === "hr" || l.id === "sleep" ? "connect your band in Settings" : "connect a wearable" };
+    if (l.kind === "hr") {
+      const v = valueAt((band?.hr ?? []) as unknown as Point[], t);
+      if (!v || !heart || t - v[0] >= heart.join) return { v: "—", sub: "band off" };
+      const u = usualAt(heart.usual, t);
+      return { v: `${Math.round(v[1])} bpm`, sub: u ? `${sgnInt(v[1] - u.mid)} vs usual ${Math.round(u.mid)}` : `learning your usual · ${Math.min(heart.days, USUAL_MIN_DAYS)} of ${USUAL_MIN_DAYS} days` };
+    }
+    if (l.kind === "hyp") {
+      const st = band ? stageAt(band.sleep, t) : null, n = band ? lastNight(band.sleep.filter((x) => x.end <= t + 12 * HOUR), t + 12 * HOUR) : null;
+      return { v: st ?? "awake", sub: n?.asleepMin != null ? `night ${clock(n.start)}–${clock(n.end)} · ${hm(n.asleepMin)} asleep` : "" };
+    }
+    if (l.id === "caf") return { v: `${fmt0(valueAt(data.caffeine, t)?.[1] ?? 0)} mg`, sub: "in your body" };
+    if (l.id === "alc") { const v = valueAt(data.alcohol, t)?.[1] ?? 0; return { v: `${v >= 0.05 ? v.toFixed(1) : "0"} g`, sub: "in your body" }; }
+    if (l.id === "wt") { const v = valueAt(l.pts ?? [], t); return v && t - v[0] < 3 * DAY ? { v: `${v[1].toFixed(1)} kg`, sub: dayLabel(v[0]) } : { v: "—", sub: "" }; }
+    if (l.id === "kcal") { const v = valueAt(l.pts ?? [], t); return v && t - v[0] < DAY ? { v: `${fmt0(v[1])} kcal`, sub: dayLabel(v[0]) } : { v: "—", sub: "" }; }
+    if (l.id === "slept") { const v = valueAt(l.pts ?? [], t); return v && t - v[0] < DAY ? { v: `${v[1]}/10`, sub: "your morning rating" } : { v: "—", sub: "" }; }
+    if (l.kind === "feel") {
+      const c = hovered ?? latestCheck(data.checks, t);
+      if (!c || t - c.at >= 6 * HOUR) return { v: "", sub: "no check-in in the 6 hours before" };
+      const parts = FEELINGS.flatMap(([k, name]) => (c[k] != null ? [`${name.toLowerCase()} ${c[k]}`] : []));
+      return { v: parts.join(" · "), sub: `check-in ${clock(c.at)}${c.note ? ` · “${c.note}”` : ""}` };
+    }
+    if (l.kind === "events") {
+      const d = localDay(t), on = (x: number) => localDay(x) === d;
+      const cups = data.doses.filter((x) => x.mg > 0 && on(x.at)).length, meals = data.meals.filter((x) => on(x.at)), drinks = data.drinks.filter((x) => on(x.at)).length;
+      const kcal = meals.reduce((a, m) => a + m.kcal, 0), gym = data.workouts.filter((x) => on(x.start)).map((x) => x.name);
+      const bits = [cups ? `${cups} coffee` : "", meals.length ? `${meals.length} meals · ${fmt0(kcal)} kcal` : "", drinks ? `${drinks} ${drinks === 1 ? "drink" : "drinks"}` : "", gym.length ? gym.join(", ") : ""].filter(Boolean);
+      return { v: "", sub: bits.length ? `${dayLabel(t)} · ${bits.join(" · ")}` : `${dayLabel(t)} · nothing logged` };
+    }
+    return { v: "", sub: "" };
   };
 
   useEffect(() => {
@@ -242,6 +265,8 @@ export function MasterGraph({ data, supplements, focus, days, band, onView }: { 
     const t0 = view.t1 - view.span, pw = Math.max(10, w - LEFT - RIGHT);
     const X = (t: number) => LEFT + ((t - t0) / view.span) * pw;
     ctx.font = "10px IBM Plex Mono, monospace"; ctx.textBaseline = "middle";
+    // Each pane on its own panel; the page shows between them.
+    ctx.fillStyle = C.panel; for (const r of layout) ctx.fillRect(0, r.y - HDR, w, HDR + r.l.h + 2);
 
     // time grid
     const steps = [HOUR, 3 * HOUR, 6 * HOUR, 12 * HOUR, DAY, 2 * DAY, 7 * DAY, 14 * DAY, 28 * DAY];
@@ -288,16 +313,6 @@ export function MasterGraph({ data, supplements, focus, days, band, onView }: { 
         ctx.beginPath(); let pen = false;
         b.forEach((k, i) => { if (!k) { pen = false; return; } const x = LEFT + i, yy = Y(k.mean); if (pen) ctx.lineTo(x, yy); else ctx.moveTo(x, yy); pen = true; });
         ctx.stroke(); ctx.setLineDash([]);
-      } else if (l.kind === "feel") {
-        const Y = (v: number) => yOf(top, h, lo, hi, v);
-        ctx.strokeStyle = l.color; ctx.fillStyle = l.color; ctx.lineWidth = 1.5; if (asOverlay) ctx.setLineDash([4, 3]);
-        for (const run of feelRuns(data.checks, l.id as FeelK)) {
-          if (run[run.length - 1][0] < t0 - HOUR || run[0][0] > view.t1 + HOUR) continue;
-          ctx.beginPath(); run.forEach((p, i) => (i ? ctx.lineTo(X(p[0]), Y(p[1])) : ctx.moveTo(X(p[0]), Y(p[1])))); ctx.stroke();
-          const r = view.span <= 7 * DAY ? 3.6 : view.span <= 30 * DAY ? 2.6 : 1.6;
-          run.forEach((p) => { ctx.beginPath(); ctx.arc(X(p[0]), Y(p[1]), r, 0, 7); ctx.fill(); });
-        }
-        ctx.setLineDash([]); ctx.lineWidth = 1;
       } else {
         const inView = pts.filter((p) => p[0] >= t0 - 3 * DAY && p[0] <= view.t1 + 3 * DAY);
         const Y = (v: number) => yOf(top, h, lo, hi, v);
@@ -408,14 +423,16 @@ export function MasterGraph({ data, supplements, focus, days, band, onView }: { 
     };
 
     layout.forEach(({ l, y: top }) => {
-      ctx.textAlign = "left"; ctx.font = "11px IBM Plex Sans, sans-serif"; ctx.fillStyle = l.kind === "wearable" ? C.dim : C.ink2; ctx.fillText(l.name, 8, top + 8);
-      ctx.font = "10px IBM Plex Mono, monospace"; ctx.fillStyle = C.dim; if (l.unit) ctx.fillText(l.unit, 8, top + 20);
-      const lv = LEFT >= 120 ? laneValue(l, hover ?? data.to) : null;
-      if (lv) { ctx.font = "600 12px IBM Plex Sans, sans-serif"; ctx.fillStyle = C.ink; ctx.textAlign = "right"; ctx.fillText(lv, LEFT - 8, top + (l.h >= 34 ? l.h - 9 : 8)); ctx.textAlign = "left"; ctx.font = "10px IBM Plex Mono, monospace"; }
+      // The header strip: NAME · value at the crosshair (or now) · a line of context.
+      const hy = top - HDR + 10, pt = paneText(l, hover ?? data.to);
+      ctx.textAlign = "left"; ctx.font = "500 10px IBM Plex Mono, monospace"; ctx.fillStyle = l.kind === "wearable" ? C.dim : C.ink2;
+      const name = l.name.toUpperCase(); ctx.fillText(name, LEFT + 2, hy); let hx = LEFT + 2 + ctx.measureText(name).width + 10;
+      if (pt.v) { ctx.font = "600 12.5px IBM Plex Sans, sans-serif"; ctx.fillStyle = C.ink; ctx.fillText(pt.v, hx, hy); hx += ctx.measureText(pt.v).width + 8; }
+      if (pt.sub) { ctx.font = "11.5px IBM Plex Sans, sans-serif"; ctx.fillStyle = C.ink2; ctx.fillText(pt.sub, hx, hy); }
+      ctx.font = "10px IBM Plex Mono, monospace";
       ctx.strokeStyle = C.line; ctx.beginPath(); ctx.moveTo(LEFT, top + l.h + .5); ctx.lineTo(w - RIGHT, top + l.h + .5); ctx.stroke();
       ctx.save(); ctx.beginPath(); ctx.rect(LEFT, top - 2, pw, l.h + 4); ctx.clip();
-      if (l.kind === "wearable") { ctx.fillStyle = C.dim; ctx.textAlign = "left"; ctx.fillText(l.id === "hr" || l.id === "sleep" ? "Connect your band in Settings" : "Connect a wearable", LEFT + 8, top + l.h / 2); }
-      else if (l.kind === "hr") drawHr(l, top, l.h);
+      if (l.kind === "hr") drawHr(l, top, l.h);
       else if (l.kind === "series" || l.kind === "daily") drawSeries(l, top, l.h, false);
       else if (l.kind === "hyp") {
         // Fitbit-style: four rows (awake at the top, deep at the bottom); a night without stages is one block.
@@ -432,43 +449,46 @@ export function MasterGraph({ data, supplements, focus, days, band, onView }: { 
           if (n.nap) { ctx.fillStyle = C.dim; ctx.textAlign = "left"; ctx.font = "9px IBM Plex Mono, monospace"; ctx.fillText("nap", X(n.start), top + 2); ctx.font = "10px IBM Plex Mono, monospace"; }
         }
       }
-      else if (l.kind === "sticks") data.meals.forEach((m) => { if (m.at < t0 || m.at > view.t1) return; const x = X(m.at), bh = Math.min(l.h, (m.kcal / 1100) * l.h), bw = view.span <= 3 * DAY ? 4 : 2; ctx.fillStyle = l.color; ctx.fillRect(x - bw / 2, top + l.h - bh, bw, bh); if (view.span <= 3 * DAY) { ctx.fillStyle = C.ink2; ctx.textAlign = "left"; ctx.fillText(String(Math.round(m.kcal)), x + 4, top + l.h - bh + 5); } });
-      else if (l.kind === "blocks") data.workouts.forEach((b) => { if (b.end < t0 || b.start > view.t1) return; const x0 = X(b.start), x1 = X(b.end); ctx.fillStyle = l.color; ctx.globalAlpha = .85; ctx.fillRect(x0, top + 3, Math.max(2, x1 - x0), l.h - 6); ctx.globalAlpha = 1; if (x1 - x0 > 50) { ctx.fillStyle = "#1a1a12"; ctx.textAlign = "left"; ctx.fillText(b.name, x0 + 4, top + l.h / 2); } });
       else if (l.kind === "feel") {
-        if (view.span <= 7 * DAY) {
-          // C · feeling ribbon: height = mood, thickness = energy, colour = stress (calm grey → tense red).
-          // Joined within a day only, so a night is a gap; notes ringed.
-          const Y = (v: number) => yOf(top + 4, l.h - 8, 0.5, 10.5, v), col = (s?: number) => { const m = stressMix(s); return m == null ? C.ink2 : mixHex(CALM, C.hr, m); };
-          [2, 5, 8].forEach((v) => { ctx.strokeStyle = C.line; ctx.setLineDash([1, 4]); ctx.beginPath(); ctx.moveTo(LEFT, Y(v)); ctx.lineTo(w - RIGHT, Y(v)); ctx.stroke(); ctx.setLineDash([]); ctx.fillStyle = C.dim; ctx.textAlign = "left"; ctx.font = "9px IBM Plex Mono, monospace"; ctx.fillText(String(v), LEFT + 3, Y(v) - 5); ctx.font = "10px IBM Plex Mono, monospace"; });
-          for (const run of ribbonRuns(data.checks)) {
-            if (run[run.length - 1].at < t0 - DAY || run[0].at > view.t1 + DAY) continue;
-            for (let i = 1; i < run.length; i++) {
-              const a = run[i - 1], b = run[i], x1 = X(a.at), x2 = X(b.at), y1 = Y(a.mood!), y2 = Y(b.mood!), w1 = ribbonWidth(a.energy) / 2, w2 = ribbonWidth(b.energy) / 2, xm = (x1 + x2) / 2;
-              const g = ctx.createLinearGradient(x1, 0, x2, 0); g.addColorStop(0, col(a.stress)); g.addColorStop(1, col(b.stress)); ctx.fillStyle = g;
-              ctx.beginPath(); ctx.moveTo(x1, y1 - w1); ctx.bezierCurveTo(xm, y1 - w1, xm, y2 - w2, x2, y2 - w2); ctx.lineTo(x2, y2 + w2); ctx.bezierCurveTo(xm, y2 + w2, xm, y1 + w1, x1, y1 + w1); ctx.closePath(); ctx.fill();
+        // Four rows, each its own 1–10 (owner, 8 Oct: the ribbon was "hard to read"). Up to a week: every
+        // check-in, joined within a day; longer: each day's average. A note gets a ring.
+        const rh = (l.h - 4) / 4, close = view.span <= 7 * DAY;
+        FEELINGS.forEach(([k, , col], ri) => {
+          const r0 = top + 2 + ri * rh, Y = (v: number) => r0 + rh - 5 - ((v - 1) / 9) * (rh - 10);
+          ctx.strokeStyle = C.line; ctx.setLineDash([1, 4]); ctx.beginPath(); ctx.moveTo(LEFT, Y(5.5) + .5); ctx.lineTo(w - RIGHT, Y(5.5) + .5); ctx.stroke(); ctx.setLineDash([]);
+          if (ri) { ctx.strokeStyle = C.line; ctx.beginPath(); ctx.moveTo(LEFT, r0 + .5); ctx.lineTo(w - RIGHT, r0 + .5); ctx.stroke(); }
+          ctx.strokeStyle = col; ctx.fillStyle = col; ctx.lineWidth = 1.75; if (k === "focus") ctx.setLineDash([4, 3]);
+          if (close) {
+            for (const run of feelRuns(data.checks, k)) {
+              if (run[run.length - 1][0] < t0 - HOUR || run[0][0] > view.t1 + HOUR) continue;
+              ctx.beginPath(); run.forEach((p, i) => (i ? ctx.lineTo(X(p[0]), Y(p[1])) : ctx.moveTo(X(p[0]), Y(p[1])))); ctx.stroke();
+              ctx.setLineDash([]); run.forEach((p) => { ctx.beginPath(); ctx.arc(X(p[0]), Y(p[1]), 3.2, 0, 7); ctx.fill(); }); if (k === "focus") ctx.setLineDash([4, 3]);
+              if (view.span <= 3 * DAY) { ctx.font = "500 10px IBM Plex Mono, monospace"; ctx.textAlign = "left"; run.forEach((p) => ctx.fillText(String(p[1]), X(p[0]) + 5, Y(p[1]) - 7)); }
             }
-            for (const c of run) { const x = X(c.at), y = Y(c.mood!), r = ribbonWidth(c.energy) / 2 + .5; ctx.fillStyle = col(c.stress); ctx.beginPath(); ctx.arc(x, y, r, 0, 7); ctx.fill(); if (c.note) { ctx.strokeStyle = C.ink; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.arc(x, y, r + 4, 0, 7); ctx.stroke(); ctx.lineWidth = 1; } }
+          } else {
+            const byDay = new Map<string, number[]>();
+            for (const c of data.checks) { const v = c[k]; if (v != null && c.at >= t0 - DAY && c.at <= view.t1 + DAY) { const d = localDay(c.at); byDay.set(d, [...(byDay.get(d) ?? []), v]); } }
+            const pts = [...byDay.entries()].sort().map(([d, vs]) => [atMinute(d, 720), vs.reduce((a, b) => a + b, 0) / vs.length] as [number, number]);
+            ctx.beginPath(); pts.forEach((p, i) => (i && p[0] - pts[i - 1][0] <= 1.5 * DAY ? ctx.lineTo(X(p[0]), Y(p[1])) : ctx.moveTo(X(p[0]), Y(p[1])))); ctx.stroke();
+            ctx.setLineDash([]); pts.forEach((p) => { ctx.beginPath(); ctx.arc(X(p[0]), Y(p[1]), view.span <= 30 * DAY ? 2.4 : 1.5, 0, 7); ctx.fill(); });
           }
-          if (hovered?.mood != null) { const x = X(hovered.at), y = Y(hovered.mood), r = ribbonWidth(hovered.energy) / 2 + 7; ctx.strokeStyle = C.ink; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(x, y, r, 0, 7); ctx.stroke(); ctx.lineWidth = 1; }
-        } else {
-          // A · life chart: each day's mood above or below your own average, energy and stress underneath.
-          const { base, days } = lifeBars(data.checks), mh = l.h - 30, y0 = top + mh / 2, ext = 3, Y = (dv: number) => y0 - (Math.max(-ext, Math.min(ext, dv)) / ext) * (mh / 2 - 4);
-          [-2, -1, 1, 2].forEach((v) => { ctx.strokeStyle = C.line; ctx.setLineDash([1, 4]); ctx.beginPath(); ctx.moveTo(LEFT, Y(v)); ctx.lineTo(w - RIGHT, Y(v)); ctx.stroke(); ctx.setLineDash([]); ctx.fillStyle = C.dim; ctx.textAlign = "left"; ctx.font = "9px IBM Plex Mono, monospace"; ctx.fillText(v > 0 ? `+${v}` : `−${-v}`, LEFT + 3, Y(v) - 5); ctx.font = "10px IBM Plex Mono, monospace"; });
-          ctx.strokeStyle = C.line2; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(LEFT, y0); ctx.lineTo(w - RIGHT, y0); ctx.stroke(); ctx.lineWidth = 1;
-          if (base != null) { ctx.fillStyle = C.ink2; ctx.textAlign = "right"; ctx.font = "9px IBM Plex Mono, monospace"; ctx.fillText(`0 = your avg ${base.toFixed(1)}`, w - RIGHT - 3, top + 6); ctx.font = "10px IBM Plex Mono, monospace"; }
-          const inV = days.filter((d) => d.at >= t0 - DAY && d.at <= view.t1 + DAY), bw = Math.max(1.5, (pw / (view.span / DAY)) * .7);
-          for (const d of inV) {
-            const x = X(d.at) - bw / 2, y = Y(d.dev), r = Math.min(3, bw / 2, Math.abs(y - y0));
-            ctx.fillStyle = d.dev >= 0 ? C.up : C.down; ctx.beginPath();
-            if (d.dev >= 0) { ctx.moveTo(x, y0); ctx.lineTo(x, y + r); ctx.quadraticCurveTo(x, y, x + r, y); ctx.lineTo(x + bw - r, y); ctx.quadraticCurveTo(x + bw, y, x + bw, y + r); ctx.lineTo(x + bw, y0); }
-            else { ctx.moveTo(x, y0); ctx.lineTo(x, y - r); ctx.quadraticCurveTo(x, y, x + r, y); ctx.lineTo(x + bw - r, y); ctx.quadraticCurveTo(x + bw, y, x + bw, y - r); ctx.lineTo(x + bw, y0); }
-            ctx.fill();
-            if (d.note && bw >= 5) { ctx.fillStyle = C.ink; ctx.beginPath(); ctx.arc(x + bw / 2, d.dev >= 0 ? y - 5 : y + 5, 1.7, 0, 7); ctx.fill(); }
-          }
-          // energy and stress, day averages, in a strip at the bottom
-          const sy = top + mh + 4, sh = 22, SY = (v: number) => sy + sh - ((v - 1) / 9) * sh;
-          ([["energy", C.gym], ["stress", C.hr]] as const).forEach(([k, c]) => { ctx.strokeStyle = c; ctx.lineWidth = 1.5; ctx.beginPath(); let prev: number | null = null; for (const d of inV) { const v = d[k]; if (v == null) { prev = null; continue; } const x = X(d.at), y = SY(v); if (prev != null && d.at - prev <= 1.6 * DAY) ctx.lineTo(x, y); else ctx.moveTo(x, y); prev = d.at; } ctx.stroke(); ctx.lineWidth = 1; });
-        }
+          ctx.setLineDash([]); ctx.lineWidth = 1;
+        });
+        if (close) for (const c of data.checks) if (c.note && c.mood != null && c.at >= t0 && c.at <= view.t1) { const Y0 = top + 2 + rh - 5 - ((c.mood - 1) / 9) * (rh - 10); ctx.strokeStyle = C.ink; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.arc(X(c.at), Y0, 7, 0, 7); ctx.stroke(); ctx.lineWidth = 1; }
+        if (hovered) { const x = X(hovered.at); ctx.strokeStyle = C.ink; ctx.globalAlpha = .6; ctx.lineWidth = 1.5; ctx.strokeRect(x - 7, top + 1, 14, l.h - 2); ctx.globalAlpha = 1; ctx.lineWidth = 1; }
+        ctx.font = "10px IBM Plex Mono, monospace";
+      }
+      else if (l.kind === "events") {
+        // Canvas B's rail: intake on top (meals as bars by kcal, coffee dots, drinks as diamonds), then
+        // activity and the stack (workouts as blocks, supplements as ticks).
+        const rh = (l.h - 4) / 2, r1 = top + 2, r2 = r1 + rh, near = view.span <= 2 * DAY;
+        ctx.strokeStyle = C.line; ctx.beginPath(); ctx.moveTo(LEFT, r2 + .5); ctx.lineTo(w - RIGHT, r2 + .5); ctx.stroke();
+        for (const m of data.meals) { if (m.at < t0 || m.at > view.t1) continue; const x = X(m.at), bh = Math.min(rh - 4, (m.kcal / 1100) * (rh - 4)), bw = view.span <= 3 * DAY ? 4 : 2; ctx.fillStyle = C.kcal; ctx.fillRect(x - bw / 2, r2 - 2 - bh, bw, bh); if (near) { ctx.fillStyle = C.ink2; ctx.font = "9.5px IBM Plex Mono, monospace"; ctx.fillText(String(Math.round(m.kcal)), x + 4, r2 - 2 - bh + 5); } }
+        for (const d of data.drinks) { if (d.at < t0 || d.at > view.t1) continue; const x = X(d.at), yy = r1 + 7; ctx.fillStyle = C.alc; ctx.beginPath(); ctx.moveTo(x, yy - 5); ctx.lineTo(x + 5, yy); ctx.lineTo(x, yy + 5); ctx.lineTo(x - 5, yy); ctx.closePath(); ctx.fill(); }
+        for (const d of data.doses) { if (d.mg <= 0 || d.at < t0 || d.at > view.t1) continue; const x = X(d.at), yy = r1 + 7; ctx.fillStyle = C.panel; ctx.beginPath(); ctx.arc(x, yy, 5, 0, 7); ctx.fill(); ctx.fillStyle = C.caf; ctx.beginPath(); ctx.arc(x, yy, 3.6, 0, 7); ctx.fill(); if (near) { ctx.font = "9.5px IBM Plex Mono, monospace"; ctx.fillText(`${Math.round(d.mg)}`, x + 6, yy - 6); } }
+        for (const b of data.workouts) { if (b.end < t0 || b.start > view.t1) continue; const x0 = X(b.start), x1 = X(b.end); ctx.fillStyle = C.gym; ctx.fillRect(x0, r2 + 6, Math.max(3, x1 - x0), rh - 12); if (x1 - x0 > 40 || near) { ctx.fillStyle = x1 - x0 > 40 ? "#1a1a12" : C.gym; ctx.font = "500 10px IBM Plex Sans, sans-serif"; ctx.fillText(b.name, x1 - x0 > 40 ? x0 + 4 : x1 + 4, r2 + rh / 2); } }
+        for (const sp of data.supps) { if (sp.at < t0 || sp.at > view.t1) continue; ctx.fillStyle = C.supp; ctx.fillRect(X(sp.at) - 1, r2 + 3, 2, 7); }
+        ctx.font = "10px IBM Plex Mono, monospace";
       }
       else if (l.kind === "chips") (l.pts ?? []).forEach(([at, v]) => {
         if (at < t0 - HOUR || at > view.t1) return;
@@ -476,24 +496,28 @@ export function MasterGraph({ data, supplements, focus, days, band, onView }: { 
         ctx.fillStyle = l.color; ctx.globalAlpha = .25 + .75 * ((v - 1) / 9); ctx.fillRect(x - cw / 2, top + 2, cw, l.h - 4); ctx.globalAlpha = 1;
         if (cw > 10) { ctx.fillStyle = v >= 7 ? "#10181a" : C.ink; ctx.textAlign = "center"; ctx.fillText(String(v), x, top + l.h / 2); }
       });
-      else if (l.kind === "ticks") {
-        const rowH = l.h / Math.max(1, supplements.length);
-        data.supps.forEach((s) => { if (s.at < t0 || s.at > view.t1) return; ctx.fillStyle = l.color; ctx.globalAlpha = .5 + (s.row % 5) * .1; ctx.fillRect(X(s.at) - 1, top + s.row * rowH + 1, 2.5, rowH - 2); });
-        ctx.globalAlpha = 1;
-        if (view.span <= 2 * DAY) { ctx.fillStyle = C.dim; ctx.font = "9.5px IBM Plex Mono, monospace"; ctx.textAlign = "left"; supplements.forEach((s, i) => ctx.fillText(s.name.split(" ")[0], LEFT + 3, top + i * rowH + rowH / 2)); }
-      }
       if (l.id === "caf") [CAF_SLEEP.lowBelowMg, CAF_SLEEP.higherFromMg].forEach((v) => { const top_ = lim(l)[1]; if (v > top_) return; const yy = yOf(top, l.h, 0, top_, v); ctx.strokeStyle = C.caf; ctx.globalAlpha = .45; ctx.setLineDash([2, 4]); ctx.beginPath(); ctx.moveTo(LEFT, yy); ctx.lineTo(w - RIGHT, yy); ctx.stroke(); ctx.setLineDash([]); ctx.globalAlpha = 1; ctx.fillStyle = C.caf; ctx.textAlign = "right"; ctx.font = "9px IBM Plex Mono, monospace"; ctx.fillText(`${v}`, w - RIGHT - 3, yy - 6); ctx.font = "10px IBM Plex Mono, monospace"; });
       if (host && l.id === host.id) overlays.forEach((o) => drawSeries(o, top, l.h, true));
       ctx.restore();
+      // Row names in the right margin, outside the pane's clip.
+      if (l.kind === "feel") FEELINGS.forEach(([, name, col], ri) => { const rh = (l.h - 4) / 4; ctx.font = "500 10px IBM Plex Sans, sans-serif"; ctx.fillStyle = col; ctx.textAlign = "left"; ctx.fillText(name, w - RIGHT + 5, top + 2 + ri * rh + rh / 2); });
+      if (l.kind === "events") { const rh = (l.h - 4) / 2; ctx.font = "9px IBM Plex Mono, monospace"; ctx.fillStyle = C.dim; ctx.textAlign = "left"; ctx.fillText("intake", w - RIGHT + 5, top + 2 + rh / 2); ctx.fillText("active", w - RIGHT + 5, top + 2 + rh * 1.5); }
+      ctx.font = "10px IBM Plex Mono, monospace";
       // Sleep stage names in the right margin, where other lanes put their "on top" axis.
       if (l.kind === "hyp") { ctx.fillStyle = C.dim; ctx.font = "8.5px IBM Plex Mono, monospace"; ctx.textAlign = "left"; STAGES.forEach((n, i) => ctx.fillText(n === "rem" ? "REM" : n, w - RIGHT + 5, top + 2 + (i + .5) * (l.h - 4) / 4)); ctx.font = "10px IBM Plex Mono, monospace"; }
       // Axis values sit just inside the plot so they never collide with the lane's name.
-      if (l.lo != null && l.hi != null && l.kind !== "feel" && l.kind !== "hr") { const [lo, hi] = lim(l); ctx.textAlign = "left"; ctx.fillStyle = C.dim; ctx.font = "9px IBM Plex Mono, monospace"; ctx.fillText(String(hi), LEFT + 3, top + 5); ctx.fillText(String(lo), LEFT + 3, top + l.h - 4); ctx.font = "10px IBM Plex Mono, monospace"; }
+      if (l.lo != null && l.hi != null && l.kind !== "feel" && l.kind !== "hr" && l.kind !== "chips") { const [lo, hi] = lim(l); ctx.textAlign = "left"; ctx.fillStyle = C.dim; ctx.font = "9px IBM Plex Mono, monospace"; ctx.fillText(String(hi), LEFT + 3, top + 5); ctx.fillText(String(lo), LEFT + 3, top + l.h - 4); ctx.font = "10px IBM Plex Mono, monospace"; }
       if (host && l.id === host.id) overlays.forEach((o, k) => { const [lo, hi] = lim(o); ctx.textAlign = "left"; ctx.fillStyle = o.color; ctx.fillText(o.kind === "feel" ? "10" : `${hi}${o.unit}`, w - RIGHT + 5, top + 4 + k * 12); ctx.fillText(o.kind === "feel" ? "1" : String(lo), w - RIGHT + 5, top + l.h - 3 - k * 12); });
     });
     // now + crosshair
     const nx = X(data.to); if (nx >= LEFT && nx <= w - RIGHT) { ctx.strokeStyle = C.ink2; ctx.setLineDash([2, 3]); ctx.beginPath(); ctx.moveTo(nx + .5, TOP - 6); ctx.lineTo(nx + .5, H - 4); ctx.stroke(); ctx.setLineDash([]); }
     if (hover != null) { const hx = X(hover); ctx.strokeStyle = C.ink; ctx.globalAlpha = .45; ctx.beginPath(); ctx.moveTo(hx + .5, TOP - 6); ctx.lineTo(hx + .5, H - 4); ctx.stroke(); ctx.globalAlpha = 1; }
+    // The crosshair's time, as a chip on the time axis.
+    if (hover != null) {
+      const hx = X(hover), txt = `${dayLabel(hover).slice(0, 3)} ${clock(hover)}`;
+      ctx.font = "500 10.5px IBM Plex Mono, monospace"; const tw = ctx.measureText(txt).width + 10, cx = Math.max(LEFT + tw / 2, Math.min(w - RIGHT - tw / 2, hx));
+      ctx.fillStyle = C.ink; ctx.fillRect(cx - tw / 2, 2, tw, 16); ctx.fillStyle = C.panel; ctx.textAlign = "center"; ctx.fillText(txt, cx, 10); ctx.font = "10px IBM Plex Mono, monospace";
+    }
   });
 
   const tAt = (clientX: number) => { const r = cv.current!.getBoundingClientRect(), pw = r.width - LEFT - RIGHT, x = clientX - r.left; return x >= LEFT && x <= r.width - RIGHT ? view.t1 - view.span + ((x - LEFT) / pw) * view.span : null; };
@@ -612,10 +636,8 @@ export function MasterGraph({ data, supplements, focus, days, band, onView }: { 
           onPointerDown={(e) => { e.currentTarget.setPointerCapture(e.pointerId); ovMove(e.clientX, true); }}
           onPointerMove={(e) => { if (ovDrag.current) ovMove(e.clientX, false); }}
           onPointerUp={() => { ovDrag.current = null; }} onPointerCancel={() => { ovDrag.current = null; }} />
-        <div className="mg-bar mg-key">{view.span <= 7 * DAY
-          ? <span className="hint-i"><b>How you felt</b> · height = mood · thickness = energy (thin = drained) · colour = stress <i className="sw" style={{ background: CALM }} />calm → <i className="sw" style={{ background: C.hr }} />tense · ring = a note</span>
-          : <span className="hint-i"><b>How you felt</b> · each day's mood above <i className="sw" style={{ background: C.up }} /> or below <i className="sw" style={{ background: C.down }} /> your own average · <i className="sw ln" style={{ background: C.gym }} />energy and <i className="sw ln" style={{ background: C.hr }} />stress underneath · dot = a note · zoom to a week or less for each check-in</span>}</div>
-        <div className="mg-bar"><span className="hint-i">Point at a check-in to read it · drag the chart or the overview to move · ⌘/Ctrl + wheel to zoom · tick lanes on and off; "on top" draws a line over {host?.name.toLowerCase() ?? "the first lane"} with its own axis.</span></div>
+        <div className="mg-bar mg-key"><span className="hint-i"><b>Feelings</b> · each its own row, 1–10 · {view.span <= 7 * DAY ? "dots are check-ins, joined within a day · ring = a note" : "each day’s average · zoom to a week or less for each check-in"} · <b>Events</b> <i className="sw" style={{ background: C.caf, borderRadius: 9 }} />coffee <i className="sw" style={{ background: C.kcal }} />meal <i className="sw" style={{ background: C.alc, transform: "rotate(45deg) scale(.8)" }} />drink <i className="sw ln" style={{ background: C.supp }} />supplement <i className="sw" style={{ background: C.gym }} />workout</span></div>
+        <div className="mg-bar"><span className="hint-i">Point anywhere to read every pane at that moment · drag the chart or the overview to move · ⌘/Ctrl + wheel to zoom · tick panes on and off; "on top" draws a line over {host?.name.toLowerCase() ?? "the first pane"} with its own axis.</span></div>
       </div>
       <aside className="mg-side">
         <div className="legend">

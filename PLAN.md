@@ -604,3 +604,9 @@ email get Dev tools (`#dev`): raw entry editor, generate/remove sample, wipe acc
      Findings, Data — one at a time on every width: a sidebar with a live number per page on a laptop, tabs on a phone;
      #insights/<page> opens one; each page has its own title and line. Links from Today/Scout/stack check land on the
      right page.
+   - **Step 2 built (8 Oct):** the Timeline as canvas A's panes — every metric its own full-width pane on its own panel,
+     its name, value at the crosshair and a line of context in a header strip (the 96–136 px label column is gone, so
+     the chart gets the whole width on a phone); feelings as four rows (mood, energy, stress, focus), each its own 1–10,
+     check-ins joined within a day up to a week and day averages beyond; meals, workouts and the stack merged into one
+     Events pane (coffee dots, meals by kcal, drink diamonds, supplement ticks, workout blocks); a time chip on the
+     crosshair; empty band panes shrink to their header. Patterns' "Show on graph" maps old lane names to the panes.

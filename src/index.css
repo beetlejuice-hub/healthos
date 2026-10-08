@@ -235,7 +235,7 @@ a { color: inherit; }
 .hint-i { font-size: 11.5px; color: var(--i-dim); }
 .mg-key .hint-i { color: var(--i-ink-2); } .mg-key b { color: var(--i-ink); font-weight: 600; }
 .mg-key i.sw { display: inline-block; width: 9px; height: 9px; border-radius: 2px; margin: 0 4px 0 2px; vertical-align: -1px; } .mg-key i.sw.ln { height: 2px; width: 12px; vertical-align: 2px; }
-.mg-canvas { display: block; width: 100%; touch-action: pan-y; cursor: grab; }
+.mg-canvas { display: block; width: 100%; touch-action: pan-y; cursor: grab; background: var(--i-bg); }
 .mg-overview { display: block; width: 100%; touch-action: pan-y; cursor: ew-resize; border-top: 1px solid var(--i-line); }
 .mg-side { border-left: 1px solid var(--i-line); display: grid; align-content: start; min-width: 0; }
 .legend { padding: 10px 12px; display: grid; gap: 2px; border-bottom: 1px solid var(--i-line); }
