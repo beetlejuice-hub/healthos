@@ -625,3 +625,9 @@ email get Dev tools (`#dev`): raw entry editor, generate/remove sample, wipe acc
        later day by an hour; a day with nothing eaten or drunk logged is unknown, not "none".
      - Not done yet: ⇄ (heart rate as the driver), more drivers (meals, steps once PLAN 52 brings them), a link from
        Findings' "pick any two" (daily) to this (within the day).
+54. [ ] **Insights → Sleep, redesigned** (claimed 8 Oct — canvas first, then Body.tsx's sleep panels move to a new
+   components/Sleep.tsx, numbers in a new lib/sleep.ts). Owner, 8 Oct, after Compare: "go" (on: "Sleep page, 2–3
+   prototypes … it has the most data the band already gives and the least design so far"). Today the page shows only
+   the morning rating, caffeine at bedtime and drinks; the band's nights (stages, time asleep, awake, time to fall
+   asleep), overnight heart rate per minute, and daily resting HR and HRV aren't on it at all.
+   - **Phase 1:** 2–3 directions on the canvas, laptop + phone, from fake nights shaped like real Fitbit ones. He picks.
