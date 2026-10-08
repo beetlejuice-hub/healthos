@@ -131,7 +131,7 @@ export function StackAlert() {
   const red = r.flags.filter((f) => f.rule.verdict === "avoid");
   if (!red.length) return null;
   return (
-    <a className="noticed-line alert" href="#insights" onClick={() => setTimeout(() => document.getElementById("stackcheck")?.scrollIntoView({ behavior: "smooth" }), 150)}>
+    <a className="noticed-line alert" href="#insights/training" onClick={() => setTimeout(() => document.getElementById("stackcheck")?.scrollIntoView({ behavior: "smooth" }), 150)}>
       <span><small>Stack check</small>{red.map((f) => `${f.a.label} + ${f.b.label}`).join("; ")}: avoid combining — tap for why.</span>
     </a>
   );

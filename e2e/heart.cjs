@@ -121,8 +121,9 @@ function world({ days, everyMin = 1, seed = 1 }) {
   await pg.keyboard.press('Escape'); await pg.waitForTimeout(200);
   check('full screen: Esc closes it', !(await pg.locator('.master').getAttribute('class')).includes('big'));
   // C: after every coffee, after a workout.
+  await pg.goto(APP + '#insights/heart'); await pg.waitForTimeout(600);
   const card = pg.locator('#ins-heart');
-  await card.scrollIntoViewIfNeeded(); await pg.waitForTimeout(300);
+  check('the Heart page is in the sidebar and shows the card', await pg.locator('.secbar button', { hasText: 'Heart' }).count() === 1 && await card.isVisible());
   const ct = await card.innerText();
   const nCof = +((ct.match(/(\d+) coffees over/) || [])[1] || 0);
   check(`card: the planted coffee effect found, in "goes with" words (${(ct.match(/\d+ coffees over[^\n]+/) || [])[0]})`, nCof >= 8 && /Coffee goes with \+\d\.\d bpm 30–90 min after, against the same hours on days without\. How sure: (clear|likely)\./.test(ct));

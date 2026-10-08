@@ -31,21 +31,27 @@ const visibleSecs = (pg) => pg.evaluate(() => [...new Set([...document.querySele
       // (in the same tab) are — they must still get a tab.
       await pg.evaluate(() => { const k = 'healthos.v1:u-test', s = JSON.parse(localStorage.getItem(k) || '{}'); s.entries = [0, 1, 2].map((d) => ({ id: 'c' + d, kind: 'drink', at: Date.now() - d * 864e5 - 36e5, name: 'Coffee', ml: 250, caffeineMg: 95, alcoholG: 0, kcal: 2 })); localStorage.setItem(k, JSON.stringify(s)); });
       await pg.goto(APP + '#insights'); await pg.reload(); await pg.waitForTimeout(800);
-      if (await pg.locator('.secbar button', { hasText: 'Connections' }).count()) { await pg.locator('.secbar button', { hasText: 'Connections' }).click(); await pg.waitForTimeout(300); }
+      if (await pg.locator('.secbar button', { hasText: 'Findings' }).count()) { await pg.locator('.secbar button', { hasText: 'Findings' }).click(); await pg.waitForTimeout(300); }
       check('coffee only: "still checking" is on screen or one tab away', await pg.locator('#noticed').isVisible());
     }
     if (name === 'phone') { await pg.goto(APP + '#settings'); await pg.getByRole('button', { name: /Load sample/ }).click(); await pg.waitForTimeout(300); }
     else await pg.waitForTimeout(500);
     await pg.goto(APP + '#insights'); await pg.waitForSelector('.secbar', { timeout: 8000 }).catch(() => {}); await pg.waitForTimeout(800);
     if (name === 'laptop') {
-      const secs = await visibleSecs(pg);
-      check(`laptop: the whole page, every section (${secs.join(', ')})`, ['connections', 'data', 'intake', 'mind', 'sleep', 'timeline', 'training', 'week'].every((s) => secs.includes(s)));
-      check('laptop: the bar still has "Try"', await pg.locator('.secbar button', { hasText: 'Try' }).count() === 1);
+      // Owner, 8 Oct: "separate pages just like on the phone" — a sidebar on the left, one page at a time.
+      const bar = await pg.locator('.secbar').boundingBox();
+      check(`laptop: pages in a sidebar on the left (${Math.round(bar.x)},${Math.round(bar.width)}×${Math.round(bar.height)})`, bar.x < 10 && bar.width < 240 && bar.height > 400);
+      check('laptop: opens on Overview only', JSON.stringify(await visibleSecs(pg)) === '["week"]');
+      for (const [label, sec] of [['Timeline', 'timeline'], ['Sleep', 'sleep'], ['Findings', 'connections'], ['Data', 'data']]) {
+        await pg.locator('.secbar button', { hasText: label }).first().click(); await pg.waitForTimeout(300);
+        check(`laptop: ${label} shows only its page, #insights/${sec}`, JSON.stringify(await visibleSecs(pg)) === JSON.stringify([sec]) && await pg.evaluate(() => location.hash) === `#insights/${sec}`);
+      }
+      check('laptop: the sidebar shows live numbers (Training "N this wk")', /\d+ this wk/.test(await pg.locator('.secbar').innerText()));
     } else {
-      check('phone: opens on "This week" only', JSON.stringify(await visibleSecs(pg)) === '["week"]');
-      check('phone: "This week" is the current tab', (await pg.locator('.secbar button[aria-current="true"], .secbar button[aria-current="page"]').innerText()).trim() === 'This week');
+      check('phone: opens on Overview only', JSON.stringify(await visibleSecs(pg)) === '["week"]');
+      check('phone: Overview is the current tab', (await pg.locator('.secbar button[aria-current="page"] > span').innerText()).trim() === 'Overview');
       check('phone: no "Try" tab (the cards are in This week)', await pg.locator('.secbar button:visible', { hasText: 'Try' }).count() === 0);
-      for (const [label, sec] of [['Timeline', 'timeline'], ['Mind', 'mind'], ['Connections', 'connections'], ['Sleep', 'sleep'], ['Intake & body', 'intake'], ['Training & stack', 'training'], ['Your data', 'data']]) {
+      for (const [label, sec] of [['Timeline', 'timeline'], ['Mind', 'mind'], ['Findings', 'connections'], ['Sleep', 'sleep'], ['Food & body', 'intake'], ['Training', 'training'], ['Data', 'data']]) {
         await pg.evaluate(() => window.scrollTo(0, 600));
         await pg.locator('.secbar button', { hasText: label }).first().click(); await pg.waitForTimeout(300);
         const secs = await visibleSecs(pg);
@@ -70,13 +76,13 @@ const visibleSecs = (pg) => pg.evaluate(() => [...new Set([...document.querySele
       // Swipe between tabs.
       await pg.goto(APP + '#insights/week'); await pg.waitForTimeout(400);
       await swipe(pg, '.gl-week', -140);
-      check('phone: swipe left on This week opens Timeline', await hash(pg) === '#insights/timeline' && JSON.stringify(await visibleSecs(pg)) === '["timeline"]');
+      check('phone: swipe left on Overview opens Timeline', await hash(pg) === '#insights/timeline' && JSON.stringify(await visibleSecs(pg)) === '["timeline"]');
       await swipe(pg, '.mg-canvas', -140);
       check('phone: dragging the timeline itself pans it, not the tab', await hash(pg) === '#insights/timeline');
       await swipe(pg, '.secbar', 140);
       check('phone: scrolling the tab bar doesn\'t switch tab', await hash(pg) === '#insights/timeline');
       await swipe(pg, '.master', 140, 0);
-      check('phone: swipe right elsewhere on Timeline goes back to This week', await hash(pg) === '#insights/week');
+      check('phone: swipe right elsewhere on Timeline goes back to Overview', await hash(pg) === '#insights/week');
       await swipe(pg, '.gl-week', 140);
       check('phone: swipe right on the first tab stays put', await hash(pg) === '#insights/week');
       await swipe(pg, '.gl-week', -110, 90);

@@ -597,3 +597,10 @@ email get Dev tools (`#dev`): raw entry editor, generate/remove sample, wipe acc
    in detail and **compare** metrics; the mood ribbon is **hard to read**.
    - **Phase 1:** 3 directions for the Timeline page on the canvas (laptop + phone), a Compare view, the feelings lane
      3 ways. He picks; then build. Other pages (Heart, Sleep, Mind, Food & body, Training, Findings) one by one after.
+   - **Canvas (8 Oct):** https://claude.ai/artifact/RK7Gg68caCxcJ71wn5k1k4 — A panes, B focus + event rail, C day log, Compare,
+     feelings 3 ways. Owner: "I like all these, these are actually good, but we'll have to make changes to these later …
+     lets get building". Building: pages shell → Timeline as A (feelings as rows, B's rail as an events pane) → Compare.
+   - **Step 1 built (8 Oct):** Insights is pages — Overview, Timeline, Heart, Sleep, Mind, Food & body, Training,
+     Findings, Data — one at a time on every width: a sidebar with a live number per page on a laptop, tabs on a phone;
+     #insights/<page> opens one; each page has its own title and line. Links from Today/Scout/stack check land on the
+     right page.

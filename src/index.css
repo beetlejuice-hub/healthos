@@ -374,9 +374,21 @@ a { color: inherit; }
 .secbar::-webkit-scrollbar { display: none; }
 .secbar button { flex: none; border: 1px solid transparent; background: none; color: var(--i-ink-2); font-size: 12.5px; padding: 5px 11px; border-radius: 999px; }
 .secbar button:hover { color: var(--i-ink); background: var(--i-panel); }
-.secbar button[aria-current="true"] { color: var(--i-ink); border-color: var(--i-line-2); background: var(--i-panel-2); }
+.secbar button[aria-current="page"] { color: var(--i-ink); border-color: var(--i-line-2); background: var(--i-panel-2); }
 #ins-glance, #ins-timeline, .gl-group { scroll-margin-top: 104px; }
 @media (min-width: 900px) { .secbar { top: 45px; } }
+.secbar small { display: none; }
+/* One page at a time: its own title replaces the section headings. */
+.inst[data-tab] .gl-group { display: none; }
+/* Laptop: the pages as a sidebar (owner, 8 Oct, on the canvas). */
+@media (min-width: 900px) {
+  .app.r-insights .ins-shell { display: grid; grid-template-columns: 200px minmax(0, 1fr); max-width: 1720px; margin: 0 auto; align-items: start; }
+  .ins-shell > .secbar { position: sticky; top: 45px; height: calc(100dvh - 45px); flex-direction: column; overflow-y: auto; margin: 0; padding: 18px 10px; gap: 2px; border-bottom: 0; border-right: 1px solid var(--i-line); background: none; backdrop-filter: none; }
+  .ins-shell > .secbar button { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; border-radius: 6px; padding: 8px 10px; text-align: left; font-size: 13.5px; border: 0; }
+  .ins-shell > .secbar button[aria-current="page"] { background: var(--i-panel-2); color: var(--i-ink); font-weight: 600; }
+  .ins-shell > .secbar small { display: inline; font-family: var(--f-mono); font-size: 11px; color: var(--i-dim); font-weight: 400; }
+  .ins-shell .inst { max-width: none; margin: 0; padding-inline: 20px; }
+}
 .pt-cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 16px 28px; }
 .pt-side { display: grid; gap: 8px; align-content: start; min-width: 0; }
 .pt-side h3 { margin: 0; font-size: 13.5px; font-weight: 600; display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: baseline; }

@@ -32,13 +32,14 @@ const { chromium, APP, OUT, handle } = require('./harness.cjs');
     check(name + ': period switch reaches the sparklines', /Daily, last 7 days/i.test(await pg.locator('.gl-vt thead').innerText()));
     await pg.getByRole('button', { name: '30 days', exact: true }).click(); await pg.waitForTimeout(150);
     check(name + ': page never scrolls sideways', await pg.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth));
-    const secs = await pg.locator('.secbar button').allInnerTexts();
-    check(name + ': section bar lists the page (' + secs.join(', ') + ')', secs.includes('This week') && secs.includes('Timeline') && secs.includes('Connections') && secs.includes('Your data'));
-    if (name === 'laptop') { // on a phone the bar switches tabs instead: e2e/phone.cjs
-    await pg.locator('.secbar button', { hasText: 'Connections' }).click(); await pg.waitForTimeout(900);
+    const secs = await pg.locator('.secbar button > span').allInnerTexts();
+    check(name + ': the page list has the pages (' + secs.join(', ') + ')', ['Overview', 'Timeline', 'Findings', 'Data'].every((p) => secs.includes(p)));
+    if (name === 'laptop') { // pages as a sidebar on a laptop (owner, 8 Oct); phone tabs: e2e/phone.cjs
+    await pg.locator('.secbar button', { hasText: 'Findings' }).click(); await pg.waitForTimeout(500);
     const top = await pg.locator('#ins-connections').evaluate((el) => el.getBoundingClientRect().top);
-    check(name + ` : jumping to Connections brings it to the top (${Math.round(top)} px)`, top >= 0 && top < 200);
-    check(name + ': the bar stays pinned and marks it', await pg.locator('.secbar').isVisible() && await pg.locator('.secbar button[aria-current="true"]').innerText() === 'Connections');
+    check(name + ` : Findings opens as its own page, at the top (${Math.round(top)} px), Overview gone`, top >= 0 && top < 260 && !(await pg.locator('#ins-glance').isVisible()));
+    check(name + ': the sidebar stays and marks it', await pg.locator('.secbar').isVisible() && await pg.locator('.secbar button[aria-current="page"] > span').innerText() === 'Findings');
+    await pg.locator('.secbar button', { hasText: 'Overview' }).click(); await pg.waitForTimeout(400);
     }
     await pg.evaluate(() => window.scrollTo(0, 0)); await pg.waitForTimeout(200);
     // One tooltip, styled, instead of the browser's: pointing at a vitals row shows its numbers.

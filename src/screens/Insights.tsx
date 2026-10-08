@@ -6,6 +6,7 @@ import { dailyFacts, lanes } from "../lib/insights";
 import { MasterGraph } from "../components/MasterGraph";
 import { HeartEffects } from "../components/HeartEffects";
 import { loadBandBefore, useBand } from "../lib/band-client";
+import { lastNight } from "../lib/band";
 import { Glance } from "../components/Glance";
 import { Mind } from "../components/Mind";
 import { Connections } from "../components/Connections";
@@ -31,6 +32,21 @@ import { DOSE_MIN_DAYS, doseCompare } from "../lib/dose";
 const f1 = (v: number) => v.toFixed(1);
 const sgn = (v: number, f = f1) => `${v >= 0 ? "+" : "−"}${f(Math.abs(v))}`;
 
+/** What each page is about, under its title. */
+const PAGE_SUB: Record<string, string> = {
+  week: "Your week against your own usual weeks — never against other people.",
+  timeline: "Every metric on one clock. Read a day, or compare two things.",
+  heart: "Your heart rate after coffee and after training, against your own usual.",
+  sleep: "Your own morning rating, and the band's nights.",
+  mind: "How you felt, when, and around what.",
+  intake: "What you ate, and your weight.",
+  training: "What you trained, and what you took.",
+  connections: "What goes with better or worse days — with how sure each one is.",
+  data: "How complete the picture is, and how the numbers are made.",
+};
+/** The period switch matters on these pages only. */
+const PERIOD_PAGES = new Set(["week", "sleep", "mind", "intake", "training"]);
+
 /** True on a phone-width screen, kept current. */
 function usePhone() {
   const q = "(max-width: 700px)";
@@ -55,20 +71,20 @@ export function Insights() {
   const scouted = useScout();
   const [focus, setFocus] = useState<GraphFocus | null>(null);
   const [period, setPeriod] = useState<7 | 30 | 84>(30);
-  // On a phone the section bar is tabs: one section at a time (#insights/<tab> opens one directly).
+  // One page at a time, on a laptop (sidebar) and a phone (tabs); #insights/<page> opens one directly.
   const phone = usePhone();
   const [tab, setTab] = useState<string>(() => tabOf(readRoute()[1]) ?? "week");
   // Tabs with something in them (SectionBar finds out after render; until then assume all, so a phone never paints the whole page first).
   const [tabs, setTabs] = useState<string[]>(ALL_TABS);
   const onTabs = useCallback((ts: string[]) => setTabs((p) => (p.join() === ts.join() ? p : ts)), []);
-  // The open tab: one with content (else the first), and none — the whole page — when there is only one.
-  const shown = phone && tabs.length >= 2 ? (tabs.includes(tab) ? tab : tabs[0]) : undefined;
+  // The open page: one with content (else the first), and none — everything — when there is only one.
+  const shown = tabs.length >= 2 ? (tabs.includes(tab) ? tab : tabs[0]) : undefined;
   const openTab = useCallback((t: string) => { setTab(t); history.replaceState(null, "", `#insights/${t}`); window.scrollTo(0, 0); }, []);
   // Swipe sideways to the next or previous tab — but not on anything that already drags sideways
   // (the timeline, its overview, the tab bar, wide tables) or on a form control.
   const inst = useRef<HTMLDivElement>(null);
   useEffect(() => {
-    const el = inst.current; if (!el || !shown) return;
+    const el = inst.current; if (!el || !shown || !phone) return;
     let start: { x: number; y: number; t: number } | null = null;
     const sideways = (n: Element | null): boolean => {
       for (; n && n !== el; n = n.parentElement) {
@@ -85,9 +101,9 @@ export function Insights() {
     };
     el.addEventListener("touchstart", down, { passive: true }); el.addEventListener("touchend", up, { passive: true });
     return () => { el.removeEventListener("touchstart", down); el.removeEventListener("touchend", up); };
-  }, [shown, tabs, openTab]);
+  }, [shown, tabs, openTab, phone]);
   useEffect(() => { const on = () => { const t = tabOf(readRoute()[1]); if (t) setTab(t); }; addEventListener("hashchange", on); return () => removeEventListener("hashchange", on); }, []);
-  const showOnGraph = (f: GraphFocus) => { setFocus(f); setTab("timeline"); if (phone) history.replaceState(null, "", "#insights/timeline"); setTimeout(() => document.querySelector(".master")?.scrollIntoView({ behavior: "smooth" }), 50); };
+  const showOnGraph = (f: GraphFocus) => { setFocus(f); openTab("timeline"); };
   const report = useMemo(() => notice(s.entries, s.goals, now, s.settings.bodyKg, { workouts: s.workouts, supplements: s.supplements, settings: s.settings }), [s.entries, s.goals, now, s.settings, s.workouts, s.supplements]);
   // Show a section only once there's something in it; list the rest in one line each, so a new
   // account sees a short page instead of ten empty panels (owner: "looks really complex").
@@ -109,24 +125,42 @@ export function Insights() {
     !has.supps && ["Supplements", "tick your stack on Today"],
   ].filter((x): x is [string, string] => !!x);
   const nothing = s.entries.length === 0;
+  // A small live number beside each page in the laptop sidebar.
+  const values = useMemo(() => {
+    const v: Record<string, string> = {}, todays = s.entries.filter((e) => localDay(e.at) === today);
+    const hr = band?.hr.at(-1); if (hr && now - hr[0] < 3 * 3600_000) v.heart = `${Math.round(hr[1])} bpm`;
+    const night = band ? lastNight(band.sleep, now) : null;
+    const rated = todays.filter((e) => e.kind === "sleep").at(-1);
+    if (night?.asleepMin != null) v.sleep = `${Math.floor(night.asleepMin / 60)} h ${String(Math.round(night.asleepMin % 60)).padStart(2, "0")}`;
+    else if (rated?.kind === "sleep") v.sleep = `${rated.rating}/10`;
+    const moods = todays.flatMap((e) => (e.kind === "feel" && e.mood != null ? [e.mood] : []));
+    if (moods.length) v.mind = (moods.reduce((a, b) => a + b, 0) / moods.length).toFixed(1);
+    const kcal = todays.reduce((a, e) => a + (e.kind === "food" ? e.macros.kcal : 0), 0);
+    if (kcal) v.intake = `${Math.round(kcal).toLocaleString("en-GB")} kcal`;
+    const week = s.workouts.filter((w) => now - w.startedAt < 7 * 86_400_000).length;
+    if (week) v.training = `${week} this wk`;
+    if (report.found.length) v.connections = `${report.found.length} found`;
+    return v;
+  }, [s.entries, s.workouts, band, now, today, report]);
 
   return (
+    <div className="ins-shell">
+    {!nothing && <SectionBar version={`${s.entries.length}-${period}-${tab}-${band ? 1 : 0}`} tab={shown ?? tab} onTabs={onTabs} onTab={openTab} values={values} />}
     <div className="inst" ref={inst} data-tab={nothing ? undefined : shown}>
       <header>
         <div>
-          <h1>Insights</h1>
-          <p>Your week against your own usual weeks — never against other people. Then every metric on one timeline, and what goes with better or worse days, with how sure each one is.</p>
+          <h1>{shown ? TABS.find(([t]) => t === shown)?.[1] : "Insights"}</h1>
+          <p>{shown ? PAGE_SUB[shown] : "Your week against your own usual weeks — never against other people. Then every metric on one timeline, and what goes with better or worse days, with how sure each one is."}</p>
         </div>
         <div className="ins-ctrls">
           {sample && <span className="badge">INCLUDES SAMPLE DATA · remove it in Settings</span>}
-          {!nothing && <div className="iseg" role="group" aria-label="Period for the charts">
+          {!nothing && (!shown || PERIOD_PAGES.has(shown)) && <div className="iseg" role="group" aria-label="Period for the charts">
             {([[7, "7 days"], [30, "30 days"], [84, "12 weeks"]] as const).map(([n, l]) => <button type="button" key={n} aria-pressed={period === n} onClick={() => setPeriod(n)}>{l}</button>)}
           </div>}
         </div>
       </header>
       {nothing && <div className="needs">Nothing logged yet. Log food, drinks and supplements for a few days and this fills in — or load sample data in Settings to see what it will look like.</div>}
       <Tip />
-      {!nothing && <SectionBar version={`${s.entries.length}-${period}-${tab}`} tab={phone ? shown ?? tab : null} onTabs={onTabs} onTab={openTab} />}
       {!nothing && <Glance now={now} trendDays={period} report={report} />}
       {!nothing && <div className="gl" data-sec="week"><Top days={gdays} /></div>}
       {!nothing && <MasterGraph data={data} supplements={s.supplements} focus={focus} days={gdays} band={band} onView={loadBandBefore} />}
@@ -155,6 +189,7 @@ export function Insights() {
         <div className="gl-group" id="ins-data" data-sec="data"><h2>Your data</h2><span>how complete the picture is, and how the numbers are made</span></div>
         <div className="gl" data-sec="data"><Coverage days={gdays} /><Methods /></div>
       </>}
+    </div>
     </div>
   );
 }

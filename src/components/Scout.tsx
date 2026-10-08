@@ -69,7 +69,7 @@ export function ScoutLine() {
   const fresh = useMemo(() => items.find((x) => !x.memo), [items]);
   if (!fresh) return null;
   return (
-    <a className="noticed-line" href="#insights" onClick={() => setTimeout(() => document.getElementById("scout")?.scrollIntoView({ behavior: "smooth" }), 150)}>
+    <a className="noticed-line" href="#insights/connections" onClick={() => setTimeout(() => document.getElementById("scout")?.scrollIntoView({ behavior: "smooth" }), 150)}>
       <span><small>Worth a look</small>{fresh.p.text} — {fresh.p.held} of {fresh.p.of} times.</span>
       <span className="r">→</span>
     </a>
