@@ -8,6 +8,8 @@ import { localDay } from "./time";
 
 export type Check = { at: number; energy?: number; mood?: number; focus?: number; stress?: number; note?: string; doing?: string[] };
 export type FeelK = "energy" | "mood" | "focus" | "stress";
+/** Each feeling's name and colour wherever they're drawn (dataviz-checked on the dark panel, 8 Oct). */
+export const FEELINGS: [FeelK, string, string][] = [["mood", "Mood", "#3987e5"], ["energy", "Energy", "#c98500"], ["stress", "Stress", "#d55181"], ["focus", "Focus", "#93a0a4"]];
 
 /** Join two check-ins with a line only if they're at most this far apart. */
 export const JOIN_GAP_MS = 4 * 3_600_000;

@@ -4,6 +4,7 @@ import { swipeTo } from "../lib/swipe";
 import { useStore } from "../lib/store";
 import { dailyFacts, lanes } from "../lib/insights";
 import { MasterGraph } from "../components/MasterGraph";
+import { Compare } from "../components/Compare";
 import { HeartEffects } from "../components/HeartEffects";
 import { loadBandBefore, useBand } from "../lib/band-client";
 import { lastNight } from "../lib/band";
@@ -66,6 +67,7 @@ export function Insights() {
   const today = localDay(now);
   const data = useMemo(() => lanes(s.entries, s.workouts, s.supplements, s.settings, now), [s.entries, s.workouts, s.supplements, s.settings, now]);
   const facts = useMemo(() => dailyFacts(s.entries, s.workouts, s.settings, addDays(today, -89), today), [s.entries, s.workouts, s.settings, today]);
+  const logged = useMemo(() => new Set(facts.filter((f) => f.logged).map((f) => f.day)), [facts]);
   const sample = s.entries.some((e) => e.id.startsWith("sample:"));
   const gdays = useMemo(() => glanceDays(s.entries, s.workouts, s.settings, addDays(today, -119), today), [s.entries, s.workouts, s.settings, today]);
   const scouted = useScout();
@@ -79,7 +81,12 @@ export function Insights() {
   const onTabs = useCallback((ts: string[]) => setTabs((p) => (p.join() === ts.join() ? p : ts)), []);
   // The open page: one with content (else the first), and none — everything — when there is only one.
   const shown = tabs.length >= 2 ? (tabs.includes(tab) ? tab : tabs[0]) : undefined;
-  const openTab = useCallback((t: string) => { setTab(t); history.replaceState(null, "", `#insights/${t}`); window.scrollTo(0, 0); }, []);
+  // Timeline: Read (the panes) or Compare (two things against each other) — #insights/timeline/compare.
+  const [cmp, setCmp] = useState(() => location.hash.split("/")[2] === "compare");
+  const cmpRef = useRef(cmp);
+  useEffect(() => { cmpRef.current = cmp; }, [cmp]);
+  const openTab = useCallback((t: string) => { setTab(t); history.replaceState(null, "", `#insights/${t}${t === "timeline" && cmpRef.current ? "/compare" : ""}`); window.scrollTo(0, 0); }, []);
+  const setMode = (on: boolean) => { setCmp(on); cmpRef.current = on; history.replaceState(null, "", `#insights/timeline${on ? "/compare" : ""}`); };
   // Swipe sideways to the next or previous tab — but not on anything that already drags sideways
   // (the timeline, its overview, the tab bar, wide tables) or on a form control.
   const inst = useRef<HTMLDivElement>(null);
@@ -102,8 +109,8 @@ export function Insights() {
     el.addEventListener("touchstart", down, { passive: true }); el.addEventListener("touchend", up, { passive: true });
     return () => { el.removeEventListener("touchstart", down); el.removeEventListener("touchend", up); };
   }, [shown, tabs, openTab, phone]);
-  useEffect(() => { const on = () => { const t = tabOf(readRoute()[1]); if (t) setTab(t); }; addEventListener("hashchange", on); return () => removeEventListener("hashchange", on); }, []);
-  const showOnGraph = (f: GraphFocus) => { setFocus(f); openTab("timeline"); };
+  useEffect(() => { const on = () => { const t = tabOf(readRoute()[1]); if (t) setTab(t); if (t === "timeline") setCmp(location.hash.split("/")[2] === "compare"); }; addEventListener("hashchange", on); return () => removeEventListener("hashchange", on); }, []);
+  const showOnGraph = (f: GraphFocus) => { setFocus(f); cmpRef.current = false; setCmp(false); openTab("timeline"); };
   const report = useMemo(() => notice(s.entries, s.goals, now, s.settings.bodyKg, { workouts: s.workouts, supplements: s.supplements, settings: s.settings }), [s.entries, s.goals, now, s.settings, s.workouts, s.supplements]);
   // Show a section only once there's something in it; list the rest in one line each, so a new
   // account sees a short page instead of ten empty panels (owner: "looks really complex").
@@ -154,6 +161,10 @@ export function Insights() {
         </div>
         <div className="ins-ctrls">
           {sample && <span className="badge">INCLUDES SAMPLE DATA · remove it in Settings</span>}
+          {!nothing && shown === "timeline" && <div className="iseg" role="group" aria-label="Read or compare">
+            <button type="button" aria-pressed={!cmp} onClick={() => setMode(false)}>Read</button>
+            <button type="button" aria-pressed={cmp} onClick={() => setMode(true)}>Compare</button>
+          </div>}
           {!nothing && (!shown || PERIOD_PAGES.has(shown)) && <div className="iseg" role="group" aria-label="Period for the charts">
             {([[7, "7 days"], [30, "30 days"], [84, "12 weeks"]] as const).map(([n, l]) => <button type="button" key={n} aria-pressed={period === n} onClick={() => setPeriod(n)}>{l}</button>)}
           </div>}
@@ -163,7 +174,8 @@ export function Insights() {
       <Tip />
       {!nothing && <Glance now={now} trendDays={period} report={report} />}
       {!nothing && <div className="gl" data-sec="week"><Top days={gdays} /></div>}
-      {!nothing && <MasterGraph data={data} supplements={s.supplements} focus={focus} days={gdays} band={band} onView={loadBandBefore} />}
+      {!nothing && (cmp && shown === "timeline" ? <Compare data={data} band={band} now={now} logged={logged} />
+        : <MasterGraph data={data} supplements={s.supplements} focus={focus} days={gdays} band={band} onView={loadBandBefore} />)}
       {!nothing && <HeartEffects now={now} doses={data.doses} workouts={data.workouts} />}
       {!nothing && <Mind days={gdays} now={now} period={period} />}
       {!nothing && <Connections days={gdays} />}

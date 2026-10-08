@@ -4,7 +4,7 @@ import { buckets, valueAt, type Point } from "../lib/series";
 import { atMinute, clock, dayLabel, localDay, DAY, HOUR, MIN } from "../lib/time";
 import type { Supplement } from "../lib/types";
 import type { GlanceDay } from "../lib/glance";
-import { feelRuns, feelText, latestCheck, nearestCheck, type Check, type FeelK } from "../lib/feelgraph";
+import { FEELINGS, feelRuns, feelText, latestCheck, nearestCheck, type Check } from "../lib/feelgraph";
 import { CAF_SLEEP } from "../lib/caffeine-sleep";
 import type { BandData } from "../lib/band-client";
 import { lastNight, type SleepSession } from "../lib/band";
@@ -30,8 +30,6 @@ type Lane = { id: string; name: string; unit: string; color: string; h: number; 
 const cssVar = (v: string) => getComputedStyle(document.querySelector(".app") ?? document.documentElement).getPropertyValue(v).trim() || "#888";
 /** Panes run the full width: names and values sit inside each pane's header strip, not in a label column. */
 const RIGHT = 46, TOP = 24, GAP = 6, HDR = 20, LEFT = 10;
-/** The four feelings, each its own row (colours checked for colour-blind separation on the dark panel). */
-const FEELINGS: [FeelK, string, string][] = [["mood", "Mood", "#3987e5"], ["energy", "Energy", "#c98500"], ["stress", "Stress", "#d55181"], ["focus", "Focus", "#93a0a4"]];
 /** Sleep stages, top to bottom like Fitbit's own chart: awake, REM, light, deep — deeper is darker. */
 const STAGES = ["awake", "rem", "light", "deep"] as const;
 const STAGE_ALPHA: Record<string, number> = { awake: .3, rem: .55, light: .7, deep: 1, asleep: .7, restless: .4 };

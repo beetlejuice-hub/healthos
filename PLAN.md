@@ -610,3 +610,18 @@ email get Dev tools (`#dev`): raw entry editor, generate/remove sample, wipe acc
      check-ins joined within a day up to a week and day averages beyond; meals, workouts and the stack merged into one
      Events pane (coffee dots, meals by kcal, drink diamonds, supplement ticks, workout blocks); a time chip on the
      crosshair; empty band panes shrink to their header. Patterns' "Show on graph" maps old lane names to the panes.
+   - **Step 3 built (8 Oct): Compare** — Timeline → Read | Compare (#insights/timeline/compare). "This [caffeine |
+     alcohol in body] and later [heart rate | mood | energy | stress | focus]" over 14/30/90 days: the last two days on
+     one clock, a scatter with band averages ± spread, how strongly they go together at each delay against what
+     shuffled days reach, and the words with how sure. Maths in lib/compare, pure, planted-effect tests:
+     - Both sides against their usual for the time of day (coffee comes during the morning climb).
+     - **Within each day** — hours with more of it against hours with less, the same day — so a busy day that brings
+       more coffee and a higher heart rate all day isn't taken for coffee doing it. Calibrated: without this the busy-day
+       trap came up linked 28 of 40 times; with it, 0 of 40. It also finds a real effect far sooner (14 days: 25/30
+       clear, from 4/30), because a day's own level stops drowning it.
+     - How sure: day-shuffling, the whole delay search repeated on every shuffle; "clear" only under p 0.005 (≈10 pairs
+       to try). 300 worlds with nothing planted: 0 clear, ~4.5 % likely. The delay is a range from resampled days, not
+       one exact number. Slots follow the local clock, so the night the clocks go back (25 Oct) doesn't shift every
+       later day by an hour; a day with nothing eaten or drunk logged is unknown, not "none".
+     - Not done yet: ⇄ (heart rate as the driver), more drivers (meals, steps once PLAN 52 brings them), a link from
+       Findings' "pick any two" (daily) to this (within the day).
