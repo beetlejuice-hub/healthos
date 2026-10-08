@@ -587,3 +587,13 @@ email get Dev tools (`#dev`): raw entry editor, generate/remove sample, wipe acc
    calories, active minutes, active zone minutes, time and calories per heart-rate zone, exercise (the band's own
    workout detection), sedentary periods, SpO2 (+ daily), daily respiratory rate, VO2 max, nightly skin-temperature
    change, HRV samples, ECG / irregular rhythm notifications. Calories burned also closes the loop with food logged.
+53. [ ] **Insights as pages — Timeline first** (claimed 8 Oct — canvas, then Insights.tsx, MasterGraph, a new page shell).
+   Owner, 8 Oct: "Should we do the separate pages just like on the phone? … in one page i see one thing, like the master
+   graph (i rate the current one a 10/6.5 …) on another page the possible findings, on another the sleep data … i need a
+   more detailed, medical, data-centric look, rather than ai slop w glowing effects … also need to redesign the mood stuff
+   on master chart. Lets pick a area, ask questions, max effort brainstorming then max effort prototyping".
+   His answers: pages in a **sidebar** on the laptop (tabs on the phone); look **dark, data-centric — "dont go too
+   medical … dont be afraid of graphs … do not do bold big glowing ai slop"**; the Timeline should **both** read a day
+   in detail and **compare** metrics; the mood ribbon is **hard to read**.
+   - **Phase 1:** 3 directions for the Timeline page on the canvas (laptop + phone), a Compare view, the feelings lane
+     3 ways. He picks; then build. Other pages (Heart, Sleep, Mind, Food & body, Training, Findings) one by one after.
