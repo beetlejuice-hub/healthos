@@ -5,6 +5,7 @@ import { useStore } from "../lib/store";
 import { dailyFacts, lanes } from "../lib/insights";
 import { MasterGraph } from "../components/MasterGraph";
 import { Compare } from "../components/Compare";
+import { SleepNights } from "../components/Sleep";
 import { HeartEffects } from "../components/HeartEffects";
 import { loadBandBefore, useBand } from "../lib/band-client";
 import { lastNight } from "../lib/band";
@@ -180,6 +181,7 @@ export function Insights() {
       {!nothing && <Mind days={gdays} now={now} period={period} />}
       {!nothing && <Connections days={gdays} />}
       {!nothing && <div data-sec="connections" className="sec-wrap"><Noticed report={report} /><WorthALook items={scouted} onShow={showOnGraph} /></div>}
+      {!nothing && <SleepNights data={data} band={band} now={now} entries={s.entries} halfLifeMin={s.settings.halfLifeMin} />}
       {!nothing && <Body days={gdays} period={period} now={now} />}
       {!nothing && (has.sets || has.supps) && <>
         <div className="gl-group" id="ins-training" data-sec="training"><h2>Training &amp; stack</h2><span>what you trained, what you took</span></div>
