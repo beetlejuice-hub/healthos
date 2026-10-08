@@ -317,3 +317,22 @@ describe("/api/band routes", () => {
     expect((await handleBand(req("/api/band/status"), { ...e, GOOGLE_CLIENT_SECRET: undefined }, f)).status).toBe(503);
   });
 });
+
+describe("how fine the heart rate is", () => {
+  it("the typical gap between readings — every 5 s, every 15 min — ignoring band-off gaps", async () => {
+    const { typicalGap } = await import("./band");
+    const t0 = 1_800_000_000_000;
+    expect(typicalGap(Array.from({ length: 100 }, (_, i) => t0 + i * 5000))).toBe(5);
+    const every15 = Array.from({ length: 40 }, (_, i) => t0 + i * 900_000);
+    expect(typicalGap(every15)).toBe(900);
+    expect(typicalGap([...Array.from({ length: 30 }, (_, i) => t0 + i * 5000), t0 + 8 * 3600_000])).toBe(5); // a night off the wrist
+    expect(typicalGap([t0, t0 + 5000])).toBeNull();
+  });
+  it("status reports it after a pull", async () => {
+    const t = T0 - 3600_000;
+    const { h } = setup(google({ hr: Array.from({ length: 60 }, (_, i) => hrPoint(t + i * 10_000, 70)) }));
+    await connect(h);
+    await h.alarm();
+    expect((await status(h)).gapSec).toBe(10);
+  });
+});

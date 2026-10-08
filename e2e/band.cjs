@@ -123,8 +123,9 @@ const { chromium, APP, OUT, handle } = require('./harness.cjs');
   const before = calls.filter((c) => c.op === 'data').length;
   await pg.getByRole('button', { name: '30D', exact: true }).click();
   await pg.waitForTimeout(800);
-  const older = calls.filter((c) => c.op === 'data').slice(before);
-  check(`scrolling back loads the week before what's held (${older.length} call)`, older.length >= 1 && +new URLSearchParams(older[0].search).get('to') === firstFrom);
+  // The week before what was held is loaded — by the Heart card (it wants 4 weeks) or by the scroll itself.
+  const older = calls.filter((c) => c.op === 'data' && +new URLSearchParams(c.search).get('to') === firstFrom);
+  check(`the weeks before what's held are loaded (${older.length} call, ${calls.filter((c) => c.op === 'data').length - before} on scroll)`, older.length >= 1);
   const [u0, u1] = (await cv.getAttribute('data-view')).split(',').map(Number);
   const box2 = await cv.boundingBox();
   await pg.mouse.move(box2.x + LEFT + ((OLD + 30 * MIN - u0) / (u1 - u0)) * (box2.width - LEFT - RIGHT), box2.y + 40); await pg.waitForTimeout(150);

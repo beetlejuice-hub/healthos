@@ -16,7 +16,16 @@ import {
 
 export type BandEnv = { GOOGLE_CLIENT_ID?: string; GOOGLE_CLIENT_SECRET?: string };
 type Auth = { refresh: string; access?: string; accessExp?: number; connectedAt: number; broken?: boolean };
-type Sync = { lastRun?: number; lastOk?: number; latest?: number; error?: string };
+/** `gapSec`: the typical time between two heart-rate readings Google sent, from the last pull with enough of them
+ * (owner, 8 Oct: "my fitbit app shows heartbeat log every 15 minute, how do u get a number for every minute??" —
+ * this answers it with his own data). */
+type Sync = { lastRun?: number; lastOk?: number; latest?: number; error?: string; gapSec?: number };
+
+/** Median seconds between consecutive readings (gaps over 30 min — band off — left out); null under 20 readings. */
+export function typicalGap(ts: number[]): number | null {
+  const g = ts.slice(1).map((t, i) => (t - ts[i]) / 1000).filter((x) => x > 0 && x <= 1800).sort((a, b) => a - b);
+  return g.length >= 20 ? g[Math.floor(g.length / 2)] : null;
+}
 
 export const PULL_EVERY_MS = 15 * 60_000;
 export const PULL_GAP_MS = 20_000;
@@ -104,13 +113,14 @@ export class BandHub {
     const now = this.now(), prev = await this.sync();
     const errors: string[] = [];
     const first = prev.lastOk == null;
-    let latest = prev.latest;
+    let latest = prev.latest, gapSec = prev.gapSec;
     try {
       const hr = readHeartRate(await this.list("heart-rate", sampleFilter("heart_rate", hrFrom(now, first, prev.latest)), 10000, errors));
       const byDay = new Map<string, HrMinute[]>();
       for (const m of perMinute(hr)) { const k = utcDay(m[0]); const a = byDay.get(k); if (a) a.push(m); else byDay.set(k, [m]); }
       for (const [day, mins] of byDay) await this.storage.put(`hr:${day}`, mergeMinutes((await this.storage.get<HrMinute[]>(`hr:${day}`)) ?? [], mins));
       if (hr.length) latest = Math.max(latest ?? 0, hr[hr.length - 1].t);
+      gapSec = typicalGap(hr.map((x) => x.t)) ?? gapSec;
       // Older days go, including any a pause in pulling skipped over.
       for (let d = KEEP_DAYS; d <= KEEP_DAYS + 60; d++) await this.storage.delete(`hr:${utcDay(now - d * DAY)}`);
     } catch (e) { errors.push(String((e as Error).message)); }
@@ -127,14 +137,14 @@ export class BandHub {
         await this.storage.put(key, { ...((await this.storage.get<Record<string, number>>(key)) ?? {}), ...got });
       } catch (e) { errors.push(String((e as Error).message)); }
     }
-    const next: Sync = { lastRun: now, lastOk: errors.filter((e) => !/pages/.test(e)).length < 4 ? now : prev.lastOk, latest, ...(errors.length ? { error: errors.join("; ").slice(0, 300) } : {}) };
+    const next: Sync = { lastRun: now, lastOk: errors.filter((e) => !/pages/.test(e)).length < 4 ? now : prev.lastOk, latest, ...(gapSec != null ? { gapSec } : {}), ...(errors.length ? { error: errors.join("; ").slice(0, 300) } : {}) };
     await this.storage.put("sync", next);
     return next;
   }
 
   private async status() {
     const a = await this.auth(), s = await this.sync();
-    return { connected: !!a && !a.broken, needsReconnect: !!a?.broken, connectedAt: a?.connectedAt ?? null, lastSync: s.lastOk ?? null, latest: s.latest ?? null, error: s.error ?? null };
+    return { connected: !!a && !a.broken, needsReconnect: !!a?.broken, connectedAt: a?.connectedAt ?? null, lastSync: s.lastOk ?? null, latest: s.latest ?? null, error: s.error ?? null, gapSec: s.gapSec ?? null };
   }
 
   async fetch(req: Request): Promise<Response> {

@@ -802,6 +802,7 @@ a { color: inherit; }
    at a time. data-tab is only set at phone width, so the laptop keeps the whole page. */
 .inst[data-tab="week"] [data-sec]:not([data-sec="week"]),
 .inst[data-tab="timeline"] [data-sec]:not([data-sec="timeline"]),
+.inst[data-tab="heart"] [data-sec]:not([data-sec="heart"]),
 .inst[data-tab="mind"] [data-sec]:not([data-sec="mind"]),
 .inst[data-tab="connections"] [data-sec]:not([data-sec="connections"]),
 .inst[data-tab="sleep"] [data-sec]:not([data-sec="sleep"]),
@@ -935,3 +936,20 @@ a { color: inherit; }
 .t2-data > * + *:not(h3) { border-top: 1px solid #ffffff10; padding-top: 12px; }
 .t2-now > * + *:not(.t2-k) { border-top: 1px solid var(--m-line); }
 .t2-now > .t2-k + * { border-top: 0; }
+
+/* Insights → Heart (canvas C, owner's pick 8 Oct): after coffee, after a workout. */
+.he { display: grid; gap: 14px; }
+.he-card { border: 1px solid var(--i-line); border-radius: 8px; background: var(--i-panel); padding: 16px; display: grid; gap: 12px; min-width: 0; }
+.he-row { display: grid; gap: 24px; min-width: 0; }
+.he-col { display: grid; gap: 8px; align-content: start; min-width: 0; }
+.he-col h3 { margin: 0; font-size: 14px; font-weight: 600; display: flex; flex-wrap: wrap; gap: 4px 8px; align-items: baseline; }
+.he-col h3 span { font-weight: 400; font-size: 12.5px; color: var(--i-ink-2); }
+.he-svg { display: block; max-width: 100%; overflow: visible; }
+.he-grid { stroke: var(--i-line); stroke-dasharray: 1 4; }
+.he-zero { stroke: var(--i-line-2); stroke-width: 1.5; }
+.he-strip { fill: var(--i-ink-2); fill-opacity: .12; }
+.he-t { fill: var(--i-dim); font: 10px var(--f-mono); }
+.he-mark { fill: var(--i-ink); font: 600 12px var(--f-plex); paint-order: stroke; stroke: var(--i-panel); stroke-width: 4px; }
+.he-words { margin: 0; font-size: 13.5px; line-height: 1.45; color: var(--i-ink-2); }
+.he-words[data-sure="clear"], .he-words[data-sure="likely"] { color: var(--i-ink); }
+.he-note { margin: 0; font-size: 12px; line-height: 1.45; color: var(--i-dim); border-top: 1px solid var(--i-line); padding-top: 10px; }

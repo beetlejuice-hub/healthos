@@ -12,6 +12,8 @@ import { clock, dayLabel, localDay } from "../lib/time";
 const ago = (t: number) => `${localDay(t) === localDay(Date.now()) ? "" : `${dayLabel(t)} `}${clock(t)}`;
 /** "just now", "6 min ago", "2 h ago" — how old the newest reading is, which is what "is it working?" needs. */
 const age = (t: number, now: number) => { const m = Math.floor((now - t) / 60_000); return m < 1 ? "just now" : m < 60 ? `${m} min ago` : `${Math.floor(m / 60)} h ago`; };
+/** "a reading every 5 s" / "every 15 min" — how fine the heart rate Google sends really is. */
+const everyText = (sec: number) => `a reading every ${sec < 90 ? `${Math.round(sec)} s` : `${Math.round(sec / 60)} min`}`;
 const hm = (min: number) => `${Math.floor(min / 60)} h ${String(Math.round(min % 60)).padStart(2, "0")} m`;
 
 /** What Google's page sent back: #settings/band-ok or #settings/band-failed?why=… */
@@ -72,6 +74,7 @@ export function Band() {
       {s?.connected && <>
         <ul className="band-facts">
           {lastHr && <li><b>Newest reading</b><span>{lastHr[1]} bpm · {ago(lastHr[0])} · <span className="nw">{age(lastHr[0], Date.now())}</span></span></li>}
+          {s.gapSec != null && <li><b>Detail</b><span>{everyText(s.gapSec)}</span></li>}
           <li><b>Checked Google</b><span>{s.lastSync ? ago(s.lastSync) : loading ? "pulling now…" : "waiting for the first one"}</span></li>
           {night && <li><b>Last night</b><span>{night.asleepMin != null ? `${hm(night.asleepMin)} asleep` : "slept"} · <span className="nw">{clock(night.start)}–{clock(night.end)}</span></span></li>}
           {data && data.sleep.length === 0 && s.lastSync && <li><b>Sleep</b><span>after your first night wearing it</span></li>}

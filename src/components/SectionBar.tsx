@@ -8,13 +8,13 @@
 import { useEffect, useState } from "react";
 
 const SECTIONS: [string, string][] = [
-  ["ins-glance", "This week"], ["ins-top", "Try"], ["ins-timeline", "Timeline"], ["ins-mind", "Mind"], ["ins-connections", "Connections"],
+  ["ins-glance", "This week"], ["ins-top", "Try"], ["ins-timeline", "Timeline"], ["ins-heart", "Heart"], ["ins-mind", "Mind"], ["ins-connections", "Connections"],
   ["ins-sleep", "Sleep"], ["ins-intake", "Intake & body"], ["ins-training", "Training & stack"], ["ins-data", "Your data"],
 ];
 
 /** Phone tabs in order (= the data-sec values on the page) and their names. */
 export const TABS: [string, string][] = [
-  ["week", "This week"], ["timeline", "Timeline"], ["mind", "Mind"], ["connections", "Connections"],
+  ["week", "This week"], ["timeline", "Timeline"], ["heart", "Heart"], ["mind", "Mind"], ["connections", "Connections"],
   ["sleep", "Sleep"], ["intake", "Intake & body"], ["training", "Training & stack"], ["data", "Your data"],
 ];
 

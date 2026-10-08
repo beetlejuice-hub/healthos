@@ -24,6 +24,8 @@ export type Lanes = {
   from: number;
   to: number;
   caffeine: Point[];
+  /** Each caffeine dose as taken (the heart-rate lane marks them and measures the 2 hours after). */
+  doses: { at: number; mg: number }[];
   alcohol: Point[];
   meals: { at: number; kcal: number; name: string }[];
   workouts: { start: number; end: number; name: string }[];
@@ -60,7 +62,7 @@ export function lanes(entries: Entry[], workouts: Workout[], supplements: Supple
   const setsByWorkout = new Map<string, number[]>();
   for (const s of of(entries, "set")) setsByWorkout.set(s.workoutId, [...(setsByWorkout.get(s.workoutId) ?? []), s.at]);
   return {
-    from, to: now, caffeine, alcohol,
+    from, to: now, caffeine, alcohol, doses,
     meals: of(entries, "food").map((f) => ({ at: f.at, kcal: f.macros.kcal, name: f.name })),
     workouts: workouts.map((w) => {
       const times = setsByWorkout.get(w.id) ?? [];

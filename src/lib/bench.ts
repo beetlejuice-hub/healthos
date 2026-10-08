@@ -141,3 +141,45 @@ export function betweenWorld(w: BetweenWorld): { entries: Entry[]; workouts: Wor
   }
   return { entries: entries.sort((a, b) => a.at - b.at), workouts };
 }
+
+export type HrWorld = {
+  seed: number; days: number; lastDay: string;
+  /** Share of days with a morning coffee, 07:30–09:30 — right in the rise after waking, on purpose. */
+  coffeeRate: number;
+  /** Planted: bpm the coffee adds at its peak, 45 min after. 0 = no effect at all. */
+  coffeeBpm: number;
+  /** Share of days with a 17:00–18:00 workout; after it the extra beats fade with this time constant (min). */
+  workoutRate?: number; tauMin?: number;
+};
+
+/**
+ * Heart rate, minute by minute, shaped like a real day: ~56 asleep, a climb to ~70 between 06:30 and 08:30,
+ * a slow evening fall; slow wandering (±2.5 bpm, half-hourly), a per-day offset and minute noise. Coffee and
+ * workouts planted on top. The morning climb is there so a detector that ignores time of day "finds" coffee.
+ */
+export function hrWorld(w: HrWorld): { hr: [number, number, number, number][]; doses: { at: number; mg: number }[]; workouts: { start: number; end: number }[] } {
+  const { r, g } = rng(w.seed);
+  const hr: [number, number, number, number][] = [], doses: { at: number; mg: number }[] = [], workouts: { start: number; end: number }[] = [];
+  const tau = w.tauMin ?? 13;
+  for (let k = w.days - 1; k >= 0; k--) {
+    const day = addDays(w.lastDay, -k), off = g() * 2.5;
+    const knots = Array.from({ length: 50 }, () => g() * 2.5);
+    const base = (md: number) => md < 390 ? 56 : md < 510 ? 56 + ((md - 390) / 120) * 14 : md < 1320 ? 70 + 2 * Math.sin((md - 510) / 180) : md < 1410 ? 70 - ((md - 1320) / 90) * 14 : 56;
+    const coffee = r() < w.coffeeRate ? atMinute(day, 450 + Math.floor(r() * 120)) : null;
+    if (coffee != null) doses.push({ at: coffee, mg: 95 });
+    const gym = r() < (w.workoutRate ?? 0) ? { start: atMinute(day, 1020), end: atMinute(day, 1080) } : null;
+    if (gym) workouts.push(gym);
+    for (let md = 0; md < 1440; md++) {
+      if (r() < 0.01) continue; // band off for a minute now and then
+      const t = atMinute(day, md);
+      const slow = knots[Math.floor(md / 30)] + (knots[Math.floor(md / 30) + 1] - knots[Math.floor(md / 30)]) * ((md % 30) / 30);
+      let v = base(md) + off + slow + g() * 2;
+      if (coffee != null && t > coffee) { const m = (t - coffee) / 60_000; v += w.coffeeBpm * (m / 45) * Math.exp(1 - m / 45); }
+      if (gym && t >= gym.start && t < gym.end) v = 135 + g() * 5;
+      if (gym && t >= gym.end) v += (130 - base(1080)) * Math.exp(-((t - gym.end) / 60_000) / tau);
+      const a = Math.round(v);
+      hr.push([t, a, a - 3, a + 3]);
+    }
+  }
+  return { hr, doses, workouts };
+}

@@ -9,7 +9,8 @@ import { supabase } from "./supabase";
 import { mergeBand, refreshFrom, type BandData } from "./band";
 
 export type { BandData };
-export type BandStatus = { connected: boolean; needsReconnect: boolean; connectedAt: number | null; lastSync: number | null; latest: number | null; error: string | null };
+/** `gapSec`: typical seconds between two heart-rate readings Google sends (null before there are enough). */
+export type BandStatus = { connected: boolean; needsReconnect: boolean; connectedAt: number | null; lastSync: number | null; latest: number | null; error: string | null; gapSec?: number | null };
 /** "off": the server has no Google keys (503). null: not asked yet. `from`: the data held starts here. */
 type State = { status: BandStatus | "off" | null; data: BandData | null; from: number; loading: boolean; older: boolean };
 
@@ -30,7 +31,7 @@ async function api<T>(op: string, post = false): Promise<T> {
   return j;
 }
 
-const pick = (j: BandStatus): BandStatus => ({ connected: j.connected, needsReconnect: j.needsReconnect, connectedAt: j.connectedAt, lastSync: j.lastSync, latest: j.latest, error: j.error });
+const pick = (j: BandStatus): BandStatus => ({ connected: j.connected, needsReconnect: j.needsReconnect, connectedAt: j.connectedAt, lastSync: j.lastSync, latest: j.latest, error: j.error, gapSec: j.gapSec ?? null });
 
 const asData = (d: Partial<BandData>): BandData => ({ hr: d.hr ?? [], sleep: d.sleep ?? [], rhr: d.rhr ?? {}, hrv: d.hrv ?? {} });
 

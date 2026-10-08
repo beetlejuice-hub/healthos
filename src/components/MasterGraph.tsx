@@ -8,6 +8,7 @@ import { feelRuns, feelText, latestCheck, lifeBars, nearestCheck, ribbonRuns, ri
 import { CAF_SLEEP } from "../lib/caffeine-sleep";
 import type { BandData } from "../lib/band-client";
 import { lastNight, type SleepSession } from "../lib/band";
+import { coffeeWindows, everydayRange, minuteMap, usualAt, usualByHour, usualReady, workoutWindows, USUAL_MIN_DAYS } from "../lib/hrusual";
 
 /**
  * One timeline for everything (owner: "one master graph that has everything on it and things can
@@ -32,8 +33,10 @@ const CALM = "#56717c";
 const STAGES = ["awake", "rem", "light", "deep"] as const;
 const STAGE_ALPHA: Record<string, number> = { awake: .3, rem: .55, light: .7, deep: 1, asleep: .7, restless: .4 };
 const STAGE_ROW: Record<string, number> = { awake: 0, restless: 0, rem: 1, light: 2, asleep: 2, deep: 3 };
-/** Minutes further apart than this aren't joined: the band was off the wrist. */
-const HR_GAP = 5 * MIN;
+/** Below your usual: a cool blue, paired with the heart-rate red above it (canvas A, owner's pick 8 Oct). */
+const COOL = "#5f9be0";
+/** "+6" / "−3" — whole bpm with a real minus sign. */
+const sgnInt = (v: number) => `${v >= 0 ? "+" : "−"}${Math.abs(Math.round(v))}`;
 const stageAt = (sleep: SleepSession[], t: number) => {
   const s = sleep.find((x) => x.start <= t && x.end >= t);
   if (!s) return null;
@@ -46,7 +49,30 @@ const mixHex = (a: string, b: string, f: number) => { const p = (h: string) => {
 export type GraphFocus = { key: string; lanes: string[]; days: string[] };
 
 export function MasterGraph({ data, supplements, focus, days, band, onView }: { data: Lanes; supplements: Supplement[]; focus?: GraphFocus | null; /** Per-day numbers for the readout's "the day" and "last night" (lib/glance). */ days?: GlanceDay[]; /** The Fitbit's minutes and nights (lib/band-client); null = not connected. */ band?: BandData | null; /** The view now starts at t (to load older band weeks). */ onView?: (t0: number) => void }) {
-  const C = useMemo(() => ({ up: cssVar("--g-now"), down: cssVar("--g-down"), line2: cssVar("--i-line-2"), ok: cssVar("--ok"), caf: cssVar("--caf"), alc: cssVar("--alc"), kcal: cssVar("--kcal"), gym: cssVar("--gym"), supp: cssVar("--supp"), wt: cssVar("--wt"), mood: cssVar("--mood"), hr: cssVar("--hr"), line: cssVar("--i-line"), ink: cssVar("--i-ink"), ink2: cssVar("--i-ink-2"), dim: cssVar("--i-dim") }), []);
+  const C = useMemo(() => ({ panel: cssVar("--i-panel"), up: cssVar("--g-now"), down: cssVar("--g-down"), line2: cssVar("--i-line-2"), ok: cssVar("--ok"), caf: cssVar("--caf"), alc: cssVar("--alc"), kcal: cssVar("--kcal"), gym: cssVar("--gym"), supp: cssVar("--supp"), wt: cssVar("--wt"), mood: cssVar("--mood"), hr: cssVar("--hr"), line: cssVar("--i-line"), ink: cssVar("--i-ink"), ink2: cssVar("--i-ink-2"), dim: cssVar("--i-dim") }), []);
+  const [w, setW] = useState(900);
+  const narrow = w < 640;
+  /**
+   * The heart-rate lane's numbers (lib/hrusual): your usual for each quarter hour from the days before today,
+   * the 2 h after each coffee and each workout's window, a scale zoomed to your everyday range (workouts run off
+   * the top), and how far apart readings may be and still be joined — 2.5× their usual spacing, at least 5 min,
+   * so a band that sends every 15 minutes still draws a line.
+   */
+  const heart = useMemo(() => {
+    if (!band?.hr.length) return null;
+    const usual = usualByHour(band.hr, data.workouts, localDay(data.to));
+    const mins = minuteMap(band.hr), range = everydayRange(band.hr, data.workouts);
+    const lo = range ? Math.max(30, Math.floor((range[0] - 4) / 5) * 5) : 40;
+    const hi = range ? Math.max(lo + 30, Math.ceil((range[1] + 6) / 5) * 5) : 120;
+    const gaps = band.hr.slice(1).map((m, i) => m[0] - band.hr[i][0]).filter((g) => g > 0 && g <= 30 * MIN).sort((a, b) => a - b);
+    const join = Math.max(5 * MIN, 2.5 * (gaps[Math.floor(gaps.length / 2)] ?? MIN));
+    const names = new Map(data.workouts.map((x) => [x.start, x.name]));
+    return {
+      usual: usualReady(usual) ? usual : null, days: usual.days, lo, hi, join,
+      coffees: coffeeWindows(data.doses, mins, usual),
+      gyms: workoutWindows(data.workouts, band.hr, usual).map((g) => ({ ...g, name: names.get(g.start) ?? "Workout" })),
+    };
+  }, [band, data]);
   const lanes: Lane[] = useMemo(() => {
     const range = (pts: Point[], pad: number, floor?: [number, number]): [number, number] => {
       if (!pts.length) return floor ?? [0, 1];
@@ -55,13 +81,19 @@ export function MasterGraph({ data, supplements, focus, days, band, onView }: { 
     const cafHi = Math.max(200, Math.ceil(Math.max(0, ...data.caffeine.map((p) => p[1])) / 50) * 50);
     const alcHi = Math.max(20, Math.ceil(Math.max(0, ...data.alcohol.map((p) => p[1])) / 10) * 10);
     const [wLo, wHi] = range(data.weight, 0.5, [70, 90]);
-    const hrPts: Point[] = (band?.hr ?? []).map((m) => [m[0], m[1]]);
-    const hrLo = Math.max(30, Math.floor(Math.min(200, ...(band?.hr ?? []).map((m) => m[2])) / 10) * 10 - 5), hrHi = Math.ceil(Math.max(90, ...(band?.hr ?? []).map((m) => m[3])) / 10) * 10;
+    // The line is a 5-minute running mean (minute-to-minute noise reads as fuzz); pointing reads the minute itself.
+    const hrPts: Point[] = [];
+    const src = band?.hr ?? [];
+    for (let i = 0, lo = 0, hi = 0, sum = 0; i < src.length; i++) {
+      while (hi < src.length && src[hi][0] <= src[i][0] + 2 * MIN) sum += src[hi++][1];
+      while (src[lo][0] < src[i][0] - 2 * MIN) sum -= src[lo++][1];
+      hrPts.push([src[i][0], sum / (hi - lo)]);
+    }
     return [
       { id: "feel", name: "How you felt", unit: "you · 1–10", color: C.mood, h: 112, kind: "feel", pts: data.mood, lo: 0.5, hi: 10.5 },
       { id: "slept", name: "Sleep rating", unit: "/10", color: C.ok, h: 22, kind: "chips", pts: data.sleep, lo: 1, hi: 10 },
       band?.hr.length
-        ? { id: "hr", name: "Heart rate", unit: "bpm", color: C.hr, h: 56, kind: "hr", pts: hrPts, lo: hrLo, hi: hrHi, overlay: true }
+        ? { id: "hr", name: "Heart rate", unit: "bpm", color: C.hr, h: narrow ? 116 : 140, kind: "hr", pts: hrPts, lo: heart?.lo, hi: heart?.hi, overlay: true }
         : { id: "hr", name: "Heart rate", unit: "bpm", color: C.hr, h: 24, kind: "wearable" },
       band?.sleep.length
         ? { id: "sleep", name: "Sleep stages", unit: "band", color: C.mood, h: 44, kind: "hyp" }
@@ -74,7 +106,7 @@ export function MasterGraph({ data, supplements, focus, days, band, onView }: { 
       { id: "wt", name: "Weight", unit: "kg", color: C.wt, h: 36, kind: "daily", pts: data.weight, lo: wLo, hi: wHi, overlay: true },
       { id: "kcal", name: "Calories per day", unit: "kcal", color: C.kcal, h: 36, kind: "daily", pts: data.kcalDay, lo: 0, hi: Math.max(3000, Math.ceil(Math.max(0, ...data.kcalDay.map((p) => p[1])) / 500) * 500), overlay: true },
     ];
-  }, [data, supplements.length, C, band]);
+  }, [data, supplements.length, C, band, heart, narrow]);
 
   const [on, setOn] = useState<Record<string, boolean>>({ hr: true, sleep: true, caf: true, alc: true, meals: true, gym: true, supps: false, wt: true, feel: true, slept: true, kcal: false });
   const [over, setOver] = useState<Record<string, boolean>>({ energy: false });
@@ -82,7 +114,6 @@ export function MasterGraph({ data, supplements, focus, days, band, onView }: { 
   const [hover, setHover] = useState<number | null>(null);
   const cv = useRef<HTMLCanvasElement>(null);
   const drag = useRef<{ x: number; t1: number } | null>(null);
-  const [w, setW] = useState(900);
   // The lane list is long; on a phone it starts folded so the readout sits right under the chart.
   const [lanesOpen, setLanesOpen] = useState(() => typeof window === "undefined" || window.innerWidth > 700);
   const LEFT = leftFor(w);
@@ -102,6 +133,15 @@ export function MasterGraph({ data, supplements, focus, days, band, onView }: { 
   }, [focus?.key]);
 
   const minT = data.from, maxT = data.to + 90 * MIN;
+  // On a phone, three days of heart rate is a blur (owner, 8 Oct: "not too visible, especially on phone"):
+  // once the band's data is in, open on one day — once, so a view you chose stays.
+  const dayOnce = useRef(false);
+  useEffect(() => {
+    if (!heart || dayOnce.current || !narrow || focus) return;
+    dayOnce.current = true;
+    setView(clampView(data.to + 90 * MIN, DAY));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [heart, narrow]);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { onView?.(view.t1 - view.span); }, [view.t1, view.span]);
   const clampView = (t1: number, span: number) => {
@@ -133,7 +173,7 @@ export function MasterGraph({ data, supplements, focus, days, band, onView }: { 
 
   /** What a lane reads at time t, for the label column (null: nothing to say). */
   const laneValue = (l: Lane, t: number): string | null => {
-    if (l.kind === "hr") { const v = valueAt(l.pts ?? [], t); return v && t - v[0] < HR_GAP ? String(v[1]) : null; }
+    if (l.kind === "hr") { const v = valueAt((band?.hr ?? []) as unknown as Point[], t); return v && heart && t - v[0] < heart.join ? String(Math.round(v[1])) : null; }
     if (l.kind === "hyp") return band ? stageAt(band.sleep, t) : null;
     if (l.id === "caf") return `${Math.round(valueAt(data.caffeine, t)?.[1] ?? 0)}`;
     if (l.id === "alc") { const v = valueAt(data.alcohol, t)?.[1] ?? 0; return v >= 0.05 ? v.toFixed(1) : "0"; }
@@ -177,14 +217,12 @@ export function MasterGraph({ data, supplements, focus, days, band, onView }: { 
     const drawSeries = (l: Lane, top: number, h: number, asOverlay: boolean) => {
       const lo = l.lo ?? 0, hi = l.hi ?? 1, pts = l.pts ?? [];
       if (l.kind === "hr") {
-        // Each pixel: the minutes in it — lowest to highest as a soft band, the average as the line.
-        const Y = (v: number) => yOf(top, h, lo, hi, v), mins = band?.hr ?? [];
-        const lows = buckets(mins.map((m) => [m[0], m[2]]), t0, view.t1, Math.floor(pw)), highs = buckets(mins.map((m) => [m[0], m[3]]), t0, view.t1, Math.floor(pw));
+        // Heart rate drawn over another lane ("on top"): the plain line with its own scale.
+        const Y = (v: number) => yOf(top, h, lo, hi, v), join = heart?.join ?? 5 * MIN;
         const avg = buckets(pts, t0, view.t1, Math.floor(pw));
-        if (!asOverlay) { ctx.fillStyle = l.color; ctx.globalAlpha = .2; avg.forEach((k, i) => { const a = lows[i], b = highs[i]; if (k && a && b) ctx.fillRect(LEFT + i, Y(b.max), 1, Math.max(1, Y(a.min) - Y(b.max))); }); ctx.globalAlpha = 1; }
-        ctx.strokeStyle = l.color; ctx.lineWidth = asOverlay ? 1.75 : 1.25; if (asOverlay) ctx.setLineDash([5, 3]);
+        ctx.strokeStyle = l.color; ctx.lineWidth = 1.75; if (asOverlay) ctx.setLineDash([5, 3]);
         ctx.beginPath(); let prev: { t1: number } | null = null;
-        avg.forEach((k, i) => { if (!k) return; const x = LEFT + i + .5, yy = Y(k.mean); if (prev && k.t0 - prev.t1 <= HR_GAP) ctx.lineTo(x, yy); else ctx.moveTo(x, yy); prev = k; });
+        avg.forEach((k, i) => { if (!k) return; const x = LEFT + i + .5, yy = Y(k.mean); if (prev && k.t0 - prev.t1 <= join) ctx.lineTo(x, yy); else ctx.moveTo(x, yy); prev = k; });
         ctx.stroke(); ctx.setLineDash([]);
       } else if (l.kind === "series") {
         // Alcohol is drawn only while there's some in you — a flat line at zero all month is just noise.
@@ -219,6 +257,102 @@ export function MasterGraph({ data, supplements, focus, days, band, onView }: { 
       }
     };
 
+    /** A + B (owner's pick, 8 Oct): heart rate against your usual for the hour, and a labelled window after each coffee and workout. */
+    const drawHr = (l: Lane, top: number, h: number) => {
+      if (!heart) return;
+      const { lo, hi, usual } = heart, Y = (v: number) => yOf(top + 3, h - 14, lo, hi, v);
+      ctx.font = "9px IBM Plex Mono, monospace"; ctx.textAlign = "left";
+      const step = hi - lo > 70 ? 20 : 10;
+      for (let v = Math.ceil((lo + 1) / step) * step; v < hi; v += step) {
+        const yy = Math.round(Y(v)) + .5; ctx.strokeStyle = C.line; ctx.setLineDash([1, 4]); ctx.beginPath(); ctx.moveTo(LEFT, yy); ctx.lineTo(w - RIGHT, yy); ctx.stroke(); ctx.setLineDash([]);
+        ctx.fillStyle = C.dim; ctx.fillText(String(v), LEFT + 3, yy - 5);
+      }
+      // B: the 2 h after each coffee, each workout and its way back down — behind everything.
+      for (const c of heart.coffees) {
+        if (c.end < t0 || c.at > view.t1) continue;
+        const a = X(c.at), b = X(c.end); ctx.fillStyle = C.caf; ctx.globalAlpha = .1; ctx.fillRect(a, top, b - a, h); ctx.globalAlpha = .8; ctx.fillRect(a - .75, top, 1.5, h); ctx.globalAlpha = 1;
+      }
+      for (const g of heart.gyms) {
+        if ((g.backAt ?? g.end) < t0 || g.start > view.t1) continue;
+        const a = X(g.start), b = X(g.end); ctx.fillStyle = C.gym; ctx.globalAlpha = .14; ctx.fillRect(a, top, b - a, h);
+        if (g.backAt) { ctx.globalAlpha = .06; ctx.fillRect(b, top, X(g.backAt) - b, h); }
+        ctx.globalAlpha = .8; ctx.fillRect(a - .75, top, 1.5, h); ctx.globalAlpha = 1;
+      }
+      // A: your usual for each quarter hour, as a band with its middle dashed.
+      if (usual) {
+        let up: [number, number][] = [], dn: [number, number][] = [], mid: [number, number][] = [];
+        const flush = () => {
+          if (up.length > 1) {
+            ctx.fillStyle = C.ink2; ctx.globalAlpha = .14; ctx.beginPath(); up.forEach(([x, yy], i) => (i ? ctx.lineTo(x, yy) : ctx.moveTo(x, yy))); [...dn].reverse().forEach(([x, yy]) => ctx.lineTo(x, yy)); ctx.closePath(); ctx.fill(); ctx.globalAlpha = 1;
+            ctx.strokeStyle = C.dim; ctx.setLineDash([2, 4]); ctx.beginPath(); mid.forEach(([x, yy], i) => (i ? ctx.lineTo(x, yy) : ctx.moveTo(x, yy))); ctx.stroke(); ctx.setLineDash([]);
+          }
+          up = []; dn = []; mid = [];
+        };
+        for (let x = 0; x <= pw; x += 2) {
+          const u = usualAt(usual, t0 + (x / pw) * view.span);
+          if (!u) { flush(); continue; }
+          up.push([LEFT + x, Y(u.hi)]); dn.push([LEFT + x, Y(u.lo)]); mid.push([LEFT + x, Y(u.mid)]);
+        }
+        flush();
+      }
+      // The line: grey inside your usual, red above it, blue below, the gap to the band filled. No usual yet: red.
+      const bk = buckets(l.pts ?? [], t0, view.t1, Math.floor(pw));
+      const lines = { n: new Path2D(), w: new Path2D(), c: new Path2D(), r: new Path2D() }, fills = { w: new Path2D(), c: new Path2D() };
+      const pts: { x: number; y: number; t1: number; v: number; joined: boolean }[] = [];
+      bk.forEach((k, i) => {
+        if (!k) return;
+        const cur = { x: LEFT + i + .5, y: Y(k.mean), t1: k.t1, v: k.mean, joined: false }, prev = pts.at(-1);
+        if (prev && k.t0 - prev.t1 <= heart.join) {
+          const u = usual ? usualAt(usual, (k.t0 + k.t1) / 2) : null, m = (prev.v + cur.v) / 2;
+          const kind = !u ? "r" : m > u.hi ? "w" : m < u.lo ? "c" : "n";
+          lines[kind].moveTo(prev.x, prev.y); lines[kind].lineTo(cur.x, cur.y);
+          if (u && (kind === "w" || kind === "c")) { const e = Y(kind === "w" ? u.hi : u.lo), f = fills[kind]; f.moveTo(prev.x, prev.y); f.lineTo(cur.x, cur.y); f.lineTo(cur.x, e); f.lineTo(prev.x, e); f.closePath(); }
+          prev.joined = true; cur.joined = true;
+        }
+        pts.push(cur);
+      });
+      ctx.globalAlpha = .22; ctx.fillStyle = C.hr; ctx.fill(fills.w); ctx.fillStyle = COOL; ctx.fill(fills.c); ctx.globalAlpha = 1;
+      ctx.lineWidth = narrow ? 2.25 : 2; ctx.lineCap = "round"; ctx.lineJoin = "round";
+      ([["n", C.ink2], ["w", C.hr], ["c", COOL], ["r", C.hr]] as const).forEach(([k, col]) => { ctx.strokeStyle = col; ctx.stroke(lines[k]); });
+      ctx.lineWidth = 1; ctx.lineCap = "butt"; ctx.lineJoin = "miter";
+      // A reading with no neighbour close enough is still shown, as a dot.
+      ctx.fillStyle = usual ? C.ink2 : C.hr; for (const p of pts) if (!p.joined) { ctx.beginPath(); ctx.arc(p.x, p.y, 2.2, 0, 7); ctx.fill(); }
+      // Markers along the bottom: coffee dots, workout bars.
+      for (const g of heart.gyms) if (g.end >= t0 && g.start <= view.t1) { ctx.fillStyle = C.gym; ctx.fillRect(X(g.start), top + h - 7, Math.max(3, X(g.end) - X(g.start)), 4); }
+      for (const d of data.doses) if (d.at >= t0 && d.at <= view.t1 && d.mg > 0) { ctx.fillStyle = C.panel; ctx.beginPath(); ctx.arc(X(d.at), top + h - 5, 5, 0, 7); ctx.fill(); ctx.fillStyle = C.caf; ctx.beginPath(); ctx.arc(X(d.at), top + h - 5, 3.5, 0, 7); ctx.fill(); }
+      // B's labels at the top of each window: in full when there's room (two days or less), else just the number.
+      const evs = [
+        ...heart.coffees.map((c) => ({ at: c.at, color: C.caf, title: `Coffee ${clock(c.at)}${c.count > 1 ? ` · ${c.count} cups` : ""}`, sub: c.delta == null ? "" : `${sgnInt(c.delta)} bpm vs ${c.vs === "usual" ? "usual" : "before"}`, short: c.delta == null ? "" : sgnInt(c.delta) })),
+        ...heart.gyms.map((g) => ({ at: g.start, color: C.gym, title: g.name, sub: [g.peak != null ? `peak ${g.peak}` : "", g.backMin != null ? `back in ${g.backMin} min` : ""].filter(Boolean).join(" · "), short: g.peak != null ? `↑${g.peak}` : "" })),
+      ].filter((e) => e.at <= view.t1 && e.at >= t0 - 2 * HOUR).sort((a, b) => a.at - b.at);
+      let right = -Infinity;
+      evs.forEach((e, i) => {
+        const x = Math.max(LEFT + 3, X(e.at) + 4);
+        if (x > w - RIGHT - 10 || x < right + 6) return;
+        const next = Math.min(w - RIGHT, ...evs.slice(i + 1).map((n) => X(n.at)).filter((nx) => nx > x));
+        ctx.font = "600 10.5px IBM Plex Sans, sans-serif"; const tw = ctx.measureText(e.title).width;
+        ctx.font = "10.5px IBM Plex Sans, sans-serif"; const sw = e.sub ? ctx.measureText(e.sub).width : 0;
+        const full = Math.max(tw, sw);
+        ctx.textAlign = "left";
+        if (view.span <= 2 * DAY && x + full + 4 <= next) {
+          ctx.fillStyle = C.panel; ctx.globalAlpha = .8; ctx.fillRect(x - 2, top + 2, full + 4, e.sub ? 26 : 14); ctx.globalAlpha = 1;
+          ctx.font = "600 10.5px IBM Plex Sans, sans-serif"; ctx.fillStyle = e.color; ctx.fillText(e.title, x, top + 9);
+          if (e.sub) { ctx.font = "10.5px IBM Plex Sans, sans-serif"; ctx.fillStyle = C.ink; ctx.fillText(e.sub, x, top + 21); }
+          right = x + full;
+        } else if (e.short) {
+          ctx.font = "600 10px IBM Plex Mono, monospace"; const ww = ctx.measureText(e.short).width;
+          if (x + ww > w - RIGHT) return;
+          ctx.fillStyle = C.panel; ctx.globalAlpha = .8; ctx.fillRect(x - 2, top + 3, ww + 4, 13); ctx.globalAlpha = 1;
+          ctx.fillStyle = e.color; ctx.fillText(e.short, x, top + 9); right = x + ww;
+        }
+      });
+      if (!usual) {
+        ctx.font = "9.5px IBM Plex Mono, monospace"; ctx.textAlign = "right"; ctx.fillStyle = C.dim;
+        ctx.fillText(`learning your usual · ${Math.min(heart.days, USUAL_MIN_DAYS)} of ${USUAL_MIN_DAYS} days`, w - RIGHT - 4, top + h - 16);
+      }
+      ctx.font = "10px IBM Plex Mono, monospace";
+    };
+
     layout.forEach(({ l, y: top }) => {
       ctx.textAlign = "left"; ctx.font = "11px IBM Plex Sans, sans-serif"; ctx.fillStyle = l.kind === "wearable" ? C.dim : C.ink2; ctx.fillText(l.name, 8, top + 8);
       ctx.font = "10px IBM Plex Mono, monospace"; ctx.fillStyle = C.dim; if (l.unit) ctx.fillText(l.unit, 8, top + 20);
@@ -227,7 +361,8 @@ export function MasterGraph({ data, supplements, focus, days, band, onView }: { 
       ctx.strokeStyle = C.line; ctx.beginPath(); ctx.moveTo(LEFT, top + l.h + .5); ctx.lineTo(w - RIGHT, top + l.h + .5); ctx.stroke();
       ctx.save(); ctx.beginPath(); ctx.rect(LEFT, top - 2, pw, l.h + 4); ctx.clip();
       if (l.kind === "wearable") { ctx.fillStyle = C.dim; ctx.textAlign = "left"; ctx.fillText(l.id === "hr" || l.id === "sleep" ? "Connect your band in Settings" : "Connect a wearable", LEFT + 8, top + l.h / 2); }
-      else if (l.kind === "series" || l.kind === "daily" || l.kind === "hr") drawSeries(l, top, l.h, false);
+      else if (l.kind === "hr") drawHr(l, top, l.h);
+      else if (l.kind === "series" || l.kind === "daily") drawSeries(l, top, l.h, false);
       else if (l.kind === "hyp") {
         // Fitbit-style: four rows (awake at the top, deep at the bottom); a night without stages is one block.
         const rh = (l.h - 4) / 4;
@@ -299,7 +434,7 @@ export function MasterGraph({ data, supplements, focus, days, band, onView }: { 
       // Sleep stage names in the right margin, where other lanes put their "on top" axis.
       if (l.kind === "hyp") { ctx.fillStyle = C.dim; ctx.font = "8.5px IBM Plex Mono, monospace"; ctx.textAlign = "left"; STAGES.forEach((n, i) => ctx.fillText(n === "rem" ? "REM" : n, w - RIGHT + 5, top + 2 + (i + .5) * (l.h - 4) / 4)); ctx.font = "10px IBM Plex Mono, monospace"; }
       // Axis values sit just inside the plot so they never collide with the lane's name.
-      if (l.lo != null && l.hi != null && l.kind !== "feel") { ctx.textAlign = "left"; ctx.fillStyle = C.dim; ctx.font = "9px IBM Plex Mono, monospace"; ctx.fillText(String(l.hi), LEFT + 3, top + 5); ctx.fillText(String(l.lo), LEFT + 3, top + l.h - 4); ctx.font = "10px IBM Plex Mono, monospace"; }
+      if (l.lo != null && l.hi != null && l.kind !== "feel" && l.kind !== "hr") { ctx.textAlign = "left"; ctx.fillStyle = C.dim; ctx.font = "9px IBM Plex Mono, monospace"; ctx.fillText(String(l.hi), LEFT + 3, top + 5); ctx.fillText(String(l.lo), LEFT + 3, top + l.h - 4); ctx.font = "10px IBM Plex Mono, monospace"; }
       if (host && l.id === host.id) overlays.forEach((o, k) => { ctx.textAlign = "left"; ctx.fillStyle = o.color; ctx.fillText(o.kind === "feel" ? "10" : `${o.hi}${o.unit}`, w - RIGHT + 5, top + 4 + k * 12); ctx.fillText(o.kind === "feel" ? "1" : String(o.lo), w - RIGHT + 5, top + l.h - 3 - k * 12); });
     });
     // now + crosshair
@@ -339,11 +474,26 @@ export function MasterGraph({ data, supplements, focus, days, band, onView }: { 
     ["Caffeine", `${Math.round(valueAt(data.caffeine, t)?.[1] ?? 0)} mg`],
     ["Alcohol", `${(valueAt(data.alcohol, t)?.[1] ?? 0).toFixed(1)} g`],
     ["Last meal", (() => { const m = [...data.meals].reverse().find((x) => x.at <= t && x.at > t - 6 * HOUR); return m ? `${clock(m.at)} · ${Math.round(m.kcal)} kcal` : "—"; })()],
-    ["Workout", data.workouts.find((b) => b.start <= t && b.end >= t)?.name ?? "—"],
+    ["Workout", (() => {
+      const g = heart?.gyms.find((x) => t >= x.start && t <= (x.backAt ?? x.end));
+      if (g) return [g.name, t > g.end ? "recovering" : "", g.peak != null ? `peak ${g.peak}` : "", g.avg != null ? `avg ${Math.round(g.avg)}` : "", g.backMin != null ? `back in ${g.backMin} min` : ""].filter(Boolean).join(" · ");
+      return data.workouts.find((b) => b.start <= t && b.end >= t)?.name ?? "—";
+    })()],
     ["Weight", (() => { const v = valueAt(data.weight, t); return v ? `${v[1]} kg` : "—"; })()],
     ["Feelings", (() => { const c = hovered ?? latestCheck(data.checks, t); return c ? `${clock(c.at)} · ${feelText(c)}` : "—"; })()],
     ...(() => { const c = hovered ?? latestCheck(data.checks, t); return [...(c?.doing?.length ? [["Up to", c.doing.join(", ")] as [string, string]] : []), ...(c?.note ? [["Note", `“${c.note}”`] as [string, string]] : [])]; })(),
-    ["Heart rate", !band?.hr.length ? "no wearable" : (() => { const v = valueAt((band.hr as unknown as Point[]), t); return v && t - v[0] < HR_GAP ? `${v[1]} bpm` : "—"; })()],
+    ["Heart rate", !band?.hr.length || !heart ? "no wearable" : (() => {
+      const v = valueAt((band.hr as unknown as Point[]), t);
+      if (!v || t - v[0] >= heart.join) return "—";
+      const u = usualAt(heart.usual, t);
+      return `${v[1]} bpm${u ? ` · ${sgnInt(v[1] - u.mid)} vs usual ${Math.round(u.mid)}` : ""}`;
+    })()],
+    ...(() => {
+      if (!heart) return [];
+      const c = heart.coffees.find((x) => t >= x.at && t <= x.end);
+      if (c) return [["After coffee", `${clock(c.at)}${c.delta != null ? ` · ${sgnInt(c.delta)} bpm vs ${c.vs === "usual" ? "usual" : "the half hour before"}` : " · band off"}${c.peakAt ? ` · peak ${clock(c.peakAt)}` : ""}`] as [string, string]];
+      return [];
+    })(),
     ...(band?.sleep.length && stageAt(band.sleep, t) ? [["Sleep", stageAt(band.sleep, t)!] as [string, string]] : []),
   ];
   // The overview: the whole history, small, with the window you're looking at. Drag it, or tap to jump.
@@ -394,6 +544,7 @@ export function MasterGraph({ data, supplements, focus, days, band, onView }: { 
         </div>
         <canvas ref={cv} className="mg-canvas" aria-label="Master graph of every tracked metric over time"
           data-lanes={layout.map((r) => r.l.id).join(",")} data-plot={`${LEFT},${RIGHT}`} data-view={`${Math.round(view.t1 - view.span)},${Math.round(view.t1)}`} data-feel={feelRow ? `${feelRow.y},${feelRow.l.h}` : ""}
+          data-hr={heart ? `${heart.usual ? "usual" : "learning"},${heart.coffees.filter((c) => c.end >= view.t1 - view.span && c.at <= view.t1).length},${heart.gyms.filter((g) => g.end >= view.t1 - view.span && g.start <= view.t1).length},${layout.find((r) => r.l.kind === "hr")?.y ?? ""},${layout.find((r) => r.l.kind === "hr")?.l.h ?? ""}` : ""}
           onPointerDown={(e) => { drag.current = { x: e.clientX, t1: view.t1 }; e.currentTarget.setPointerCapture(e.pointerId); setHover(tAt(e.clientX)); setHoverY(e.clientY - e.currentTarget.getBoundingClientRect().top); }}
           onPointerMove={(e) => { if (drag.current && Math.abs(e.clientX - drag.current.x) > 4) { const pw = e.currentTarget.getBoundingClientRect().width - LEFT - RIGHT; setView(clampView(drag.current.t1 - ((e.clientX - drag.current.x) / pw) * view.span, view.span)); } setHover(tAt(e.clientX)); setHoverY(e.clientY - e.currentTarget.getBoundingClientRect().top); }}
           onPointerUp={() => { drag.current = null; }} onPointerCancel={() => { drag.current = null; }} onPointerLeave={() => { if (!drag.current) setHover(null); }} />
