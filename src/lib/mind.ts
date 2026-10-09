@@ -3,11 +3,17 @@
  * - the course: each day's mood against your own average (the clinical life-chart layout), with
  *   energy, stress, sleep and what happened that day underneath;
  * - the rhythm: mood by weekday × time of day, from every check-in.
+ * And the band's side (PLAN 58, owner's pick 9 Oct: "C, with A's calendar under it"):
+ * - the grid: last night, this morning, the evening before and the day against how you felt that day
+ *   (lib/sleep's shuffle test, so it reads like the Sleep and Heart grids), and this morning's line from it;
+ * - a feeling against hours asleep the night before;
+ * - the month as a calendar, each day's mood against your usual.
  * Pure: in → numbers out; the component only draws. Nothing here says "because".
  */
 
 import type { Entry, EntryOf } from "./types";
 import type { GlanceDay } from "./glance";
+import { clockH, type Cell as GridCell, type Evening, type Factor, type Night, type Outcome, type Sure } from "./sleep";
 import { mean } from "./stats";
 
 export type CourseDay = GlanceDay & { dev: number | null; drinksBefore: boolean; weekend: boolean };
@@ -58,3 +64,93 @@ export function moodRhythm(entries: Entry[], fromMs: number, key: "mood" | "ener
 
 /** A cell's colour step 0–5 between the grid's lowest and highest mean. */
 export const stepOf = (v: number, lo: number, hi: number) => Math.max(0, Math.min(5, Math.floor(((v - lo) / (hi - lo || 1)) * 5.999)));
+
+/* ------------------------------------------------------------------ the band's side (PLAN 58) */
+
+export type Feeling = "mood" | "energy" | "stress" | "focus";
+export const FEELING_NAMES: [Feeling, string][] = [["mood", "Mood"], ["energy", "Energy"], ["stress", "Stress"], ["focus", "Focus"]];
+
+/** The grid's columns: how you felt the day each night ends on (that day's check-ins, as GlanceDay has them). Less stress is the better way. */
+export function mindOutcomes(byDay: Map<string, GlanceDay>): Outcome[] {
+  return FEELING_NAMES.map(([k, name]) => ({ id: k, name, unit: "/10" as const, better: k === "stress" ? -1 : 1, of: (n: Night) => byDay.get(n.day)?.[k] ?? null }));
+}
+
+export type When = "last night" | "this morning" | "the evening before" | "the day";
+export type MindFactor = Factor & { when: When };
+/** Under this many minutes asleep is a short night. */
+export const SHORT_NIGHT_MIN = 390;
+
+/**
+ * The grid's rows, each saying when it's from — this morning's line only uses what's known by the morning. HRV's
+ * "lowest quarter" is among the nights given (needs 8 with HRV); "trained that day" is the day itself, not the evening.
+ */
+export function mindFactors(ns: Night[], trainedOn: (day: string) => boolean): MindFactor[] {
+  const hrv = ns.map((n) => n.hrv).filter((v): v is number => v != null).sort((a, b) => a - b);
+  const q1 = hrv.length >= 8 ? hrv[Math.floor((hrv.length - 1) * 0.25)] : null;
+  return [
+    { id: "short", name: "Under 6 h 30 asleep", when: "last night", has: (n) => n.asleep < SHORT_NIGHT_MIN },
+    { id: "latebed", name: "In bed after 00:15", when: "last night", has: (n) => clockH(n.bed, n.eve) >= 24.25 },
+    { id: "lowhrv", name: "HRV in your lowest quarter", when: "this morning", has: (n) => q1 != null && n.hrv != null && n.hrv <= q1 },
+    { id: "drinks", name: "Drinks the evening before", when: "the evening before", has: (_, e) => e.drinks.length > 0 },
+    { id: "caf", name: "Caffeine at bed ≥ 30 mg", when: "the evening before", has: (_, e) => e.caffeineAtBed >= 30 },
+    { id: "trained", name: "Trained that day", when: "the day", has: (n) => trainedOn(n.day) },
+  ];
+}
+
+export type MorningLink = { factor: MindFactor; cell: GridCell };
+/** What the grid says about mornings like this one: rows known by the morning that hold for it, cells clear or likely. */
+export function thisMorning(n: Night, e: Evening, factors: MindFactor[], cells: GridCell[]): MorningLink[] {
+  return factors.filter((f) => f.when !== "the day" && f.has(n, e)).flatMap((f) =>
+    cells.filter((c) => c.factor === f.id && (c.sure === "clear" || c.sure === "likely")).map((cell) => ({ factor: f, cell })))
+    .sort((a, b) => a.cell.p! - b.cell.p!);
+}
+
+export type SleepSlope = { pts: [hours: number, value: number][]; slope: number | null; p: number | null; sure: Sure };
+/** Days needed before the slope says anything. */
+export const SLOPE_MIN_DAYS = 10;
+
+/**
+ * A feeling on the day against hours asleep the night before: the least-squares slope per hour; how sure by shuffling
+ * which day had which night (2,000 times). The page lets you pick any of four feelings, so the bars are four times
+ * stricter than for one: clear p < 0.00125, likely p < 0.0125.
+ */
+export function sleepSlope(ns: Night[], of: (n: Night) => number | null, opts: { perms?: number; seed?: number } = {}): SleepSlope {
+  const pts: [number, number][] = ns.flatMap((n) => { const v = of(n); return v == null ? [] : [[n.asleep / 60, v] as [number, number]]; });
+  if (pts.length < SLOPE_MIN_DAYS) return { pts, slope: null, p: null, sure: "too few" };
+  const xs = pts.map((p) => p[0]), ys = pts.map((p) => p[1]), mx = mean(xs), my = mean(ys);
+  const sxx = xs.reduce((a, x) => a + (x - mx) ** 2, 0);
+  if (sxx === 0) return { pts, slope: null, p: null, sure: "too few" };
+  const slopeOf = (y: number[]) => xs.reduce((a, x, i) => a + (x - mx) * (y[i] - my), 0) / sxx;
+  const slope = slopeOf(ys), perms = opts.perms ?? 2000, sh = [...ys];
+  let seed = opts.seed ?? 13, hits = 0;
+  const rnd = () => { seed = (seed * 1103515245 + 12345) % 2147483648; return seed / 2147483648; };
+  for (let k = 0; k < perms; k++) {
+    for (let i = sh.length - 1; i > 0; i--) { const j = Math.floor(rnd() * (i + 1)); [sh[i], sh[j]] = [sh[j], sh[i]]; }
+    if (Math.abs(slopeOf(sh)) >= Math.abs(slope) - 1e-9) hits++;
+  }
+  const p = (hits + 1) / (perms + 1);
+  return { pts, slope, p, sure: p < 0.00125 ? "clear" : p < 0.0125 ? "likely" : "not clear" };
+}
+
+export type CalDay = { day: string; mood: number | null; dev: number | null; step: number | null; drinksBefore: boolean; short: boolean | null; trained: boolean };
+export type Month = { usual: number | null; days: CalDay[] };
+/** Mood points from your usual that make each colour step: about usual inside ±0.3, then 0.7, then 1.2. */
+export const CAL_STEPS = [0.3, 0.7, 1.2];
+
+/**
+ * The last `n` days as a calendar: each day's mood against your usual — the middle of those days' moods (needs 5 rated
+ * days) — as a step −3…3; what the evening before held, a short night (from the band, null without one), training.
+ */
+export function moodMonth(days: GlanceDay[], n: number, asleepOn: (day: string) => number | null): Month {
+  const list = days.slice(-n), rated = list.map((d) => d.mood).filter((v): v is number => v != null).sort((a, b) => a - b);
+  const usual = rated.length >= 5 ? (rated.length % 2 ? rated[(rated.length - 1) / 2] : (rated[rated.length / 2 - 1] + rated[rated.length / 2]) / 2) : null;
+  const step = (dev: number) => Math.sign(dev) * CAL_STEPS.filter((s) => Math.abs(dev) >= s).length;
+  const start = days.length - list.length;
+  return {
+    usual,
+    days: list.map((d, k) => {
+      const dev = d.mood != null && usual != null ? d.mood - usual : null, a = asleepOn(d.day);
+      return { day: d.day, mood: d.mood, dev, step: dev == null ? null : step(dev), drinksBefore: (days[start + k - 1]?.drinks ?? 0) > 0, short: a == null ? null : a < SHORT_NIGHT_MIN, trained: d.trained };
+    }),
+  };
+}
