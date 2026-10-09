@@ -8,6 +8,7 @@ import { Compare } from "../components/Compare";
 import { SleepNights } from "../components/Sleep";
 import { HeartPage } from "../components/Heart";
 import { MindPage } from "../components/MindPage";
+import { SuppAfter } from "../components/SuppAfter";
 import { loadBandBefore, useBand } from "../lib/band-client";
 import { lastNight } from "../lib/band";
 import { Glance } from "../components/Glance";
@@ -194,6 +195,7 @@ export function Insights() {
       <div className="pgrid" data-sec="training">
         {has.strength && <Strength now={now} />}
         <DoseEffects />
+        <SuppAfter band={band} data={data} />
         <Experiments />
         <StackCheckPanel />
         {locked.length > 0 && (

@@ -185,9 +185,21 @@ const isCaffeineNear = (doses: Dose[], t: number) => doses.some((d) => d.mg > 0 
  * their window, are left out — they'd measure the wrong thing.
  */
 export function afterCoffee(doses: Dose[], hrMinutes: HrMinute[], workouts: Span[]): AfterCoffee {
-  const mins = minuteMap(hrMinutes);
+  const caf = doses.filter((d) => d.mg > 0).map((d) => d.at);
+  return afterEach(caf, hrMinutes, workouts);
+}
+
+/**
+ * The same for any intake (PLAN 63, owner: "keep in mind at what time i log supplements, can check whether it affects
+ * mental, or bpm changes"): each one against the same clock minutes on days without it near that hour. `avoid` (caffeine,
+ * for a supplement) leaves out intakes with one of those within 2 hours either side — the coffee would be measured — and
+ * days with one near that hour as controls. `minN`: intakes before it says anything.
+ */
+export function afterEach(times: number[], hrMinutes: HrMinute[], workouts: Span[], opts: { avoid?: number[]; minN?: number } = {}): AfterCoffee {
+  const mins = minuteMap(hrMinutes), avoid = opts.avoid ?? [], minN = opts.minN ?? COFFEE_MIN_N;
   const days = [...new Set(hrMinutes.map((m) => localDay(m[0])))].sort();
-  const caf = doses.filter((d) => d.mg > 0).sort((a, b) => a.at - b.at);
+  const caf = [...times].sort((a, b) => a - b).map((at) => ({ at, mg: 1 }));
+  const avoided = (t: number, h: number) => avoid.some((a) => Math.abs(a - t) < h * 3600_000);
   const bins: number[] = []; for (let m = FROM; m < TO; m += STEP) bins.push(m);
   const clear = (t0: number) => !workouts.some((w) => w.end > t0 + FROM * MIN && w.start < t0 + TO * MIN);
   /** 30–90 min after t0 minus the half hour before it, on whatever day t0 is. */
@@ -195,12 +207,12 @@ export function afterCoffee(doses: Dose[], hrMinutes: HrMinute[], workouts: Span
   type Use = { day: string; mine: number; ctl: { day: string; v: number }[]; curve: [number, number][] };
   const uses: Use[] = [];
   for (const c of caf) {
-    if (caf.some((o) => o.at < c.at && c.at - o.at < 3 * 3600_000) || !clear(c.at)) continue;
+    if (caf.some((o) => o.at < c.at && c.at - o.at < 3 * 3600_000) || !clear(c.at) || avoided(c.at, 2)) continue;
     const mine = rise(c.at);
     if (mine == null) continue;
     const day = localDay(c.at), cm = minuteOfDay(c.at);
     const ctl = days.filter((d) => d !== day).map((d) => ({ day: d, t0: atMinute(d, 0) + cm * MIN }))
-      .filter((x) => !isCaffeineNear(caf, x.t0) && clear(x.t0))
+      .filter((x) => !isCaffeineNear(caf, x.t0) && !avoided(x.t0, 3) && clear(x.t0))
       .flatMap((x) => { const v = rise(x.t0); return v == null ? [] : [{ day: x.day, v, t0: x.t0 }]; });
     if (ctl.length < 2) continue;
     // The thin line: this coffee minus the coffee-free days, per 5 minutes, lined up on its own half hour before.
@@ -245,7 +257,7 @@ export function afterCoffee(doses: Dose[], hrMinutes: HrMinute[], workouts: Span
   // that with nothing there it says "likely" about 1 time in 20 and "clear" practically never (hrusual.test).
   const bm = mean(boots), se = Math.sqrt(boots.reduce((a, x) => a + (x - bm) ** 2, 0) / Math.max(1, boots.length - 1)) * Math.sqrt(days.length / Math.max(1, days.length - 1));
   const t = se > 0 ? Math.abs(effect) / se : 0;
-  const sure: Sure = n < COFFEE_MIN_N ? "too few" : t >= 3.5 && n >= 12 ? "clear" : t >= 2.4 ? "likely" : "not clear";
+  const sure: Sure = n < minN ? "too few" : t >= 3.5 && n >= 12 ? "clear" : t >= 2.4 ? "likely" : "not clear";
   const after = curve.filter((p) => p[0] >= 0);
   const peak = after.length ? after.reduce((a, b) => ((effect >= 0 ? b[1] > a[1] : b[1] < a[1]) ? b : a)) : null;
   return { n, days: new Set(uses.map((u) => u.day)).size, curve, each, wobble: 2 * se, effect, se, sure, peakMin: peak ? peak[0] : null };

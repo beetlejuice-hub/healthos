@@ -787,12 +787,30 @@ email get Dev tools (`#dev`): raw entry editor, generate/remove sample, wipe acc
    Checked: heart.test (40 min at +18 → very; +7 → slightly; 15 min → nothing; one 5-min dip kept, two split; training,
    the hour after and sleep left out; the reasons), e2e/heartpage.cjs (a stretch after coffee explained; one with
    nothing near it asked, answered "outside", then explained).
-63. [ ] **After a supplement** — heart rate and feelings in the hours after each supplement you log, like after coffee
-   (owner: "keep in mind at what time i log supplements, can check whether it affects mental, or bpm changes").
+63. [x] **After a supplement** (9 Oct — lib/suppafter.ts, lib/hrusual `afterEach`, components/SuppAfter.tsx on Insights →
+   Training & stack). Owner: "keep in mind at what time i log supplements, can check whether it affects mental, or bpm
+   changes". Heart rate 30–90 min after each intake against the same hours on days without it (intakes within 2 h of a
+   coffee left out, so coffee isn't credited to the supplement); how you felt at check-ins 1–4 h after against check-ins
+   at the same time of day without it (so a noon pill isn't credited with your usual afternoon). Four feelings → bars four
+   times stricter. Taken at the same time every day → says there's nothing to compare yet. Checked: suppafter.test
+   (planted +6 bpm found, coffee-adjacent intakes left out, planted mood found, nothing found where nothing's planted,
+   time-of-day not credited), e2e/suppafter.cjs (30 fake days, 390 px phone).
 64. [ ] **Training page** — canvas first. Owner: "track strength trends, how good i felt against how much work i do in gym,
-   add in heart bpm, add in sleep quality, when im going gym, supplements, food".
+   add in heart bpm, add in sleep quality, when im going gym, supplements, food". And (9 Oct): "Make sure app sees
+   connection between food intake, calorie, carbs, and strength in gym, etc." Idea: a session's strength as each lift's
+   best set against that lift's own trend (so progress isn't credited to food), tested against carbs/kcal in the 4 h
+   before, kcal/protein over the 3 days before, sleep, morning HRV/RHR, caffeine, supplements, time of day.
 65. [ ] **Noticing, and digests** — owner: "App should have a pretty complex n smart system of noticing patterns especially
    focusing on sleep and focus" and "AI should look at data at eod, eow, eom, and make suggestions, summaries, etc, even
    make graphs or like interesting notices". The grids (Sleep, Heart, Mind) already test what goes with sleep and focus;
    next is one feed of what's new and clear across them. Digests: needs an AI key for the written part (owner, earlier:
    "no ai key yet") — asked.
+66. [ ] **Steps from the band** — brainstormed 9 Oct, waiting on the owner. Owner: "I dont see it tracking daily steps …
+   wondering if the data is valuable for us like more walking equals better sleep at night or better mood". Main use:
+   minute steps explain raised heart rate on their own (walking), and keep walks out of after-coffee / after-supplement
+   heart rate; then daily steps as a factor in the sleep and mood grids. Google permission already covers it.
+67. [ ] **AI chat that can look things up** — brainstormed 9 Oct, waiting on the owner (AI key). Owner: "a chat for ai …
+   it knows every data in app … pull data based on what i ask and answer it nicely. it can also send me messages of new
+   findings". A chat exists (components/Ai.tsx) but sees only a written summary. Idea: tools the AI calls and the app
+   answers from your data with the same tested engines (find, day, series, compare, after, findings, show-a-chart);
+   every number from a tool, never the AI's own maths; new clear findings arrive as chat messages.

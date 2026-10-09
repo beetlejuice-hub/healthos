@@ -13,7 +13,7 @@ const sgn = (v: number, d = 1) => { const t = Math.abs(v).toFixed(d); return Num
 const path = (pts: Pt[], X: (m: number) => number, Y: (v: number) => number) => pts.map(([m, v], i) => `${i ? "L" : "M"}${X(m).toFixed(1)} ${Y(v).toFixed(1)}`).join("");
 
 /** One small chart: thin lines, their average, zero, an optional strip and a marked point. */
-function Aligned({ width, height, x, y, each, avg, color, strip, mark, xTicks, yTicks, label }: {
+export function Aligned({ width, height, x, y, each, avg, color, strip, mark, xTicks, yTicks, label }: {
   width: number; height: number; x: [number, number]; y: [number, number]; each: Pt[][]; avg: Pt[]; color: string;
   strip?: number; mark?: { m: number; text: string } | null; xTicks: [number, string][]; yTicks: number[]; label: string;
 }) {
