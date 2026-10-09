@@ -728,3 +728,17 @@ email get Dev tools (`#dev`): raw entry editor, generate/remove sample, wipe acc
 58. [ ] **Insights → Mind, redesigned** (claimed 9 Oct — canvas first; components/Mind.tsx, lib/mind.ts after the
    owner picks). Owner, 9 Oct: "do 3" (design the Mind page next). Phase 1: 2–3 directions on the canvas, laptop +
    phone, from fake check-ins shaped like his.
+   - **Canvas (9 Oct): https://claude.ai/artifact/Gdp9Y5QYBPMVFfqW4eqrPv** — three directions, each laptop + phone, from 30
+     fake days of check-ins (2–4 a day, what you were doing, notes) and band nights. Planted: the day after drinks mood
+     −0.9; energy +0.9 per hour asleep; check-ins after being outside mood +0.8; weekday afternoons stress +1.4; focus
+     nothing. **A · your days, in words:** this week against your usual week (four feelings), today check-in by check-in
+     with what you were doing, the month as a calendar coloured by mood against your usual, best and worst days in
+     sentences (drinks → mood −0.8, likely). **B · your rhythm:** each feeling through the day (weekdays / weekends),
+     mood by weekday × time of day, mood after each thing you were doing against check-ins at the same time of day
+     (outside +0.9 clear; nothing else). **C · what goes with your mood:** this morning from the band in one line
+     ("mornings like this have gone with…", only what's known by the morning), the Sleep/Heart grid with mood, energy,
+     stress, focus as columns (short night → energy −1.4, drinks → mood −0.8, both likely), the strongest cell opened,
+     energy against hours asleep (+1.0 per hour, clear). Found while checking: focus came up "likely" through the day
+     with nothing planted — four feelings tested at once now need a 4× stricter bar; the week heat map compared with a
+     median of whole numbers (7.0) so nearly all of it read "below" — average now. Every board rendered at its width,
+     no label past its box. Waiting on his pick.
