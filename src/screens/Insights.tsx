@@ -7,6 +7,7 @@ import { MasterGraph } from "../components/MasterGraph";
 import { Compare } from "../components/Compare";
 import { SleepNights } from "../components/Sleep";
 import { HeartPage } from "../components/Heart";
+import { MindPage } from "../components/MindPage";
 import { loadBandBefore, useBand } from "../lib/band-client";
 import { lastNight } from "../lib/band";
 import { Glance } from "../components/Glance";
@@ -180,6 +181,7 @@ export function Insights() {
       {!nothing && (cmp && shown === "timeline" ? <Compare data={data} band={band} now={now} logged={logged} />
         : <MasterGraph data={data} supplements={s.supplements} focus={focus} days={gdays} band={band} onView={loadBandBefore} />)}
       {!nothing && <HeartPage data={data} band={band} now={now} entries={s.entries} halfLifeMin={s.settings.halfLifeMin} />}
+      {!nothing && <MindPage data={data} band={band} now={now} entries={s.entries} halfLifeMin={s.settings.halfLifeMin} days={gdays} period={period} />}
       {!nothing && <Mind days={gdays} now={now} period={period} />}
       {!nothing && <Connections days={gdays} />}
       {!nothing && <div data-sec="connections" className="sec-wrap"><Noticed report={report} /><WorthALook items={scouted} onShow={showOnGraph} /></div>}

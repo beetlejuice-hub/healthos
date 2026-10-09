@@ -1129,3 +1129,27 @@ a { color: inherit; }
 .hp-st-row svg { display: block; flex: 0 0 auto; }
 .hp-st-words { flex: 1 1 260px; display: grid; gap: 8px; min-width: 0; }
 @media (max-width: 640px) { .hp-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); } .hp-kpis .kpi:nth-child(2) { border-right: 0; } .hp-kpis .kpi:nth-child(-n+2) { border-bottom: 1px solid var(--i-line); } .hp-hint { margin-left: 0; width: 100%; } }
+/* Insights → Mind, the band's side (PLAN 58, owner's pick 9 Oct): this morning, the grid, sleep → that day, the month. */
+.mp { display: grid; gap: 12px; min-width: 0; margin-bottom: 4px; }
+.mp-morning { padding: 14px 16px; display: grid; gap: 6px; }
+.mp-big { margin: 0; font-size: 15.5px; line-height: 1.45; color: var(--i-ink); font-weight: 500; }
+.mp-small { margin: 0; font-size: 13px; line-height: 1.5; color: var(--i-ink-2); }
+.mp-small b { font-weight: 600; }
+.mp-two { display: grid; gap: 12px; grid-template-columns: minmax(0, 1fr); align-items: start; }
+.mp-two.wide { grid-template-columns: 56fr 44fr; }
+.mp-sleep { padding: 14px 0 12px; display: grid; gap: 8px; overflow: hidden; }
+.mp-sleep > p { padding: 0 16px; }
+.mp-sleep svg { display: block; }
+.mp-head { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; padding: 0 16px; }
+.mp-head .iseg { margin-left: auto; } .mp-head .iseg button { min-height: 32px; }
+.mp-month { padding: 14px 16px; display: grid; gap: 10px; }
+.mp-cal { display: flex; flex-wrap: wrap; gap: 12px 24px; align-items: start; margin: 0 -14px; }
+.mp-cal svg { display: block; flex: 0 0 auto; touch-action: pan-y; cursor: pointer; }
+.mp-cal-side { flex: 1 1 220px; display: grid; gap: 8px; padding: 0 14px; min-width: 0; }
+.mp-date { fill: rgba(220, 227, 229, .72); font: 400 10px var(--f-mono); }
+.mp-v { font: 600 13px var(--f-mono); }
+.mp-scale { display: flex; gap: 4px; } .mp-scale i { width: 22px; height: 10px; border-radius: 2px; }
+.mp-scale-k { display: flex; justify-content: space-between; width: 178px; font: 400 10px var(--f-mono); color: var(--i-dim); }
+.mp-key { padding: 0; }
+.mp-hov b { color: var(--i-ink); font-weight: 500; }
+@media (max-width: 640px) { .mp-v { font-size: 11px; } }

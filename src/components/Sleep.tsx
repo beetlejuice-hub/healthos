@@ -8,7 +8,7 @@ import { useEffect, useMemo, useState } from "react";
 import type { BandData } from "../lib/band";
 import { loadBandBefore } from "../lib/band-client";
 import type { Lanes } from "../lib/insights";
-import { clockH, facts, firstAt, FACTORS, goesWith, OUTCOMES, regularity, usual, usualNightHr, weekendShift, type Cell, type Evening, type Night, type Outcome, type Range } from "../lib/sleep";
+import { clockH, facts, firstAt, FACTORS, goesWith, OUTCOMES, regularity, usual, usualNightHr, weekendShift, type Cell, type Evening, type Factor, type Night, type Outcome, type Range } from "../lib/sleep";
 import { addDays, atMinute, clock, dayLabel, DAY, HOUR, MIN } from "../lib/time";
 import type { Entry } from "../lib/types";
 import { useNights } from "./useNights";
@@ -313,8 +313,8 @@ const SLEEP_COPY: GridCopy = {
   sub: "Each cell: nights with the thing against nights without it. Filled: clear · faint: likely · empty: not clear yet. Goes with, not proof of cause.",
 };
 
-export function GoesWith({ ns, evs, wide, w, outcomes = OUTCOMES, narrow, copy = SLEEP_COPY }: { ns: Night[]; evs: Evening[]; wide: boolean; w: number; outcomes?: Outcome[]; narrow?: Outcome[]; copy?: GridCopy }) {
-  const cells = useMemo(() => goesWith(ns, evs, { outcomes }), [ns, evs, outcomes]);
+export function GoesWith({ ns, evs, wide, w, outcomes = OUTCOMES, factors = FACTORS, narrow, copy = SLEEP_COPY }: { ns: Night[]; evs: Evening[]; wide: boolean; w: number; outcomes?: Outcome[]; factors?: Factor[]; narrow?: Outcome[]; copy?: GridCopy }) {
+  const cells = useMemo(() => goesWith(ns, evs, { outcomes, factors }), [ns, evs, outcomes, factors]);
   const outs = wide ? outcomes : narrow ?? outcomes.filter((o) => o.id !== "awake" && o.id !== "rating");
   const [open, setOpen] = useState<{ f: string; o: string } | null>(null);
   const firstClear = cells.filter((c) => c.sure === "clear" && outs.some((o) => o.id === c.outcome)).sort((a, b) => a.p! - b.p!)[0];
@@ -326,8 +326,8 @@ export function GoesWith({ ns, evs, wide, w, outcomes = OUTCOMES, narrow, copy =
     if (o.unit === "clock") return Math.abs(d) >= 60 ? `${d > 0 ? "+" : "−"}${hmm(Math.abs(d))}` : `${sgn(d)}m`;
     return sgn(d, 1);
   };
-  const shown = FACTORS.filter((f) => cells.some((c) => c.factor === f.id && c.sure !== "too few"));
-  const hidden = FACTORS.filter((f) => !shown.includes(f)).map((f) => { const c = cells.find((x) => x.factor === f.id)!; return `${f.name.toLowerCase()} (${c.nWith} with, ${c.nWithout} without)`; });
+  const shown = factors.filter((f) => cells.some((c) => c.factor === f.id && c.sure !== "too few"));
+  const hidden = factors.filter((f) => !shown.includes(f)).map((f) => { const c = cells.find((x) => x.factor === f.id)!; return `${f.name.toLowerCase()} (${c.nWith} with, ${c.nWithout} without)`; });
   if (ns.length < copy.minNights) return <section className="sl-p sl-c" aria-label={copy.title}><span className="cmp-k">{copy.title}</span><p>Needs at least {copy.minNights} {copy.what} with the band, and 5 with and 5 without each thing — {ns.length} {copy.what} so far.</p></section>;
   return (
     <section className="sl-p sl-c" aria-label={copy.title}>
@@ -349,7 +349,7 @@ export function GoesWith({ ns, evs, wide, w, outcomes = OUTCOMES, narrow, copy =
             ];
           })}
         </div>
-        {cur && <Opened ns={ns} evs={evs} cell={cells.find((c) => c.factor === cur.f && c.outcome === cur.o)!} outcomes={outcomes} what={copy.what} w={wide ? Math.min(460, w - 640) : w - 32} />}
+        {cur && <Opened ns={ns} evs={evs} cell={cells.find((c) => c.factor === cur.f && c.outcome === cur.o)!} outcomes={outcomes} factors={factors} what={copy.what} w={wide ? Math.min(460, w - 640) : w - 32} />}
       </div>
       {hidden.length > 0 && <p className="sl-note">Not enough {copy.what} yet — 5 with and 5 without — for: {hidden.join(", ")}.</p>}
       <div className="sl-c-key"><span><i style={{ background: "#4f86dc" }} />{copy.toward}</span><span><i style={{ background: "#d9822b" }} />the other way</span></div>
@@ -357,8 +357,8 @@ export function GoesWith({ ns, evs, wide, w, outcomes = OUTCOMES, narrow, copy =
   );
 }
 
-function Opened({ ns, evs, cell, w, outcomes, what }: { ns: Night[]; evs: Evening[]; cell: Cell; w: number; outcomes: Outcome[]; what: string }) {
-  const f = FACTORS.find((x) => x.id === cell.factor)!, o = outcomes.find((x) => x.id === cell.outcome)!;
+function Opened({ ns, evs, cell, w, outcomes, factors, what }: { ns: Night[]; evs: Evening[]; cell: Cell; w: number; outcomes: Outcome[]; factors: Factor[]; what: string }) {
+  const f = factors.find((x) => x.id === cell.factor)!, o = outcomes.find((x) => x.id === cell.outcome)!;
   const pts = ns.flatMap((n, i) => { const v = o.of(n, evs[i]); return v == null ? [] : [{ v, has: f.has(n, evs[i]) }]; });
   if (cell.sure === "too few" || pts.length < 2) return null;
   const vs = pts.map((p) => p.v), lo = Math.min(...vs), hi = Math.max(...vs), span = hi - lo || 1;
@@ -378,7 +378,7 @@ function Opened({ ns, evs, cell, w, outcomes, what }: { ns: Night[]; evs: Evenin
         <text x={20} y={142} className="he-t">{fmtV(lo)}</text><text x={w - 20} y={142} textAnchor="end" className="he-t">{fmtV(hi)}</text>
       </svg>
       <p className="sl-open-v"><b>{words}</b> on {what} with it · {cell.sure}{cell.p != null ? ` (p ${cell.p < 0.001 ? "<0.001" : cell.p.toFixed(3)})` : ""}</p>
-      <p className="sl-note">Every {what === "nights" ? "night" : "morning"} is a dot, so you can see what the average hides. Evenings with one thing often have others too (drinks, weekends, late bedtimes) — read the rows together.</p>
+      <p className="sl-note">Every {what.replace(/s$/, "")} is a dot, so you can see what the average hides. Evenings with one thing often have others too (drinks, weekends, late bedtimes) — read the rows together.</p>
     </div>
   );
 }

@@ -752,3 +752,12 @@ email get Dev tools (`#dev`): raw entry editor, generate/remove sample, wipe acc
      2. components/MindPage.tsx on top of the Mind page; without band nights only the calendar; the old course /
         rhythm / patterns panels stay below for now (as Sleep's did) — his call whether they go.
      3. e2e/mindpage.cjs at laptop + phone width, then live.
+   - **Built (9 Oct).** Phase 1 landed as e166202. Phase 2 + 3: components/MindPage.tsx on top of the Mind page — this
+     morning from the band in one line, the grid (Sleep.tsx's `GoesWith`, now taking rows too), a feeling against
+     hours asleep (Mood / Energy / Stress / Focus), the month as a calendar; without band nights only the calendar.
+     The grid and the slope learn from finished days only (today's feelings so far are just its morning); this
+     morning's line applies them to today. Checked (e2e/mindpage.cjs, 30 fake days, laptop + phone): drinks the
+     evening before → mood −1.0 clear, a short night → energy −0.8 clear, nothing else clear; energy +0.9 per hour
+     asleep clear, focus nothing; the calendar marks every day after drinks and reads them below usual; tapping a
+     day shows its numbers; no band → the calendar only. The old course / rhythm / patterns panels are still below —
+     his call whether they go. Not checked: his real check-ins and nights (blocked from here).
