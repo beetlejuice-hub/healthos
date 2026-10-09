@@ -761,3 +761,38 @@ email get Dev tools (`#dev`): raw entry editor, generate/remove sample, wipe acc
      asleep clear, focus nothing; the calendar marks every day after drinks and reads them below usual; tapping a
      day shows its numbers; no band → the calendar only. The old course / rhythm / patterns panels are still below —
      his call whether they go. Not checked: his real check-ins and nights (blocked from here).
+59. [x] **Sleep score asked once a morning** (9 Oct — components/HowNow.tsx). Owner: "i logged my sleep score (1-10) at
+   start of day now it asks again when i click log again (mental)". "Rate again" also reopened the sleep slider; now last
+   night's rating is one line ("Last night 7 / 10 · change"). e2e/sleeponce.cjs fails on the old code. Landed af5a189.
+60. [x] **Supplement amount per intake** (claimed 9 Oct — lib/dose.ts, components/SuppAmount.tsx, Today.tsx stack, Log list,
+   types `amount`). Owner: "i set up 1 capsule as 200mg, i should be either change to 300mg when im logging, or just +1 to
+   add +1 caps, so its 400mg taken". Ticked → − / + one capsule (the dose, or its "each" in "2 x 200 mg"), or tap and type;
+   saved on that intake only, the plan's dose untouched. Dose comparisons use what was taken: each slot once (the same slot
+   logged twice is one intake), the day's slots added up. Checked: dose.test (+1/−1, typed units, two slots add, a
+   duplicate doesn't — each fails when its rule is taken out), e2e/suppamount.cjs (360 px phone), e2e/dose.cjs.
+61. [x] **Morning catch-up on Today** (claimed 9 Oct — lib/catchup.ts, components/CatchUp.tsx, Today.tsx, Log.tsx `useWhen`).
+   Owner: "At morning the next day it should ask … did u take magnesium (supp), and other things i did not log that day but
+   shouldve done". 05:00–14:00, only when yesterday's missing something by your own habits (last 14 days, on ≥60 % of
+   logged days): a stack supplement you've been ticking with no answer → Took it / Didn't (logged at its time yesterday);
+   a drink you have most days → "Had my usual" (your latest one at your usual time); a meal you log most days → Log it
+   (Log opens saying "Logging for yesterday, 19:00"). "No" remembered on the device. Checked: catchup.test (7),
+   e2e/catchup.cjs.
+62. [x] **Raised heart rate: highlighted, explained or asked** (9 Oct — lib/heart.ts `raisedStretches`, `whyRaised`;
+   components/Heart.tsx). Owner: "pick times when heartrate was
+   slighlty or very elevated and highlight them, find out what i was doing by either reading data, or straigh up asking
+   me". Stretches ≥ 20 min above your usual band (slightly: 5–15 bpm, very: 15+), workouts aside; each matched to what's
+   logged around it (coffee in the 2 h before, drinks in the 3 h, a meal in the 90 min, a check-in's "doing" or high
+   stress around it); unexplained ones asked ("Nothing logged around it — what were you doing?" — your tags + own word,
+   saved as a check-in's doing mid-stretch, so it's explained from then on). Shaded on the day chart (+18 written in it).
+   Checked: heart.test (40 min at +18 → very; +7 → slightly; 15 min → nothing; one 5-min dip kept, two split; training,
+   the hour after and sleep left out; the reasons), e2e/heartpage.cjs (a stretch after coffee explained; one with
+   nothing near it asked, answered "outside", then explained).
+63. [ ] **After a supplement** — heart rate and feelings in the hours after each supplement you log, like after coffee
+   (owner: "keep in mind at what time i log supplements, can check whether it affects mental, or bpm changes").
+64. [ ] **Training page** — canvas first. Owner: "track strength trends, how good i felt against how much work i do in gym,
+   add in heart bpm, add in sleep quality, when im going gym, supplements, food".
+65. [ ] **Noticing, and digests** — owner: "App should have a pretty complex n smart system of noticing patterns especially
+   focusing on sleep and focus" and "AI should look at data at eod, eow, eom, and make suggestions, summaries, etc, even
+   make graphs or like interesting notices". The grids (Sleep, Heart, Mind) already test what goes with sleep and focus;
+   next is one feed of what's new and clear across them. Digests: needs an AI key for the written part (owner, earlier:
+   "no ai key yet") — asked.

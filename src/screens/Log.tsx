@@ -14,7 +14,7 @@ import { forGrams } from "../lib/nutrition";
 import { alcoholGrams } from "../lib/alcohol";
 import { addDays, atMinute, clock, dayLabel, localDay } from "../lib/time";
 import { labelOf } from "../lib/feel";
-import { readRoute, go } from "../lib/nav";
+import { readRoute, go, LOG_FOR_KEY } from "../lib/nav";
 import { bodyDays, weightTrend } from "../lib/tdee";
 import { LineChart } from "../components/Charts";
 import type { Drink, Entry, EntryOf, Food, Macros, Supplement } from "../lib/types";
@@ -43,9 +43,14 @@ const hhmmOf = (minute: number) => `${String(Math.floor(minute / 60)).padStart(2
  * "should not be default option but there should be a way to"). `day` null = today.
  */
 type When = { time: string; setTime: (t: string) => void; day: string | null; setDay: (d: string | null) => void };
+/** A day and time handed over once (Today's catch-up: "No dinner logged yesterday → Log it"), else now. */
+function handedOver(): { day: string; time: string } | null {
+  try { const v = sessionStorage.getItem(LOG_FOR_KEY); if (!v) return null; sessionStorage.removeItem(LOG_FOR_KEY); const o = JSON.parse(v); return typeof o?.day === "string" && typeof o?.time === "string" ? o : null; } catch { return null; }
+}
 function useWhen(): When {
-  const [time, setTime] = useState(nowHHMM);
-  const [day, setDay] = useState<string | null>(null);
+  const [first] = useState(handedOver);
+  const [time, setTime] = useState(() => first?.time ?? nowHHMM());
+  const [day, setDay] = useState<string | null>(first?.day ?? null);
   return { time, setTime, day, setDay };
 }
 /** "HH:MM" on the chosen day (today unless an earlier day was picked) → epoch ms. */
@@ -268,6 +273,9 @@ function FoodTab({ done }: { done: (m: string) => void }) {
 
   return <>
     <div className="card">
+      {/* Opened for another day (Today's catch-up: "No dinner logged yesterday → Log it"): say so before anything's typed. */}
+      {when.day && <p className="note log-for">Logging for <b>{when.day === addDays(localDay(Date.now()), -1) ? "yesterday" : dayLabel(atMinute(when.day, 12 * 60))}, {when.time}</b> ·{" "}
+        <button type="button" className="linkish" onClick={() => { when.setDay(null); when.setTime(nowHHMM()); }}>Back to today</button></p>}
       <label className="field">What did you eat?
         <div className="row-add">
           <input value={typed} placeholder="2 scrambled eggs, toast, an apple, coffee" onChange={(e) => setTyped(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter" && typed.trim()) addTyped(); }} aria-label="Type what you ate" />
@@ -893,7 +901,7 @@ const describe = (e: Entry, supps: Supplement[]): [string, string] => {
   switch (e.kind) {
     case "food": return [e.name, `${e.unit && e.count ? `${amountText(e.count, e.unit)} · ≈ ${approx(e.macros.kcal)}` : Math.round(e.macros.kcal)} kcal · P ${Math.round(e.macros.p)}${!e.unit && e.grams ? ` · ${Math.round(e.grams)} g` : ""}`];
     case "drink": return [e.name, [e.caffeineMg ? `${e.caffeineMg} mg caffeine` : "", e.alcoholG ? `${e.alcoholG} g alcohol` : "", e.kcal > 5 ? `${e.kcal} kcal` : ""].filter(Boolean).join(" · ")];
-    case "supp": return [supps.find((s) => s.id === e.suppId)?.name ?? "Supplement", e.status];
+    case "supp": return [supps.find((s) => s.id === e.suppId)?.name ?? "Supplement", e.status === "taken" && e.amount ? `taken · ${e.amount}` : e.status];
     case "set": return [e.exercise, `${e.kg} kg × ${e.reps}`];
     case "weight": return ["Weight", `${e.kg} kg${e.fatPct != null ? ` · ${e.fatPct}% fat` : ""}`];
     // Only the sliders you set, all of them (stress was missing from this line).

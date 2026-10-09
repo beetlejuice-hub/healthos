@@ -9,7 +9,9 @@ import { useEffect, useMemo, useState, type MouseEvent, type PointerEvent } from
 import type { BandData, HrMinute } from "../lib/band";
 import { loadBandBefore } from "../lib/band-client";
 import type { Check } from "../lib/feelgraph";
-import { aroundChecks, awakeByDay, dayNumbers, heartOutcomes, roll, CHECK_MIN_N, type AroundChecks, type AwakeDay } from "../lib/heart";
+import { aroundChecks, awakeByDay, dayNumbers, heartOutcomes, raisedStretches, roll, whyRaised, CHECK_MIN_N, type AroundChecks, type AwakeDay, type Raised, type Why } from "../lib/heart";
+import { doingOrder, labelOf, tagOf } from "../lib/feel";
+import { act, useStore } from "../lib/store";
 import { afterCoffee, afterWorkouts, usualAt, usualByHour, usualReady, workoutWindows } from "../lib/hrusual";
 import type { Lanes } from "../lib/insights";
 import { clockH, lowestHr, usual as middleHalf, type Evening, type Night } from "../lib/sleep";
@@ -112,6 +114,7 @@ function OneDay({ band, data, day, today, now, onDay, w }: { band: BandData; dat
   const night = band.sleep.filter((s) => !s.nap && s.end >= t0 && s.end < t1).sort((a, b) => (b.end - b.start) - (a.end - a.start))[0];
   const low = night ? lowestHr(band.hr, night.start, night.end) : null;
   const wins = useMemo(() => workoutWindows(workouts, band.hr, u), [workouts, band, u]);
+  const raised = useMemo(() => raisedStretches(band.hr, band.sleep, data.workouts, u, t0, Math.min(t1, now)), [band, data.workouts, u, t0, t1, now]);
   const [hov, setHov] = useState<number | null>(null);
   const phone = w < 640, H = phone ? 270 : 340, L = 10, R = 40, top = 44, bot = H - 24;
   const X = (t: number) => L + ((t - t0) / (t1 - t0)) * (w - L - R);
@@ -175,6 +178,8 @@ function OneDay({ band, data, day, today, now, onDay, w }: { band: BandData; dat
             <path d={`M${run.map((p) => `${f1(p.x)} ${f1(p.hi)}`).join("L")}L${run.slice().reverse().map((p) => `${f1(p.x)} ${f1(p.lo)}`).join("L")}Z`} className="hp-usual" />
             <path d={`M${run.map((p) => `${f1(p.x)} ${f1(p.mid)}`).join("L")}`} className="hp-mid" />
           </g>)}
+          {raised.map((r) => <g key={r.start} data-raised={r.level}><rect x={X(r.start)} y={top - 6} width={Math.max(2, X(r.end) - X(r.start))} height={bot - top + 6} fill={HOT} fillOpacity={r.level === "very" ? 0.13 : 0.07} />
+            <text x={(X(r.start) + X(r.end)) / 2} y={bot - 6} textAnchor="middle" className="hp-t" style={{ fill: "#f0a597" }}>+{Math.round(r.excess)}</text></g>)}
           <path d={fill.hot} fill={HOT} fillOpacity=".22" /><path d={fill.cool} fill={COOL} fillOpacity=".22" />
           <path d={seg.in} stroke={IN} strokeWidth="1.6" fill="none" strokeLinejoin="round" />
           <path d={seg.cool} stroke={COOL} strokeWidth="1.8" fill="none" strokeLinejoin="round" />
@@ -199,9 +204,56 @@ function OneDay({ band, data, day, today, now, onDay, w }: { band: BandData; dat
         <div className="hp-key">
           <span><i style={{ background: HOT }} />above your usual</span><span><i style={{ background: COOL }} />below</span><span><i className="band" />your usual: the middle of the last 2 weeks at that time</span>
           <span><i className="dot" style={{ background: "var(--caf)" }} />coffee</span><span><i className="dia" />drink</span><span><i className="box" />check-in (stress)</span>
+          {raised.length > 0 && <span><i className="raised" />raised: 20+ min above your usual</span>}
         </div>
       </div>
+      <RaisedList raised={raised} data={data} isToday={isToday} now={now} />
     </section>
+  );
+}
+
+const WHY_WORDS: Record<Why["kind"], string> = { coffee: "after coffee", drinks: "after drinks", meal: "after a meal", said: "you said", stress: "a stressful check-in" };
+/** What explains a stretch, in words: "after coffee 13:40 · you said: outside". */
+const whyText = (ws: Why[]) => ws.map((w) => (w.kind === "said" ? `you said: ${w.tags!.map(labelOf).join(", ")}` : w.kind === "stress" ? `stress ${w.level} at ${clock(w.at)}` : `${WHY_WORDS[w.kind]} ${clock(w.at)}`)).join(" · ");
+
+/**
+ * The raised stretches of the day, each with what's logged around it — or, when nothing is, asked (owner, 9 Oct: "find out
+ * what i was doing by either reading data, or straigh up asking me"). An answer is saved like a check-in's "what I was
+ * doing", in the middle of the stretch, so it explains it from then on and counts wherever "doing" counts.
+ */
+function RaisedList({ raised, data, isToday, now }: { raised: Raised[]; data: Lanes; isToday: boolean; now: number }) {
+  const entries = useStore((s) => s.entries);
+  const tags = useMemo(() => doingOrder(entries, now).slice(0, 6), [entries, now]);
+  const [own, setOwn] = useState<Record<number, string>>({});
+  // What's logged, in the shape whyRaised reads.
+  const logged = useMemo(() => [
+    ...data.doses.map((d) => ({ kind: "drink", at: d.at, caffeineMg: d.mg, alcoholG: 0 })),
+    ...data.drinks.map((d) => ({ kind: "drink", at: d.at, caffeineMg: 0, alcoholG: d.g })),
+    ...data.meals.map((m) => ({ kind: "food", at: m.at, macros: { kcal: m.kcal } })),
+    ...data.checks.map((c) => ({ kind: "feel", at: c.at, doing: c.doing, stress: c.stress })),
+  ], [data]);
+  const say = (r: Raised, tag: string | null) => { if (tag) act.addEntry({ kind: "feel", at: Math.round((r.start + r.end) / 2), doing: [tag] }); };
+  if (!raised.length) return <p className="sl-note hp-raised-none">{isToday ? "No stretch above your usual so far today" : "No stretch above your usual this day"} — raised means 20+ minutes at 5+ bpm over it, training aside.</p>;
+  return (
+    <div className="sl-p hp-raised" aria-label="Raised stretches">
+      <span className="cmp-k">Raised · {raised.length} {raised.length === 1 ? "stretch" : "stretches"}{isToday ? " so far" : ""}</span>
+      {raised.map((r) => {
+        const why = whyRaised(r, logged);
+        return (
+          <div key={r.start} className="hp-raised-row" data-level={r.level} data-explained={why.length > 0}>
+            <div className="hp-raised-h"><b>{clock(r.start)}–{clock(r.end)}</b><span className="hp-raised-x">+{Math.round(r.excess)} bpm · {r.level}</span><span className="hp-raised-p">peak {Math.round(r.peak)}</span></div>
+            {why.length ? <p className="hp-raised-why">{whyText(why)}</p> : <>
+              <p className="hp-raised-why q">Nothing logged around it — what were you doing?</p>
+              <div className="hn-tags hp-raised-tags">
+                {tags.map((t) => <button key={t} type="button" onClick={() => say(r, t)}>{labelOf(t)}</button>)}
+                <input aria-label={`What you were doing ${clock(r.start)}–${clock(r.end)}`} placeholder="own word" value={own[r.start] ?? ""} onChange={(e) => setOwn({ ...own, [r.start]: e.target.value })}
+                  onKeyDown={(e) => { if (e.key === "Enter") { say(r, tagOf(own[r.start] ?? "")); setOwn({ ...own, [r.start]: "" }); } }} />
+              </div></>}
+          </div>
+        );
+      })}
+      <p className="sl-note">Raised: 20+ minutes at 5+ bpm over your usual for that time (very: 15+), training and the hour after left out. What's logged around it goes with it — it isn't proof of why.</p>
+    </div>
   );
 }
 

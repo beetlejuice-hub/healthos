@@ -8,3 +8,6 @@ export function readRoute(): [Route, string | undefined] {
 }
 
 export const go = (r: Route, sub?: string) => { location.hash = sub ? `${r}/${sub}` : r; };
+
+/** A day and time for Log to open on, set by Today's catch-up ("No dinner logged yesterday → Log it") and read once by Log. */
+export const LOG_FOR_KEY = "healthos.logFor";

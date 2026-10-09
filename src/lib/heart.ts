@@ -143,3 +143,61 @@ export function aroundChecks(checks: Check[], hr: HrMinute[], usual: Usual | nul
 export function roll(vals: (number | null)[], k = 7, need = 4): (number | null)[] {
   return vals.map((_, i) => { const w = vals.slice(Math.max(0, i - k + 1), i + 1).filter((v): v is number => v != null); return w.length >= need ? mean(w) : null; });
 }
+
+/* ------------------------------------------------------------------ raised stretches (PLAN 62) */
+
+/**
+ * Owner, 9 Oct: "pick times when heartrate was slighlty or very elevated and highlight them, find out what i was doing by
+ * either reading data, or straigh up asking me". A stretch is 20+ minutes of 5-minute averages (the chart's) at least
+ * RAISED_BPM above your usual for that time — one 5-minute dip inside doesn't end it, a gap in the band's data does.
+ * Asleep, training and the hour after are left out: those are known. "Very" when it averages VERY_BPM or more above.
+ */
+export const RAISED_BPM = 5, VERY_BPM = 15, RAISED_MIN = 20;
+export type Raised = { start: number; end: number; excess: number; peak: number; level: "slightly" | "very" };
+
+export function raisedStretches(hr: HrMinute[], sleep: Pick<SleepSession, "start" | "end">[], workouts: Span[], usual: Usual | null, from: number, to: number): Raised[] {
+  const B = 5 * MIN, buckets = new Map<number, number[]>();
+  for (const [t, v] of awakeMinutes(hr.filter((m) => m[0] >= from && m[0] < to), sleep, workouts)) { const k = Math.floor(t / B), a = buckets.get(k); if (a) a.push(v); else buckets.set(k, [v]); }
+  const ks = [...buckets.keys()].sort((a, b) => a - b), out: Raised[] = [];
+  type Run = { ks: number[]; ex: number[]; vals: number[] };
+  let run: Run | null = null, dip = 0;
+  const close = () => {
+    if (run && run.ks.length * 5 >= RAISED_MIN) {
+      const excess = mean(run.ex);
+      out.push({ start: run.ks[0] * B, end: (run.ks.at(-1)! + 1) * B, excess, peak: Math.max(...run.vals), level: excess >= VERY_BPM ? "very" : "slightly" });
+    }
+    run = null; dip = 0;
+  };
+  ks.forEach((k, i) => {
+    const vals = buckets.get(k)!, m = mean(vals), u = usualAt(usual, k * B + B / 2);
+    if (i && k !== ks[i - 1] + 1) close(); // the band was off (or asleep, training) in between
+    if (!u) { close(); return; }
+    const ex = m - u.mid;
+    if (ex >= RAISED_BPM) { if (!run) run = { ks: [], ex: [], vals: [] }; run.ks.push(k); run.ex.push(ex); run.vals.push(m); dip = 0; return; }
+    if (run && dip === 0) { dip = 1; return; } // one 5-minute dip doesn't end it…
+    close(); // …two do
+  });
+  close();
+  return out;
+}
+
+export type Why = { kind: "coffee" | "drinks" | "meal" | "said" | "stress"; at: number; tags?: string[]; level?: number };
+/** What's logged around a stretch that could go with it: coffee in the 2 hours before, drinks in the 3, a meal in the 90 minutes, what you said you were doing or a stressful check-in around it. */
+export function whyRaised(r: Pick<Raised, "start" | "end">, entries: { kind: string; at: number; [k: string]: unknown }[]): Why[] {
+  const out: Why[] = [];
+  for (const e of entries) {
+    const before = (min: number) => e.at >= r.start - min * MIN && e.at <= r.end;
+    if (e.kind === "drink" && (e.caffeineMg as number) >= 40 && before(120)) out.push({ kind: "coffee", at: e.at });
+    else if (e.kind === "drink" && (e.alcoholG as number) > 0 && before(180)) out.push({ kind: "drinks", at: e.at });
+    else if (e.kind === "food" && ((e.macros as { kcal: number } | undefined)?.kcal ?? 0) >= 300 && before(90)) out.push({ kind: "meal", at: e.at });
+    else if (e.kind === "feel" && e.at >= r.start - 30 * MIN && e.at <= r.end + 30 * MIN) {
+      const doing = (e.doing as string[] | undefined) ?? [];
+      if (doing.length) out.push({ kind: "said", at: e.at, tags: doing });
+      else if ((e.stress as number | undefined) != null && (e.stress as number) >= 7) out.push({ kind: "stress", at: e.at, level: e.stress as number });
+    }
+  }
+  // one of each kind, the closest to the stretch
+  const best = new Map<string, Why>();
+  for (const w of out) { const cur = best.get(w.kind); if (!cur || Math.abs(w.at - r.start) < Math.abs(cur.at - r.start)) best.set(w.kind, w); }
+  return [...best.values()].sort((a, b) => a.at - b.at);
+}

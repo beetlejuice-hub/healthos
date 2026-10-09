@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { HrMinute } from "./band";
 import { rng } from "./bench";
 import type { Check } from "./feelgraph";
-import { aroundChecks, awakeByDay, dayNumbers, heartOutcomes, roll, type AwakeDay } from "./heart";
+import { aroundChecks, awakeByDay, dayNumbers, heartOutcomes, raisedStretches, roll, whyRaised, type AwakeDay } from "./heart";
 import { usualByHour } from "./hrusual";
 import { FACTORS, goesWith, type Evening, type Night } from "./sleep";
 import { addDays, atMinute, HOUR, MIN } from "./time";
@@ -152,5 +152,47 @@ describe("heart rate around a check-in, by the stress you gave", () => {
 describe("7-day average", () => {
   it("averages what's there in the last 7, when at least 4 are", () => {
     expect(roll([1, 2, 3, null, 5, 6, 7, 8])).toEqual([null, null, null, null, 11 / 4, 17 / 5, 24 / 6, 31 / 6]);
+  });
+});
+
+describe("raised stretches", () => {
+  // ten flat days at 60 make a usual of 60 (band 57–63); today is flat 60 apart from what each test adds
+  const base: HrMinute[] = []; for (let i = 1; i <= 10; i++) base.push(...minutes(addDays(D0, -i), 7, 23, () => 60));
+  const usual = usualByHour(base, [], D0);
+  const day = (v: (h: number) => number) => minutes(D0, 7, 23, v);
+  const find = (hr: HrMinute[], workouts: { start: number; end: number }[] = [], sleep: { start: number; end: number }[] = []) => raisedStretches(hr, sleep, workouts, usual, T(D0, 0), T(D0, 24));
+  it("40 minutes at +18: one stretch, very, where it was", () => {
+    const r = find(day((h) => (h >= 14 && h < 14 + 40 / 60 ? 78 : 60)));
+    expect(r).toHaveLength(1);
+    expect(r[0]).toMatchObject({ start: T(D0, 14), end: T(D0, 14 + 40 / 60), level: "very" });
+    expect(r[0].excess).toBeCloseTo(18, 6);
+  });
+  it("30 minutes at +7: slightly; 15 minutes at +8: too short to say", () => {
+    expect(find(day((h) => (h >= 10 && h < 10.5 ? 67 : 60)))).toEqual([expect.objectContaining({ level: "slightly", start: T(D0, 10), end: T(D0, 10.5) })]);
+    expect(find(day((h) => (h >= 10 && h < 10.25 ? 68 : 60)))).toEqual([]);
+  });
+  it("one 5-minute dip doesn't end a stretch; two do", () => {
+    const one = find(day((h) => (h >= 15 && h < 15 + 50 / 60 && !(h >= 15 + 20 / 60 && h < 15 + 25 / 60) ? 72 : 60)));
+    expect(one).toHaveLength(1);
+    expect(one[0].end - one[0].start).toBe(50 * MIN);
+    const two = find(day((h) => (h >= 15 && h < 15 + 50 / 60 && !(h >= 15 + 20 / 60 && h < 15 + 30 / 60) ? 72 : 60)));
+    expect(two.map((r) => (r.end - r.start) / MIN)).toEqual([20, 20]);
+  });
+  it("training, the hour after, and sleep are left out — they're known", () => {
+    const hr = day((h) => (h >= 17 && h < 19.5 ? 110 : 60));
+    expect(find(hr, [{ start: T(D0, 17), end: T(D0, 18.5) }])).toEqual([]);
+    expect(find(day((h) => (h < 7.5 ? 75 : 60)), [], [{ start: T(D0, 0), end: T(D0, 7.5) }])).toEqual([]);
+  });
+  it("what's logged around it: coffee before, what you said, a stressful check-in; nothing → nothing", () => {
+    const r = { start: T(D0, 14), end: T(D0, 14.75) };
+    const es = [
+      { kind: "drink", at: T(D0, 13), name: "Coffee", caffeineMg: 95, alcoholG: 0 },
+      { kind: "drink", at: T(D0, 9), name: "Coffee", caffeineMg: 95, alcoholG: 0 }, // too early
+      { kind: "feel", at: T(D0, 14.5), doing: ["outside"], stress: 8 },
+      { kind: "food", at: T(D0, 13.5), macros: { kcal: 650 } },
+    ];
+    expect(whyRaised(r, es).map((w) => w.kind)).toEqual(["coffee", "meal", "said"]);
+    expect(whyRaised(r, [{ kind: "feel", at: T(D0, 14.2), stress: 8 }])).toEqual([{ kind: "stress", at: T(D0, 14.2), level: 8 }]);
+    expect(whyRaised(r, [])).toEqual([]);
   });
 });

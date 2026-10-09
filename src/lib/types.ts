@@ -96,7 +96,8 @@ export type Supplement = {
 export type Entry =
   | { id: string; kind: "food"; at: number; foodId?: string; name: string; grams: number; macros: Macros; /** As you counted it: 2 × "egg". */ count?: number; unit?: string }
   | { id: string; kind: "drink"; at: number; drinkId?: string; name: string; ml: number; caffeineMg: number; alcoholG: number; kcal: number; p?: number; c?: number; f?: number }
-  | { id: string; kind: "supp"; at: number; suppId: string; status: "taken" | "skipped"; /** Which of its slots this answers (older answers: its first). */ slot?: Slot }
+  | { id: string; kind: "supp"; at: number; suppId: string; status: "taken" | "skipped"; /** Which of its slots this answers (older answers: its first). */ slot?: Slot;
+      /** What you actually took when it isn't the plan's dose ("400 mg": one more capsule; owner, 9 Oct). */ amount?: string }
   | { id: string; kind: "set"; at: number; workoutId: string; exercise: string; kg: number; reps: number }
   | { id: string; kind: "weight"; at: number; kg: number; /** From a smart scale, optional: its body-fat estimate. */ fatPct?: number }
   | { id: string; kind: "feel"; at: number; energy?: number; mood?: number; focus?: number; anxiety?: number; stress?: number; note?: string; /** What you were up to since the last check-in: "gym", "outside", your own words. */ doing?: string[] }

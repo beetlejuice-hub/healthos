@@ -5,7 +5,7 @@
  * the lower one — "goes with", with a 95% range, never claimed below enough days.
  */
 
-import type { Entry, Supplement } from "./types";
+import { answerSlot, type Entry, type Supplement } from "./types";
 import { addDays, localDay } from "./time";
 import { difference, mean, type Range } from "./stats";
 
@@ -38,6 +38,44 @@ export function changeDose(s: Pick<Supplement, "dose" | "doseLog">, next: string
   return { dose: to, doseLog: [...log, { at: now, dose: to }] };
 }
 
+/**
+ * One capsule (scoop, drop…) of a supplement: "2 x 200 mg" → 200 mg; "200 mg" → the whole dose is one (owner, 9 Oct:
+ * "i set up 1 capsule as 200mg … +1 to add +1 caps, so its 400mg taken"). Null without a number.
+ */
+export function perCapsule(s: Pick<Supplement, "dose" | "doseLog">, t: number): { n: number; unit: string } | null {
+  const d = doseAt(s, t).toLowerCase().replace(",", ".");
+  const times = d.match(/(\d+(?:\.\d+)?)\s*[x×]\s*(\d+(?:\.\d+)?)\s*([a-z]+)?/);
+  if (times) return { n: Number(times[2]), unit: times[3] ?? "" };
+  return doseAmount(d);
+}
+
+/** What was taken: the amount logged with it, else the plan's dose that day. */
+export const takenAmount = (s: Pick<Supplement, "dose" | "doseLog">, e: { at: number; amount?: string }): string => e.amount ?? doseAt(s, e.at);
+
+const fmtN = (n: number) => String(Math.round(n * 1000) / 1000);
+/** One capsule more (+1) or less (−1) than `current`, never under one capsule. Null when the dose has no number. */
+export function stepAmount(s: Pick<Supplement, "dose" | "doseLog">, t: number, current: string, by: 1 | -1): string | null {
+  const per = perCapsule(s, t), cur = doseAmount(current);
+  if (!per || !cur || cur.unit !== per.unit) return null;
+  const n = Math.max(per.n, cur.n + by * per.n);
+  return `${fmtN(n)} ${per.unit}`.trim();
+}
+
+/** "400 mg" as capsules of this supplement: 2 — or null when it isn't a whole number of them. */
+export function capsulesIn(s: Pick<Supplement, "dose" | "doseLog">, t: number, amount: string): number | null {
+  const per = perCapsule(s, t), a = doseAmount(amount);
+  if (!per || !a || a.unit !== per.unit || per.n <= 0) return null;
+  const k = a.n / per.n;
+  return Math.abs(k - Math.round(k)) < 1e-6 ? Math.round(k) : null;
+}
+
+/** A typed amount ("300", "300mg", "0,5 g") in the dose's unit: "300 mg". A bare number takes the dose's unit. Null when unreadable. */
+export function typedAmount(s: Pick<Supplement, "dose" | "doseLog">, t: number, text: string): string | null {
+  const a = doseAmount(text), unit = perCapsule(s, t)?.unit ?? "";
+  if (!a || a.n <= 0) return null;
+  return `${fmtN(a.n)} ${a.unit || unit}`.trim();
+}
+
 export const DOSE_MIN_DAYS = 5;
 export type DoseMetric = "energy" | "mood" | "focus" | "stress" | "sleep";
 export type DoseCompare = {
@@ -49,7 +87,8 @@ export type DoseCompare = {
 
 /**
  * Higher vs lower dose, for each supplement taken at two or more doses: the next day's average
- * ratings and that night's sleep rating, on days taken at the higher dose vs the lower. Only doses in
+ * ratings and that night's sleep rating, on days taken at the higher dose vs the lower. A day's dose is
+ * everything taken that day — what was logged with each intake, else the plan's dose. Only doses in
  * the same unit are compared; with three or more, the two you took on the most days.
  */
 export function doseCompare(entries: Entry[], supplements: Supplement[]): DoseCompare[] {
@@ -61,15 +100,20 @@ export function doseCompare(entries: Entry[], supplements: Supplement[]): DoseCo
   }
   const out: DoseCompare[] = [];
   for (const s of supplements) {
-    const days = new Map<string, number>(); // day → amount
+    // A day's dose: each slot counted once (the same slot logged twice is one intake), the slots added up.
+    const perSlot = new Map<string, number>(); // "day|slot" → amount
     let unit: string | null = null;
     for (const e of entries) {
       if (e.kind !== "supp" || e.suppId !== s.id || e.status !== "taken") continue;
-      const a = doseAmount(doseAt(s, e.at));
+      const a = doseAmount(takenAmount(s, e));
       if (!a) continue;
       unit ??= a.unit;
-      if (a.unit === unit) days.set(localDay(e.at), Math.max(days.get(localDay(e.at)) ?? 0, a.n));
+      if (a.unit !== unit) continue;
+      const k = `${localDay(e.at)}|${answerSlot(e, s)}`;
+      perSlot.set(k, Math.max(perSlot.get(k) ?? 0, a.n));
     }
+    const days = new Map<string, number>(); // day → amount
+    for (const [k, n] of perSlot) { const d = k.split("|")[0]; days.set(d, (days.get(d) ?? 0) + n); }
     const counts = new Map<number, number>();
     for (const n of days.values()) counts.set(n, (counts.get(n) ?? 0) + 1);
     if (counts.size < 2) continue;

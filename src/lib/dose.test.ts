@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { changeDose, doseAmount, doseAt, doseCompare } from "./dose";
+import { capsulesIn, changeDose, doseAmount, doseAt, doseCompare, perCapsule, stepAmount, takenAmount, typedAmount } from "./dose";
 import { rng } from "./bench";
 import type { Entry, Supplement } from "./types";
 
@@ -49,5 +49,44 @@ describe("higher vs lower dose (fake person, known answers)", () => {
   it("says nothing with a single dose, and counts days still needed", () => {
     const s: Supplement = { id: "x", name: "Zinc", dose: "15 mg", slot: "morning", at: 480, active: true };
     expect(doseCompare([{ id: "a", kind: "supp", at: 1, suppId: "x", status: "taken" }], [s])).toEqual([]);
+  });
+});
+
+describe("what you actually took (owner, 9 Oct: 1 capsule = 200 mg; +1 → 400 mg, or type 300 mg)", () => {
+  const mag: Pick<Supplement, "dose" | "doseLog"> = { dose: "200 mg" };
+  it("one capsule is the dose, or its 'each' when written 2 x 200 mg", () => {
+    expect(perCapsule(mag, 0)).toEqual({ n: 200, unit: "mg" });
+    expect(perCapsule({ dose: "2 x 200mg" }, 0)).toEqual({ n: 200, unit: "mg" });
+    expect(perCapsule({ dose: "one capsule" }, 0)).toBeNull();
+  });
+  it("+1 capsule and −1, never under one", () => {
+    expect(stepAmount(mag, 0, "200 mg", 1)).toBe("400 mg");
+    expect(stepAmount(mag, 0, "400 mg", -1)).toBe("200 mg");
+    expect(stepAmount(mag, 0, "200 mg", -1)).toBe("200 mg");
+    expect(stepAmount(mag, 0, "300 mg", 1)).toBe("500 mg");
+    expect(stepAmount({ dose: "2 x 200 mg" }, 0, "400 mg", 1)).toBe("600 mg");
+    expect(stepAmount(mag, 0, "1 g", 1)).toBeNull(); // another unit: no guessing
+  });
+  it("capsules in an amount, and a typed amount takes the dose's unit", () => {
+    expect([capsulesIn(mag, 0, "400 mg"), capsulesIn(mag, 0, "300 mg")]).toEqual([2, null]);
+    expect([typedAmount(mag, 0, "300"), typedAmount(mag, 0, "300mg"), typedAmount(mag, 0, "0,5 g"), typedAmount(mag, 0, "lots")]).toEqual(["300 mg", "300 mg", "0.5 g", null]);
+  });
+  it("an intake's logged amount wins over the plan's dose; a day's dose is everything taken that day", () => {
+    const s: Supplement = { id: "mag", name: "Magnesium", dose: "200 mg", slot: "evening", slots: ["morning", "evening"], at: 21 * 60, active: true };
+    expect(takenAmount(s, { at: 0 })).toBe("200 mg");
+    expect(takenAmount(s, { at: 0, amount: "400 mg" })).toBe("400 mg");
+    // 12 days at 400 (one +1 intake), 12 at 200 (100 in the morning + 100 in the evening)
+    const D = 86_400_000, t0 = new Date(2026, 8, 1, 21).getTime(), es: Entry[] = [];
+    for (let i = 0; i < 24; i++) {
+      const at = t0 + i * D;
+      if (i < 12) es.push({ id: `a${i}`, kind: "supp", at, suppId: "mag", status: "taken", amount: "400 mg" });
+      else { es.push({ id: `b${i}`, kind: "supp", at: at - 12 * 3600e3, suppId: "mag", status: "taken", amount: "100 mg", slot: "morning" }, { id: `c${i}`, kind: "supp", at, suppId: "mag", status: "taken", amount: "100 mg", slot: "evening" }); }
+      es.push({ id: `r${i}`, kind: "sleep", at: at + 10 * 3600e3, rating: 6 });
+    }
+    const c = doseCompare(es, [s])[0];
+    expect([c.hi, c.lo]).toEqual([{ dose: "400 mg", days: 12 }, { dose: "200 mg", days: 12 }]);
+    // the same slot logged twice in a day is one intake, not double
+    const dup: Entry[] = es.flatMap((e): Entry[] => (e.kind === "supp" ? [e, { ...e, id: e.id + "x" }] : [e]));
+    expect(doseCompare(dup, [s])[0].lo).toEqual({ dose: "200 mg", days: 12 });
   });
 });

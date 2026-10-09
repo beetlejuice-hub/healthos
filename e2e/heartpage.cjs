@@ -45,6 +45,8 @@ function world({ seed = 7, everyMin = 1 } = {}) {
         if (drinks && h >= 20.5) v += 4;
         if (gym) { if (m >= gym[0] && m < gym[1]) v = 128 + 10 * Math.sin((m - gym[0]) / 540_000) + g() * 4; else if (m >= gym[1] && m < gym[1] + 2 * HOUR) v += 55 * Math.exp(-((m - gym[1]) / MIN) / 18); }
         v += g() * 2;
+        // planted raised stretches (PLAN 62): today after the 14:15 coffee; yesterday morning with nothing logged near it
+        if ((today && h >= 15.6 && h < 16.25) || (k === 1 && h >= 10.75 && h < 11.5)) v += 18;
       }
       if (m >= T(-0.6) && m < T(24)) { const a = Math.round(v); hr.push([m, a, a - 2, a + 3]); }
     }
@@ -116,6 +118,22 @@ function world({ seed = 7, everyMin = 1 } = {}) {
   check(`‹ the day before: Wed 7 Oct, its own resting ${w.rhr['2026-10-07']}, no "so far" (${y1}; ${(kp2.match(/vs usual[^\n]*/) || [''])[0]})`, /Wed · 7 Oct/.test(y1) && new RegExp(`Resting\\s*${w.rhr['2026-10-07']}`, 'i').test(kp2) && !/so far/.test(kp2) && !(await day.textContent()).includes('now 16:30'));
   await pg.getByRole('button', { name: 'The day after' }).first().click(); await pg.waitForTimeout(200);
   check('› back to today, and › is off there', /Today/.test(await pg.locator('.hp-day .sl-title').innerText()) && await pg.getByRole('button', { name: 'The day after' }).first().isDisabled());
+
+  // raised stretches (owner, 9 Oct: "pick times when heartrate was slighlty or very elevated and highlight them, find out
+  // what i was doing by either reading data, or straigh up asking me")
+  const rrows = () => pg.locator('.hp-raised-row').evaluateAll((els) => els.map((e) => [e.dataset.level, e.dataset.explained, e.innerText.replace(/\n/g, ' ')]));
+  let rr = (await rrows()).find((x) => /^15:3\d|^15:4\d/.test(x[2]));
+  check(`raised today: 15:35–16:15 very, after the 14:15 coffee, shaded on the chart (${rr && rr[2]})`, !!rr && rr[0] === 'very' && rr[1] === 'true' && /after coffee 14:15/.test(rr[2]) && await day.locator('g[data-raised="very"]').count() >= 1);
+  await pg.getByRole('button', { name: 'The day before' }).first().click(); await pg.waitForTimeout(250);
+  rr = (await rrows()).find((x) => /^10:4\d|^10:5\d/.test(x[2]));
+  check(`raised yesterday 10:45–11:30, nothing logged near it: asked (${rr && rr[2].slice(0, 90)})`, !!rr && rr[1] === 'false' && /what were you doing/.test(rr[2]));
+  await pg.locator('.hp-raised').screenshot({ path: OUT + 'heartpage-raised-ask.png' });
+  await pg.locator('.hp-raised-row[data-explained="false"]').first().getByRole('button', { name: 'outside' }).click(); await pg.waitForTimeout(250);
+  rr = (await rrows()).find((x) => /^10:4\d|^10:5\d/.test(x[2]));
+  const said = (await pg.evaluate(() => JSON.parse(localStorage.getItem('healthos.v1:u-test') || '{}'))).entries.filter((e) => e.kind === 'feel' && e.doing?.includes('outside') && e.mood == null);
+  check(`answered "outside": saved as what you were doing, mid-stretch, and now explained (${rr && rr[2].slice(0, 60)})`, said.length === 1 && new Date(said[0].at).getHours() === 11 && !!rr && rr[1] === 'true' && /you said: outside/.test(rr[2]));
+  await pg.locator('.hp-raised').screenshot({ path: OUT + 'heartpage-raised.png' });
+  await pg.getByRole('button', { name: 'The day after' }).first().click(); await pg.waitForTimeout(200);
 
   // mornings
   const morn = pg.locator('.hp-morn');

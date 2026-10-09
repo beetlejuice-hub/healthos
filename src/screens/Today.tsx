@@ -17,6 +17,8 @@ import type { Drink, Entry, EntryOf, Slot } from "../lib/types";
 import { answerSlot, SLOTS, slotsOf } from "../lib/types";
 import { parseFat } from "../lib/bodyfat";
 import { HowNow } from "../components/HowNow";
+import { SuppAmount } from "../components/SuppAmount";
+import { CatchUp } from "../components/CatchUp";
 import { DataCard, EveningRead, NowCard, Pad, Status, UsualPicker, useStackCount } from "../components/TodayParts";
 import { dayNumbers, momentOf } from "../lib/moment";
 import { restDay } from "../lib/programs";
@@ -114,7 +116,7 @@ export function Today() {
       <Status kcal={totals.kcal} goalKcal={s.goals.kcal} protein={totals.p} goalP={s.goals.p} cafNow={cafNow} cafBed={cafBed} bed={bed} stack={stack} />
 
       <NowCard moment={moment}>
-        {moment === "evening" ? <>{itemsList}{feelNow}</> : <>{feelNow}{itemsList}</>}
+        {moment === "evening" ? <>{itemsList}{feelNow}</> : <>{feelNow}<CatchUp now={now} />{itemsList}</>}
         <NightRead />
         <MorningRead />
         <AiQuestions />
@@ -313,7 +315,7 @@ function Stack({ now }: { now: number }) {
               const a = answers.get(key(s.id, slot.id));
               return (
                 <div className="stack-row" key={s.id}>
-                  <span style={{ opacity: a ? 0.6 : 1 }}>{s.name} <span style={{ color: "var(--c-dim)", fontSize: 12.5 }}>{s.dose}</span></span>
+                  <span style={{ opacity: a && a.status !== "taken" ? 0.6 : 1 }}>{s.name} {a?.status === "taken" ? <SuppAmount s={s} e={a} /> : <span style={{ color: "var(--c-dim)", fontSize: 12.5 }}>{s.dose}</span>}</span>
                   <div className="tick">
                     <button type="button" className="yes" aria-pressed={a?.status === "taken"} aria-label={`Took ${s.name}`} onClick={() => set(s.id, slot.id, "taken")}>✓</button>
                     <button type="button" className="no" aria-pressed={a?.status === "skipped"} aria-label={`Skipped ${s.name}`} onClick={() => set(s.id, slot.id, "skipped")}>✗</button>
