@@ -121,6 +121,39 @@ describe("what goes with your sleep", () => {
   });
 });
 
+/** 30 nights; the band off on 5 of the days (no steps for them). Planted: a day with more steps than usual, `extraMin` more sleep that night. */
+function stepWorld(seed: number, extraMin: number) {
+  const { r, g } = rng(seed), ns: Night[] = [], steps = new Map<string, number>(), dayOf: number[] = [];
+  for (let k = 0; k < 30; k++) { const eve = addDays(EVE0, k); dayOf.push(Math.round(7000 + g() * 2500)); if (k % 6 !== 5) steps.set(eve, dayOf[k]); }
+  const mid = [...steps.values()].sort((a, b) => a - b)[12];
+  for (let k = 0; k < 30; k++) {
+    const eve = addDays(EVE0, k), [n] = nights([session(eve, 23.3 + g() * 0.2, 31 + g() * 0.2)], [], {}, {});
+    // the planted effect follows the real day, worn or not; days off are a sixth, picked without regard to it
+    n.asleep += g() * 20 + (dayOf[k] > mid ? extraMin : 0); n.low = 50 + g(); n.hrv = 45 + g() * 4; ns.push(n); r();
+  }
+  const evs = evenings(ns, { drinks: [], caffeineAt: () => 0, workouts: [], meals: [], ratings: [], steps });
+  return { ns, evs, steps };
+}
+
+describe("steps in the sleep grid (PLAN 66)", () => {
+  it("finds a planted +50 min asleep after days with more steps than usual — counting only the days the band was on", () => {
+    const w = stepWorld(5, 50), c = goesWith(w.ns, w.evs).find((x) => x.factor === "steps" && x.outcome === "asleep")!;
+    expect(c.nWith + c.nWithout).toBe(25); // 5 days the band was off: left out, not "fewer steps"
+    expect(c.sure).toBe("clear"); expect(c.toward).toBe("better"); expect(c.diff!).toBeGreaterThan(30); expect(c.diff!).toBeLessThan(70);
+    expect(w.evs.filter((e) => e.moreSteps == null)).toHaveLength(5);
+    expect(w.evs.filter((e) => e.moreSteps === true).length).toBeGreaterThanOrEqual(11);
+  });
+  it("nothing planted: the steps row stays quiet across 20 worlds", () => {
+    let loud = 0;
+    for (let s = 200; s < 220; s++) { const w = stepWorld(s, 0); loud += goesWith(w.ns, w.evs, { perms: 1000, seed: s }).filter((c) => c.factor === "steps" && c.sure === "clear").length; }
+    expect(loud).toBeLessThanOrEqual(1);
+  }, 30_000);
+  it("no steps at all (no band data yet): the row says too few, it doesn't count every day as a day without", () => {
+    const w = world(2, 0);
+    expect(goesWith(w.ns, w.evs, { perms: 100 }).filter((c) => c.factor === "steps").every((c) => c.sure === "too few" && c.nWith + c.nWithout === 0)).toBe(true);
+  });
+});
+
 describe("evenings and facts", () => {
   it("an evening: drinks from noon to bed, caffeine at bed, the workout, food after 21:00, the next morning's rating", () => {
     const [n] = nights([session(EVE0, 23.5, 31)], [], {}, {});

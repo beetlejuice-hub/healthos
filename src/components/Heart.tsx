@@ -6,7 +6,7 @@
  */
 
 import { useEffect, useMemo, useState, type MouseEvent, type PointerEvent } from "react";
-import type { BandData, HrMinute } from "../lib/band";
+import type { BandData, HrMinute, StepBucket } from "../lib/band";
 import { loadBandBefore } from "../lib/band-client";
 import type { Check } from "../lib/feelgraph";
 import { aroundChecks, awakeByDay, dayNumbers, heartOutcomes, raisedStretches, roll, whyRaised, CHECK_MIN_N, type AroundChecks, type AwakeDay, type Raised, type Why } from "../lib/heart";
@@ -15,6 +15,7 @@ import { act, useStore } from "../lib/store";
 import { afterCoffee, afterWorkouts, usualAt, usualByHour, usualReady, workoutWindows } from "../lib/hrusual";
 import type { Lanes } from "../lib/insights";
 import { clockH, lowestHr, usual as middleHalf, type Evening, type Night } from "../lib/sleep";
+import { stepsIn } from "../lib/steps";
 import { addDays, atMinute, clock, dayLabel, localDay, DAY, MIN } from "../lib/time";
 import type { Entry } from "../lib/types";
 import { AfterCards } from "./HeartEffects";
@@ -116,7 +117,11 @@ function OneDay({ band, data, day, today, now, onDay, w }: { band: BandData; dat
   const wins = useMemo(() => workoutWindows(workouts, band.hr, u), [workouts, band, u]);
   const raised = useMemo(() => raisedStretches(band.hr, band.sleep, data.workouts, u, t0, Math.min(t1, now)), [band, data.workouts, u, t0, t1, now]);
   const [hov, setHov] = useState<number | null>(null);
-  const phone = w < 640, H = phone ? 270 : 340, L = 10, R = 40, top = 44, bot = H - 24;
+  // The band's steps, as a strip under the chart with its own scale (PLAN 66): where you walked, against the heart rate above.
+  const stepsDay = useMemo(() => (band.steps ?? []).filter((b) => b[0] >= t0 && b[0] < t1), [band, t0, t1]);
+  const stepTotal = stepsDay.reduce((a, b) => a + b[2], 0), stepMax = Math.max(300, ...stepsDay.map((b) => (b[2] * 5) / b[1]));
+  const S = stepsDay.length ? 24 : 0;
+  const phone = w < 640, H = (phone ? 270 : 340) + S, L = 10, R = 40, top = 44, bot = H - 24 - S;
   const X = (t: number) => L + ((t - t0) / (t1 - t0)) * (w - L - R);
   const vals = pts.map((p) => p.v), lo = Math.min(45, ...vals.map((v) => v - 3)), hi = Math.max(100, ...vals.map((v) => v + 6));
   const Y = (v: number) => top + ((Math.log(hi) - Math.log(Math.max(lo, Math.min(hi, v)))) / (Math.log(hi) - Math.log(lo))) * (bot - top);
@@ -143,7 +148,7 @@ function OneDay({ band, data, day, today, now, onDay, w }: { band: BandData; dat
   const peak = wins.filter((x) => x.peak != null).sort((a, b) => b.peak! - a.peak!)[0];
   const peakPt = peak ? pts.filter((p) => p.t >= peak.start && p.t <= peak.end).sort((a, b) => b.v - a.v)[0] : null;
   const peakName = peak ? data.workouts.find((x) => x.start === peak.start)?.name || "Workout" : "";
-  const h = hov != null ? pts[hov] : null, hb = h ? usualAt(u, h.t) : null;
+  const h = hov != null ? pts[hov] : null, hb = h ? usualAt(u, h.t) : null, hs = h && stepsDay.length ? stepsIn(stepsDay, h.t - 2.5 * MIN, h.t + 2.5 * MIN) : 0;
   const move = (e: PointerEvent<SVGRectElement>) => {
     const r = e.currentTarget.getBoundingClientRect(), t = t0 + ((e.clientX - r.left) / r.width) * (t1 - t0);
     let best = -1, bd = Infinity; pts.forEach((p, i) => { const d = Math.abs(p.t - t); if (d < bd) { bd = d; best = i; } });
@@ -178,6 +183,10 @@ function OneDay({ band, data, day, today, now, onDay, w }: { band: BandData; dat
             <path d={`M${run.map((p) => `${f1(p.x)} ${f1(p.hi)}`).join("L")}L${run.slice().reverse().map((p) => `${f1(p.x)} ${f1(p.lo)}`).join("L")}Z`} className="hp-usual" />
             <path d={`M${run.map((p) => `${f1(p.x)} ${f1(p.mid)}`).join("L")}`} className="hp-mid" />
           </g>)}
+          {S > 0 && <g className="hp-steps" aria-label={`Steps: ${stepTotal.toLocaleString("en-US")} this day`}>
+            <line x1={L} x2={w - R} y1={bot + S - 2} y2={bot + S - 2} className="he-grid" />
+            {stepsDay.map((b) => { const bh = Math.min(1, (b[2] * 5) / b[1] / stepMax) * (S - 6); return bh >= 0.5 && <rect key={b[0]} x={X(b[0])} y={bot + S - 2 - bh} width={Math.max(1, X(b[0] + b[1] * MIN) - X(b[0]) - 0.4)} height={bh} />; })}
+            <text x={w - R + 6} y={bot + S - 3} className="hp-t">steps</text></g>}
           {raised.map((r) => <g key={r.start} data-raised={r.level}><rect x={X(r.start)} y={top - 6} width={Math.max(2, X(r.end) - X(r.start))} height={bot - top + 6} fill={HOT} fillOpacity={r.level === "very" ? 0.13 : 0.07} />
             <text x={(X(r.start) + X(r.end)) / 2} y={bot - 6} textAnchor="middle" className="hp-t" style={{ fill: "#f0a597" }}>+{Math.round(r.excess)}</text></g>)}
           <path d={fill.hot} fill={HOT} fillOpacity=".22" /><path d={fill.cool} fill={COOL} fillOpacity=".22" />
@@ -200,28 +209,29 @@ function OneDay({ band, data, day, today, now, onDay, w }: { band: BandData; dat
           <rect x={L} y={0} width={w - L - R} height={H} fill="transparent" onPointerMove={move} onPointerLeave={() => setHov(null)} />
         </svg>
         {h && <div className="hp-tip" style={{ left: Math.min(Math.max(8, X(h.t) - 80), w - 180) }}>
-          <b>{clock(h.t)} · {Math.round(h.v)} bpm</b>{hb ? <span>usual {Math.round(hb.lo)}–{Math.round(hb.hi)}</span> : <span>no usual yet</span>}</div>}
+          <b>{clock(h.t)} · {Math.round(h.v)} bpm</b>{hb ? <span>usual {Math.round(hb.lo)}–{Math.round(hb.hi)}</span> : <span>no usual yet</span>}{hs > 0 && <span>{hs.toLocaleString("en-US")} steps</span>}</div>}
         <div className="hp-key">
           <span><i style={{ background: HOT }} />above your usual</span><span><i style={{ background: COOL }} />below</span><span><i className="band" />your usual: the middle of the last 2 weeks at that time</span>
           <span><i className="dot" style={{ background: "var(--caf)" }} />coffee</span><span><i className="dia" />drink</span><span><i className="box" />check-in (stress)</span>
           {raised.length > 0 && <span><i className="raised" />raised: 20+ min above your usual</span>}
+          {S > 0 && <span><i className="stp" />steps · {stepTotal.toLocaleString("en-US")}{isToday ? " so far" : " this day"}</span>}
         </div>
       </div>
-      <RaisedList raised={raised} data={data} isToday={isToday} now={now} />
+      <RaisedList raised={raised} data={data} steps={band.steps ?? []} isToday={isToday} now={now} />
     </section>
   );
 }
 
-const WHY_WORDS: Record<Why["kind"], string> = { coffee: "after coffee", drinks: "after drinks", meal: "after a meal", said: "you said", stress: "a stressful check-in" };
-/** What explains a stretch, in words: "after coffee 13:40 · you said: outside". */
-const whyText = (ws: Why[]) => ws.map((w) => (w.kind === "said" ? `you said: ${w.tags!.map(labelOf).join(", ")}` : w.kind === "stress" ? `stress ${w.level} at ${clock(w.at)}` : `${WHY_WORDS[w.kind]} ${clock(w.at)}`)).join(" · ");
+const WHY_WORDS: Record<Why["kind"], string> = { moving: "on the move", coffee: "after coffee", drinks: "after drinks", meal: "after a meal", said: "you said", stress: "a stressful check-in" };
+/** What explains a stretch, in words: "on the move — 1,240 steps · after coffee 13:40 · you said: outside". */
+const whyText = (ws: Why[]) => ws.map((w) => (w.kind === "moving" ? `on the move — ${w.steps!.toLocaleString("en-US")} steps` : w.kind === "said" ? `you said: ${w.tags!.map(labelOf).join(", ")}` : w.kind === "stress" ? `stress ${w.level} at ${clock(w.at)}` : `${WHY_WORDS[w.kind]} ${clock(w.at)}`)).join(" · ");
 
 /**
  * The raised stretches of the day, each with what's logged around it — or, when nothing is, asked (owner, 9 Oct: "find out
  * what i was doing by either reading data, or straigh up asking me"). An answer is saved like a check-in's "what I was
  * doing", in the middle of the stretch, so it explains it from then on and counts wherever "doing" counts.
  */
-function RaisedList({ raised, data, isToday, now }: { raised: Raised[]; data: Lanes; isToday: boolean; now: number }) {
+function RaisedList({ raised, data, steps, isToday, now }: { raised: Raised[]; data: Lanes; steps: StepBucket[]; isToday: boolean; now: number }) {
   const entries = useStore((s) => s.entries);
   const tags = useMemo(() => doingOrder(entries, now).slice(0, 6), [entries, now]);
   const [own, setOwn] = useState<Record<number, string>>({});
@@ -238,7 +248,7 @@ function RaisedList({ raised, data, isToday, now }: { raised: Raised[]; data: La
     <div className="sl-p hp-raised" aria-label="Raised stretches">
       <span className="cmp-k">Raised · {raised.length} {raised.length === 1 ? "stretch" : "stretches"}{isToday ? " so far" : ""}</span>
       {raised.map((r) => {
-        const why = whyRaised(r, logged);
+        const why = whyRaised(r, logged, steps);
         return (
           <div key={r.start} className="hp-raised-row" data-level={r.level} data-explained={why.length > 0}>
             <div className="hp-raised-h"><b>{clock(r.start)}–{clock(r.end)}</b><span className="hp-raised-x">+{Math.round(r.excess)} bpm · {r.level}</span><span className="hp-raised-p">peak {Math.round(r.peak)}</span></div>

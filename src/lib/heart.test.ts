@@ -195,4 +195,13 @@ describe("raised stretches", () => {
     expect(whyRaised(r, [{ kind: "feel", at: T(D0, 14.2), stress: 8 }])).toEqual([{ kind: "stress", at: T(D0, 14.2), level: 8 }]);
     expect(whyRaised(r, [])).toEqual([]);
   });
+  it("walking during it (PLAN 66): explained by the band's steps — no need to ask; pottering about isn't walking", () => {
+    const r = { start: T(D0, 14), end: T(D0, 14.75) };
+    const walk = [0, 1, 2, 3].map((i) => [T(D0, 14) + i * 5 * 60_000, 5, 480] as [number, number, number]);
+    expect(whyRaised(r, [], walk)).toEqual([{ kind: "moving", at: r.start, steps: 1920 }]);
+    expect(whyRaised(r, [{ kind: "drink", at: T(D0, 13), caffeineMg: 95, alcoholG: 0 }], walk).map((w) => w.kind)).toEqual(["coffee", "moving"]); // in time order, like the rest
+    const potter = Array.from({ length: 9 }, (_, i) => [T(D0, 14) + i * 5 * 60_000, 5, 40] as [number, number, number]);
+    expect(whyRaised(r, [], potter)).toEqual([]);
+    expect(whyRaised(r, [], walk.map(([t, m, n]) => [t + 3 * 3600_000, m, n]))).toEqual([]); // a walk later that day
+  });
 });

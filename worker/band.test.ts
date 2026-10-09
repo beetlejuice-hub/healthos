@@ -21,16 +21,22 @@ function fakeStorage() {
 const T0 = Date.UTC(2026, 9, 7, 10, 0);
 const env = { GOOGLE_CLIENT_ID: "cid", GOOGLE_CLIENT_SECRET: "csecret" };
 const hrPoint = (t: number, bpm: number) => ({ name: `hr/${t}`, heartRate: { sampleTime: { physicalTime: new Date(t).toISOString() }, beatsPerMinute: bpm } });
+/** Steps over [t, t + min): what Google's roll-up would hand back for one window. */
+const stepWin = (t: number, min: number, n: number) => ({ startTime: new Date(t).toISOString(), endTime: new Date(t + min * 60_000).toISOString(), steps: { countSum: String(n) } });
 
 /** Google, faked: the token endpoint, the Health API (paged), the revoke endpoint. Every call is logged. */
-function google(opts: { hr?: unknown[]; pageSize?: number; expireAccessOnce?: boolean; refreshFails?: string; failType?: string } = {}) {
-  const calls: { url: URL; body: URLSearchParams | null; auth: string | null }[] = [];
+function google(opts: { hr?: unknown[]; pageSize?: number; expireAccessOnce?: boolean; refreshFails?: string; failType?: string;
+  /** Step counts per minute (t → n); rolled up into whatever window is asked for. Default: 600 steps at T0 − 2 h. */
+  steps?: Map<number, number>; stepWindows?: string[]; stepsPage?: number } = {}) {
+  const calls: { url: URL; body: URLSearchParams | null; json: Record<string, unknown> | null; auth: string | null }[] = [];
   let issued = 0, expired = !!opts.expireAccessOnce;
   const f = (async (input: RequestInfo | URL, init?: RequestInit) => {
     const req = new Request(input, init);
     const url = new URL(req.url);
-    const body = req.method === "POST" && url.hostname === "oauth2.googleapis.com" ? new URLSearchParams(await req.text()) : null;
-    calls.push({ url, body, auth: req.headers.get("authorization") });
+    const raw = req.method === "POST" ? await req.text() : "";
+    const body = url.hostname === "oauth2.googleapis.com" && raw ? new URLSearchParams(raw) : null;
+    const jb = url.hostname === "health.googleapis.com" && raw ? (JSON.parse(raw) as Record<string, unknown>) : null;
+    calls.push({ url, body, json: jb, auth: req.headers.get("authorization") });
     if (url.href === "https://oauth2.googleapis.com/token") {
       if (body!.get("grant_type") === "authorization_code") {
         return body!.get("code") === "good-code" ? Response.json({ access_token: `at${++issued}`, refresh_token: "rt", expires_in: 3599 }) : Response.json({ error: "invalid_grant" }, { status: 400 });
@@ -50,6 +56,16 @@ function google(opts: { hr?: unknown[]; pageSize?: number; expireAccessOnce?: bo
         const all = (opts.hr ?? []).filter((p) => (!from || tOf(p) >= Date.parse(from)) && (!to || tOf(p) < Date.parse(to)));
         const size = opts.pageSize ?? 1000, at = Number(url.searchParams.get("pageToken") || 0);
         return Response.json({ dataPoints: all.slice(at, at + size), ...(at + size < all.length ? { nextPageToken: String(at + size) } : {}) });
+      }
+      if (type === "steps" && url.pathname.endsWith(":rollUp")) {
+        const { range, windowSize, pageToken } = jb as { range: { startTime: string; endTime: string }; windowSize: string; pageToken?: string };
+        if (!(opts.stepWindows ?? ["300s", "3600s"]).includes(windowSize)) return Response.json({ error: { code: 400, message: "window" } }, { status: 400 });
+        const w = parseInt(windowSize) * 1000, a = Date.parse(range.startTime), z = Date.parse(range.endTime);
+        const per = opts.steps ?? new Map([[T0 - 2 * 3600_000, 600]]);
+        const wins: unknown[] = [];
+        for (let t = a; t < z; t += w) { let n = 0, any = false; for (const [m, c] of per) if (m >= t && m < t + w) { n += c; any = true; } if (any) wins.push(stepWin(t, w / 60_000, n)); }
+        const size = opts.stepsPage ?? 1000, at = Number(pageToken || 0);
+        return Response.json({ rollupDataPoints: wins.slice(at, at + size), ...(at + size < wins.length ? { nextPageToken: String(at + size) } : {}) });
       }
       if (type === "sleep") return Response.json({ dataPoints: [{ name: "users/me/dataTypes/sleep/dataPoints/n1", sleep: { interval: { startTime: "2026-10-06T21:40:00Z", endTime: "2026-10-07T05:10:00Z" }, summary: { minutesAsleep: 412 } } }] });
       if (type === "daily-resting-heart-rate") return Response.json({ dataPoints: [{ dailyRestingHeartRate: { date: { year: 2026, month: 10, day: 7 }, beatsPerMinute: 54 } }] });
@@ -229,6 +245,38 @@ describe("BandHub", () => {
     at(T0 + 21_000);
     await h.fetch(post("sync"));
     expect(g.health().length).toBeGreaterThan(n);
+  });
+
+  it("steps (PLAN 66): a 5-minute roll-up from two weeks back, kept per UTC day, served by data", async () => {
+    const at = Date.UTC(2026, 9, 6, 23, 57), per = new Map([[at, 40], [at + 60_000, 50], [at + 4 * 60_000, 30], [Date.UTC(2026, 9, 7, 8, 2), 100]]);
+    const { h, st, g } = setup(google({ steps: per }));
+    await connect(h); await h.alarm();
+    const call = g.health().find((c) => c.url.pathname.endsWith("/steps/dataPoints:rollUp"))!;
+    expect(call.json).toEqual({ range: { startTime: "2026-09-23T10:00:00Z", endTime: "2026-10-07T10:00:00Z" }, windowSize: "300s" });
+    expect(st.m.get("steps:2026-10-06")).toEqual([[Date.UTC(2026, 9, 6, 23, 55), 5, 90]]);
+    expect(st.m.get("steps:2026-10-07")).toEqual([[Date.UTC(2026, 9, 7, 0, 0), 5, 30], [Date.UTC(2026, 9, 7, 8, 0), 5, 100]]);
+    const d = (await (await h.fetch(new Request(`https://band/data?from=${Date.UTC(2026, 9, 6, 23)}&to=${Date.UTC(2026, 9, 7, 1)}`))).json()) as { steps: unknown[] };
+    expect(d.steps).toEqual([[Date.UTC(2026, 9, 6, 23, 55), 5, 90], [Date.UTC(2026, 9, 7, 0, 0), 5, 30]]);
+    expect((await status(h)).error).toBeNull();
+  });
+
+  it("steps: Google refusing 5-minute windows → hourly ones, no error shown", async () => {
+    const { h, st, g } = setup(google({ steps: new Map([[Date.UTC(2026, 9, 7, 8, 10), 100], [Date.UTC(2026, 9, 7, 8, 50), 200]]), stepWindows: ["3600s"] }));
+    await connect(h); await h.alarm();
+    expect(g.health().filter((c) => c.url.pathname.endsWith(":rollUp")).map((c) => c.json!.windowSize)).toEqual(["300s", "3600s"]);
+    expect(st.m.get("steps:2026-10-07")).toEqual([[Date.UTC(2026, 9, 7, 8), 60, 300]]);
+    expect((await status(h)).error).toBeNull();
+  });
+
+  it("steps: every page (the token goes back in the body), and later pulls look 12 hours back", async () => {
+    const per = new Map(Array.from({ length: 5 }, (_, i) => [T0 - (i + 1) * 3600_000, 10 + i] as [number, number]));
+    const { h, st, g, at } = setup(google({ steps: per, stepsPage: 2 }));
+    await connect(h); await h.alarm();
+    const rolls = () => g.health().filter((c) => c.url.pathname.endsWith(":rollUp"));
+    expect(rolls().map((c) => c.json!.pageToken ?? null)).toEqual([null, "2", "4"]);
+    expect((st.m.get("steps:2026-10-07") as unknown[]).length).toBe(5);
+    at(T0 + PULL_EVERY_MS); await h.alarm();
+    expect((rolls().at(-1)!.json!.range as { startTime: string }).startTime).toBe("2026-10-06T22:15:00Z");
   });
 
   it("data returns the minutes in range across days, and the nights that touch it", async () => {

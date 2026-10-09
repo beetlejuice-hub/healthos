@@ -33,12 +33,12 @@ const dur = (min: number) => { const t = Math.round(min); return `${Math.floor(t
 export function MindPage({ data, band, now, entries, halfLifeMin, days, period }: { data: Lanes; band: BandData | null; now: number; entries: Entry[]; halfLifeMin: number; days: GlanceDay[]; period: number }) {
   const span = Math.max(30, period), today = localDay(now);
   useEffect(() => { if (band) void loadBandBefore(now - (span + 2) * DAY); }, [band, now, span]);
-  const { ns, evs } = useNights(band, data, entries, halfLifeMin, now, span);
+  const { ns, evs, steps } = useNights(band, data, entries, halfLifeMin, now, span);
   const byDay = useMemo(() => new Map(days.map((d) => [d.day, d])), [days]);
   // The grid and the slope learn from finished days: today's feelings so far are only its morning.
   const doneDays = useMemo(() => new Map(days.filter((d) => d.day < today).map((d) => [d.day, d])), [days, today]);
   const outcomes = useMemo(() => mindOutcomes(doneDays), [doneDays]);
-  const factors = useMemo(() => mindFactors(ns, (d) => byDay.get(d)?.trained ?? false), [ns, byDay]);
+  const factors = useMemo(() => mindFactors(ns, (d) => byDay.get(d)?.trained ?? false, steps), [ns, byDay, steps]);
   const cells = useMemo(() => goesWith(ns, evs, { factors, outcomes }), [ns, evs, factors, outcomes]);
   const asleepOn = useMemo(() => { const m = new Map(ns.map((n) => [n.day, n.asleep])); return (d: string) => m.get(d) ?? null; }, [ns]);
   const month = useMemo(() => moodMonth(days, span, asleepOn), [days, span, asleepOn]);

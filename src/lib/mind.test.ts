@@ -125,6 +125,28 @@ describe("what goes with how you felt that day", () => {
   });
 });
 
+describe("steps in the mind grid (PLAN 66)", () => {
+  it("finds a planted +0.8 mood on days with more steps than usual; days the band was off are left out", () => {
+    const { g } = rng(8), ns: Night[] = [], evs: Evening[] = [], byDay = new Map<string, GlanceDay>(), steps = new Map<string, number>();
+    const st = Array.from({ length: 30 }, () => Math.round(7000 + g() * 2500)), mid = [...st].sort((a, b) => a - b)[15];
+    for (let i = 0; i < 30; i++) {
+      const n = night(i, { asleep: 430 + g() * 20 }); ns.push(n); evs.push(evening());
+      if (i % 7 !== 3) steps.set(n.day, st[i]);
+      byDay.set(n.day, day(n.day, 6.2 + g() * 0.4 + (st[i] > mid ? 0.8 : 0), { energy: 6 + g() * 0.4, stress: 4 + g() * 0.5, focus: 5.5 + g() * 0.5 }));
+    }
+    const f = mindFactors(ns, () => false, steps), cells = goesWith(ns, evs, { factors: f, outcomes: mindOutcomes(byDay) });
+    const c = cells.find((x) => x.factor === "steps" && x.outcome === "mood")!;
+    expect(c.nWith + c.nWithout).toBe(26);
+    expect(c).toMatchObject({ sure: "clear", toward: "better" });
+    expect(cells.filter((x) => x.factor === "steps" && x.outcome !== "mood").every((x) => x.sure !== "clear")).toBe(true);
+    expect(f.find((x) => x.id === "steps")!.when).toBe("the day"); // so this morning's line never uses it
+  });
+  it("without steps the row is there but says too few", () => {
+    const w = world(4), cells = goesWith(w.ns, w.evs, { factors: mindFactors(w.ns, w.trainedOn), outcomes: mindOutcomes(w.byDay) });
+    expect(cells.filter((c) => c.factor === "steps").every((c) => c.sure === "too few")).toBe(true);
+  });
+});
+
 describe("a feeling against hours asleep", () => {
   const nights = (seed: number, k: number) => { const { g } = rng(seed); return Array.from({ length: 30 }, (_, i) => { const a = 420 + g() * 45; return { n: night(i, { asleep: a }), v: 5.8 + k * (a / 60 - 7) + g() * 0.5 }; }); };
   it("finds a planted +0.9 energy per hour asleep, clear", () => {

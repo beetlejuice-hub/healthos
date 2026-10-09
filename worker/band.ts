@@ -4,14 +4,14 @@
  *  - pulls new data every 15 minutes on an alarm and when the app asks (the band itself syncs to the
  *    phone every ~15–30 min, so pulling faster gains nothing),
  *  - keeps heart rate per minute (avg/min/max, one bucket per UTC day, 120 days), sleep sessions with
- *    stages, daily resting heart rate and HRV — what the app draws.
+ *    stages, daily resting heart rate and HRV, steps per 5 minutes (PLAN 66) — what the app draws.
  * Google's side: lib/band.ts (shapes from Google's own CLI).
  */
 
 import type { Storage } from "./push";
 import {
-  GOOGLE_TOKEN, HEALTH_API, dailyFilter, wakeFor, mergeMinutes, perMinute, readDaily, readHeartRate, readSleep, sampleFilter, sleepFilter,
-  type HrMinute, type Page, type SleepSession,
+  GOOGLE_TOKEN, HEALTH_API, STEP_WINDOWS, dailyFilter, wakeFor, mergeMinutes, mergeSteps, perMinute, readDaily, readHeartRate, readSleep, readSteps, rollUpBody, sampleFilter, sleepFilter,
+  type HrMinute, type Page, type RollUpPage, type SleepSession, type StepBucket,
 } from "../src/lib/band";
 
 export type BandEnv = {
@@ -23,7 +23,7 @@ type Auth = { refresh: string; access?: string; accessExp?: number; connectedAt:
 /** `gapSec`: the typical time between two heart-rate readings Google sent, from the last pull with enough of them
  * (owner, 8 Oct: "my fitbit app shows heartbeat log every 15 minute, how do u get a number for every minute??" —
  * this answers it with his own data). */
-type Sync = { lastRun?: number; lastOk?: number; latest?: number; error?: string; gapSec?: number };
+type Sync = { lastRun?: number; lastOk?: number; latest?: number; error?: string; gapSec?: number; stepsLatest?: number };
 
 /** Median seconds between consecutive readings (gaps over 30 min — band off — left out); null under 20 readings. */
 export function typicalGap(ts: number[]): number | null {
@@ -44,6 +44,11 @@ const FIRST_MS = 2 * DAY, AGAIN_MS = 12 * 3600_000, MAX_BACK_MS = 7 * DAY;
 export function hrFrom(now: number, first: boolean, latest: number | undefined): number {
   const from = first ? now - FIRST_MS : Math.max(now - MAX_BACK_MS, Math.min(now - AGAIN_MS, (latest ?? now) - 3600_000));
   return Math.floor(from / 60_000) * 60_000;
+}
+/** Steps: like heart rate, but the first pull goes two weeks back (the sleep and mood grids want days), from a whole 5 minutes. */
+export function stepsFrom(now: number, latest: number | undefined): number {
+  const from = latest == null ? now - 14 * DAY : Math.max(now - MAX_BACK_MS, Math.min(now - AGAIN_MS, latest - 3600_000));
+  return Math.floor(from / 300_000) * 300_000;
 }
 /** Pages per kind per pull. Cloudflare allows 50 outside calls per run; this keeps one pull under ~25. */
 const MAX_PAGES = 20;
@@ -112,12 +117,31 @@ export class BandHub {
     return { dataPoints: all };
   }
 
+  /** A roll-up (steps): POSTed, paged by putting the token back in the body. One 401 → renew the token and retry. */
+  private async rollUp(type: string, from: number, to: number, windowSize: string, errors: string[]): Promise<RollUpPage> {
+    const all: NonNullable<RollUpPage["rollupDataPoints"]> = [];
+    let pageToken: string | undefined, retried = false;
+    for (let i = 0; i < MAX_PAGES; i++) {
+      const token = await this.access(retried);
+      if (!token) throw new Error("not connected");
+      const r = await this.f(`${HEALTH_API}/users/me/dataTypes/${type}/dataPoints:rollUp`, { method: "POST", headers: { authorization: `Bearer ${token}`, "content-type": "application/json" }, body: rollUpBody(from, to, windowSize, pageToken) });
+      if (r.status === 401 && !retried) { retried = true; i--; continue; }
+      if (!r.ok) throw Object.assign(new Error(`${type} ${r.status}`), { status: r.status });
+      const page = (await r.json()) as RollUpPage;
+      all.push(...(page.rollupDataPoints ?? []));
+      if (!page.nextPageToken) break;
+      pageToken = page.nextPageToken;
+      if (i === MAX_PAGES - 1) errors.push(`${type}: more than ${MAX_PAGES} pages, the rest next time`);
+    }
+    return { rollupDataPoints: all };
+  }
+
   /** Pull what's new from Google into storage. Each kind on its own: one failing doesn't lose the others. */
   async pull(): Promise<Sync> {
     const now = this.now(), prev = await this.sync();
     const errors: string[] = [];
     const first = prev.lastOk == null;
-    let latest = prev.latest, gapSec = prev.gapSec;
+    let latest = prev.latest, gapSec = prev.gapSec, stepsLatest = prev.stepsLatest;
     try {
       const hr = readHeartRate(await this.list("heart-rate", sampleFilter("heart_rate", hrFrom(now, first, prev.latest)), 10000, errors));
       const byDay = new Map<string, HrMinute[]>();
@@ -135,13 +159,27 @@ export class BandHub {
       for (const s of fresh) byId.set(s.id, s);
       await this.storage.put("sleep", [...byId.values()].sort((a, b) => a.start - b.start).slice(-90));
     } catch (e) { errors.push(String((e as Error).message)); }
+    try {
+      // 5-minute windows; if Google won't give windows that small, hourly ones (still enough to say "you were walking").
+      const from = stepsFrom(now, prev.stepsLatest);
+      let got: StepBucket[] | null = null;
+      for (const w of STEP_WINDOWS) {
+        try { got = readSteps(await this.rollUp("steps", from, now, w, errors)); break; }
+        catch (e) { if ((e as { status?: number }).status !== 400 || w === STEP_WINDOWS.at(-1)) throw e; }
+      }
+      const byDay = new Map<string, StepBucket[]>();
+      for (const b of got ?? []) { const k = utcDay(b[0]); const a = byDay.get(k); if (a) a.push(b); else byDay.set(k, [b]); }
+      for (const [day, bs] of byDay) await this.storage.put(`steps:${day}`, mergeSteps((await this.storage.get<StepBucket[]>(`steps:${day}`)) ?? [], bs));
+      if (got?.length) stepsLatest = Math.max(stepsLatest ?? 0, got[got.length - 1][0]);
+      for (let d = KEEP_DAYS; d <= KEEP_DAYS + 60; d++) await this.storage.delete(`steps:${utcDay(now - d * DAY)}`);
+    } catch (e) { errors.push(String((e as Error).message)); }
     for (const [type, name, key, field] of [["daily-resting-heart-rate", "daily_resting_heart_rate", "rhr", "beatsPerMinute"], ["daily-heart-rate-variability", "daily_heart_rate_variability", "hrv", undefined]] as const) {
       try {
         const got = readDaily(await this.list(type, dailyFilter(name, utcDay(now - (first ? 30 : 7) * DAY)), 1000, errors), field);
         await this.storage.put(key, { ...((await this.storage.get<Record<string, number>>(key)) ?? {}), ...got });
       } catch (e) { errors.push(String((e as Error).message)); }
     }
-    const next: Sync = { lastRun: now, lastOk: errors.filter((e) => !/pages/.test(e)).length < 4 ? now : prev.lastOk, latest, ...(gapSec != null ? { gapSec } : {}), ...(errors.length ? { error: errors.join("; ").slice(0, 300) } : {}) };
+    const next: Sync = { lastRun: now, lastOk: errors.filter((e) => !/pages/.test(e)).length < 5 ? now : prev.lastOk, latest, ...(gapSec != null ? { gapSec } : {}), ...(stepsLatest != null ? { stepsLatest } : {}), ...(errors.length ? { error: errors.join("; ").slice(0, 300) } : {}) };
     await this.storage.put("sync", next);
     return next;
   }
@@ -172,10 +210,13 @@ export class BandHub {
     }
     if (path === "data") {
       const from = Number(url.searchParams.get("from")) || this.now() - DAY, to = Number(url.searchParams.get("to")) || this.now();
-      const hr: HrMinute[] = [];
-      for (let d = from - (from % DAY); d <= to; d += DAY) for (const m of (await this.storage.get<HrMinute[]>(`hr:${utcDay(d)}`)) ?? []) if (m[0] >= from && m[0] <= to) hr.push(m);
+      const hr: HrMinute[] = [], steps: StepBucket[] = [];
+      for (let d = from - (from % DAY); d <= to; d += DAY) {
+        for (const m of (await this.storage.get<HrMinute[]>(`hr:${utcDay(d)}`)) ?? []) if (m[0] >= from && m[0] <= to) hr.push(m);
+        for (const b of (await this.storage.get<StepBucket[]>(`steps:${utcDay(d)}`)) ?? []) if (b[0] >= from && b[0] <= to) steps.push(b);
+      }
       const sleep = ((await this.storage.get<SleepSession[]>("sleep")) ?? []).filter((s) => s.end >= from - DAY && s.start <= to);
-      return json({ hr, sleep, rhr: (await this.storage.get("rhr")) ?? {}, hrv: (await this.storage.get("hrv")) ?? {}, ...(await this.status()) });
+      return json({ hr, sleep, rhr: (await this.storage.get("rhr")) ?? {}, hrv: (await this.storage.get("hrv")) ?? {}, steps, ...(await this.status()) });
     }
     if (path === "wake") {
       const sleep = (await this.storage.get<SleepSession[]>("sleep")) ?? [];
@@ -190,7 +231,7 @@ export class BandHub {
       const a = await this.auth();
       if (a) await this.f(`https://oauth2.googleapis.com/revoke?token=${encodeURIComponent(a.refresh)}`, { method: "POST" }).catch(() => null);
       for (const k of ["auth", "sync", "sleep", "rhr", "hrv"]) await this.storage.delete(k);
-      for (let d = 0; d <= KEEP_DAYS; d++) await this.storage.delete(`hr:${utcDay(this.now() - d * DAY)}`);
+      for (let d = 0; d <= KEEP_DAYS; d++) { await this.storage.delete(`hr:${utcDay(this.now() - d * DAY)}`); await this.storage.delete(`steps:${utcDay(this.now() - d * DAY)}`); }
       await this.storage.deleteAlarm();
       return json({ ok: true });
     }

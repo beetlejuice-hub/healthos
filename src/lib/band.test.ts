@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { authUrl, BAND_SCOPES, dailyFilter, lastNight, mergeBand, mergeMinutes, refreshFrom, perMinute, readDaily, readHeartRate, readHrv, readSleep, readState, sampleFilter, signState, sleepFilter, wakeFor, type SleepSession } from "./band";
+import { authUrl, BAND_SCOPES, dailyFilter, lastNight, mergeBand, mergeMinutes, refreshFrom, perMinute, readDaily, readHeartRate, readHrv, readSleep, readState, readSteps, rollUpBody, sampleFilter, signState, sleepFilter, wakeFor, type SleepSession } from "./band";
 
 // Shapes as Google's CLI reads them (pkg/output/simplify.go): the type object holds sampleTime / interval / date.
 const hr = (t: string, bpm: unknown) => ({ name: `users/me/dataTypes/heart-rate/dataPoints/${t}`, dataSource: { device: { displayName: "Charge 6" } }, heartRate: { sampleTime: { physicalTime: t, utcOffset: "7200s" }, beatsPerMinute: bpm } });
@@ -75,6 +75,27 @@ describe("asking Google", () => {
     expect(await readState(st, "other", now)).toBeNull();
     expect(await readState(st, "secret", now + 16 * 60_000)).toBeNull();
     expect(await readState("junk", "secret", now)).toBeNull();
+  });
+});
+
+describe("steps (PLAN 66)", () => {
+  it("the roll-up asked for: a physical range and a window size; a page token rides in the body", () => {
+    expect(JSON.parse(rollUpBody(Date.UTC(2026, 9, 7, 10), Date.UTC(2026, 9, 7, 12), "300s"))).toEqual({ range: { startTime: "2026-10-07T10:00:00Z", endTime: "2026-10-07T12:00:00Z" }, windowSize: "300s" });
+    expect(JSON.parse(rollUpBody(0, 300_000, "300s", "abc")).pageToken).toBe("abc");
+  });
+  it("Google's roll-up → [start, minutes, steps]: int64 counts as strings, junk and broken windows dropped, oldest first", () => {
+    const w = (a: string, z: string, n: unknown) => ({ startTime: a, endTime: z, steps: { countSum: n } });
+    expect(readSteps({ rollupDataPoints: [
+      w("2026-10-07T10:05:00Z", "2026-10-07T10:10:00Z", "512"), w("2026-10-07T10:00:00Z", "2026-10-07T10:05:00Z", 0),
+      w("2026-10-07T10:10:00Z", "2026-10-07T10:15:00Z", "99999"), w("2026-10-07T10:15:00Z", "2026-10-07T10:15:00Z", "3"), w("bad", "2026-10-07T10:20:00Z", "3"),
+      { startTime: "2026-10-07T10:20:00Z", endTime: "2026-10-07T10:25:00Z" },
+    ] })).toEqual([[Date.UTC(2026, 9, 7, 10, 0), 5, 0], [Date.UTC(2026, 9, 7, 10, 5), 5, 512]]);
+    expect(readSteps({})).toEqual([]);
+  });
+  it("merging keeps old windows and replaces re-sent ones; data without steps keeps what's held", () => {
+    const a = { hr: [], sleep: [], rhr: {}, hrv: {}, steps: [[1, 5, 10], [2, 5, 20]] as [number, number, number][] };
+    expect(mergeBand(a, { hr: [], sleep: [], rhr: {}, hrv: {}, steps: [[2, 5, 25], [3, 5, 30]] }).steps).toEqual([[1, 5, 10], [2, 5, 25], [3, 5, 30]]);
+    expect(mergeBand(a, { hr: [], sleep: [], rhr: {}, hrv: {} }).steps).toEqual([[1, 5, 10], [2, 5, 20]]);
   });
 });
 

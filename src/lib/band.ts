@@ -116,6 +116,36 @@ export function readSleep(page: Page): SleepSession[] {
   return out.sort((a, b) => a.start - b.start);
 }
 
+/**
+ * Steps (PLAN 66). Google's `steps list` gives minute intervals without counts; the counts come from a roll-up:
+ *   POST …/dataTypes/steps/dataPoints:rollUp  { range: { startTime, endTime }, windowSize: "300s", pageToken? }
+ * → { rollupDataPoints: [{ startTime, endTime, steps: { countSum: "123" } }], nextPageToken } (int64 as a string).
+ * A window that's missing means the band wasn't worn or didn't sync — not zero steps.
+ */
+export const STEP_WINDOWS = ["300s", "3600s"] as const;
+export function rollUpBody(fromMs: number, toMs: number, windowSize: string, pageToken?: string): string {
+  return JSON.stringify({ range: { startTime: iso(fromMs), endTime: iso(toMs) }, windowSize, ...(pageToken ? { pageToken } : {}) });
+}
+/** [window start (ms), minutes long, steps]. */
+export type StepBucket = [t: number, min: number, count: number];
+export type RollUpPage = { rollupDataPoints?: Obj[]; nextPageToken?: string };
+export function readSteps(page: RollUpPage): StepBucket[] {
+  const out: StepBucket[] = [];
+  for (const p of page.rollupDataPoints ?? []) {
+    const a = ms(p.startTime), z = ms(p.endTime), n = num(obj(p.steps)?.countSum);
+    if (a == null || z == null || z <= a || n == null || n < 0) continue;
+    const min = Math.round((z - a) / 60_000);
+    if (n <= min * 300) out.push([a, min, Math.round(n)]); // over 300 a minute is junk
+  }
+  return out.sort((x, y) => x[0] - y[0]);
+}
+/** Merge newly pulled windows into what's kept: a window pulled again replaces the old one. */
+export function mergeSteps(kept: StepBucket[], fresh: StepBucket[]): StepBucket[] {
+  const m = new Map(kept.map((x) => [x[0], x]));
+  for (const x of fresh) m.set(x[0], x);
+  return [...m.values()].sort((a, b) => a[0] - b[0]);
+}
+
 // ---- what the app keeps: heart rate per minute ----
 
 /** Samples (every few seconds) → one value per minute: [minute start (ms), average bpm, min, max]. */
@@ -132,15 +162,15 @@ export function mergeMinutes(kept: HrMinute[], fresh: HrMinute[]): HrMinute[] {
   return [...m.values()].sort((a, b) => a[0] - b[0]);
 }
 
-/** What the app holds of the band (lib/band-client): minutes, nights, daily resting HR and HRV, and from when. */
-export type BandData = { hr: HrMinute[]; sleep: SleepSession[]; rhr: Record<string, number>; hrv: Record<string, number> };
+/** What the app holds of the band (lib/band-client): minutes, nights, daily resting HR and HRV, steps, and from when. */
+export type BandData = { hr: HrMinute[]; sleep: SleepSession[]; rhr: Record<string, number>; hrv: Record<string, number>; steps?: StepBucket[] };
 
 /** Fold a newly loaded window into what the app holds: minutes and nights replace their old selves, nothing is lost. */
 export function mergeBand(prev: BandData | null, got: BandData): BandData {
   if (!prev) return got;
   const nights = new Map(prev.sleep.map((n) => [n.id, n]));
   for (const n of got.sleep) nights.set(n.id, n);
-  return { hr: mergeMinutes(prev.hr, got.hr), sleep: [...nights.values()].sort((a, b) => a.start - b.start), rhr: { ...prev.rhr, ...got.rhr }, hrv: { ...prev.hrv, ...got.hrv } };
+  return { hr: mergeMinutes(prev.hr, got.hr), sleep: [...nights.values()].sort((a, b) => a.start - b.start), rhr: { ...prev.rhr, ...got.rhr }, hrv: { ...prev.hrv, ...got.hrv }, steps: mergeSteps(prev.steps ?? [], got.steps ?? []) };
 }
 
 /**

@@ -10,6 +10,7 @@
 
 import type { HrMinute, SleepSession } from "./band";
 import { addDays, atMinute, localDay, minuteOfDay, startOfDay, MIN, HOUR } from "./time";
+import { usualSteps } from "./steps";
 
 export type StageType = "awake" | "rem" | "light" | "deep";
 export type Night = {
@@ -156,9 +157,12 @@ export function firstAt(hr: HrMinute[], t: number): number {
 }
 
 /** What each night's evening held, from what you logged. */
-export type Evening = { drinks: number[]; caffeineAtBed: number; trained: boolean; ateLate: boolean; rating: number | null };
+export type Evening = { drinks: number[]; caffeineAtBed: number; trained: boolean; ateLate: boolean; rating: number | null;
+  /** The day's steps when the band was worn (lib/steps), and whether that's above the middle of the nights given (PLAN 66). */
+  steps?: number | null; moreSteps?: boolean | null };
 
-export type Factor = { id: string; name: string; has: (n: Night, e: Evening) => boolean };
+/** `known`: false leaves the night out of that row — a day the band was off has no steps, it isn't a day without. */
+export type Factor = { id: string; name: string; has: (n: Night, e: Evening) => boolean; known?: (n: Night, e: Evening) => boolean };
 export type Outcome = { id: string; name: string; unit: "min" | "bpm" | "ms" | "/10" | "clock"; /** +1: more is toward longer, deeper, calmer sleep. */ better: 1 | -1; of: (n: Night, e: Evening) => number | null };
 export const FACTORS: Factor[] = [
   { id: "drinks", name: "Drinks that evening", has: (_, e) => e.drinks.length > 0 },
@@ -167,6 +171,7 @@ export const FACTORS: Factor[] = [
   { id: "late", name: "Ate after 21:00", has: (_, e) => e.ateLate },
   { id: "nap", name: "Napped that day", has: (n) => !!n.nap },
   { id: "latebed", name: "In bed after 00:15", has: (n) => clockH(n.bed, n.eve) >= 24.25 },
+  { id: "steps", name: "More steps than usual that day", has: (_, e) => e.moreSteps === true, known: (_, e) => e.moreSteps != null },
 ];
 export const OUTCOMES: Outcome[] = [
   { id: "asleep", name: "Asleep", unit: "min", better: 1, of: (n) => n.asleep },
@@ -195,9 +200,9 @@ export function goesWith(ns: Night[], evs: Evening[], opts: { perms?: number; se
   const rnd = () => { seed = (seed * 1103515245 + 12345) % 2147483648; return seed / 2147483648; };
   const out: Cell[] = [];
   for (const f of opts.factors ?? FACTORS) {
-    const has = ns.map((n, i) => f.has(n, evs[i]));
+    const has = ns.map((n, i) => f.has(n, evs[i])), known = ns.map((n, i) => !f.known || f.known(n, evs[i]));
     for (const o of opts.outcomes ?? OUTCOMES) {
-      const pairs: [boolean, number][] = []; ns.forEach((n, i) => { const v = o.of(n, evs[i]); if (v != null && Number.isFinite(v)) pairs.push([has[i], v]); });
+      const pairs: [boolean, number][] = []; ns.forEach((n, i) => { const v = o.of(n, evs[i]); if (known[i] && v != null && Number.isFinite(v)) pairs.push([has[i], v]); });
       const nWith = pairs.filter((p) => p[0]).length, nWithout = pairs.length - nWith;
       if (nWith < MIN_SIDE || nWithout < MIN_SIDE) { out.push({ factor: f.id, outcome: o.id, nWith, nWithout, diff: null, p: null, sure: "too few", toward: null }); continue; }
       const vals = pairs.map((p) => p[1]), total = vals.reduce((s, v) => s + v, 0);
@@ -217,11 +222,14 @@ export function goesWith(ns: Night[], evs: Evening[], opts: { perms?: number; se
   return out;
 }
 
-/** The evening before each night, from logged entries: drinks, caffeine left at bed, a workout, food after 21:00, the next morning's rating. */
+/** The evening before each night, from logged entries: drinks, caffeine left at bed, a workout, food after 21:00, the next morning's rating; and the day's steps from the band (lib/steps `stepsByDay`). */
 export function evenings(ns: Night[], o: {
   drinks: { at: number; g: number }[]; caffeineAt: (t: number) => number; workouts: { start: number }[]; meals: { at: number }[]; ratings: { at: number; rating?: number }[];
+  steps?: Map<string, number>;
 }): Evening[] {
+  const mid = o.steps ? usualSteps(o.steps, ns.map((n) => n.eve)) : null;
   return ns.map((n) => {
+    const st = o.steps?.get(n.eve) ?? null;
     const from = atMinute(n.eve, 12 * 60), late = atMinute(n.eve, 21 * 60);
     const rate = o.ratings.filter((r) => r.rating != null && localDay(r.at) === n.day && r.at >= n.up - HOUR && r.at <= n.up + 12 * HOUR).at(-1);
     return {
@@ -230,6 +238,7 @@ export function evenings(ns: Night[], o: {
       trained: o.workouts.some((w) => localDay(w.start) === n.eve),
       ateLate: o.meals.some((m) => m.at >= late && m.at < n.bed),
       rating: rate?.rating ?? null,
+      ...(o.steps ? { steps: st, moreSteps: st != null && mid != null ? st > mid : null } : {}),
     };
   });
 }

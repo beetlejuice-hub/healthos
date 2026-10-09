@@ -1182,3 +1182,7 @@ a { color: inherit; }
 .mp-key { padding: 0; }
 .mp-hov b { color: var(--i-ink); font-weight: 500; }
 @media (max-width: 640px) { .mp-v { font-size: 11px; } }
+
+/* Steps under the Heart page's day chart (PLAN 66): its own small scale, quiet ink — where you walked. */
+.hp-steps rect { fill: var(--i-ink-2); fill-opacity: .45; }
+.hp-key i.stp { width: 4px; height: 9px; background: var(--i-ink-2); opacity: .55; vertical-align: -1px; }

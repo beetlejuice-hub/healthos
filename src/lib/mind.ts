@@ -15,6 +15,7 @@ import type { Entry, EntryOf } from "./types";
 import type { GlanceDay } from "./glance";
 import { clockH, type Cell as GridCell, type Evening, type Factor, type Night, type Outcome, type Sure } from "./sleep";
 import { mean } from "./stats";
+import { usualSteps } from "./steps";
 
 export type CourseDay = GlanceDay & { dev: number | null; drinksBefore: boolean; weekend: boolean };
 export type Course = { base: number | null; days: CourseDay[]; above: number; rated: number; best: CourseDay | null; lowest: CourseDay | null };
@@ -84,8 +85,9 @@ export const SHORT_NIGHT_MIN = 390;
  * The grid's rows, each saying when it's from — this morning's line only uses what's known by the morning. HRV's
  * "lowest quarter" is among the nights given (needs 8 with HRV); "trained that day" is the day itself, not the evening.
  */
-export function mindFactors(ns: Night[], trainedOn: (day: string) => boolean): MindFactor[] {
+export function mindFactors(ns: Night[], trainedOn: (day: string) => boolean, steps?: Map<string, number>): MindFactor[] {
   const hrv = ns.map((n) => n.hrv).filter((v): v is number => v != null).sort((a, b) => a - b);
+  const mid = steps ? usualSteps(steps, ns.map((n) => n.day)) : null;
   const q1 = hrv.length >= 8 ? hrv[Math.floor((hrv.length - 1) * 0.25)] : null;
   return [
     { id: "short", name: "Under 6 h 30 asleep", when: "last night", has: (n) => n.asleep < SHORT_NIGHT_MIN },
@@ -94,6 +96,8 @@ export function mindFactors(ns: Night[], trainedOn: (day: string) => boolean): M
     { id: "drinks", name: "Drinks the evening before", when: "the evening before", has: (_, e) => e.drinks.length > 0 },
     { id: "caf", name: "Caffeine at bed ≥ 30 mg", when: "the evening before", has: (_, e) => e.caffeineAtBed >= 30 },
     { id: "trained", name: "Trained that day", when: "the day", has: (n) => trainedOn(n.day) },
+    // PLAN 66 (owner: "more walking equals … better mood"): the day's own steps, worn days only.
+    { id: "steps", name: "More steps than usual", when: "the day", has: (n) => mid != null && (steps!.get(n.day) ?? 0) > mid, known: (n) => mid != null && !!steps?.has(n.day) },
   ];
 }
 

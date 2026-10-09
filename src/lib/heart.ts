@@ -14,11 +14,12 @@
  *  - roll: the 7-day average for the trend lines.
  */
 
-import type { HrMinute, SleepSession } from "./band";
+import type { HrMinute, SleepSession, StepBucket } from "./band";
 import type { Check } from "./feelgraph";
 import { usualAt, type Usual } from "./hrusual";
 import type { Outcome, Sure } from "./sleep";
 import { addDays, atMinute, localDay, minuteOfDay, MIN } from "./time";
+import { walked } from "./steps";
 
 export type Span = { start: number; end: number };
 /** A day's awake average needs this many minutes of it (a day with the band off half of it says nothing). */
@@ -181,10 +182,16 @@ export function raisedStretches(hr: HrMinute[], sleep: Pick<SleepSession, "start
   return out;
 }
 
-export type Why = { kind: "coffee" | "drinks" | "meal" | "said" | "stress"; at: number; tags?: string[]; level?: number };
-/** What's logged around a stretch that could go with it: coffee in the 2 hours before, drinks in the 3, a meal in the 90 minutes, what you said you were doing or a stressful check-in around it. */
-export function whyRaised(r: Pick<Raised, "start" | "end">, entries: { kind: string; at: number; [k: string]: unknown }[]): Why[] {
+export type Why = { kind: "moving" | "coffee" | "drinks" | "meal" | "said" | "stress"; at: number; tags?: string[]; level?: number; steps?: number };
+/**
+ * What's around a stretch that could go with it: walking during it (the band's steps, PLAN 66 — so a walk isn't asked
+ * about), coffee in the 2 hours before, drinks in the 3, a meal in the 90 minutes, what you said you were doing or a
+ * stressful check-in around it.
+ */
+export function whyRaised(r: Pick<Raised, "start" | "end">, entries: { kind: string; at: number; [k: string]: unknown }[], steps: StepBucket[] = []): Why[] {
   const out: Why[] = [];
+  const w = walked(steps, r.start, r.end);
+  if (w != null) out.push({ kind: "moving", at: r.start, steps: w });
   for (const e of entries) {
     const before = (min: number) => e.at >= r.start - min * MIN && e.at <= r.end;
     if (e.kind === "drink" && (e.caffeineMg as number) >= 40 && before(120)) out.push({ kind: "coffee", at: e.at });

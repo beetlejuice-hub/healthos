@@ -805,10 +805,19 @@ email get Dev tools (`#dev`): raw entry editor, generate/remove sample, wipe acc
    make graphs or like interesting notices". The grids (Sleep, Heart, Mind) already test what goes with sleep and focus;
    next is one feed of what's new and clear across them. Digests: needs an AI key for the written part (owner, earlier:
    "no ai key yet") — asked.
-66. [ ] **Steps from the band** — brainstormed 9 Oct, waiting on the owner. Owner: "I dont see it tracking daily steps …
-   wondering if the data is valuable for us like more walking equals better sleep at night or better mood". Main use:
-   minute steps explain raised heart rate on their own (walking), and keep walks out of after-coffee / after-supplement
-   heart rate; then daily steps as a factor in the sleep and mood grids. Google permission already covers it.
+66. [x] **Steps from the band** (9 Oct, owner: "go" — worker/band.ts, lib/band.ts `readSteps`, lib/steps.ts, lib/heart.ts
+   `whyRaised`, lib/sleep.ts + lib/mind.ts rows, components/Heart.tsx, useNights.ts, MindPage.tsx). Owner: "I dont see it
+   tracking daily steps … wondering if the data is valuable for us like more walking equals better sleep at night or better
+   mood". The Worker pulls steps per 5 minutes (Google's `steps list` has no counts — the roll-up does; hourly if 5-minute
+   windows are refused), the first time two weeks back, then like heart rate. Heart page: a raised stretch you walked through
+   is explained ("on the move — 3,840 steps"), not asked; a steps strip under the day chart with its own scale; the day's
+   total in the key. Sleep grid: "More steps than usual that day" (above the middle of the nights shown) against that night;
+   Mind grid: "More steps than usual" against that day's feelings. A day the band was off has no total (heart rate in under
+   70 % of 08–21) and is left out, never counted as a day with fewer steps. Honest limit: at ~25 worn days a planted +50 min
+   is found clear 7 times in 10 — a smaller real effect will read "likely" or "not clear" for weeks. Checked: steps.test,
+   band.test (Google's shape), worker band.test (request, paging, hourly fallback), heart/sleep/mind tests (planted found,
+   nothing planted stays quiet, band-off days out — each fails with its rule taken out), e2e/steps.cjs (390 px).
+   Not checked: Google's real answer — first real check is the owner's band after the deploy.
 67. [ ] **AI chat that can look things up** — brainstormed 9 Oct, waiting on the owner (AI key). Owner: "a chat for ai …
    it knows every data in app … pull data based on what i ask and answer it nicely. it can also send me messages of new
    findings". A chat exists (components/Ai.tsx) but sees only a written summary. Idea: tools the AI calls and the app
