@@ -725,7 +725,7 @@ email get Dev tools (`#dev`): raw entry editor, generate/remove sample, wipe acc
      hidden there — the page has its own 14 / 30 / 90 nights); without them the old rating + caffeine panels show as
      before. Drinks per week is under Food & body. Checked: e2e/sleep.cjs (band: old panels and the header switch gone,
      drinks on Food & body), e2e/body.cjs (no band: the old panels, with the switch), full suite 681 PASS.
-58. [ ] **Insights → Mind, redesigned** (claimed 9 Oct — canvas first; components/Mind.tsx, lib/mind.ts after the
+58. [x] **Insights → Mind, redesigned** (claimed 9 Oct — canvas first; components/Mind.tsx, lib/mind.ts after the
    owner picks). Owner, 9 Oct: "do 3" (design the Mind page next). Phase 1: 2–3 directions on the canvas, laptop +
    phone, from fake check-ins shaped like his.
    - **Canvas (9 Oct): https://claude.ai/artifact/Gdp9Y5QYBPMVFfqW4eqrPv** — three directions, each laptop + phone, from 30
@@ -757,7 +757,7 @@ email get Dev tools (`#dev`): raw entry editor, generate/remove sample, wipe acc
      hours asleep (Mood / Energy / Stress / Focus), the month as a calendar; without band nights only the calendar.
      The grid and the slope learn from finished days only (today's feelings so far are just its morning); this
      morning's line applies them to today. Checked (e2e/mindpage.cjs, 30 fake days, laptop + phone): drinks the
-     evening before → mood −1.0 clear, a short night → energy −0.8 clear, nothing else clear; energy +0.9 per hour
+     evening before → mood −0.9 clear, a short night → energy −0.7 likely (29 finished days), nothing else clear; energy +0.9 per hour
      asleep clear, focus nothing; the calendar marks every day after drinks and reads them below usual; tapping a
      day shows its numbers; no band → the calendar only. The old course / rhythm / patterns panels are still below —
      his call whether they go. Not checked: his real check-ins and nights (blocked from here).
