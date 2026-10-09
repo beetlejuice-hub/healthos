@@ -653,7 +653,7 @@ email get Dev tools (`#dev`): raw entry editor, generate/remove sample, wipe acc
      trend on C. Default for 3 until he says otherwise: the grid stays on Sleep; Findings links to it.
    - **Tempo's idea 8** (sleep starts the day) asks for last night's wake time. Answered: live at
      healthos.lukacsarnold9.workers.dev, code at github.com/beetlejuice-hub/healthos; the band data needs a sign-in, so
-     Tempo needs a small `/api/band/wake?day=` behind a shared key set in Cloudflare. Not built — waiting on his go.
+     Tempo needs a small `/api/band/wake?day=` behind a shared key set in Cloudflare. Go given 9 Oct — see 56.
    - **Build (claimed 8 Oct, owner: "do 1")** — lib/sleep.ts (nights from the band, usual ranges, regularity, facts,
      what-goes-with with how sure), components/Sleep.tsx (B last night on top, A night log under it, C's grid at the
      bottom), Insights.tsx wiring, e2e/sleep.cjs. Body.tsx's rating/caffeine/drinks panels stay below for now.
@@ -680,3 +680,8 @@ email get Dev tools (`#dev`): raw entry editor, generate/remove sample, wipe acc
      planted 0.8), and coming back down after a workout. Checked: each board's numbers recomputed outside the
      canvas, every board rendered in Chromium at its width with no label past its card; A's tiles, week card
      and C agree (51 bpm resting, 47 ms HRV, 67 awake). Waiting on his pick.
+56. [ ] **Wake time for Tempo** (claimed 9 Oct by the Tempo session — worker/index.ts handleBand, worker/band.ts,
+   lib/band.ts `wakeFor`). Owner: "do it". `GET /api/band/wake?day=YYYY-MM-DD&tz=<min east of UTC>`,
+   `Authorization: Bearer <TEMPO_KEY>` (secret, same value as Tempo's `HEALTHOS_KEY`) → `{ wokeAt, asleepMin }` from
+   the main (non-nap) night ending that morning, `{ wokeAt: null }` if none, 401 on a wrong key. Whose band: `BAND_OWNER`
+   if set, else the first account that syncs a connected band (it's his app).
