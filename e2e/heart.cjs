@@ -122,7 +122,7 @@ function world({ days, everyMin = 1, seed = 1 }) {
   check('full screen: Esc closes it', !(await pg.locator('.master').getAttribute('class')).includes('big'));
   // C: after every coffee, after a workout.
   await pg.goto(APP + '#insights/heart'); await pg.waitForTimeout(600);
-  const card = pg.locator('#ins-heart');
+  const card = pg.locator('#ins-heart .he-card');
   check('the Heart page is in the sidebar and shows the card', await pg.locator('.secbar button', { hasText: 'Heart' }).count() === 1 && await card.isVisible());
   const ct = await card.innerText();
   const nCof = +((ct.match(/(\d+) coffees over/) || [])[1] || 0);

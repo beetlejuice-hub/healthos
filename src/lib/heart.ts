@@ -18,7 +18,7 @@ import type { HrMinute, SleepSession } from "./band";
 import type { Check } from "./feelgraph";
 import { usualAt, type Usual } from "./hrusual";
 import type { Outcome, Sure } from "./sleep";
-import { localDay, minuteOfDay, MIN } from "./time";
+import { addDays, atMinute, localDay, minuteOfDay, MIN } from "./time";
 
 export type Span = { start: number; end: number };
 /** A day's awake average needs this many minutes of it (a day with the band off half of it says nothing). */
@@ -61,14 +61,20 @@ export function awakeByDay(hr: HrMinute[], sleep: Pick<SleepSession, "start" | "
 export type DayNumbers = { avg: number | null; usualAvg: number | null; above: number; below: number; minutes: number };
 /**
  * One day, awake and not training: its average, your usual over the same minutes (so a day that's only got to 11:00
- * is compared with your usual mornings, not your usual whole day), and minutes above / below your usual band.
+ * is compared with your usual mornings, not your usual whole day), and time above / below your usual band — judged on
+ * 5-minute averages, the same ones the day's chart draws, so one jumpy minute isn't "above" and the number matches
+ * the red and blue you see.
  */
 export function dayNumbers(hr: HrMinute[], sleep: Pick<SleepSession, "start" | "end">[], workouts: Span[], usual: Usual | null, day: string): DayNumbers {
-  const mins = awakeMinutes(hr.filter((m) => localDay(m[0]) === day), sleep, workouts);
+  const t0 = atMinute(day, 0), t1 = atMinute(addDays(day, 1), 0);
+  const mins = awakeMinutes(hr.filter((m) => m[0] >= t0 && m[0] < t1), sleep, workouts);
   let above = 0, below = 0; const mids: number[] = [];
-  for (const [t, v] of mins) {
-    const u = usualAt(usual, t); if (!u) continue;
-    mids.push(u.mid); if (v > u.hi) above++; else if (v < u.lo) below++;
+  for (const [t] of mins) { const u = usualAt(usual, t); if (u) mids.push(u.mid); }
+  const buckets = new Map<number, number[]>();
+  for (const [t, v] of mins) { const k = Math.floor(t / (5 * MIN)), a = buckets.get(k); if (a) a.push(v); else buckets.set(k, [v]); }
+  for (const [k, v] of buckets) {
+    const u = usualAt(usual, k * 5 * MIN + 2.5 * MIN); if (!u) continue;
+    const m = mean(v); if (m > u.hi) above += v.length; else if (m < u.lo) below += v.length;
   }
   return { avg: mins.length ? mean(mins.map((m) => m[1])) : null, usualAvg: mids.length >= mins.length / 2 && mids.length ? mean(mids) : null, above, below, minutes: mins.length };
 }

@@ -1,14 +1,12 @@
 /**
- * Insights → Heart: after every coffee, after every workout (canvas C, owner's pick 8 Oct). Every coffee lined
- * up at zero against the same hours on coffee-free days; every workout's way back down. Numbers from
- * lib/hrusual (tested with planted effects); words say "goes with", and how sure.
+ * Insights → Heart, the after-coffee / after-a-workout card (canvas C, owner's pick 8 Oct; part of the Heart page,
+ * components/Heart.tsx, since 9 Oct). Every coffee lined up at zero against the same hours on coffee-free days;
+ * every workout's way back down. Numbers from lib/hrusual (tested with planted effects); words say "goes with".
  */
 
-import { useEffect, useMemo, useState } from "react";
-import { afterCoffee, afterWorkouts, usualByHour, usualReady, COFFEE_MIN_N, type AfterCoffee, type AfterWorkouts } from "../lib/hrusual";
-import { loadBandBefore, useBand } from "../lib/band-client";
+import { useEffect, useState } from "react";
+import { COFFEE_MIN_N, type AfterCoffee, type AfterWorkouts } from "../lib/hrusual";
 import { useWidth } from "./useWidth";
-import { localDay, DAY } from "../lib/time";
 
 type Pt = [number, number];
 const sgn = (v: number, d = 1) => { const t = Math.abs(v).toFixed(d); return Number(t) === 0 ? `±${t}` : `${v > 0 ? "+" : "−"}${t}`; };
@@ -54,22 +52,8 @@ function workoutWords(a: AfterWorkouts, haveUsual: boolean): string {
   return `${head}. Back to ${haveUsual ? "your usual" : "where you started"} in ${a.backMin} min${a.backN > 1 ? " on average" : ""}.`;
 }
 
-export function HeartEffects({ now, doses, workouts }: { now: number; doses: { at: number; mg: number }[]; workouts: { start: number; end: number }[] }) {
-  const { data, status } = useBand();
-  const connected = !!status && status !== "off" && status.connected;
-  // Four weeks back: the comparison needs coffee-free days, and more coffees make it surer.
-  useEffect(() => { if (connected && data) void loadBandBefore(now - 28 * DAY); }, [connected, data, now]);
-  const res = useMemo(() => {
-    if (!data?.hr.length) return null;
-    const usual = usualByHour(data.hr, workouts, localDay(now));
-    return { coffee: afterCoffee(doses, data.hr, workouts), gym: afterWorkouts(workouts, data.hr, usual), usual: usualReady(usual) };
-  }, [data, doses, workouts, now]);
-  if (!connected || !res) return null;
-  return <HeartCard coffee={res.coffee} gym={res.gym} usual={res.usual} />;
-}
-
 /** Mounted only once there's data, so its width is measured from the start (the charts draw to it). */
-function HeartCard({ coffee, gym, usual }: { coffee: AfterCoffee; gym: AfterWorkouts; usual: boolean }) {
+export function AfterCards({ coffee, gym, usual }: { coffee: AfterCoffee; gym: AfterWorkouts; usual: boolean }) {
   const [ref, w] = useWidth<HTMLDivElement>();
   // Full screen, like the timeline (owner, 8 Oct: "view it in big … other charts too").
   const [big, setBig] = useState(false);
@@ -83,18 +67,17 @@ function HeartCard({ coffee, gym, usual }: { coffee: AfterCoffee; gym: AfterWork
     return () => { document.body.style.overflow = prev; window.removeEventListener("keydown", key); window.removeEventListener("resize", size); };
   }, [big]);
   const chartH = (small: number) => (big ? Math.max(small, Math.round(vh * (w >= 680 ? 0.55 : 0.36))) : small);
-  const two = w >= 680, cw = two ? Math.floor((w - 24) * 0.62) : w, gw = two ? w - 24 - cw : w;
+  // The card's width less its padding: the columns are drawn to what's inside it.
+  const iw = w - 32, two = iw >= 650, cw = two ? Math.floor((iw - 24) * 0.62) : iw, gw = two ? iw - 24 - cw : iw;
   const c = coffee, g = gym;
   const cHi = Math.max(8, Math.ceil(Math.max(0, ...c.curve.map((p) => p[1]), ...c.each.flat().map((p) => p[1])) / 4) * 4);
   const cLo = Math.min(-4, Math.floor(Math.min(0, ...c.each.flat().map((p) => p[1])) / 4) * 4);
   const gHi = Math.max(20, Math.ceil(Math.max(0, ...g.each.flat().map((p) => p[1])) / 20) * 20);
   const peak = c.effect != null && c.peakMin != null && c.sure !== "too few" ? { m: c.peakMin, text: `${sgn(c.curve.find((p) => p[0] === c.peakMin)?.[1] ?? 0, 0)} bpm at ${c.peakMin} min` } : null;
   return (
-    <section className="he" id="ins-heart" data-sec="heart" aria-label="Heart rate after coffee and workouts">
-      <div className="gl-group"><h2>Heart</h2><span>what your heart rate does after coffee and after training — against your own usual</span></div>
-      <div className={`he-card${big ? " big" : ""}`} ref={ref}>
+      <div className={`he-card${big ? " big" : ""}`} ref={ref} aria-label="Heart rate after coffee and after workouts">
         <button type="button" className="ibtn he-big" aria-pressed={big} onClick={() => setBig(!big)}>{big ? "✕ Close" : "⤢ Full screen"}</button>
-        <div className="he-row" style={{ gridTemplateColumns: two ? `${cw}px ${gw}px` : "1fr" }}>
+        <div className={`he-row${two ? " two" : ""}`} style={{ gridTemplateColumns: two ? `${cw}px ${gw}px` : "1fr" }}>
           <div className="he-col">
             <h3>After coffee <span>bpm vs coffee-free days, same hours</span></h3>
             {c.n > 0 && <Aligned width={cw} height={chartH(two ? 240 : 200)} x={[-30, 180]} y={[cLo, cHi]} each={c.each} avg={c.curve} color="var(--caf)" strip={c.wobble || undefined}
@@ -112,6 +95,5 @@ function HeartCard({ coffee, gym, usual }: { coffee: AfterCoffee; gym: AfterWork
         </div>
         {c.n > 0 && <p className="he-note">Thin lines: each coffee. Thick: their average. {c.wobble ? "Grey strip: what chance alone could draw. " : ""}Lined up so the half hour before each coffee is 0 — a day you're higher anyway doesn't count as the coffee.</p>}
       </div>
-    </section>
   );
 }

@@ -7,11 +7,11 @@
 import { useEffect, useMemo, useState } from "react";
 import type { BandData } from "../lib/band";
 import { loadBandBefore } from "../lib/band-client";
-import { caffeineAt } from "../lib/caffeine";
 import type { Lanes } from "../lib/insights";
-import { clockH, evenings, facts, firstAt, FACTORS, goesWith, nights, OUTCOMES, regularity, usual, usualNightHr, weekendShift, type Cell, type Evening, type Night, type Range } from "../lib/sleep";
+import { clockH, facts, firstAt, FACTORS, goesWith, OUTCOMES, regularity, usual, usualNightHr, weekendShift, type Cell, type Evening, type Night, type Outcome, type Range } from "../lib/sleep";
 import { addDays, atMinute, clock, dayLabel, DAY, HOUR, MIN } from "../lib/time";
 import type { Entry } from "../lib/types";
+import { useNights } from "./useNights";
 import { useWidth } from "./useWidth";
 
 const ST = { awake: "#eef1f2", rem: "#7fadf0", light: "#4f86dc", deep: "#2f5cc0" } as const;
@@ -30,12 +30,7 @@ export function SleepNights({ data, band, now, entries, halfLifeMin }: { data: L
   const [span, setSpan] = useState<14 | 30 | 90>(30);
   // The nights need the band's older weeks; each load changes `band`, so this asks again until they're in.
   useEffect(() => { if (band) void loadBandBefore(now - (span + 2) * DAY); }, [band, now, span]);
-  const all = useMemo(() => (band ? nights(band.sleep, band.hr, band.rhr, band.hrv) : []), [band]);
-  const ns = useMemo(() => all.filter((n) => n.up >= now - span * DAY && n.up <= now), [all, now, span]);
-  const evs = useMemo(() => evenings(ns, {
-    drinks: data.drinks, caffeineAt: (t) => caffeineAt(data.doses.map((d) => ({ at: d.at, mg: d.mg })), t, halfLifeMin),
-    workouts: data.workouts, meals: entries.filter((e) => e.kind === "food"), ratings: entries.flatMap((e) => (e.kind === "sleep" ? [{ at: e.at, rating: e.rating }] : [])),
-  }), [ns, data, entries, halfLifeMin]);
+  const { ns, evs } = useNights(band, data, entries, halfLifeMin, now, span);
   const [selId, setSel] = useState<string | null>(null);
   const si = Math.max(0, ns.findIndex((n) => n.id === selId) >= 0 ? ns.findIndex((n) => n.id === selId) : ns.length - 1);
   // Measured from the first render (useWidth only looks on mount), so the box is there before the band's data is.
@@ -311,14 +306,21 @@ function NightLog({ ns, evs, sel, onSel, wide, w, workouts, meals }: { ns: Night
 
 /* ------------------------------------------------------------------ C · what goes with your sleep */
 
-function GoesWith({ ns, evs, wide, w }: { ns: Night[]; evs: Evening[]; wide: boolean; w: number }) {
-  const cells = useMemo(() => goesWith(ns, evs), [ns, evs]);
-  const outs = wide ? OUTCOMES : OUTCOMES.filter((o) => o.id !== "awake" && o.id !== "rating");
+/** The words around the grid; the Sleep page's by default, the Heart page passes its own with its columns. */
+export type GridCopy = { title: string; sub: string; what: string; toward: string; minNights: number };
+const SLEEP_COPY: GridCopy = {
+  title: "What goes with your sleep", what: "nights", toward: "toward more sleep, deeper, a calmer heart", minNights: 10,
+  sub: "Each cell: nights with the thing against nights without it. Filled: clear · faint: likely · empty: not clear yet. Goes with, not proof of cause.",
+};
+
+export function GoesWith({ ns, evs, wide, w, outcomes = OUTCOMES, narrow, copy = SLEEP_COPY }: { ns: Night[]; evs: Evening[]; wide: boolean; w: number; outcomes?: Outcome[]; narrow?: Outcome[]; copy?: GridCopy }) {
+  const cells = useMemo(() => goesWith(ns, evs, { outcomes }), [ns, evs, outcomes]);
+  const outs = wide ? outcomes : narrow ?? outcomes.filter((o) => o.id !== "awake" && o.id !== "rating");
   const [open, setOpen] = useState<{ f: string; o: string } | null>(null);
   const firstClear = cells.filter((c) => c.sure === "clear" && outs.some((o) => o.id === c.outcome)).sort((a, b) => a.p! - b.p!)[0];
   const cur = open ?? (firstClear ? { f: firstClear.factor, o: firstClear.outcome } : null);
   const fmt = (c: Cell) => {
-    const o = OUTCOMES.find((x) => x.id === c.outcome)!, d = c.diff!;
+    const o = outcomes.find((x) => x.id === c.outcome)!, d = c.diff!;
     if (Math.abs(d) < 0.05) return "±0";
     if (o.unit === "min") return `${sgn(d)}m`;
     if (o.unit === "clock") return Math.abs(d) >= 60 ? `${d > 0 ? "+" : "−"}${hmm(Math.abs(d))}` : `${sgn(d)}m`;
@@ -326,11 +328,11 @@ function GoesWith({ ns, evs, wide, w }: { ns: Night[]; evs: Evening[]; wide: boo
   };
   const shown = FACTORS.filter((f) => cells.some((c) => c.factor === f.id && c.sure !== "too few"));
   const hidden = FACTORS.filter((f) => !shown.includes(f)).map((f) => { const c = cells.find((x) => x.factor === f.id)!; return `${f.name.toLowerCase()} (${c.nWith} with, ${c.nWithout} without)`; });
-  if (ns.length < 10) return <section className="sl-p sl-c" aria-label="What goes with your sleep"><span className="cmp-k">What goes with your sleep</span><p>Needs at least 10 nights with the band, and 5 with and 5 without each thing — {ns.length} nights so far.</p></section>;
+  if (ns.length < copy.minNights) return <section className="sl-p sl-c" aria-label={copy.title}><span className="cmp-k">{copy.title}</span><p>Needs at least {copy.minNights} {copy.what} with the band, and 5 with and 5 without each thing — {ns.length} {copy.what} so far.</p></section>;
   return (
-    <section className="sl-p sl-c" aria-label="What goes with your sleep">
-      <span className="cmp-k">What goes with your sleep</span>
-      <p className="sl-c-sub">Each cell: nights with the thing against nights without it. Filled: clear · faint: likely · empty: not clear yet. Goes with, not proof of cause.</p>
+    <section className="sl-p sl-c" aria-label={copy.title}>
+      <span className="cmp-k">{copy.title}</span>
+      <p className="sl-c-sub">{copy.sub}</p>
       <div className={`sl-c-grid${wide ? " wide" : ""}`}>
         <div className="sl-matrix" style={{ gridTemplateColumns: `minmax(${wide ? 170 : 88}px, 1fr) repeat(${outs.length}, ${wide ? 50 : 38}px)` }} role="table" aria-label="Evening things against sleep measures">
           <span role="columnheader" />
@@ -338,25 +340,25 @@ function GoesWith({ ns, evs, wide, w }: { ns: Night[]; evs: Evening[]; wide: boo
           {shown.map((f) => {
             const row = cells.filter((c) => c.factor === f.id), any = row[0];
             return [
-              <span key={f.id} role="rowheader" className="sl-mf">{f.name}<small>{any ? `${any.nWith} vs ${any.nWithout} nights` : ""}</small></span>,
+              <span key={f.id} role="rowheader" className="sl-mf">{f.name}<small>{any ? `${any.nWith} vs ${any.nWithout} ${copy.what}` : ""}</small></span>,
               ...outs.map((o) => {
                 const c = row.find((x) => x.outcome === o.id)!, isOpen = cur?.f === f.id && cur?.o === o.id;
                 return <button key={o.id} type="button" role="cell" className="sl-cell" data-sure={c.sure} data-toward={c.toward ?? undefined} aria-pressed={isOpen} disabled={c.sure === "too few"}
-                  aria-label={`${f.name} and ${o.name}: ${c.sure === "too few" ? "too few nights" : `${fmt(c)}, ${c.sure}`}`} onClick={() => setOpen({ f: f.id, o: o.id })}>{c.sure === "too few" ? "·" : fmt(c)}</button>;
+                  aria-label={`${f.name} and ${o.name}: ${c.sure === "too few" ? `too few ${copy.what}` : `${fmt(c)}, ${c.sure}`}`} onClick={() => setOpen({ f: f.id, o: o.id })}>{c.sure === "too few" ? "·" : fmt(c)}</button>;
               }),
             ];
           })}
         </div>
-        {cur && <Opened ns={ns} evs={evs} cell={cells.find((c) => c.factor === cur.f && c.outcome === cur.o)!} w={wide ? Math.min(460, w - 640) : w - 32} />}
+        {cur && <Opened ns={ns} evs={evs} cell={cells.find((c) => c.factor === cur.f && c.outcome === cur.o)!} outcomes={outcomes} what={copy.what} w={wide ? Math.min(460, w - 640) : w - 32} />}
       </div>
-      {hidden.length > 0 && <p className="sl-note">Not enough nights yet — 5 with and 5 without — for: {hidden.join(", ")}.</p>}
-      <div className="sl-c-key"><span><i style={{ background: "#4f86dc" }} />toward more sleep, deeper, a calmer heart</span><span><i style={{ background: "#d9822b" }} />the other way</span></div>
+      {hidden.length > 0 && <p className="sl-note">Not enough {copy.what} yet — 5 with and 5 without — for: {hidden.join(", ")}.</p>}
+      <div className="sl-c-key"><span><i style={{ background: "#4f86dc" }} />{copy.toward}</span><span><i style={{ background: "#d9822b" }} />the other way</span></div>
     </section>
   );
 }
 
-function Opened({ ns, evs, cell, w }: { ns: Night[]; evs: Evening[]; cell: Cell; w: number }) {
-  const f = FACTORS.find((x) => x.id === cell.factor)!, o = OUTCOMES.find((x) => x.id === cell.outcome)!;
+function Opened({ ns, evs, cell, w, outcomes, what }: { ns: Night[]; evs: Evening[]; cell: Cell; w: number; outcomes: Outcome[]; what: string }) {
+  const f = FACTORS.find((x) => x.id === cell.factor)!, o = outcomes.find((x) => x.id === cell.outcome)!;
   const pts = ns.flatMap((n, i) => { const v = o.of(n, evs[i]); return v == null ? [] : [{ v, has: f.has(n, evs[i]) }]; });
   if (cell.sure === "too few" || pts.length < 2) return null;
   const vs = pts.map((p) => p.v), lo = Math.min(...vs), hi = Math.max(...vs), span = hi - lo || 1;
@@ -369,14 +371,14 @@ function Opened({ ns, evs, cell, w }: { ns: Night[]; evs: Evening[]; cell: Cell;
       <span className="cmp-k">Opened · {f.name} → {o.name}</span>
       <svg width={w} height={150} viewBox={`0 0 ${w} 150`} role="img" aria-label={`${o.name} on each night with and without: ${f.name.toLowerCase()}`}>
         {[["with", 40, "var(--i-ink)", true], ["without", 100, "var(--i-dim)", false]].map(([name, y, col, has]) => <g key={name as string}>
-          <text x={4} y={(y as number) - 20} className="sl-tag" style={{ fill: col as string }}>{name} · {pts.filter((p) => p.has === has).length} nights</text>
+          <text x={4} y={(y as number) - 20} className="sl-tag" style={{ fill: col as string }}>{name} · {pts.filter((p) => p.has === has).length} {what}</text>
           {pts.filter((p) => p.has === has).map((p, i) => <circle key={i} cx={X(p.v)} cy={(y as number) + ((i * 7) % 5 - 2) * 4} r={4} fill={col as string} fillOpacity=".8" stroke="var(--i-panel)" strokeWidth="1.2" />)}
           <line x1={X(has ? mW : mWo)} x2={X(has ? mW : mWo)} y1={(y as number) - 14} y2={(y as number) + 14} stroke="var(--i-ink)" strokeWidth="2.5" />
         </g>)}
         <text x={20} y={142} className="he-t">{fmtV(lo)}</text><text x={w - 20} y={142} textAnchor="end" className="he-t">{fmtV(hi)}</text>
       </svg>
-      <p className="sl-open-v"><b>{words}</b> on nights with it · {cell.sure}{cell.p != null ? ` (p ${cell.p < 0.001 ? "<0.001" : cell.p.toFixed(3)})` : ""}</p>
-      <p className="sl-note">Every night is a dot, so you can see what the average hides. Nights with one thing often have others too (drinks, weekends, late bedtimes) — read the rows together.</p>
+      <p className="sl-open-v"><b>{words}</b> on {what} with it · {cell.sure}{cell.p != null ? ` (p ${cell.p < 0.001 ? "<0.001" : cell.p.toFixed(3)})` : ""}</p>
+      <p className="sl-note">Every {what === "nights" ? "night" : "morning"} is a dot, so you can see what the average hides. Evenings with one thing often have others too (drinks, weekends, late bedtimes) — read the rows together.</p>
     </div>
   );
 }

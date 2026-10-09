@@ -690,6 +690,20 @@ email get Dev tools (`#dev`): raw entry editor, generate/remove sample, wipe acc
      2. components/Heart.tsx: one day (‹ › days, heart rate vs your usual band, what you did on top, three numbers),
         then the mornings, the grid, after coffee + after a workout (lib/hrusual, unchanged), around a check-in.
      3. e2e/heart.cjs at laptop + phone width, then live.
+   - **Built (9 Oct).** Phase 1 landed as 211c4e0. Phase 2 + 3: components/Heart.tsx (the page), Sleep.tsx's grid made
+     shareable (`GoesWith` takes columns and words; `useNights` moved to components/useNights.ts), HeartEffects.tsx
+     now only the after-coffee / after-a-workout card (`AfterCards`), e2e/heartpage.cjs (new; e2e/heart.cjs points at
+     the card). Checked (e2e/heartpage.cjs, 30 fake Charge-6 days, laptop + phone): drinks → next morning's resting
+     HR +4.6 and HRV −8.1, both clear, nothing else clear; stress +0.8 bpm per point found (planted 0.8) with more
+     stress given in the afternoon; the day's numbers match the band; tapping a morning opens that day; a band that
+     reads every 15 minutes still draws the day; nothing wider than the phone. Found and fixed on the way:
+     - the check-in slope came back at 0.33 for a planted 0.8 — compared within time-of-day windows now (test);
+     - "time below your usual" counted noisy single minutes the chart doesn't show as blue — 5-minute averages now,
+       like the chart (test);
+     - tapping a morning on a phone did nothing (it needed a hover first);
+     - the after-coffee / after-a-workout card was 32 px wider than its box on laptops (the workout chart's right
+       edge was cut off) and its Full screen button sat on the "After a workout" heading — both from before.
+     Not checked: the owner's real band data (blocked from here) — first thing to look at when he opens it.
 56. [ ] **Wake time for Tempo** (claimed 9 Oct by the Tempo session — worker/index.ts handleBand, worker/band.ts,
    lib/band.ts `wakeFor`). Owner: "do it". `GET /api/band/wake?day=YYYY-MM-DD&tz=<min east of UTC>`,
    `Authorization: Bearer <TEMPO_KEY>` (secret, same value as Tempo's `HEALTHOS_KEY`) → `{ wokeAt, asleepMin }` from

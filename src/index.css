@@ -962,7 +962,7 @@ a { color: inherit; }
 .he-card.big .he-big { position: fixed; top: calc(12px + env(safe-area-inset-top, 0px)); }
 .he-row { display: grid; gap: 24px; min-width: 0; }
 .he-col { display: grid; gap: 8px; align-content: start; min-width: 0; }
-.he-col:first-child h3 { padding-right: 120px; }
+.he-row:not(.two) .he-col:first-child h3, .he-row.two .he-col:last-child h3 { padding-right: 120px; }
 .he-col h3 { margin: 0; font-size: 14px; font-weight: 600; display: flex; flex-wrap: wrap; gap: 4px 8px; align-items: baseline; }
 .he-col h3 span { font-weight: 400; font-size: 12.5px; color: var(--i-ink-2); }
 .he-svg { display: block; max-width: 100%; overflow: visible; }
@@ -1088,3 +1088,44 @@ a { color: inherit; }
 .sl-open { display: grid; gap: 6px; min-width: 0; }
 .sl-open svg { max-width: 100%; }
 .sl-open-v { margin: 0; font-size: 13px; color: var(--i-ink-2); } .sl-open-v b { color: var(--i-ink); font: 600 14px var(--f-plex); }
+/* Insights → Heart (PLAN 55, owner's pick 9 Oct): one day on top, then recovery and what moves it. */
+.hp { display: grid; gap: 12px; min-width: 0; }
+.hp-day { display: grid; gap: 10px; min-width: 0; }
+.hp-hint { margin-left: auto; font: 400 11px var(--f-mono); color: var(--i-dim); }
+.hp-kpis { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.hp-kpis .k { font: 500 10px var(--f-mono); letter-spacing: .08em; text-transform: uppercase; color: var(--i-ink-2); }
+.hp-chart { position: relative; overflow: hidden; }
+.hp-chart svg, .hp-morn svg { display: block; touch-action: pan-y; }
+.hp-none { position: absolute; left: 16px; top: 60px; margin: 0; font-size: 13px; color: var(--i-ink-2); }
+.hp-t { fill: var(--i-dim); font: 400 10px var(--f-mono); }
+.hp-ev { font: 500 10.5px var(--f-plex); paint-order: stroke; stroke: var(--i-panel); stroke-width: 3px; }
+.hp-last { font: 600 11px var(--f-mono); }
+.hp-asleep { fill: var(--i-ink); fill-opacity: .035; }
+.hp-usual { fill: var(--i-ink-2); fill-opacity: .14; }
+.hp-mid { fill: none; stroke: var(--i-ink-2); stroke-opacity: .55; stroke-dasharray: 3 4; }
+.hp-now { stroke: var(--i-ink); stroke-dasharray: 2 3; }
+.hp-cross { stroke: var(--i-ink-2); stroke-width: 1; }
+.hp-tip { position: absolute; top: 34px; width: 172px; display: grid; gap: 1px; padding: 6px 9px; background: var(--i-panel-2); border: 1px solid var(--i-line-2); border-radius: 6px; font: 400 11.5px var(--f-mono); color: var(--i-ink-2); pointer-events: none; }
+.hp-tip b { color: var(--i-ink); font-weight: 500; }
+.hp-key { display: flex; flex-wrap: wrap; gap: 4px 14px; padding: 0 14px 12px; font-size: 11.5px; color: var(--i-ink-2); align-items: center; }
+.hp-key i { display: inline-block; width: 10px; height: 4px; border-radius: 1px; margin-right: 5px; vertical-align: 2px; }
+.hp-key i.band { height: 8px; background: var(--i-ink-2); opacity: .3; vertical-align: 0; }
+.hp-key i.dot { width: 7px; height: 7px; border-radius: 50%; vertical-align: 0; }
+.hp-key i.dia { width: 7px; height: 7px; background: var(--alc); transform: rotate(45deg); vertical-align: 0; margin: 0 6px 0 2px; }
+.hp-key i.box { width: 9px; height: 9px; border: 1px solid #d55181; border-radius: 2px; vertical-align: -1px; }
+.hp-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; margin-top: 6px; }
+.hp-bar .iseg { margin-left: auto; } .hp-bar .iseg button { min-height: 32px; }
+.hp-two { display: grid; gap: 12px; grid-template-columns: minmax(0, 1fr); align-items: start; }
+.hp-two.wide { grid-template-columns: 58fr 42fr; }
+.hp-morn { padding-top: 14px; display: grid; gap: 6px; overflow: hidden; }
+.hp-morn .hp-key { padding: 0 10px; }
+.hp-morn .sl-note { padding: 0 10px; }
+.hp-morn .sl-note:last-child { padding-bottom: 12px; }
+.hp-morn .sl-note b { color: var(--i-ink); font-weight: 500; }
+.hp-wkend { fill: var(--i-ink); fill-opacity: .025; }
+.hp-colsel { fill: var(--i-ink); fill-opacity: .07; }
+.hp-st { padding: 14px 16px; display: grid; gap: 10px; }
+.hp-st-row { display: flex; flex-wrap: wrap; gap: 12px 24px; align-items: center; }
+.hp-st-row svg { display: block; flex: 0 0 auto; }
+.hp-st-words { flex: 1 1 260px; display: grid; gap: 8px; min-width: 0; }
+@media (max-width: 640px) { .hp-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); } .hp-kpis .kpi:nth-child(2) { border-right: 0; } .hp-kpis .kpi:nth-child(-n+2) { border-bottom: 1px solid var(--i-line); } .hp-hint { margin-left: 0; width: 100%; } }

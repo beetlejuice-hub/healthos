@@ -33,6 +33,16 @@ describe("awake average", () => {
 });
 
 describe("one day against your usual", () => {
+  it("above / below is judged on 5-minute averages, like the chart: minutes jumping ±5 around your usual aren't above or below", () => {
+    const hr: HrMinute[] = [];
+    for (let i = 1; i <= 10; i++) hr.push(...minutes(addDays(D0, -i), 7, 23, () => 60));
+    const usual = usualByHour(hr, [], D0);
+    hr.push(...minutes(D0, 8, 12, (h) => (Math.round(h * 60) % 2 ? 65 : 55)));
+    const n = dayNumbers(hr, [], [], usual, D0);
+    expect(n.minutes).toBe(240);
+    expect(n.above).toBe(0);
+    expect(n.below).toBe(0);
+  });
   it("average, your usual over the same minutes, and minutes above / below the band — a morning only", () => {
     const hr: HrMinute[] = [];
     for (let i = 1; i <= 10; i++) hr.push(...minutes(addDays(D0, -i), 7, 23, () => 60));

@@ -6,7 +6,7 @@ import { dailyFacts, lanes } from "../lib/insights";
 import { MasterGraph } from "../components/MasterGraph";
 import { Compare } from "../components/Compare";
 import { SleepNights } from "../components/Sleep";
-import { HeartEffects } from "../components/HeartEffects";
+import { HeartPage } from "../components/Heart";
 import { loadBandBefore, useBand } from "../lib/band-client";
 import { lastNight } from "../lib/band";
 import { Glance } from "../components/Glance";
@@ -38,7 +38,7 @@ const sgn = (v: number, f = f1) => `${v >= 0 ? "+" : "−"}${f(Math.abs(v))}`;
 const PAGE_SUB: Record<string, string> = {
   week: "Your week against your own usual weeks — never against other people.",
   timeline: "Every metric on one clock. Read a day, or compare two things.",
-  heart: "Your heart rate after coffee and after training, against your own usual.",
+  heart: "One day against your usual, each morning's resting heart rate and HRV, and what goes with them moving.",
   sleep: "Your own morning rating, and the band's nights.",
   mind: "How you felt, when, and around what.",
   intake: "What you ate, and your weight.",
@@ -177,7 +177,7 @@ export function Insights() {
       {!nothing && <div className="gl" data-sec="week"><Top days={gdays} /></div>}
       {!nothing && (cmp && shown === "timeline" ? <Compare data={data} band={band} now={now} logged={logged} />
         : <MasterGraph data={data} supplements={s.supplements} focus={focus} days={gdays} band={band} onView={loadBandBefore} />)}
-      {!nothing && <HeartEffects now={now} doses={data.doses} workouts={data.workouts} />}
+      {!nothing && <HeartPage data={data} band={band} now={now} entries={s.entries} halfLifeMin={s.settings.halfLifeMin} />}
       {!nothing && <Mind days={gdays} now={now} period={period} />}
       {!nothing && <Connections days={gdays} />}
       {!nothing && <div data-sec="connections" className="sec-wrap"><Noticed report={report} /><WorthALook items={scouted} onShow={showOnGraph} /></div>}
