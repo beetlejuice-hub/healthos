@@ -695,3 +695,9 @@ email get Dev tools (`#dev`): raw entry editor, generate/remove sample, wipe acc
    `Authorization: Bearer <TEMPO_KEY>` (secret, same value as Tempo's `HEALTHOS_KEY`) → `{ wokeAt, asleepMin }` from
    the main (non-nap) night ending that morning, `{ wokeAt: null }` if none, 401 on a wrong key. Whose band: `BAND_OWNER`
    if set, else the first account that syncs a connected band (it's his app).
+   - **Built (9 Oct):** `wakeFor` in lib/band.ts (main night ending that local morning, 00:00–14:00; the longer of
+     two; naps out), the `wake` and `_owner` paths on BandHub, the keyed route (constant-time compare). Checked: 5 unit
+     tests on known nights + 1 route test (no key / wrong key / a signed-in token → 401; nothing before a sync; the
+     fake Google's night after one; BAND_OWNER overrides). Not checked here: e2e/*.cjs (they need /opt/node22's
+     Playwright, not on the Mac) — the change is Worker-only. Needs from the owner: `TEMPO_KEY` secret in Cloudflare
+     (same value as Tempo's HEALTHOS_KEY), then open HealthOS once so a sync names the band's owner.

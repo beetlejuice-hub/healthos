@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { authUrl, BAND_SCOPES, dailyFilter, lastNight, mergeBand, mergeMinutes, refreshFrom, perMinute, readDaily, readHeartRate, readHrv, readSleep, readState, sampleFilter, signState, sleepFilter } from "./band";
+import { authUrl, BAND_SCOPES, dailyFilter, lastNight, mergeBand, mergeMinutes, refreshFrom, perMinute, readDaily, readHeartRate, readHrv, readSleep, readState, sampleFilter, signState, sleepFilter, wakeFor, type SleepSession } from "./band";
 
 // Shapes as Google's CLI reads them (pkg/output/simplify.go): the type object holds sampleTime / interval / date.
 const hr = (t: string, bpm: unknown) => ({ name: `users/me/dataTypes/heart-rate/dataPoints/${t}`, dataSource: { device: { displayName: "Charge 6" } }, heartRate: { sampleTime: { physicalTime: t, utcOffset: "7200s" }, beatsPerMinute: bpm } });
@@ -96,5 +96,41 @@ describe("what the app holds", () => {
     expect(m.sleep.map((s) => [s.id, s.asleepMin])).toEqual([["x", 55], ["y", 50]]);
     expect(m.rhr).toEqual({ "2026-10-06": 55, "2026-10-07": 54 });
     expect(mergeBand(null, b)).toBe(b);
+  });
+});
+
+describe("wakeFor (PLAN 56, for Tempo)", () => {
+  const night = (start: string, end: string, extra: Partial<SleepSession> = {}): SleepSession => ({
+    id: start, start: Date.parse(start), end: Date.parse(end), asleepMin: 391, awakeMin: 20, toFallAsleepMin: 8,
+    nap: false, stageMin: {}, stages: [], ...extra,
+  });
+  // Budapest in October: UTC+2 → tz 120. Up 07:12 local = 05:12Z.
+  const main = night("2026-10-07T22:41:00Z", "2026-10-08T05:12:00Z");
+
+  it("the night that ended that morning, in local time", () => {
+    expect(wakeFor([main], "2026-10-08", 120)).toEqual({ wokeAt: "2026-10-08T05:12:00.000Z", asleepMin: 391 });
+  });
+
+  it("not the night before, nor an afternoon nap, nor a night ending past 14:00", () => {
+    const before = night("2026-10-06T22:00:00Z", "2026-10-07T05:00:00Z");
+    const nap = night("2026-10-08T11:00:00Z", "2026-10-08T11:40:00Z", { nap: true, asleepMin: 35 });
+    expect(wakeFor([before, nap], "2026-10-08", 120)).toBeNull();
+    expect(wakeFor([night("2026-10-08T03:00:00Z", "2026-10-08T12:30:00Z")], "2026-10-08", 120)).toBeNull();
+  });
+
+  it("the day boundary is local: 23:30Z on the 7th is 01:30 on the 8th in Budapest", () => {
+    const short = night("2026-10-07T20:00:00Z", "2026-10-07T23:30:00Z", { asleepMin: 200 });
+    expect(wakeFor([short], "2026-10-08", 120)?.wokeAt).toBe("2026-10-07T23:30:00.000Z");
+    expect(wakeFor([short], "2026-10-08", 0)).toBeNull();
+  });
+
+  it("two nights that morning (logged twice): the one with more sleep", () => {
+    const first = night("2026-10-07T22:00:00Z", "2026-10-08T01:00:00Z", { asleepMin: 170 });
+    expect(wakeFor([first, main], "2026-10-08", 120)?.wokeAt).toBe("2026-10-08T05:12:00.000Z");
+  });
+
+  it("bad day or time zone: nothing", () => {
+    expect(wakeFor([main], "8 Oct", 120)).toBeNull();
+    expect(wakeFor([main], "2026-10-08", Number.NaN)).toBeNull();
   });
 });

@@ -177,3 +177,20 @@ export async function readState(state: string, secret: string, now = Date.now())
   if (!user || !/^\d+$/.test(at) || now - +at > 15 * 60_000 || +at > now + 60_000) return null;
   return (await hmac(secret, `${user}.${at}`)) === sig ? user : null;
 }
+
+/**
+ * **Last night's wake time, for Tempo (PLAN 56).** The main night that ended on `day`'s morning:
+ * not a nap, ending between that day's local 00:00 and 14:00 (`tzMin` = minutes east of UTC on
+ * that day — Tempo sends it, the server has no clock of yours). Two such nights (a broken night
+ * logged twice): the one with more sleep. Null when there's none — no night is not a 0.
+ */
+export function wakeFor(sessions: SleepSession[], day: string, tzMin: number): { wokeAt: string; asleepMin: number | null } | null {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(day);
+  if (!m || !Number.isFinite(tzMin) || Math.abs(tzMin) > 14 * 60) return null;
+  const midnight = Date.UTC(+m[1], +m[2] - 1, +m[3]) - tzMin * 60_000;
+  const slept = (s: SleepSession) => s.asleepMin ?? (s.end - s.start) / 60_000;
+  const nights = sessions.filter((s) => !s.nap && s.end >= midnight && s.end < midnight + 14 * 3_600_000);
+  if (nights.length === 0) return null;
+  const main = nights.reduce((a, b) => (slept(b) > slept(a) ? b : a));
+  return { wokeAt: new Date(main.end).toISOString(), asleepMin: main.asleepMin };
+}

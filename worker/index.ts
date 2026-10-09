@@ -82,6 +82,14 @@ export async function handlePush(req: Request, env: Env, f: typeof fetch = fetch
  *   GET /api/google/callback?code&state → Google sends you back here; keeps the sign-in, back to Settings.
  *   GET /api/band/status, GET /api/band/data?from&to, POST /api/band/sync, POST /api/band/disconnect.
  */
+/** Constant-time string compare, so the key can't be guessed a character at a time. */
+function sameKey(a: string, b: string): boolean {
+  if (a.length !== b.length) return false;
+  let diff = 0;
+  for (let i = 0; i < a.length; i++) diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  return diff === 0;
+}
+
 export async function handleBand(req: Request, env: Env, f: typeof fetch = fetch): Promise<Response> {
   const url = new URL(req.url);
   if (!env.BAND || !env.GOOGLE_CLIENT_ID || !env.GOOGLE_CLIENT_SECRET) return json({ error: "the band isn't set up on this server" }, 503);
@@ -97,10 +105,27 @@ export async function handleBand(req: Request, env: Env, f: typeof fetch = fetch
     return r.ok ? back(true) : back(false, ((await r.json().catch(() => ({}))) as { error?: string }).error ?? "Google refused");
   }
   const op = url.pathname.replace(/^\/api\/band\/?/, "");
-  if (!["start", "status", "data", "sync", "disconnect"].includes(op)) return json({ error: "not found" }, 404);
+  if (!["start", "status", "data", "sync", "disconnect", "wake"].includes(op)) return json({ error: "not found" }, 404);
+  /**
+   * **Tempo asks for last night's wake time (PLAN 56).** Not a signed-in person — Tempo's server,
+   * holding the key both apps share. It reads only the owner's band, and only the wake time.
+   */
+  if (op === "wake") {
+    if (!env.TEMPO_KEY || !sameKey(req.headers.get("authorization") ?? "", `Bearer ${env.TEMPO_KEY}`)) return json({ error: "wrong key" }, 401);
+    const owner = env.BAND_OWNER || ((await (await hub("_owner").fetch(new Request("https://band/owner"))).json()) as { id: string | null }).id;
+    if (!owner) return json({ wokeAt: null });
+    return hub(owner).fetch(new Request(`https://band/wake${url.search}`));
+  }
   const user = await whoIs(req, env, { fetch: (u, i) => f(u, i), now: Date.now });
   if (!user) return json({ error: "sign in first" }, 401);
   if (op === "start") return json({ url: authUrl(env.GOOGLE_CLIENT_ID, await signState(user.id, env.GOOGLE_CLIENT_SECRET), redirect) });
+  if (op === "sync") {
+    const r = await hub(user.id).fetch(new Request("https://band/sync", { method: "POST", headers: { "content-type": "application/json" }, body: "{}" }));
+    // A connected band names its owner for Tempo (first one wins; BAND_OWNER overrides).
+    const s = (await r.clone().json().catch(() => ({}))) as { connected?: boolean };
+    if (s.connected) await hub("_owner").fetch(new Request("https://band/owner", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ id: user.id }) }));
+    return r;
+  }
   return hub(user.id).fetch(new Request(`https://band/${op}${url.search}`, { method: req.method === "POST" ? "POST" : "GET", headers: { "content-type": "application/json" }, body: req.method === "POST" ? "{}" : undefined }));
 }
 

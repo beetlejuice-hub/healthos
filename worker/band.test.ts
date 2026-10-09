@@ -307,6 +307,26 @@ describe("/api/band routes", () => {
     expect(await status(hubs.get("u1")!)).toMatchObject({ connected: false });
   });
 
+  it("wake (PLAN 56): Tempo's key only; nothing until a connected band has synced; then the owner's morning", async () => {
+    const { e, f } = world();
+    const k = { ...e, TEMPO_KEY: "tk" as string | undefined, BAND_OWNER: undefined as string | undefined };
+    const wake = (env2: typeof k, token = "tk") => handleBand(req("/api/band/wake?day=2026-10-07&tz=120", "GET", token), env2, f);
+    // No key set on the server, or the wrong one: refused — even for a signed-in person's token.
+    expect((await wake({ ...k, TEMPO_KEY: undefined })).status).toBe(401);
+    expect((await wake(k, "good")).status).toBe(401);
+    expect((await wake(k, "tk-")).status).toBe(401);
+    // Right key, no band yet: no wake time, not an error.
+    expect(await (await wake(k)).json()).toEqual({ wokeAt: null });
+    // u1 connects and syncs: the fake Google's night ends 05:10Z = 07:10 in Budapest.
+    const { url } = (await (await handleBand(req("/api/band/start", "POST"), e, f)).json()) as { url: string };
+    const state = encodeURIComponent(new URL(url).searchParams.get("state")!);
+    await handleBand(new Request(`https://healthos.example/api/google/callback?code=good-code&state=${state}`), e, f);
+    await handleBand(req("/api/band/sync", "POST"), e, f);
+    expect(await (await wake(k)).json()).toEqual({ wokeAt: "2026-10-07T05:10:00.000Z", asleepMin: 412 });
+    // BAND_OWNER points elsewhere: that account's band, which has nothing.
+    expect(await (await wake({ ...k, BAND_OWNER: "someone-else" })).json()).toEqual({ wokeAt: null });
+  });
+
   it("status/data/sync/disconnect go to your own hub; unknown paths 404; no secrets → 503", async () => {
     const { e, f, hubs } = world();
     expect((await (await handleBand(req("/api/band/status"), e, f)).json())).toMatchObject({ connected: false });

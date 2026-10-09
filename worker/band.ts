@@ -10,11 +10,15 @@
 
 import type { Storage } from "./push";
 import {
-  GOOGLE_TOKEN, HEALTH_API, dailyFilter, mergeMinutes, perMinute, readDaily, readHeartRate, readSleep, sampleFilter, sleepFilter,
+  GOOGLE_TOKEN, HEALTH_API, dailyFilter, wakeFor, mergeMinutes, perMinute, readDaily, readHeartRate, readSleep, sampleFilter, sleepFilter,
   type HrMinute, type Page, type SleepSession,
 } from "../src/lib/band";
 
-export type BandEnv = { GOOGLE_CLIENT_ID?: string; GOOGLE_CLIENT_SECRET?: string };
+export type BandEnv = {
+  GOOGLE_CLIENT_ID?: string; GOOGLE_CLIENT_SECRET?: string;
+  /** PLAN 56: the key Tempo holds (its HEALTHOS_KEY), and optionally whose band it reads. */
+  TEMPO_KEY?: string; BAND_OWNER?: string;
+};
 type Auth = { refresh: string; access?: string; accessExp?: number; connectedAt: number; broken?: boolean };
 /** `gapSec`: the typical time between two heart-rate readings Google sent, from the last pull with enough of them
  * (owner, 8 Oct: "my fitbit app shows heartbeat log every 15 minute, how do u get a number for every minute??" —
@@ -172,6 +176,15 @@ export class BandHub {
       for (let d = from - (from % DAY); d <= to; d += DAY) for (const m of (await this.storage.get<HrMinute[]>(`hr:${utcDay(d)}`)) ?? []) if (m[0] >= from && m[0] <= to) hr.push(m);
       const sleep = ((await this.storage.get<SleepSession[]>("sleep")) ?? []).filter((s) => s.end >= from - DAY && s.start <= to);
       return json({ hr, sleep, rhr: (await this.storage.get("rhr")) ?? {}, hrv: (await this.storage.get("hrv")) ?? {}, ...(await this.status()) });
+    }
+    if (path === "wake") {
+      const sleep = (await this.storage.get<SleepSession[]>("sleep")) ?? [];
+      return json(wakeFor(sleep, url.searchParams.get("day") ?? "", Number(url.searchParams.get("tz") ?? 0)) ?? { wokeAt: null });
+    }
+    // The "_owner" hub only: whose band Tempo reads. Set once, by the first account that syncs a connected band.
+    if (path === "owner") {
+      if (req.method === "POST" && typeof body.id === "string" && !(await this.storage.get("owner"))) await this.storage.put("owner", body.id);
+      return json({ id: (await this.storage.get<string>("owner")) ?? null });
     }
     if (path === "disconnect") {
       const a = await this.auth();
