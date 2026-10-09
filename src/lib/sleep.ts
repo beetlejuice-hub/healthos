@@ -188,14 +188,15 @@ export const MIN_SIDE = 5;
  * Nights with a thing against nights without it, for every factor × outcome. How sure: shuffle which nights had the
  * thing (2,000 times) and see how often a difference this big turns up anyway. With ~48 cells tried at once, "clear"
  * needs p < 0.002 and "likely" p < 0.02 — so a grid of pure chance comes up clear about once in ten grids, not every time.
+ * The Heart page passes its own columns (lib/heart HEART_OUTCOMES) and keeps these rows, so the two grids agree.
  */
-export function goesWith(ns: Night[], evs: Evening[], opts: { perms?: number; seed?: number } = {}): Cell[] {
+export function goesWith(ns: Night[], evs: Evening[], opts: { perms?: number; seed?: number; factors?: Factor[]; outcomes?: Outcome[] } = {}): Cell[] {
   const perms = opts.perms ?? 2000; let seed = opts.seed ?? 7;
   const rnd = () => { seed = (seed * 1103515245 + 12345) % 2147483648; return seed / 2147483648; };
   const out: Cell[] = [];
-  for (const f of FACTORS) {
+  for (const f of opts.factors ?? FACTORS) {
     const has = ns.map((n, i) => f.has(n, evs[i]));
-    for (const o of OUTCOMES) {
+    for (const o of opts.outcomes ?? OUTCOMES) {
       const pairs: [boolean, number][] = []; ns.forEach((n, i) => { const v = o.of(n, evs[i]); if (v != null && Number.isFinite(v)) pairs.push([has[i], v]); });
       const nWith = pairs.filter((p) => p[0]).length, nWithout = pairs.length - nWith;
       if (nWith < MIN_SIDE || nWithout < MIN_SIDE) { out.push({ factor: f.id, outcome: o.id, nWith, nWithout, diff: null, p: null, sure: "too few", toward: null }); continue; }
