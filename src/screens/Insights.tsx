@@ -41,7 +41,7 @@ const PAGE_SUB: Record<string, string> = {
   heart: "One day against your usual, each morning's resting heart rate and HRV, and what goes with them moving.",
   sleep: "Your own morning rating, and the band's nights.",
   mind: "How you felt, when, and around what.",
-  intake: "What you ate, and your weight.",
+  intake: "What you ate and drank, and your weight.",
   training: "What you trained, and what you took.",
   connections: "What goes with better or worse days — with how sure each one is.",
   data: "How complete the picture is, and how the numbers are made.",
@@ -65,6 +65,8 @@ export function Insights() {
   const now = useNow(60_000);
   const s = useStore((x) => x);
   const band = useBand().data;
+  // With the band's nights the Sleep page is the band's (components/Sleep.tsx); the old rating panels are its fallback.
+  const bandNights = !!band?.sleep.some((x) => !x.nap);
   const today = localDay(now);
   const data = useMemo(() => lanes(s.entries, s.workouts, s.supplements, s.settings, now), [s.entries, s.workouts, s.supplements, s.settings, now]);
   const facts = useMemo(() => dailyFacts(s.entries, s.workouts, s.settings, addDays(today, -89), today), [s.entries, s.workouts, s.settings, today]);
@@ -166,7 +168,7 @@ export function Insights() {
             <button type="button" aria-pressed={!cmp} onClick={() => setMode(false)}>Read</button>
             <button type="button" aria-pressed={cmp} onClick={() => setMode(true)}>Compare</button>
           </div>}
-          {!nothing && (!shown || PERIOD_PAGES.has(shown)) && <div className="iseg" role="group" aria-label="Period for the charts">
+          {!nothing && (!shown || (PERIOD_PAGES.has(shown) && !(shown === "sleep" && bandNights))) && <div className="iseg" role="group" aria-label="Period for the charts">
             {([[7, "7 days"], [30, "30 days"], [84, "12 weeks"]] as const).map(([n, l]) => <button type="button" key={n} aria-pressed={period === n} onClick={() => setPeriod(n)}>{l}</button>)}
           </div>}
         </div>
@@ -182,7 +184,7 @@ export function Insights() {
       {!nothing && <Connections days={gdays} />}
       {!nothing && <div data-sec="connections" className="sec-wrap"><Noticed report={report} /><WorthALook items={scouted} onShow={showOnGraph} /></div>}
       {!nothing && <SleepNights data={data} band={band} now={now} entries={s.entries} halfLifeMin={s.settings.halfLifeMin} />}
-      {!nothing && <Body days={gdays} period={period} now={now} />}
+      {!nothing && <Body days={gdays} period={period} now={now} bandNights={bandNights} />}
       {!nothing && (has.sets || has.supps) && <>
         <div className="gl-group" id="ins-training" data-sec="training"><h2>Training &amp; stack</h2><span>what you trained, what you took</span></div>
         <div className="gl" data-sec="training"><TrainingLoad now={now} period={period} /><SuppMatrix days={gdays} period={period} /></div>

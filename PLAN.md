@@ -715,12 +715,16 @@ email get Dev tools (`#dev`): raw entry editor, generate/remove sample, wipe acc
      fake Google's night after one; BAND_OWNER overrides). Not checked here: e2e/*.cjs (they need /opt/node22's
      Playwright, not on the Mac) — the change is Worker-only. Needs from the owner: `TEMPO_KEY` secret in Cloudflare
      (same value as Tempo's HEALTHOS_KEY), then open HealthOS once so a sync names the band's owner.
-57. [ ] **Sleep page: the old panels stop repeating it** (claimed 9 Oct — components/Body.tsx, Insights.tsx one prop,
+57. [x] **Sleep page: the old panels stop repeating it** (claimed 9 Oct — components/Body.tsx, Insights.tsx one prop,
    e2e/body.cjs, e2e/sleep.cjs). Owner, 9 Oct: "do 2" (to "remove the old sleep panels from Body: they repeat what's on
    the Sleep page now"). Checked first: with the band, the rating (per night, against your range, in the grid) and
    caffeine at bed (grid, last night's chart) are on the new page — the old panels repeat them. Without band nights the
    new page hides itself, so the old rating + caffeine panels stay as the fallback there; "Drinks per week" isn't on
    the new page at all, so it moves to Food & body instead of going.
+   - **Done (9 Oct).** With band nights the Sleep page is only the band's (and the header's 7 / 30 / 12-week switch is
+     hidden there — the page has its own 14 / 30 / 90 nights); without them the old rating + caffeine panels show as
+     before. Drinks per week is under Food & body. Checked: e2e/sleep.cjs (band: old panels and the header switch gone,
+     drinks on Food & body), e2e/body.cjs (no band: the old panels, with the switch), full suite 681 PASS.
 58. [ ] **Insights → Mind, redesigned** (claimed 9 Oct — canvas first; components/Mind.tsx, lib/mind.ts after the
    owner picks). Owner, 9 Oct: "do 3" (design the Mind page next). Phase 1: 2–3 directions on the canvas, laptop +
    phone, from fake check-ins shaped like his.

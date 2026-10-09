@@ -29,7 +29,8 @@ const { chromium, APP, OUT, handle } = require('./harness.cjs');
     check(name + ': sleep rating night by night', /You rated your sleep \d\.\d\/10 on average over \d+ nights/.test(sleep));
     check(name + ': a bar per rated night', await pg.locator('.gl-sleep path').count() >= 25);
     check(name + ': caffeine tiers counted', /\d+ low, \d+ possible, \d+ higher nights/.test(await pg.locator('.gl-caf').innerText()));
-    check(name + ': drinks per week', /(Average \d+(\.\d)? a week|Log drinks)/.test(await pg.locator('.gl-drinks').innerText()));
+    check(name + ': no band: the rating and caffeine panels are the Sleep page, with its period', await pg.locator('[data-sec="sleep"] .gl-sleep').isVisible() && await pg.locator('[aria-label="Period for the charts"]').isVisible());
+    check(name + ': drinks per week, under Food & body', /(Average \d+(\.\d)? a week|Log drinks)/.test(await pg.locator('[data-sec="intake"] .gl-drinks').innerText()));
     await pg.goto(APP + '#insights/intake'); await pg.waitForTimeout(300);
     const kcal = await pg.locator('.gl-kcal').innerText();
     check(name + ': calories against the goal, protein per kg', /Averaging [\d,]+ kcal \(goal [\d,]+/.test(kcal) && /g\/kg/.test(kcal));
@@ -37,7 +38,7 @@ const { chromium, APP, OUT, handle } = require('./harness.cjs');
     check(name + ': weight trend in kg a week, with its range', /kg a week \(95% range/.test(wt));
     check(name + ': old panels gone', !(await pg.locator('text=Today so far').count()) && !(await pg.locator('h2:has-text("Caffeine and alcohol")').count()));
     check(name + ': page never scrolls sideways', await pg.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth));
-    for (const c of ['sleep', 'caf', 'drinks', 'kcal', 'weight']) { await pg.goto(APP + '#insights/' + (c === 'kcal' || c === 'weight' ? 'intake' : 'sleep')); await pg.locator('.gl-' + c).screenshot({ path: OUT + `body-${c}-${name}.png` }); }
+    for (const c of ['sleep', 'caf', 'drinks', 'kcal', 'weight']) { await pg.goto(APP + '#insights/' + (c === 'kcal' || c === 'weight' || c === 'drinks' ? 'intake' : 'sleep')); await pg.locator('.gl-' + c).screenshot({ path: OUT + `body-${c}-${name}.png` }); }
     await ctx.close();
   }
   console.log('errors: ' + JSON.stringify(errs)); await b.close();

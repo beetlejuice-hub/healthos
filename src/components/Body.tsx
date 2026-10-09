@@ -1,7 +1,8 @@
 /**
- * Insights → Sleep, and Intake & body (approved prototype v2, phase 5a). Your sleep rating night by
- * night with what happened that evening, caffeine left at bedtime, drinks per week, calories and
- * macros per day, and the weight trend. Ring/watch panels (stages, HRV) join once one is connected.
+ * Insights → Sleep without a band, and Intake & body (approved prototype v2, phase 5a). Your sleep rating night by
+ * night with what happened that evening and caffeine left at bedtime — only when there are no band nights: with the
+ * band, the Sleep page (components/Sleep.tsx) shows both and these would repeat it (owner, 9 Oct: "do 2"). Drinks per
+ * week, calories and macros per day, and the weight trend under Food & body.
  * Numbers from lib/body, lib/connections, lib/tdee, lib/nutrition; this file only draws.
  */
 
@@ -37,13 +38,14 @@ function Panel({ cls, kick, title, ans, meta, foot, children }: { cls: string; k
   );
 }
 
-export function Body({ days, period, now }: { days: GlanceDay[]; period: number; now: number }) {
+export function Body({ days, period, now, bandNights }: { days: GlanceDay[]; period: number; now: number; bandNights: boolean }) {
   const list = useMemo(() => days.slice(-period - 1), [days, period]);
   const ns = useMemo(() => nights(list), [list]);
   const rated = ns.filter((n) => n.rating != null), hasCaf = ns.some((n) => n.cafBed != null), hasFood = list.some((d) => d.kcal != null);
+  const hasDrinks = days.some((d) => (d.drinks ?? 0) > 0);
   const entries = useStore((s) => s.entries);
   const hasWeight = entries.some((e) => e.kind === "weight");
-  const sleepGroup = rated.length > 0 || hasCaf;
+  const sleepGroup = !bandNights && (rated.length > 0 || hasCaf);
   return (
     <>
       {sleepGroup && <>
@@ -51,13 +53,13 @@ export function Body({ days, period, now }: { days: GlanceDay[]; period: number;
         <div className="gl" data-sec="sleep">
           {rated.length > 0 && <SleepPanel all={days} ns={ns} />}
           {hasCaf && <CaffeinePanel ns={ns} />}
-          {hasCaf && <DrinksPanel days={days} period={period} />}
         </div>
       </>}
-      {(hasFood || hasWeight) && <>
-        <div className="gl-group" id="ins-intake" data-sec="intake"><h2>Intake &amp; body</h2><span>food and weight</span></div>
+      {(hasFood || hasWeight || hasDrinks) && <>
+        <div className="gl-group" id="ins-intake" data-sec="intake"><h2>Intake &amp; body</h2><span>food, drinks and weight</span></div>
         <div className="gl" data-sec="intake">
           {hasFood && <KcalPanel list={list.slice(-period)} />}
+          {hasDrinks && <DrinksPanel days={days} period={period} />}
           {hasWeight && <WeightPanel period={period} now={now} />}
         </div>
       </>}
