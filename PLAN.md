@@ -741,4 +741,14 @@ email get Dev tools (`#dev`): raw entry editor, generate/remove sample, wipe acc
      energy against hours asleep (+1.0 per hour, clear). Found while checking: focus came up "likely" through the day
      with nothing planted — four feelings tested at once now need a 4× stricter bar; the week heat map compared with a
      median of whole numbers (7.0) so nearly all of it read "below" — average now. Every board rendered at its width,
-     no label past its box. Waiting on his pick.
+     no label past its box.
+   - **Owner, 9 Oct: "yea lets do it"** — to "C, with A's calendar under it". Building it (claimed 9 Oct — lib/mind.ts +
+     mind.test.ts, new components/MindPage.tsx, Sleep.tsx's `GoesWith` takes rows too, Insights.tsx one line, index.css
+     `.mp-*`, new e2e/mindpage.cjs). Phases, each landed on its own:
+     1. lib/mind.ts: the grid's rows (last night / this morning / the evening before / the day) and columns (the day's
+        mood, energy, stress, focus — GlanceDay's, as the rest of the app), this morning's line (only rows known by the
+        morning), a feeling against hours asleep (shuffle test, stricter bar for four feelings), the month's calendar
+        against your usual. Planted-effect tests, and null data that must stay quiet.
+     2. components/MindPage.tsx on top of the Mind page; without band nights only the calendar; the old course /
+        rhythm / patterns panels stay below for now (as Sleep's did) — his call whether they go.
+     3. e2e/mindpage.cjs at laptop + phone width, then live.
