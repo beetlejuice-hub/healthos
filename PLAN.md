@@ -679,7 +679,17 @@ email get Dev tools (`#dev`): raw entry editor, generate/remove sample, wipe acc
      coffee (+4.7 bpm at 50 min vs coffee-free days at that time), around a check-in (+0.7 bpm per stress point,
      planted 0.8), and coming back down after a workout. Checked: each board's numbers recomputed outside the
      canvas, every board rendered in Chromium at its width with no label past its card; A's tiles, week card
-     and C agree (51 bpm resting, 47 ms HRV, 67 awake). Waiting on his pick.
+     and C agree (51 bpm resting, 47 ms HRV, 67 awake).
+   - **Owner, 9 Oct: "ok do"** — to the recommendation "C with A's one-day chart on top". Building it (claimed 9 Oct —
+     new lib/heart.ts + heart.test.ts, new components/Heart.tsx replacing components/HeartEffects.tsx, Insights.tsx one
+     line, index.css `.hp-*`, e2e/heart.cjs). Phases, each landed on its own:
+     1. lib/heart.ts: each morning's resting HR / HRV (the band's) and each day's awake average (asleep, workouts and
+        the hour after left out); the grid reuses lib/sleep's evenings + goesWith with heart columns (resting HR, HRV,
+        next day's awake average) so its rows match the Sleep page's; heart rate around a check-in against stress
+        given (shuffle test). Planted-effect tests, and null data that must stay "not clear".
+     2. components/Heart.tsx: one day (‹ › days, heart rate vs your usual band, what you did on top, three numbers),
+        then the mornings, the grid, after coffee + after a workout (lib/hrusual, unchanged), around a check-in.
+     3. e2e/heart.cjs at laptop + phone width, then live.
 56. [ ] **Wake time for Tempo** (claimed 9 Oct by the Tempo session — worker/index.ts handleBand, worker/band.ts,
    lib/band.ts `wakeFor`). Owner: "do it". `GET /api/band/wake?day=YYYY-MM-DD&tz=<min east of UTC>`,
    `Authorization: Bearer <TEMPO_KEY>` (secret, same value as Tempo's `HEALTHOS_KEY`) → `{ wokeAt, asleepMin }` from
