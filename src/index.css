@@ -698,6 +698,9 @@ a { color: inherit; }
 .hn-note input { width: 100%; border: 0; border-radius: 10px; padding: 10px 12px; background: var(--c-card-2); color: var(--c-ink); font-size: 15px; }
 .hn-doing { display: grid; gap: 6px; padding-top: 4px; border-top: 1px solid #ffffff0d; }
 .hn-tags { display: flex; flex-wrap: wrap; gap: 6px; }
+.hn-slept { display: flex; align-items: center; justify-content: space-between; gap: 10px; font-size: 13.5px; color: var(--c-ink-2); }
+.hn-slept b { color: var(--c-ink); font-weight: 600; }
+.hn-slept button { border: 0; border-radius: 999px; min-height: 36px; padding: 6px 14px; background: var(--c-card-2); color: var(--c-ink); font-size: 13px; font-weight: 600; }
 .hn-tags button { border: 0; border-radius: 999px; padding: 7px 12px; background: var(--c-card-2); color: var(--c-ink); font-size: 13px; font-weight: 600; }
 .hn-tags button[aria-pressed="true"] { background: var(--c-ink); color: var(--c-bg); }
 .hn-tags .hn-more { background: transparent; color: var(--c-ink-2); box-shadow: inset 0 0 0 1px #ffffff22; }

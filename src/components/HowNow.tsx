@@ -37,6 +37,7 @@ export function HowNow({ now, always = false }: { now: number; always?: boolean 
   const [closedId, setClosedId] = useState<string | null>(null);
   const [more, setMore] = useState(false);
   const [own, setOwn] = useState("");
+  const [sleepEdit, setSleepEdit] = useState(false);
 
   const last = latestFeel(entries);
   const open = last && now - last.at < OPEN_MS && now >= last.at ? last : undefined;
@@ -74,7 +75,10 @@ export function HowNow({ now, always = false }: { now: number; always?: boolean 
     if (night) act.updateEntry(night.id, patch as Partial<Entry>);
     else act.addEntry({ kind: "sleep", at: Date.now(), ...patch });
   };
-  const sleepOpen = morning && (!night || now - night.at < OPEN_MS || again);
+  // Asked once a morning (owner, 9 Oct: "i logged my sleep score … now it asks again when i click log again"): open until
+  // it's rated, and for a moment after to adjust; from then on one line you can tap to change — "Rate again" is for feelings.
+  const sleepOpen = morning && (!night || night.rating == null || now - night.at < OPEN_MS || sleepEdit);
+  const sleptLine = morning && !sleepOpen && night?.rating != null;
 
   const order = useMemo(() => doingOrder(entries, now), [entries, now]);
   const ticked = open?.doing ?? [];
@@ -97,6 +101,8 @@ export function HowNow({ now, always = false }: { now: number; always?: boolean 
   return (
     <div className="card hownow" id="feel">
       <h3>How now? <span>{open ? "saved as you tap" : last ? `last ${clock(last.at)}` : "tap or slide any you want to log"}</span></h3>
+      {sleptLine && <div className="hn-slept"><span>Last night <b>{night!.rating} / 10</b>{night!.slow ? " · slow to fall asleep" : ""}</span>
+        <button type="button" aria-label="Change last night's sleep" onClick={() => setSleepEdit(true)}>change</button></div>}
       {sleepOpen && <div className="hn-sleep">
         <FeelSlider label="Sleep" name="sleep" value={night?.rating} word={sleepWord} color="var(--ok)" empty="last night" onChange={(n) => rateSleep({ rating: n })} />
         <div className="hn-tags"><button type="button" aria-pressed={!!night?.slow} onClick={() => rateSleep({ slow: !night?.slow })}>took long to fall asleep</button></div>
