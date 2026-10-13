@@ -19,12 +19,11 @@ import { SectionBar, TABS } from "../components/SectionBar";
 import { Tip } from "../components/Tip";
 import { Top } from "../components/Top";
 import { Coverage, Methods, SuppMatrix, TrainingLoad } from "../components/Stack";
+import { TrainingPage } from "../components/TrainingPage";
 import { glanceDays } from "../lib/glance";
 import { LineChart } from "../components/Charts";
-import { e1rmHistory, suggestNext } from "../lib/training";
 import type { Range } from "../lib/stats";
-import { addDays, atMinute, dayLabel, localDay, DAY } from "../lib/time";
-import type { EntryOf } from "../lib/types";
+import { addDays, atMinute, dayLabel, localDay } from "../lib/time";
 import { useNow } from "./Today";
 import { notice, WINDOW_DAYS, type Report } from "../lib/findings";
 import { StackCheckPanel } from "../components/StackCheck";
@@ -133,7 +132,7 @@ export function Insights() {
     };
   }, [s.entries, facts]);
   const locked: [string, string][] = [
-    !has.strength && ["Strength", "log the same exercise in two workouts"],
+    !has.strength && ["Your lifts", "log the same exercise in three workouts"],
     !has.sets && ["Training load", "log a workout"],
     !has.supps && ["Supplements", "tick your stack on Today"],
   ].filter((x): x is [string, string] => !!x);
@@ -189,12 +188,12 @@ export function Insights() {
       {!nothing && <div data-sec="connections" className="sec-wrap"><Noticed report={report} /><WorthALook items={scouted} onShow={showOnGraph} /></div>}
       {!nothing && <SleepNights data={data} band={band} now={now} entries={s.entries} halfLifeMin={s.settings.halfLifeMin} />}
       {!nothing && <Body days={gdays} period={period} now={now} bandNights={bandNights} />}
+      {!nothing && has.sets && <TrainingPage now={now} />}
       {!nothing && (has.sets || has.supps) && <>
         <div className="gl-group" id="ins-training" data-sec="training"><h2>Training &amp; stack</h2><span>what you trained, what you took</span></div>
         <div className="gl" data-sec="training"><TrainingLoad now={now} period={period} /><SuppMatrix days={gdays} period={period} /></div>
       </>}
       <div className="pgrid" data-sec="training">
-        {has.strength && <Strength now={now} />}
         <DoseEffects />
         <SuppAfter band={band} data={data} />
         <Experiments />
@@ -279,45 +278,7 @@ function CompareBars({ c }: { c: Extract<NonNullable<Report["found"][number]["ch
 
 /* ------------------------------------------------------------------ strength */
 
-const PALETTE = ["var(--hr)", "var(--gym)", "var(--caf)", "var(--fat)", "var(--kcal)", "var(--supp)"];
 
-function Strength({ now: nowMs }: { now: number }) {
-  const entries = useStore((s) => s.entries);
-  const templates = useStore((s) => s.templates);
-  const sets = useMemo(() => entries.filter((e): e is EntryOf<"set"> => e.kind === "set"), [entries]);
-  const exercises = useMemo(() => {
-    const count = new Map<string, Set<string>>();
-    sets.forEach((s) => count.set(s.exercise, (count.get(s.exercise) ?? new Set()).add(s.workoutId)));
-    return [...count.entries()].filter(([, w]) => w.size >= 2).sort((a, b) => b[1].size - a[1].size).slice(0, 6).map(([e]) => e);
-  }, [sets]);
-  if (!exercises.length) return <section className="p w12"><h2>Strength <span>estimated 1-rep max</span></h2><div className="needs">Log the same exercise in two workouts to start seeing strength trends.</div></section>;
-  const hist = exercises.map((e) => e1rmHistory(sets, e));
-  const first = Math.min(...hist.map((h) => h[0].at)), lastT = nowMs;
-  const allPct = hist.flatMap((h) => h.map((x) => (x.e1rm / h[0].e1rm) * 100));
-  const target = (ex: string) => templates.flatMap((t) => t.exercises).find((x) => x.name === ex)?.reps ?? 8;
-  return (
-    <section className="p w12">
-      <h2>Strength <span>estimated 1-rep max (Epley)</span></h2>
-      <div className="twocol">
-        <div className="sub"><h3>e1RM, % of where each lift started</h3>
-          <LineChart label="Estimated one-rep max over time, as a percentage of the first session" series={hist.map((h, i) => ({ pts: h.map((x) => [x.at, (x.e1rm / h[0].e1rm) * 100] as [number, number]), color: PALETTE[i], end: true }))}
-            lo={Math.floor(Math.min(95, ...allPct))} hi={Math.ceil(Math.max(110, ...allPct))} xs={[first, lastT]} yfmt={(v) => `${Math.round(v)}%`} xlabels={[[first, dayLabel(first).slice(4)], [lastT, "now"]]} />
-          <div style={{ display: "flex", flexWrap: "wrap", gap: "4px 12px" }}>{exercises.map((e, i) => <span key={e} className="muted" style={{ fontSize: 11.5 }}><i style={{ display: "inline-block", width: 10, height: 3, background: PALETTE[i], verticalAlign: "middle", marginRight: 5 }} />{e}</span>)}</div>
-        </div>
-        <div className="sub tw"><h3>Lifts</h3><table><tbody>
-          <tr><th>Lift</th><th className="n">Last top set</th><th className="n">e1RM</th><th className="n">vs 4 wk</th><th className="n">Next</th></tr>
-          {exercises.map((e, i) => {
-            const h = hist[i], now = h[h.length - 1], old = [...h].reverse().find((x) => x.at <= nowMs - 28 * DAY) ?? h[0];
-            const lastW = sets.filter((s) => s.workoutId === now.workoutId && s.exercise === e);
-            const nx = suggestNext(lastW, target(e));
-            return <tr key={e}><td>{e}</td><td className="n">{now.kg} × {now.reps}</td><td className="n">{f1(now.e1rm)}</td><td className="n">{sgn(now.e1rm - old.e1rm)}</td><td className="n">{nx ? `${nx.kg} × ${nx.reps}` : "—"}</td></tr>;
-          })}
-        </tbody></table>
-        <p className="muted" style={{ margin: 0, fontSize: 12 }}>Next = double progression: +2.5 kg once every set of the last session hit the target reps.</p></div>
-      </div>
-    </section>
-  );
-}
 
 /* ------------------------------------------------------------------ supplements */
 

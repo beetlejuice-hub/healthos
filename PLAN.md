@@ -810,7 +810,21 @@ email get Dev tools (`#dev`): raw entry editor, generate/remove sample, wipe acc
      6 sessions", nothing else), carbs-before scatter. **C · what training goes with afterwards:** grid (heavy → next
      morning HRV −5.7 clear; nothing else), each week's kg lifted next to energy, heart rate back to usual after sessions.
      Found while building: at 8 weeks (25 sessions) even planted effects only reach "likely" — the page needs ~12 weeks.
-     Waiting on the owner's pick.
+     **Owner, 13 Oct: "I like all of them … looks like all serve a diff thing" → "go".** All three, one page (Insights →
+     Training), A on top, then B, then C; B and C say how many sessions they still need until they have them. Each lands
+     on its own. (claimed 13 Oct — lib/liftstrength, components/TrainingPage, Insights training page; A replaces the old
+     Strength panel, the weekly sets heatmap stays below as the history)
+     - [x] A · your lifts — done 13 Oct (lib/liftstrength, components/TrainingPage): this week (sessions and working
+       sets against the median of the 4 weeks before, strength against your trends, the next template with last time's
+       sets → double progression), the four most-trained lifts (est. 1-rep max per session, its line, "+N kg in 12
+       weeks"), the last 8 sessions as ±% against your lines (with kg lifted and felt before → after from check-ins),
+       working sets per muscle (usual week, this week's tick, the 10–20 zone). Replaces the old Strength panel; the
+       weekly sets heatmap stays below. Checked: liftstrength.test (planted +0.6 %/week found as the line's gain;
+       planted good sessions +3.5 % found; warm-ups never count; Monday weeks; no "usual" without 4 weeks behind it),
+       e2e/training.cjs at 390 and 1280 px. Found on the way: a good day that always falls on the same template is
+       absorbed by that lift's own line — by design (the line is the lift's normal), worth knowing for B.
+     - [ ] B · what goes with a strong session ← next
+     - [ ] C · what training goes with afterwards
 65. [ ] **Noticing, and digests** — owner: "App should have a pretty complex n smart system of noticing patterns especially
    focusing on sleep and focus" and "AI should look at data at eod, eow, eom, and make suggestions, summaries, etc, even
    make graphs or like interesting notices". The grids (Sleep, Heart, Mind) already test what goes with sleep and focus;

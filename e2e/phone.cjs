@@ -71,7 +71,8 @@ const visibleSecs = (pg) => pg.evaluate(() => [...new Set([...document.querySele
       const labs = await pg.locator('.gl-load svg text').evaluateAll((ts) => ts.filter((t) => /^\d+ \w{3}$/.test(t.textContent)).map((t) => t.getBBox()).map((r) => [r.x, r.x + r.width]));
       check(`phone: Training load week labels don't overlap (${labs.length})`, labs.length >= 2 && labs.every((r, i) => !i || r[0] >= labs[i - 1][1] + 2));
       await pg.locator('.gl-load').screenshot({ path: OUT + 'phone-load.png' });
-      const sizes = await pg.locator('.mini-chart svg text').evaluateAll((ts) => ts.map((t) => t.getBoundingClientRect().height).filter((h) => h > 0)); // on-screen ones (Noticed's are on another tab)
+      // the lift cards' charts (PLAN 64 — they replaced the old Strength mini-chart on this tab)
+      const sizes = await pg.locator('.tp-lift svg text').evaluateAll((ts) => ts.map((t) => t.getBoundingClientRect().height).filter((h) => h > 0));
       check(`phone: small-chart labels are readable, not shrunk (smallest ${Math.min(...sizes).toFixed(1)} px tall)`, sizes.length > 0 && Math.min(...sizes) >= 9);
       // Swipe between tabs.
       await pg.goto(APP + '#insights/week'); await pg.waitForTimeout(400);
