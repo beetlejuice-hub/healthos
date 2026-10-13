@@ -1025,7 +1025,12 @@ below, in his words, grouped; A first (broken or wrong now), then the rest. Item
       rows, 2 clear cells across 20 empty grids (lib/sleep.test); e2e/sleepfood.cjs at 390 px. Kept quick: the columns
       of a row share one set of shuffles, and the shuffle's random numbers are exact 32-bit ones (the old generator
       multiplied past what a double holds) — twice the cells for about the old cost (~30 ms for 30 nights on a laptop).
-   2. *The AI sees every night*, and the evening "Tonight" line (canvas first).
+   2. *The AI sees every night*, and the evening "Tonight" line (canvas first). **AI part done 13 Oct**
+      (lib/ai/nights): every band night it has, one line each — bed, asleep, fell asleep in, woke ×, deep, REM, lowest
+      HR and when, HRV — then the evening before (drinks, caffeine at bed, last meal before bed, kcal from 17:00, a late
+      workout, evening stress, supplements taken or not, last-night tags, the rating). Only what's known: an evening with
+      nothing logged says nothing, not "0 kcal". In every AI call and in Settings → AI → What the AI sees. Checked:
+      ai/nights.test (exact line; from band data + log; under its heading). Not checked live: no AI key yet.
    3. *Phone down* — the one tap at night for scrolling minutes (canvas first).
    4. *Your sleep need and best bedtime window.*
    Open questions for the owner: is "phone down" a tap you'd really do? Which supplements are the sleep ones?

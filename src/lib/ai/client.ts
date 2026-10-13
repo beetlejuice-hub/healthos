@@ -11,6 +11,8 @@ import { notice } from "../findings";
 import { scout } from "../scout";
 import { bodyDays, weightTrend } from "../tdee";
 import { addDays, localDay } from "../time";
+import { nightsForAi } from "./nights";
+import { bandNow } from "../band-client";
 import { buildContext, dayTimeline } from "./context";
 import type { AiAnswer, AiRequest, Task, UsageDoc } from "./tasks";
 import { currentKg } from "../body";
@@ -66,7 +68,9 @@ export function contextNow(state: State = getState(), now = Date.now()): string 
   const report = notice(state.entries, state.goals, now, currentKg(state.entries, state.settings.bodyKg, now), { workouts: state.workouts, supplements: state.supplements, settings: state.settings });
   const patterns = scout(days, state.supplements, (id) => !!state.scout[id]?.dismissed);
   const t = weightTrend(bodyDays(state.entries, addDays(today, -27), today));
-  return buildContext({ state, now, days, findings: report.found, patterns, weight: t ? { kg: t.nowKg, perWeek: t.perDay * 7 } : null });
+  // the band's nights, when the band has sent some (PLAN 88): the AI used to see the ratings but not one night
+  const band = bandNow(), nightsSeen = band ? nightsForAi({ ...state, halfLifeMin: state.settings.halfLifeMin }, band, now) : [];
+  return buildContext({ state, now, days, findings: report.found, patterns, weight: t ? { kg: t.nowKg, perWeek: t.perDay * 7 } : null, nights: nightsSeen });
 }
 
 /** The nightly read-back's context: everything above, plus that day in order with your notes. */

@@ -87,6 +87,8 @@ export async function disconnectBand(): Promise<void> {
 }
 
 /** The newest reading the server has (ms), or null. For "Pull now" to say whether anything new came. */
+/** What the band has sent so far, outside React (the AI's context reads it). */
+export const bandNow = (): BandData | null => state.data;
 export const bandLatest = (): number | null => (state.status && state.status !== "off" ? state.status.latest : null);
 
 export function useBand(): State {

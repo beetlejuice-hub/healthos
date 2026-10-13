@@ -126,13 +126,16 @@ export type ContextInput = {
   findings: Finding[];
   patterns: Pattern[];
   weight?: { kg: number; perWeek: number } | null;
+  /** The band's nights with the evening before each, one line a night (lib/ai/nights, PLAN 88). */
+  nights?: string[];
 };
 
 export function buildContext(input: ContextInput): string {
   const { state, now } = input;
   const base = baseContext(input);
   const engines = moodEngines({ ...state, workouts: state.workouts ?? [] }, now);
-  const extra = engines.length ? `\n## Mood engines (tested numbers)\n${engines.map((l) => `- ${l}`).join("\n")}` : "";
+  const extra = (engines.length ? `\n## Mood engines (tested numbers)\n${engines.map((l) => `- ${l}`).join("\n")}` : "")
+    + (input.nights?.length ? `\n## My nights from the band, newest last (the band's measures, then the evening before)\n${input.nights.map((l) => `- ${l}`).join("\n")}` : "");
   // The journal fills what's left, newest days kept: the oldest go first when it's too long.
   let journal = moodJournal(state, now);
   const room = CONTEXT_MAX - base.length - extra.length - 80;
