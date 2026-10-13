@@ -988,7 +988,7 @@ below, in his words, grouped; A first (broken or wrong now), then the rest. Item
    the plan's answer, × removes an extra, Log → Stack logs too).
 
 ### E · Sleep — brainstorm first
-88. [ ] (claimed 13 Oct — lib/sleep, Sleep/Heart grids, ai/context; phase 1 done) **More from sleep** — "Feel like
+88. [x] (13 Oct — all four phases done) **More from sleep** — "Feel like
    we need better or more about sleep like can ai or app determine more things about sleep based on all the data it gets?"
    and "I'm big on sleep and how it affects me and foods and activities like late might scrolling how it affects sleep
    score deep sleep etc sso can we brainstorm and track that too".
@@ -1047,7 +1047,15 @@ below, in his words, grouped; A first (broken or wrong now), then the rest. Item
       Checked: sleep.test (planted 30+ min → −12 deep, +10 to fall asleep, found; quiet across 20 empty worlds; only
       answered mornings count), e2e/tellmore.cjs at 390 px. Later, if useful: minutes as a dose (a slope) once there
       are enough mornings.
-   4. *Your sleep need and best bedtime window.* ← next (canvas first)
+   4. *Your sleep need and best bedtime window.* **Done 13 Oct** (lib/sleepneed; Mind → "Last night's sleep → that
+      day"): a switch "Hours asleep | Bedtime"; the days in half-hour bands (each day a dot, the band's average a line);
+      the window of neighbouring bands whose next days went best against all the others, shaded, in words: "Energy went
+      best after 7–7½ h asleep: 7.3 vs 6.1 on your other days · likely", "Mood went best on days after a bedtime before
+      00:00". A window, not one band — bedtime's usual shape is a step, which one band can't show. How sure: shuffle
+      which night went with which day and pick the best window again each time (choosing among 21 is counted); the
+      slope's bars (four feelings). Built in place of the scatter (an existing section), not on a canvas — say if you'd
+      rather have it as its own card on the Sleep page. Checked: sleepneed.test (planted peak and step found, step
+      clear in 4 of 4 worlds, 0 clear in 20 empty worlds), e2e/sleepneed.cjs at 390 px.
    Owner's answers, 13 Oct: no "phone down" tap (the morning question instead); sleep supplements: "Rn only magnesium".
 
 ### F · Telling the app more

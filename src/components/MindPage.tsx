@@ -11,7 +11,8 @@ import { loadBandBefore } from "../lib/band-client";
 import type { GlanceDay } from "../lib/glance";
 import type { Lanes } from "../lib/insights";
 import { FEELING_NAMES, mindFactors, mindOutcomes, moodMonth, sleepSlope, thisMorning, type CalDay, type Feeling, type MorningLink } from "../lib/mind";
-import { FACTORS, goesWith, type Evening, type Night } from "../lib/sleep";
+import { clockH, FACTORS, goesWith, type Evening, type Night } from "../lib/sleep";
+import { BAND_MIN, BED_EDGES, bestBand, NEED_MIN_DAYS, SLEEP_EDGES } from "../lib/sleepneed";
 import { tagFactors } from "../lib/lastnight";
 import { atMinute, dayLabel, localDay, DAY } from "../lib/time";
 import type { Entry } from "../lib/types";
@@ -78,26 +79,47 @@ function ThisMorning({ n, e, links, enough, ns }: { n: Night | null; e: Evening 
 
 function SleepAgainst({ ns, byDay, w }: { ns: Night[]; byDay: Map<string, GlanceDay>; w: number }) {
   const [k, setK] = useState<Feeling>("energy");
+  // PLAN 88: hours asleep, or the clock time you went to bed — in half-hour bands, and the window that went best
+  const [by, setBy] = useState<"hours" | "bed">("hours");
   const s = useMemo(() => sleepSlope(ns, (n) => byDay.get(n.day)?.[k] ?? null), [ns, byDay, k]);
-  const name = FEELING_NAMES.find(([x]) => x === k)![1], cw = w - 2, H = 230, L = 34, R = 14, T = 14, B = 24;
-  const xs = s.pts.map((p) => p[0]), x0 = Math.min(5, ...xs.map((x) => Math.floor(x))), x1 = Math.max(9, ...xs.map((x) => Math.ceil(x)));
-  const X = (h: number) => L + ((h - x0) / (x1 - x0)) * (cw - L - R), Y = (v: number) => T + (1 - (v - 1) / 9) * (H - T - B);
-  const mx = xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : 0, my = s.pts.length ? s.pts.reduce((a, p) => a + p[1], 0) / s.pts.length : 0;
-  const words = s.sure === "too few" ? `Needs 10 days with a night from the band and a check-in — ${s.pts.length} so far.`
+  const better = k === "stress" ? -1 : 1;
+  const pts = useMemo(() => ns.flatMap((n) => { const v = byDay.get(n.day)?.[k]; return v == null ? [] : [[by === "hours" ? n.asleep / 60 : clockH(n.bed, n.eve), v] as [number, number]]; }), [ns, byDay, k, by]);
+  const b = useMemo(() => bestBand(pts, by === "hours" ? SLEEP_EDGES : BED_EDGES, by === "hours" ? "hours" : "clock", better), [pts, by, better]);
+  const name = FEELING_NAMES.find(([x]) => x === k)![1], cw = w - 2, H = 250, L = 30, R = 8, T = 18, B = 44;
+  const nB = b.bands.length, colW = (cw - L - R) / nB, xc = (i: number) => L + (i + 0.5) * colW, Y = (v: number) => T + (1 - (v - 1) / 9) * (H - T - B);
+  const inBest = (band: { lo: number; hi: number }) => b.best != null && (b.sure === "clear" || b.sure === "likely") && band.lo >= b.best.lo && band.hi <= b.best.hi;
+  const shade = b.bands.map((band, i) => (inBest(band) ? i : -1)).filter((i) => i >= 0);
+  const f1 = (v: number) => v.toFixed(1);
+  const head = b.sure === "too few" ? `Needs ${NEED_MIN_DAYS} days with a night from the band and a check-in — ${b.n} so far.`
+    : b.sure === "not clear" ? "No clear best window yet — each column is your days so far."
+      : `${name} ${better > 0 ? "went best" : "was lowest"} ${by === "hours" ? `after ${b.best!.label} asleep` : `on days after a bedtime ${b.best!.label}`}: ${f1(b.best!.mean)} vs ${f1(b.rest!)} on your other days · ${b.sure}.`;
+  const slopeWords = s.sure === "too few" ? `Needs 10 days with a night from the band and a check-in — ${s.pts.length} so far.`
     : s.sure === "not clear" ? `No clear link yet: ${sgn(s.slope!)} ${name.toLowerCase()} per hour asleep, which chance alone could give.`
       : `${name} goes with ${sgn(s.slope!)} per hour asleep the night before. How sure: ${s.sure}.`;
+  const two = (label: string) => { const m = label.match(/^(.*?[–]|before|after|under)\s*(.*)$/); return m ? [m[1], m[2]] : [label, ""]; };
   return (
-    <section className="sl-p mp-sleep" aria-label={`${name} against hours asleep the night before`}>
+    <section className="sl-p mp-sleep" aria-label={`${name} against ${by === "hours" ? "hours asleep" : "bedtime"} the night before`}>
       <div className="mp-head"><span className="cmp-k">Last night's sleep → that day</span>
-        <div className="iseg" role="group" aria-label="Feeling">{FEELING_NAMES.map(([x, n]) => <button key={x} type="button" aria-pressed={k === x} onClick={() => setK(x)}>{n}</button>)}</div></div>
-      {s.pts.length > 0 && <svg width={cw} height={H} viewBox={`0 0 ${cw} ${H}`} role="img" aria-label={`Each day a dot: hours asleep the night before against the ${name.toLowerCase()} you gave that day, with the fitted line`}>
+        <div className="mp-toggles">
+          <div className="iseg" role="group" aria-label="Against">{([["hours", "Hours asleep"], ["bed", "Bedtime"]] as const).map(([x, n]) => <button key={x} type="button" aria-pressed={by === x} onClick={() => setBy(x)}>{n}</button>)}</div>
+          <div className="iseg" role="group" aria-label="Feeling">{FEELING_NAMES.map(([x, n]) => <button key={x} type="button" aria-pressed={k === x} onClick={() => setK(x)}>{n}</button>)}</div>
+        </div></div>
+      <p className="mp-best" data-sure={b.sure} data-best={b.best?.label}>{head}</p>
+      {pts.length > 0 && <svg width={cw} height={H} viewBox={`0 0 ${cw} ${H}`} role="img" aria-label={`Each day a dot, in half-hour bands of ${by === "hours" ? "hours asleep" : "bedtime"}, with each band's average ${name.toLowerCase()}`}>
+        {shade.length > 0 && <rect x={L + shade[0] * colW + 2} y={T - 12} width={shade.length * colW - 4} height={H - T - B + 14} rx="6" className="mp-bestband" />}
+        {shade.length > 0 && <text x={L + (shade[0] + shade.length / 2) * colW} y={T - 2} textAnchor="middle" className="hp-t mp-bestlab">best</text>}
         {[2, 4, 6, 8, 10].map((v) => <g key={v}><line x1={L} x2={cw - R} y1={Y(v)} y2={Y(v)} className="he-grid" /><text x={L - 6} y={Y(v) + 3} textAnchor="end" className="hp-t">{v}</text></g>)}
-        {Array.from({ length: x1 - x0 + 1 }, (_, i) => x0 + i).map((h) => <text key={h} x={X(h)} y={H - 6} textAnchor={h === x0 ? "start" : h === x1 ? "end" : "middle"} className="hp-t">{h} h</text>)}
-        {s.pts.map((p, i) => <circle key={i} cx={X(p[0])} cy={Y(p[1])} r={3.6} fill={COL[k]} fillOpacity=".85" stroke="var(--i-panel)" strokeWidth="1.2"><title>{`${dur(p[0] * 60)} asleep · ${name.toLowerCase()} ${p[1].toFixed(1)}`}</title></circle>)}
-        {s.slope != null && <line x1={X(x0 + 0.2)} x2={X(x1 - 0.2)} y1={Y(my + s.slope * (x0 + 0.2 - mx))} y2={Y(my + s.slope * (x1 - 0.2 - mx))} stroke="var(--i-ink)" strokeDasharray="5 4" strokeWidth="1.3" />}
+        {b.bands.map((band, i) => { const [l1, l2] = two(band.label); return (
+          <g key={band.label} data-band={band.label} data-n={band.vals.length}>
+            {band.vals.map((v, q) => <circle key={q} cx={xc(i) + (((q * 37) % 100) / 100 - 0.5) * colW * 0.55} cy={Y(v)} r={3.4} fill={COL[k]} fillOpacity={band.vals.length >= BAND_MIN ? 0.8 : 0.35} stroke="var(--i-panel)" strokeWidth="1"><title>{`${band.label} · ${name.toLowerCase()} ${v.toFixed(1)}`}</title></circle>)}
+            {band.mean != null && band.vals.length >= BAND_MIN && <line x1={xc(i) - colW * 0.34} x2={xc(i) + colW * 0.34} y1={Y(band.mean)} y2={Y(band.mean)} stroke="var(--i-ink)" strokeWidth="2.2" strokeLinecap="round" />}
+            <text x={xc(i)} y={H - B + 16} textAnchor="middle" className="hp-t">{l1}{l2 && <tspan x={xc(i)} dy="11">{l2}</tspan>}</text>
+            <text x={xc(i)} y={H - 4} textAnchor="middle" className="hp-t mp-n">{band.vals.length} d</text>
+          </g>); })}
       </svg>}
-      <p className="he-words" data-sure={s.sure}>{words}</p>
-      <p className="sl-note">Each dot: a day — hours asleep the night before, and the average {name.toLowerCase()} you gave that day. Four feelings to pick from, so it takes more to say "clear".</p>
+      {/* the straight line, when it says something — or when no window stands out (a "best middle" with "no clear trend" under it read as a contradiction) */}
+      {by === "hours" && (s.sure === "clear" || s.sure === "likely" || !(b.sure === "clear" || b.sure === "likely")) && <p className="he-words" data-sure={s.sure}>{slopeWords}</p>}
+      <p className="sl-note">Each dot is a day: {by === "hours" ? "hours asleep the night before" : "bedtime the night before"} against the {name.toLowerCase()} you gave that day; the line, the band's average (from {BAND_MIN} days). "Best" is picked from many windows, and how sure counts that.</p>
     </section>
   );
 }

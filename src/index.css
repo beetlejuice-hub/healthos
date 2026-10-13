@@ -1258,3 +1258,9 @@ a { color: inherit; }
 .stack-row.extra .x { border: 0; background: transparent; color: var(--c-ink-2); font-size: 18px; min-width: 36px; min-height: 36px; }
 .sl-hidden summary { cursor: pointer; }
 .sl-hidden p { margin: 6px 0 0; }
+/* sleep need and best bedtime (PLAN 88) */
+.mp-toggles { display: flex; flex-wrap: wrap; gap: 6px; justify-content: flex-end; }
+.mp-best { margin: 4px 0 0; font-size: 15px; color: var(--i-ink); }
+.mp-best[data-sure="not clear"], .mp-best[data-sure="too few"] { color: var(--i-ink-2); font-size: 14px; }
+.mp-bestband { fill: var(--i-ink); fill-opacity: .07; }
+.mp-bestlab { fill: var(--i-ink-2); }
