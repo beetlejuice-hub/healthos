@@ -39,7 +39,7 @@ export function baseline(facts: DayFacts[]): Finding | null {
 /** Best estimated 1-rep max per session, line over the last 8 weeks, for your most-trained lifts. */
 export function strengthTrends(entries: Entry[], now: number, days = 56, max = 3): Finding[] {
   const from = now - days * DAY, firstDay = localDay(from);
-  const sets = entries.filter((e): e is EntryOf<"set"> => e.kind === "set" && e.at >= from);
+  const sets = entries.filter((e): e is EntryOf<"set"> => e.kind === "set" && !e.warmup && e.at >= from);
   const lifts = [...new Set(sets.map((s) => s.exercise))]
     .map((ex) => ({ ex, h: e1rmHistory(sets, ex) }))
     .filter((x) => x.h.length >= 4 && x.h[x.h.length - 1].at - x.h[0].at >= 14 * DAY)

@@ -1216,3 +1216,15 @@ a { color: inherit; }
 .night-words .nw-h b { color: var(--i-ink); font-weight: 600; }
 .night-words li[data-side="more"] .nw-h b, .night-words li[data-side="less"] .nw-h b { text-decoration: underline; text-decoration-color: var(--i-line-2); text-underline-offset: 3px; }
 .night-words .nw-what { font-size: 12px; color: var(--i-dim); line-height: 1.45; max-width: 70ch; }
+
+/* Planned sets done: Next beside "+ Set 4" — suggested, never forced (PLAN 80). A warm-up row: shown, not counted. */
+.go-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; }
+.go-row .go { min-width: 0; padding: 4px 14px; font-size: 19px; line-height: 1.05; overflow-wrap: anywhere; }
+.go-row .go.alt { font-size: 20px; }
+.set.warm b, .set.warm span, .set.warm i { color: var(--k-dim); }
+
+/* Today → Food: calories burned from the band, against eaten (PLAN 83). */
+.burn { display: grid; gap: 2px; margin-top: 12px; padding-top: 10px; border-top: 1px solid #ffffff12; font-size: 13px; color: var(--c-ink-2); }
+.burn b { color: var(--c-ink); font-weight: 600; }
+.burn i { font-style: normal; color: var(--c-dim); }
+.burn .dimt { font-size: 12px; color: var(--c-dim); }

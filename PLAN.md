@@ -920,18 +920,28 @@ below, in his words, grouped; A first (broken or wrong now), then the rest. Item
    components/NightWords.tsx). Checked: sleep.test, e2e/explain.cjs. Awake 0 on two 8-hour nights: Awake counts only
    after first falling asleep; can't check his real nights from here.
 ### B · Workouts
-80. [ ] **Sets as he does them** — "For sets its 1 warmup 3 w normal weight but sometimes just 3 so makke sure i can do that.
+80. [x] **Sets as he does them** — "For sets its 1 warmup 3 w normal weight but sometimes just 3 so makke sure i can do that.
    And i i decide to do 5 sets i should br able to log all so it recommends me whats next but not forcing to switch
    exercise".
+   Owner, 13 Oct, confirming: "warm up plus 2-3 sets but i should be able to log another set". Done 13 Oct: a warm-up
+   is its own kind of set (lighter, ~half the working weight, 10 reps) — shown as W, never counted in sets done, strength,
+   bests, kg lifted or sets per muscle (training `working`). Learned per exercise: it starts as a warm-up when half of its
+   last 3 sessions had one ("Skip warm-up" one tap — "sometimes just 3"); a new exercise offers "Warm-up first". Planned
+   sets done: "Next: …" and "+ Set 4" side by side — suggested, never forced. Checked: training.test (habit, weight, not
+   counted), e2e/workoutsets.cjs, and the five workout suites unchanged.
 81. [ ] **More exercises, picked by muscle** — "Add more exercises and that i can choose when hitting a muscle- like i
    should do shoulder and i can choose between exercises and machine or dumbbell etc".
 82. [ ] **Strength per muscle group** — "Should also do a muscle group strength average taking in data from diff exercises
    that target same muscle".
-83. [ ] **Calories burned** — "one would assume calories burned are already in the app…pls include". From the band (Google
+83. [x] **Calories burned** — "one would assume calories burned are already in the app…pls include". From the band (Google
    total / active calories) and workouts; into Today's energy balance.
    Research 13 Oct: Google gives `total-calories` (daily roll-up only, per civil day: POST …/total-calories/dataPoints:
    dailyRollUp, {range: {start: {date}, end: {date}}, windowSizeDays: 1} → kcalSum) and `active-energy-burned` (roll-up
    per window). Same permission as steps.
+   Owner, 13 Oct: "lets do it". Done 13 Oct: the Worker pulls Google's daily total calories (12 days back the first time,
+   then the last 3 days; today so far); Today's Food card: "Burned 1,840 so far · band", eaten against it, and yesterday's
+   whole day (lib/burn `balance`, lib/band `readDailyKcal`). Checked: band.test, worker band.test (the request shape from
+   Google's own CLI), burn.test, e2e/burned.cjs. Not checked: Google's real answer — his band after the deploy.
    - Training page and food ↔ strength: #64 (canvas up).
 
 ### C · Food

@@ -8,14 +8,19 @@
  *   already do in their head.
  */
 
-export type LoggedSet = { at: number; workoutId: string; exercise: string; kg: number; reps: number };
+export type LoggedSet = { at: number; workoutId: string; exercise: string; kg: number; reps: number; warmup?: boolean };
+/**
+ * Working sets only. A warm-up is logged and shown, but never counts toward a set count, strength, a best, kg lifted or
+ * sets per muscle (PLAN 80; owner, 13 Oct: "warm up plus 2-3 sets").
+ */
+export const working = <T extends { warmup?: boolean }>(sets: T[]): T[] => sets.filter((s) => !s.warmup);
 
 export const e1rm = (kg: number, reps: number) => (reps <= 1 ? kg : kg * (1 + reps / 30));
 
 /** Best e1RM per workout for one exercise, oldest first. Sets over 12 reps don't count. */
 export function e1rmHistory(sets: LoggedSet[], exercise: string): { at: number; workoutId: string; e1rm: number; kg: number; reps: number }[] {
   const byWorkout = new Map<string, { at: number; workoutId: string; e1rm: number; kg: number; reps: number }>();
-  for (const s of sets) {
+  for (const s of working(sets)) {
     if (s.exercise !== exercise || s.reps > 12 || s.reps < 1 || s.kg <= 0) continue;
     const v = e1rm(s.kg, s.reps);
     const cur = byWorkout.get(s.workoutId);
@@ -120,9 +125,9 @@ export function sameMuscle(exercise: string, skip: string[] = [], max = 6): stri
 }
 
 /** Hard sets per muscle in the given sets. Unknown exercises are counted under their own name. */
-export function setsPerMuscle(sets: { exercise: string }[]): Record<string, number> {
+export function setsPerMuscle(sets: { exercise: string; warmup?: boolean }[]): Record<string, number> {
   const out: Record<string, number> = {};
-  for (const s of sets) {
+  for (const s of working(sets)) {
     const map = MUSCLES[s.exercise] ?? { [s.exercise]: 1 };
     for (const [m, f] of Object.entries(map)) out[m] = (out[m] ?? 0) + f;
   }
@@ -134,7 +139,7 @@ export function setsPerMuscle(sets: { exercise: string }[]): Record<string, numb
  * press its one hand kg or both hand kg in total"). Their kg lifted counts both hands.
  */
 export const isDumbbell = (exercise: string) => /\b(db|dumbbells?)\b/i.test(exercise);
-export const volume = (sets: { kg: number; reps: number; exercise?: string }[]) => sets.reduce((a, s) => a + s.kg * s.reps * (s.exercise && isDumbbell(s.exercise) ? 2 : 1), 0);
+export const volume = (sets: { kg: number; reps: number; exercise?: string; warmup?: boolean }[]) => working(sets).reduce((a, s) => a + s.kg * s.reps * (s.exercise && isDumbbell(s.exercise) ? 2 : 1), 0);
 
 /**
  * Workouts that end themselves (owner: "sessions could easily get forgotten to end"). An open
@@ -192,7 +197,7 @@ export function templateProblems(t: { name: string; exercises: Ex[] }, others: {
 /** The last `n` sessions of one exercise, newest first: the sets, and the best estimated 1RM. */
 export function exerciseHistory(sets: LoggedSet[], exercise: string, n = 5): { workoutId: string; at: number; sets: { kg: number; reps: number }[]; best: number }[] {
   const by = new Map<string, LoggedSet[]>();
-  for (const s of sets) if (s.exercise === exercise) by.set(s.workoutId, [...(by.get(s.workoutId) ?? []), s]);
+  for (const s of working(sets)) if (s.exercise === exercise) by.set(s.workoutId, [...(by.get(s.workoutId) ?? []), s]);
   return [...by.entries()]
     .map(([workoutId, ss]) => ({ workoutId, at: Math.min(...ss.map((s) => s.at)), sets: ss.sort((a, b) => a.at - b.at).map((s) => ({ kg: s.kg, reps: s.reps })), best: Math.max(0, ...ss.filter((s) => s.reps <= 12 && s.kg > 0).map((s) => e1rm(s.kg, s.reps))) }))
     .sort((a, b) => b.at - a.at).slice(0, n);
@@ -211,8 +216,8 @@ const counts = (s: { kg: number; reps: number }) => s.kg > 0 && s.reps > 0 && s.
  * first time you do an exercise (nothing to beat), and never twice for the same number.
  */
 export function isBest(sets: LoggedSet[], set: LoggedSet): boolean {
-  if (!counts(set)) return false;
-  const before = sets.filter((s) => s.exercise === set.exercise && s.at < set.at && counts(s));
+  if (!counts(set) || set.warmup) return false;
+  const before = working(sets).filter((s) => s.exercise === set.exercise && s.at < set.at && counts(s));
   return before.length > 0 && e1rm(set.kg, set.reps) > Math.max(...before.map((s) => e1rm(s.kg, s.reps))) + 1e-9;
 }
 
@@ -220,7 +225,7 @@ export type Summary = { minutes: number; sets: number; volume: number; vsLast: n
 
 /** The finish screen: how long, how much, against the last session of the same day, and new bests. */
 export function sessionSummary(w: { id: string; template: string; startedAt: number }, sets: LoggedSet[], workouts: { id: string; template: string; startedAt: number; endedAt: number | null }[], now: number): Summary {
-  const mine = sets.filter((s) => s.workoutId === w.id);
+  const mine = working(sets).filter((s) => s.workoutId === w.id);
   const prev = [...workouts].filter((x) => x.template === w.template && x.id !== w.id && x.endedAt && x.startedAt < w.startedAt).sort((a, b) => a.startedAt - b.startedAt).pop();
   const prevVol = prev ? volume(sets.filter((s) => s.workoutId === prev.id)) : 0;
   const vol = volume(mine);
@@ -245,7 +250,26 @@ export const WEEKLY_SETS = { low: 5, good: 10, full: 12, high: 20 };
 
 /** Hard sets per muscle group, per week, over the last `weeks` weeks before `now` (secondary muscles count half). */
 export function muscleWeek(sets: { at: number; exercise: string }[], now: number, weeks = 1): Record<MuscleGroup, number> {
-  const recent = sets.filter((s) => s.at <= now && s.at > now - weeks * 7 * 86_400_000);
+  const recent = working(sets as { at: number; exercise: string; warmup?: boolean }[]).filter((s) => s.at <= now && s.at > now - weeks * 7 * 86_400_000);
   const per = setsPerMuscle(recent);
   return Object.fromEntries(MUSCLE_GROUPS.map((m) => [m, Math.round(((per[m] ?? 0) / weeks) * 10) / 10])) as Record<MuscleGroup, number>;
 }
+
+/**
+ * Does this exercise usually start with a warm-up? (PLAN 80; owner, 13 Oct: "1 warmup 3 w normal weight but sometimes just
+ * 3"). Yes when at least half of its last 3 sessions before this workout had one; never done before: no — the first set
+ * offers "Warm-up first" instead, and the habit is learned from there.
+ */
+export function warmsUp(sets: LoggedSet[], exercise: string, notWorkout: string): boolean {
+  const by = new Map<string, { at: number; warm: boolean }>();
+  for (const s of sets) {
+    if (s.exercise !== exercise || s.workoutId === notWorkout) continue;
+    const cur = by.get(s.workoutId) ?? { at: s.at, warm: false };
+    by.set(s.workoutId, { at: Math.min(cur.at, s.at), warm: cur.warm || !!s.warmup });
+  }
+  const last = [...by.values()].sort((a, b) => b.at - a.at).slice(0, 3);
+  return last.length > 0 && last.filter((x) => x.warm).length * 2 >= last.length;
+}
+
+/** A warm-up's weight: about half the working weight, to the 2.5 kg (1 kg for dumbbells), never below one step. */
+export const warmKg = (workKg: number, exercise: string) => { const step = isDumbbell(exercise) ? 1 : 2.5; return Math.max(step, Math.round((workKg * 0.5) / step) * step); };

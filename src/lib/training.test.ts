@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { dayStats, exerciseHistory, mainMuscle, nextTemplate, sameMuscle, sessionPlan, templateProblems, tidyWorkouts, e1rm, e1rmHistory, setsPerMuscle, suggestNext, volume, isDumbbell } from "./training";
+import { dayStats, exerciseHistory, mainMuscle, nextTemplate, sameMuscle, sessionPlan, templateProblems, tidyWorkouts, e1rm, e1rmHistory, setsPerMuscle, suggestNext, volume, isDumbbell, warmsUp, warmKg, working, isBest } from "./training";
 
 describe("e1rm — Epley", () => {
   it("estimates a one-rep max", () => {
@@ -141,5 +141,32 @@ describe("dumbbells (PLAN 76)", () => {
     expect(["Bench press", "Deadlift", "Lat pulldown"].some(isDumbbell)).toBe(false);
     expect(volume([{ exercise: "DB bench press", kg: 20, reps: 10 }, { exercise: "Bench press", kg: 60, reps: 5 }])).toBe(20 * 10 * 2 + 300);
     expect(volume([{ kg: 20, reps: 10 }])).toBe(200);
+  });
+});
+
+describe("warm-ups (PLAN 80)", () => {
+  const set = (workoutId: string, at: number, kg: number, reps: number, warmup = false) => ({ workoutId, at, exercise: "Bench press", kg, reps, ...(warmup ? { warmup } : {}) });
+  it("shown but never counted: not in kg lifted, strength, bests, or sets per muscle", () => {
+    const ss = [set("a", 1, 40, 10, true), set("a", 2, 80, 5), set("a", 3, 80, 5)];
+    expect(volume(ss)).toBe(800);
+    expect(working(ss)).toHaveLength(2);
+    expect(e1rmHistory([set("a", 1, 100, 1, true), set("a", 2, 80, 5)], "Bench press")[0].kg).toBe(80); // a heavy single as a warm-up isn't a best
+    expect(isBest([set("a", 1, 80, 5)], set("b", 9, 100, 3, true))).toBe(false);
+    expect(setsPerMuscle([{ exercise: "Bench press", warmup: true }, { exercise: "Bench press" }]).Chest).toBe(1);
+  });
+  it("learned per exercise: on when at least half of the last 3 sessions had one; never done → off", () => {
+    expect(warmsUp([], "Bench press", "now")).toBe(false);
+    expect(warmsUp([set("a", 1, 40, 10, true), set("a", 2, 80, 5)], "Bench press", "now")).toBe(true);
+    const three = [set("a", 1, 40, 10, true), set("a", 2, 80, 5), set("b", 10, 80, 5), set("c", 20, 80, 5)];
+    expect(warmsUp(three, "Bench press", "now")).toBe(false); // 1 of the last 3: "sometimes just 3"
+    expect(warmsUp([...three, set("d", 30, 40, 10, true)], "Bench press", "now")).toBe(false); // last 3: b, c, d — 1 of 3
+    expect(warmsUp([...three, set("d", 30, 40, 10, true), set("e", 40, 40, 10, true)], "Bench press", "now")).toBe(true); // c, d, e — 2 of 3
+    expect(warmsUp([set("now", 1, 40, 10, true)], "Bench press", "now")).toBe(false); // today's doesn't count
+  });
+  it("its weight: about half, rounded to the plates", () => {
+    expect(warmKg(80, "Bench press")).toBe(40);
+    expect(warmKg(62.5, "Bench press")).toBe(32.5);
+    expect(warmKg(22, "Incline DB press")).toBe(11);
+    expect(warmKg(2.5, "Bench press")).toBe(2.5);
   });
 });

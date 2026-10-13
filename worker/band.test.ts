@@ -67,6 +67,14 @@ function google(opts: { hr?: unknown[]; pageSize?: number; expireAccessOnce?: bo
         const size = opts.stepsPage ?? 1000, at = Number(pageToken || 0);
         return Response.json({ rollupDataPoints: wins.slice(at, at + size), ...(at + size < wins.length ? { nextPageToken: String(at + size) } : {}) });
       }
+      if (type === "total-calories" && url.pathname.endsWith(":dailyRollUp")) {
+        // like Google: one point per local day in [start, end), today's so far
+        const { range } = jb as { range: { start: { date: { year: number; month: number; day: number } }; end: { date: { year: number; month: number; day: number } } } };
+        const d0 = Date.UTC(range.start.date.year, range.start.date.month - 1, range.start.date.day), d1 = Date.UTC(range.end.date.year, range.end.date.month - 1, range.end.date.day);
+        const pts = [];
+        for (let d = d0; d < d1 && d <= T0; d += 86_400_000) { const dt = new Date(d); const date = { year: dt.getUTCFullYear(), month: dt.getUTCMonth() + 1, day: dt.getUTCDate() }; pts.push({ civilStartTime: { date }, civilEndTime: { date }, totalCalories: { kcalSum: String(2300 + dt.getUTCDate()) } }); }
+        return Response.json({ rollupDataPoints: pts });
+      }
       if (type === "sleep") return Response.json({ dataPoints: [{ name: "users/me/dataTypes/sleep/dataPoints/n1", sleep: { interval: { startTime: "2026-10-06T21:40:00Z", endTime: "2026-10-07T05:10:00Z" }, summary: { minutesAsleep: 412 } } }] });
       if (type === "daily-resting-heart-rate") return Response.json({ dataPoints: [{ dailyRestingHeartRate: { date: { year: 2026, month: 10, day: 7 }, beatsPerMinute: 54 } }] });
       if (type === "daily-heart-rate-variability") return Response.json({ dataPoints: [{ dailyHeartRateVariability: { date: { year: 2026, month: 10, day: 7 }, averageRmssdMilliseconds: 41 } }] });
@@ -286,6 +294,17 @@ describe("BandHub", () => {
     at(T0 + 3 * 3600_000);
     await h.fetch(post("sync"));
     expect(st.alarm()).toBe(T0 + 3 * 3600_000 + PULL_EVERY_MS);
+  });
+
+  it("calories burned (PLAN 83): a daily roll-up, 14 days on the first pull, kept by day and served by data", async () => {
+    const { h, st, g } = setup();
+    await connect(h); await h.alarm();
+    const call = g.health().find((c) => c.url.pathname.endsWith("/total-calories/dataPoints:dailyRollUp"))!;
+    expect(call.json).toEqual({ range: { start: { date: { year: 2026, month: 9, day: 25 } }, end: { date: { year: 2026, month: 10, day: 9 } } }, windowSizeDays: 1 });
+    expect((st.m.get("kcal") as Record<string, number>)["2026-10-07"]).toBe(2307);
+    const d = (await (await h.fetch(new Request(`https://band/data?from=${T0 - 86_400_000}&to=${T0}`))).json()) as { kcal: Record<string, number> };
+    expect(d.kcal["2026-10-06"]).toBe(2306);
+    expect((await status(h)).error).toBeNull();
   });
 
   it("data returns the minutes in range across days, and the nights that touch it", async () => {

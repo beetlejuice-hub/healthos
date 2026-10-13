@@ -11,7 +11,7 @@ import { caffeineAt, latestDoseFor } from "../lib/caffeine";
 import { bedtimeVerdict, CAF_SLEEP, personalSleep, ratedNights, tierOf, tonightsBed, type Personal } from "../lib/caffeine-sleep";
 import { caffeineDoses } from "../lib/insights";
 import { add, byDay, macrosOf, ZERO } from "../lib/nutrition";
-import { atMinute, clock, dayLabel, localDay, MIN } from "../lib/time";
+import { atMinute, clock, dayLabel, localDay, MIN, addDays } from "../lib/time";
 import { go } from "../lib/nav";
 import type { Drink, Entry, EntryOf, Slot } from "../lib/types";
 import { answerSlot, SLOTS, slotsOf } from "../lib/types";
@@ -23,6 +23,8 @@ import { DataCard, EveningRead, NowCard, Pad, Status, UsualPicker, useStackCount
 import { dayNumbers, momentOf } from "../lib/moment";
 import { restDay } from "../lib/programs";
 import { currentKg } from "../lib/body";
+import { balance } from "../lib/burn";
+import { useBand } from "../lib/band-client";
 
 /**
  * The current time, re-read on every render and re-rendered every `ms` while open. Read fresh
@@ -63,6 +65,13 @@ export function Today() {
   const personal = useMemo(() => personalSleep(ratedNights(s.entries, s.settings.halfLifeMin, s.settings.bedMinute)), [s.entries, s.settings.halfLifeMin, s.settings.bedMinute]);
   const cafNow = Math.round(caffeineAt(doses, now, s.settings.halfLifeMin));
   const cafBed = Math.round(caffeineAt(doses.filter((d) => d.at <= now), bed, s.settings.halfLifeMin));
+  // calories burned from the band, today so far and yesterday's whole day (PLAN 83)
+  const bandKcal = useBand().data?.kcal;
+  const burned = bandKcal?.[day] ?? null;
+  const yday = (() => {
+    const y = addDays(day, -1), b = bandKcal?.[y], d = byDay(s.entries).get(y);
+    return b != null && d?.logged ? { ate: d.totals.kcal, burned: b } : null;
+  })();
   const usual = (() => {
     const d = [...byDay(s.entries).values()].filter((x) => x.logged && x.day < day).slice(-14);
     return d.length ? d.reduce((a, x) => a + x.totals.kcal, 0) / d.length : null;
@@ -132,7 +141,7 @@ export function Today() {
 
       <Stack now={now} />
       <CaffeineCard doses={doses} now={now} bed={bed} halfLife={s.settings.halfLifeMin} cafNow={cafNow} cafBed={cafBed} personal={personal} coffeeMg={coffeeMg} />
-      <Fuel totals={totals} goals={s.goals} usual={usual} />
+      <Fuel totals={totals} goals={s.goals} usual={usual} burned={burned} yday={yday} />
       <DataCard>
         <NoticedLine />
         <ScoutLine />
@@ -142,7 +151,7 @@ export function Today() {
   );
 }
 
-function Fuel({ totals, goals, usual }: { totals: { kcal: number; p: number; c: number; f: number }; goals: { kcal: number; p: number; c: number; f: number }; usual: number | null }) {
+function Fuel({ totals, goals, usual, burned, yday }: { totals: { kcal: number; p: number; c: number; f: number }; goals: { kcal: number; p: number; c: number; f: number }; usual: number | null; burned: number | null; yday: { ate: number; burned: number } | null }) {
   const pct = Math.min(1, totals.kcal / goals.kcal);
   return (
     <div className="card" id="fuel">
@@ -164,6 +173,12 @@ function Fuel({ totals, goals, usual }: { totals: { kcal: number; p: number; c: 
           ))}
         </div>
       </div>
+      {/* Calories burned, from the band (PLAN 83) — today so far, and yesterday's whole day */}
+      {burned != null && <div className="burn" data-burned={burned}>
+        <span>Burned <b>{fmt(burned)}</b> so far <i>· band</i></span>
+        <span>Eaten {fmt(totals.kcal)} — {balance(totals.kcal, burned).words} so far</span>
+        {yday && <span className="dimt">Yesterday: ate {fmt(yday.ate)} · burned {fmt(yday.burned)} — {balance(yday.ate, yday.burned).words}</span>}
+      </div>}
     </div>
   );
 }

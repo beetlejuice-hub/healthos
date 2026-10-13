@@ -146,6 +146,32 @@ export function mergeSteps(kept: StepBucket[], fresh: StepBucket[]): StepBucket[
   return [...m.values()].sort((a, b) => a[0] - b[0]);
 }
 
+/**
+ * Calories burned (PLAN 83; owner, 13 Oct: "one would assume calories burned are already in the app…pls include"). Google
+ * gives a day's total only as a daily roll-up, by your local (civil) day, up to 14 days per request:
+ *   POST …/dataTypes/total-calories/dataPoints:dailyRollUp  { range: { start: { date }, end: { date } }, windowSizeDays: 1 }
+ * (the end day not included) → rollupDataPoints[]: { civilStartTime: { date }, …: { kcalSum } }. Today's is so far.
+ */
+const civil = (day: string) => { const [y, m, d] = day.split("-").map(Number); return { date: { year: y, month: m, day: d } }; };
+export function dailyRollUpBody(fromDay: string, toDayExclusive: string, pageToken?: string): string {
+  return JSON.stringify({ range: { start: civil(fromDay), end: civil(toDayExclusive) }, windowSizeDays: 1, ...(pageToken ? { pageToken } : {}) });
+}
+/** The first `kcalSum` anywhere in a point (its type object's name isn't documented). */
+function kcalSum(v: unknown): number | null {
+  const o = obj(v); if (!o) return null;
+  if ("kcalSum" in o) return num(o.kcalSum);
+  for (const x of Object.values(o)) { const k = kcalSum(x); if (k != null) return k; }
+  return null;
+}
+export function readDailyKcal(page: RollUpPage): Record<string, number> {
+  const out: Record<string, number> = {};
+  for (const p of page.rollupDataPoints ?? []) {
+    const day = civilDate(obj(p.civilStartTime)?.date ?? p.date), k = kcalSum(p);
+    if (day && !day.includes("null") && k != null && k >= 0 && k < 20_000) out[day] = Math.round(k);
+  }
+  return out;
+}
+
 // ---- what the app keeps: heart rate per minute ----
 
 /** Samples (every few seconds) → one value per minute: [minute start (ms), average bpm, min, max]. */
@@ -163,14 +189,14 @@ export function mergeMinutes(kept: HrMinute[], fresh: HrMinute[]): HrMinute[] {
 }
 
 /** What the app holds of the band (lib/band-client): minutes, nights, daily resting HR and HRV, steps, and from when. */
-export type BandData = { hr: HrMinute[]; sleep: SleepSession[]; rhr: Record<string, number>; hrv: Record<string, number>; steps?: StepBucket[] };
+export type BandData = { hr: HrMinute[]; sleep: SleepSession[]; rhr: Record<string, number>; hrv: Record<string, number>; steps?: StepBucket[]; /** Calories burned per local day (today so far). */ kcal?: Record<string, number> };
 
 /** Fold a newly loaded window into what the app holds: minutes and nights replace their old selves, nothing is lost. */
 export function mergeBand(prev: BandData | null, got: BandData): BandData {
   if (!prev) return got;
   const nights = new Map(prev.sleep.map((n) => [n.id, n]));
   for (const n of got.sleep) nights.set(n.id, n);
-  return { hr: mergeMinutes(prev.hr, got.hr), sleep: [...nights.values()].sort((a, b) => a.start - b.start), rhr: { ...prev.rhr, ...got.rhr }, hrv: { ...prev.hrv, ...got.hrv }, steps: mergeSteps(prev.steps ?? [], got.steps ?? []) };
+  return { hr: mergeMinutes(prev.hr, got.hr), sleep: [...nights.values()].sort((a, b) => a.start - b.start), rhr: { ...prev.rhr, ...got.rhr }, hrv: { ...prev.hrv, ...got.hrv }, steps: mergeSteps(prev.steps ?? [], got.steps ?? []), kcal: { ...prev.kcal, ...got.kcal } };
 }
 
 /**

@@ -13,6 +13,7 @@ import { alcoholCurve, type AlcoholDose } from "./alcohol";
 import { currentKg } from "./body";
 import { atMinute, localDay, minuteOfDay, addDays, startOfDay, DAY, MIN } from "./time";
 import { correlation, difference, mean, median, sd, type Range } from "./stats";
+import { volume } from "./training";
 
 const of = <K extends Entry["kind"]>(entries: Entry[], k: K) => entries.filter((e): e is EntryOf<K> => e.kind === k);
 
@@ -169,7 +170,7 @@ export function dailyFacts(entries: Entry[], workouts: Workout[], settings: Sett
       lateCaffeineMg: caf.filter((d) => minuteOfDay(d.at) >= LATE_CAFFEINE_MIN).reduce((a, d) => a + d.caffeineMg, 0),
       lateEat: foods.some((f) => minuteOfDay(f.at) >= 21 * 60),
       bigMealKcal: biggestMeal(foods),
-      volumeKg: of(es, "set").reduce((a, x) => a + x.kg * x.reps, 0),
+      volumeKg: volume(of(es, "set")),
       weekend: [0, 6].includes(new Date(atMinute(day, 12 * 60)).getDay()),
       sleep: sleepBy.get(day) ?? null,
     });

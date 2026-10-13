@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { act, newId, useStore } from "../lib/store";
-import { EXERCISES, e1rm, exerciseHistory, isBest, isDumbbell, mainMuscle, nextTemplate, restLeft, sameMuscle, sessionPlan, sessionSummary, suggestNext, templateProblems, volume, type Suggestion } from "../lib/training";
+import { EXERCISES, e1rm, exerciseHistory, isBest, isDumbbell, warmKg, warmsUp, mainMuscle, nextTemplate, restLeft, sameMuscle, sessionPlan, sessionSummary, suggestNext, templateProblems, volume, type Suggestion } from "../lib/training";
 import { PROGRAMS, asSplit, asTemplate } from "../lib/programs";
 import { MuscleMap } from "../components/MuscleMap";
 import { DayCard } from "../components/DayCard";
@@ -12,7 +12,7 @@ type SetE = EntryOf<"set">;
 
 /** The last session's sets of an exercise, before a given workout. */
 function lastSets(sets: SetE[], exercise: string, notWorkout?: string): SetE[] {
-  const prior = sets.filter((s) => s.exercise === exercise && s.workoutId !== notWorkout);
+  const prior = sets.filter((s) => s.exercise === exercise && s.workoutId !== notWorkout && !s.warmup);
   if (!prior.length) return [];
   const wid = prior[prior.length - 1].workoutId;
   return prior.filter((s) => s.workoutId === wid);
@@ -158,7 +158,9 @@ function Session({ w }: { w: Workout }) {
   const workouts = useStore((s) => s.workouts);
   const sets = useMemo(() => entries.filter((e): e is SetE => e.kind === "set"), [entries]);
   const plan: Template["exercises"] = sessionPlan(w, templates);
-  const done = (ex: string) => sets.filter((s) => s.workoutId === w.id && s.exercise === ex);
+  // Working sets only; a warm-up is shown, never counted (PLAN 80).
+  const doneAll = (ex: string) => sets.filter((s) => s.workoutId === w.id && s.exercise === ex);
+  const done = (ex: string) => doneAll(ex).filter((s) => !s.warmup);
   const firstOpen = Math.max(0, plan.findIndex((e) => done(e.name).length < e.sets));
   const [i, setI] = useState(firstOpen === -1 ? 0 : firstOpen);
   const cur = plan[i];
@@ -189,15 +191,29 @@ function Session({ w }: { w: Workout }) {
     </div>
   );
   const mine = cur ? done(cur.name) : [];
+  const warmToday = cur ? doneAll(cur.name).filter((s) => s.warmup) : [];
   const prev = cur ? lastSets(sets, cur.name, w.id) : [];
   const sug: Suggestion | null = cur ? suggestNext(prev, cur.reps) : null;
   const [kg, setKg] = useState<number>(sug?.kg ?? 20);
   const [reps, setReps] = useState<number>(cur?.reps ?? 8);
+  // Owner, 13 Oct: "warm up plus 2-3 sets". The first set is a warm-up when this exercise usually starts with one
+  // (training `warmsUp`); otherwise "Warm-up first" is offered. Lighter, ~10 reps, never counted.
+  const [warmOn, setWarmOn] = useState(false);
+  // the working weight set aside while warming up — what you typed, or the suggestion — and put back after
+  const workRef = useRef<number | null>(null);
+  const startWarm = (on: boolean) => {
+    setWarmOn(on); if (!cur) return;
+    if (on) { workRef.current = kg; setKg(warmKg(kg, cur.name)); setReps(10); }
+    else { setKg(workRef.current ?? mine[mine.length - 1]?.kg ?? sug?.kg ?? 20); workRef.current = null; setReps(cur.reps); }
+  };
   // When moving to another exercise, start from its suggestion (or what you just did on it).
   useEffect(() => {
     const last = mine[mine.length - 1];
-    setKg(last?.kg ?? sug?.kg ?? 20);
-    setReps(cur?.reps ?? 8);
+    const warm = !!cur && !last && warmToday.length === 0 && warmsUp(sets, cur.name, w.id);
+    setWarmOn(warm);
+    workRef.current = warm ? sug?.kg ?? 20 : null;
+    setKg(warm && cur ? warmKg(sug?.kg ?? 20, cur.name) : last?.kg ?? sug?.kg ?? 20);
+    setReps(warm ? 10 : cur?.reps ?? 8);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [i]);
 
@@ -218,7 +234,7 @@ function Session({ w }: { w: Workout }) {
   const el = Math.max(0, Math.floor((now - w.startedAt) / 1000));
 
   const total = plan.reduce((a, e) => a + e.sets, 0);
-  const doneN = sets.filter((s) => s.workoutId === w.id).length;
+  const doneN = sets.filter((s) => s.workoutId === w.id && !s.warmup).length;
   const vol = volume(sets.filter((s) => s.workoutId === w.id));
   const lastSame = (() => { const ws = [...workouts].reverse().find((x) => x.template === w.template && x.id !== w.id && x.endedAt); return ws ? volume(sets.filter((s) => s.workoutId === ws.id)) : null; })();
 
@@ -226,7 +242,8 @@ function Session({ w }: { w: Workout }) {
     if (!cur) return;
     const at = Date.now();
     lastLog.current = at;
-    const set = { at, workoutId: w.id, exercise: cur.name, kg, reps };
+    const set = { at, workoutId: w.id, exercise: cur.name, kg, reps, ...(warmOn ? { warmup: true } : {}) };
+    if (warmOn) { act.addEntry({ kind: "set", ...set }); startWarm(false); setRest(60); return; }
     if (isBest(sets, set)) setBest({ exercise: cur.name, kg, reps, e1rm: Math.round(e1rm(kg, reps) * 10) / 10, at });
     act.addEntry({ kind: "set", ...set });
     const after = mine.length + 1;
@@ -257,10 +274,11 @@ function Session({ w }: { w: Workout }) {
       <div className="prog">{Array.from({ length: total }, (_, k) => <i key={k} className={k < doneN ? "on" : ""} />)}</div>
 
       <div className="tile cur">
-        <div className="ex"><b>{cur.name}</b><span>{exDone ? "Done" : `Set ${mine.length + 1} of ${cur.sets}`}</span></div>
+        <div className="ex"><b>{cur.name}</b><span>{warmOn ? "Warm-up" : exDone ? `${mine.length} of ${cur.sets} done` : `Set ${mine.length + 1} of ${cur.sets}`}</span></div>
         <div className="exacts">
           <button type="button" className="kbtn sm" aria-expanded={showHist} onClick={() => setShowHist(!showHist)}>History</button>
           {mine.length === 0 && <button type="button" className="kbtn sm" onClick={() => { setAdding("swap"); setNewEx(""); }}>Swap</button>}
+          {mine.length === 0 && warmToday.length === 0 && <button type="button" className="kbtn sm" aria-pressed={warmOn} onClick={() => startWarm(!warmOn)}>{warmOn ? "Skip warm-up" : "Warm-up first"}</button>}
         </div>
         {showHist && <History sets={sets.filter((x) => x.workoutId !== w.id)} exercise={cur.name} />}
         <div className="steppers">
@@ -281,8 +299,13 @@ function Session({ w }: { w: Workout }) {
             accident (found in testing: 17 sets logged on a 12-set plan). An extra set is still
             one deliberate tap away. */}
         {best && best.exercise === cur.name && now - best.at < 20_000 && <p className="best" role="status">New best · {best.kg} kg × {best.reps} · est. 1RM {best.e1rm} kg</p>}
-        {!exDone && <button type="button" className="go" onClick={log}>Log set</button>}
-        {exDone && next != null && <button type="button" className="go" onClick={() => settled() && setI(next)}>Next: {plan[next].name}</button>}
+        {(warmOn || !exDone) && <button type="button" className="go" onClick={log}>{warmOn ? "Log warm-up" : "Log set"}</button>}
+        {/* Planned sets done: the next exercise is suggested, never forced — another set of this one sits right beside it
+            (owner, 13 Oct: "i should be able to log another set"). */}
+        {!warmOn && exDone && <div className={next != null ? "go-row" : undefined}>
+          {next != null && <button type="button" className="go" onClick={() => settled() && setI(next)}>Next: {plan[next].name}</button>}
+          <button type="button" className="go alt" onClick={() => settled() && log()}>+ Set {mine.length + 1}</button>
+        </div>}
         {/* Finishing never sits where "Log set" was: it's at the bottom, and asks first. */}
         {allDone && <p className="alldone" role="status">✓ All planned sets done</p>}
         {/* Owner, 6 Oct: "finish all 3, choose another exercise" — any of today's others, or something new. */}
@@ -292,8 +315,13 @@ function Session({ w }: { w: Workout }) {
           <button type="button" className="add" onClick={() => { setAdding("add"); setNewEx(""); }}>+ Add</button>
         </div>}
 
-        {exDone && <button type="button" className="kbtn" onClick={log}>+ Extra set of {cur.name}</button>}
         <div className="sets">
+          {warmToday.map((s) => (
+            <div key={s.id} className="set warm">
+              <i>W</i><b>{s.kg} × {s.reps}</b><span>warm-up</span>
+              <button type="button" aria-label="Delete warm-up" onClick={() => act.removeEntry(s.id)}>×</button>
+            </div>
+          ))}
           {Array.from({ length: Math.max(cur.sets, mine.length) }, (_, k) => {
             const s = mine[k];
             return (

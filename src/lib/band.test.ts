@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { authUrl, BAND_SCOPES, behind, dailyFilter, lastNight, mergeBand, mergeMinutes, refreshFrom, perMinute, readDaily, readHeartRate, readHrv, readSleep, readState, readSteps, rollUpBody, sampleFilter, signState, sleepFilter, wakeFor, type SleepSession } from "./band";
+import { authUrl, BAND_SCOPES, behind, dailyRollUpBody, readDailyKcal, dailyFilter, lastNight, mergeBand, mergeMinutes, refreshFrom, perMinute, readDaily, readHeartRate, readHrv, readSleep, readState, readSteps, rollUpBody, sampleFilter, signState, sleepFilter, wakeFor, type SleepSession } from "./band";
 
 // Shapes as Google's CLI reads them (pkg/output/simplify.go): the type object holds sampleTime / interval / date.
 const hr = (t: string, bpm: unknown) => ({ name: `users/me/dataTypes/heart-rate/dataPoints/${t}`, dataSource: { device: { displayName: "Charge 6" } }, heartRate: { sampleTime: { physicalTime: t, utcOffset: "7200s" }, beatsPerMinute: bpm } });
@@ -167,5 +167,17 @@ describe("which side is behind (PLAN 69)", () => {
   it("fresh enough, or nothing to judge: nothing to say", () => {
     expect(behind({ lastSync: now - 5 * 60_000, latest: now - 40 * 60_000 }, now)).toBeNull();
     expect(behind({ lastSync: null, latest: null }, now)).toBeNull();
+  });
+});
+
+describe("calories burned (PLAN 83)", () => {
+  it("asks by local day, the end day not included", () => {
+    expect(JSON.parse(dailyRollUpBody("2026-10-01", "2026-10-14"))).toEqual({ range: { start: { date: { year: 2026, month: 10, day: 1 } }, end: { date: { year: 2026, month: 10, day: 14 } } }, windowSizeDays: 1 });
+  });
+  it("reads kcalSum wherever its type object puts it; junk dropped", () => {
+    const pt = (day: number, body: unknown) => ({ civilStartTime: { date: { year: 2026, month: 10, day } }, ...(body as object) });
+    expect(readDailyKcal({ rollupDataPoints: [pt(12, { totalCalories: { kcalSum: "2451.6" } }), pt(13, { calories: { kcalSum: 1210 } }), pt(11, { totalCalories: { kcalSum: "-5" } }), pt(10, { totalCalories: {} })] }))
+      .toEqual({ "2026-10-12": 2452, "2026-10-13": 1210 });
+    expect(readDailyKcal({})).toEqual({});
   });
 });

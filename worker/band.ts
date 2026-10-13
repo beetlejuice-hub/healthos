@@ -10,7 +10,7 @@
 
 import type { Storage } from "./push";
 import {
-  GOOGLE_TOKEN, HEALTH_API, STEP_WINDOWS, dailyFilter, wakeFor, mergeMinutes, mergeSteps, perMinute, readDaily, readHeartRate, readSleep, readSteps, rollUpBody, sampleFilter, sleepFilter,
+  GOOGLE_TOKEN, HEALTH_API, STEP_WINDOWS, dailyFilter, dailyRollUpBody, readDailyKcal, wakeFor, mergeMinutes, mergeSteps, perMinute, readDaily, readHeartRate, readSleep, readSteps, rollUpBody, sampleFilter, sleepFilter,
   type HrMinute, type Page, type RollUpPage, type SleepSession, type StepBucket,
 } from "../src/lib/band";
 
@@ -136,6 +136,25 @@ export class BandHub {
     return { rollupDataPoints: all };
   }
 
+  /** A daily roll-up (calories burned): like `rollUp`, by local day. */
+  private async dailyRollUp(type: string, fromDay: string, toDayExclusive: string, errors: string[]): Promise<RollUpPage> {
+    const all: NonNullable<RollUpPage["rollupDataPoints"]> = [];
+    let pageToken: string | undefined, retried = false;
+    for (let i = 0; i < MAX_PAGES; i++) {
+      const token = await this.access(retried);
+      if (!token) throw new Error("not connected");
+      const r = await this.f(`${HEALTH_API}/users/me/dataTypes/${type}/dataPoints:dailyRollUp`, { method: "POST", headers: { authorization: `Bearer ${token}`, "content-type": "application/json" }, body: dailyRollUpBody(fromDay, toDayExclusive, pageToken) });
+      if (r.status === 401 && !retried) { retried = true; i--; continue; }
+      if (!r.ok) throw new Error(`${type} ${r.status}`);
+      const page = (await r.json()) as RollUpPage;
+      all.push(...(page.rollupDataPoints ?? []));
+      if (!page.nextPageToken) break;
+      pageToken = page.nextPageToken;
+      if (i === MAX_PAGES - 1) errors.push(`${type}: more than ${MAX_PAGES} pages, the rest next time`);
+    }
+    return { rollupDataPoints: all };
+  }
+
   /** Pull what's new from Google into storage. Each kind on its own: one failing doesn't lose the others. */
   async pull(): Promise<Sync> {
     const now = this.now(), prev = await this.sync();
@@ -173,13 +192,19 @@ export class BandHub {
       if (got?.length) stepsLatest = Math.max(stepsLatest ?? 0, got[got.length - 1][0]);
       for (let d = KEEP_DAYS; d <= KEEP_DAYS + 60; d++) await this.storage.delete(`steps:${utcDay(now - d * DAY)}`);
     } catch (e) { errors.push(String((e as Error).message)); }
+    try {
+      // Calories burned per local day (PLAN 83). Google allows 14 days a request: the first time 12 back to tomorrow (any
+      // time zone's today is inside), then the last 3 days again (today's grows; late syncs fill yesterday in).
+      const got = readDailyKcal(await this.dailyRollUp("total-calories", utcDay(now - (first ? 12 : 3) * DAY), utcDay(now + 2 * DAY), errors));
+      await this.storage.put("kcal", { ...((await this.storage.get<Record<string, number>>("kcal")) ?? {}), ...got });
+    } catch (e) { errors.push(String((e as Error).message)); }
     for (const [type, name, key, field] of [["daily-resting-heart-rate", "daily_resting_heart_rate", "rhr", "beatsPerMinute"], ["daily-heart-rate-variability", "daily_heart_rate_variability", "hrv", undefined]] as const) {
       try {
         const got = readDaily(await this.list(type, dailyFilter(name, utcDay(now - (first ? 30 : 7) * DAY)), 1000, errors), field);
         await this.storage.put(key, { ...((await this.storage.get<Record<string, number>>(key)) ?? {}), ...got });
       } catch (e) { errors.push(String((e as Error).message)); }
     }
-    const next: Sync = { lastRun: now, lastOk: errors.filter((e) => !/pages/.test(e)).length < 5 ? now : prev.lastOk, latest, ...(gapSec != null ? { gapSec } : {}), ...(stepsLatest != null ? { stepsLatest } : {}), ...(errors.length ? { error: errors.join("; ").slice(0, 300) } : {}) };
+    const next: Sync = { lastRun: now, lastOk: errors.filter((e) => !/pages/.test(e)).length < 6 ? now : prev.lastOk, latest, ...(gapSec != null ? { gapSec } : {}), ...(stepsLatest != null ? { stepsLatest } : {}), ...(errors.length ? { error: errors.join("; ").slice(0, 300) } : {}) };
     await this.storage.put("sync", next);
     return next;
   }
@@ -219,7 +244,7 @@ export class BandHub {
         for (const b of (await this.storage.get<StepBucket[]>(`steps:${utcDay(d)}`)) ?? []) if (b[0] >= from && b[0] <= to) steps.push(b);
       }
       const sleep = ((await this.storage.get<SleepSession[]>("sleep")) ?? []).filter((s) => s.end >= from - DAY && s.start <= to);
-      return json({ hr, sleep, rhr: (await this.storage.get("rhr")) ?? {}, hrv: (await this.storage.get("hrv")) ?? {}, steps, ...(await this.status()) });
+      return json({ hr, sleep, rhr: (await this.storage.get("rhr")) ?? {}, hrv: (await this.storage.get("hrv")) ?? {}, steps, kcal: (await this.storage.get("kcal")) ?? {}, ...(await this.status()) });
     }
     if (path === "wake") {
       const sleep = (await this.storage.get<SleepSession[]>("sleep")) ?? [];
@@ -233,7 +258,7 @@ export class BandHub {
     if (path === "disconnect") {
       const a = await this.auth();
       if (a) await this.f(`https://oauth2.googleapis.com/revoke?token=${encodeURIComponent(a.refresh)}`, { method: "POST" }).catch(() => null);
-      for (const k of ["auth", "sync", "sleep", "rhr", "hrv"]) await this.storage.delete(k);
+      for (const k of ["auth", "sync", "sleep", "rhr", "hrv", "kcal"]) await this.storage.delete(k);
       for (let d = 0; d <= KEEP_DAYS; d++) { await this.storage.delete(`hr:${utcDay(this.now() - d * DAY)}`); await this.storage.delete(`steps:${utcDay(this.now() - d * DAY)}`); }
       await this.storage.deleteAlarm();
       return json({ ok: true });
