@@ -800,6 +800,17 @@ email get Dev tools (`#dev`): raw entry editor, generate/remove sample, wipe acc
    connection between food intake, calorie, carbs, and strength in gym, etc." Idea: a session's strength as each lift's
    best set against that lift's own trend (so progress isn't credited to food), tested against carbs/kcal in the 4 h
    before, kcal/protein over the 3 days before, sleep, morning HRV/RHR, caffeine, supplements, time of day.
+   - **Canvas (13 Oct): https://claude.ai/artifact/8diofqHRZJ18vRJPYQ7aWw** — three directions, laptop + phone, from 12
+     fake weeks (39 sessions, every set, food, band nights, coffee, creatine, check-ins before/after). Planted: carbs ≥ 60 g
+     in the 4 h before → strength +3.5 % against each lift's own trend; under 6 h 30 asleep → −4 %; a cut → −2.5 %; a heavy
+     session → next morning's HRV −6 ms; nothing for coffee, creatine, morning/evening, felt after. **A · your lifts:** this
+     week, bench/squat/deadlift/OHP as estimated 1-rep max against each lift's trend, recent sessions as ±% against trend,
+     sets per muscle (usual week + this week). **B · what goes with a strong session:** in words, every session's ±% with the
+     sleep / carbs / food / coffee / creatine before it, the grid (carbs clear, short night likely, the cut "not clear yet —
+     6 sessions", nothing else), carbs-before scatter. **C · what training goes with afterwards:** grid (heavy → next
+     morning HRV −5.7 clear; nothing else), each week's kg lifted next to energy, heart rate back to usual after sessions.
+     Found while building: at 8 weeks (25 sessions) even planted effects only reach "likely" — the page needs ~12 weeks.
+     Waiting on the owner's pick.
 65. [ ] **Noticing, and digests** — owner: "App should have a pretty complex n smart system of noticing patterns especially
    focusing on sleep and focus" and "AI should look at data at eod, eow, eom, and make suggestions, summaries, etc, even
    make graphs or like interesting notices". The grids (Sleep, Heart, Mind) already test what goes with sleep and focus;
@@ -823,3 +834,92 @@ email get Dev tools (`#dev`): raw entry editor, generate/remove sample, wipe acc
    findings". A chat exists (components/Ai.tsx) but sees only a written summary. Idea: tools the AI calls and the app
    answers from your data with the same tested engines (find, day, series, compare, after, findings, show-a-chart);
    every number from a tool, never the AI's own maths; new clear findings arrive as chat messages.
+
+---
+
+## 13 Oct batch — sorted (owner, 13 Oct)
+
+Owner: *"Lots of new info in this batch - sort all these then get started on them - SORT ALL, DO NOT LEAVE ANY OF THESE
+OUT"* and *"This is a lot of info so rn just take all this in, understand it and note for ur later sessions"*. Every note
+below, in his words, grouped; A first (broken or wrong now), then the rest. Items already in the plan point to their number.
+
+### A · Broken or wrong now — fix first
+68. [ ] **Workout says "Connect a wearable" though the band is connected** — "wearable is connected but it says connect
+   wearable". Found: screens/Workout.tsx's heart-rate tile is hard-coded "Connect a wearable". Show the band's bpm.
+69. [ ] **Last band reading 9 h old** — "For some reason my last reading from the band came in like 9h ago". Find out where
+   it waits: the Fitbit app syncing to Google, or our pull (Worker status/error). Can't see his account from here — check
+   what the band card says and make it say plainly which side is behind.
+70. [ ] **Barcode drink shows no protein** — "Logged a protein and caffeine drink w bar code it worked but it does not show
+   protein … and also add protein and even fat data if u find it w bar code and its significant".
+71. [ ] **Edit a logged food or drink's macros** — "i should be able to click on the logged food or drink and modify its
+   macros if it wont cause a big database problem" (it won't: each entry keeps its own numbers).
+72. [ ] **Barcode camera** — "it asks me if i give permission every single time, and it opens idk the wrong camera, its
+   always a bit blurry, like its using the macro camera automatically". Keep the permission; pick the main back camera.
+73. [ ] **Settings body weight** — "In the settings i have body weight its nonsense cus i log every morning". Use the latest
+   weigh-in; Settings only as a fallback before the first one.
+74. [ ] **Findings about supplements he almost never skips** — "I see app making findings like days w and w/o things like l
+   theanine or black cumin…i dont have much data in app where i didnt take it..so how does it make an assumption that it
+   causes my off mood". Audit the findings engine on that shape: enough days without, counts shown, never "causes".
+75. [ ] **Too soon after a supplement to count** — "if i take X and after 2 minutes i log very bad mood, you shouldnt
+   connect X and low mood..the supp had no chance to dissolve and have an effect in 2 mins". Every engine and the AI's
+   context skip check-ins in the first hour after taking it (the after-a-supplement card already does).
+76. [ ] **Dumbbell weight: one hand or both?** — "not sure if for exp on db press its one hand kg or both hand kg in total".
+   Say "kg per dumbbell" on dumbbell exercises; volume counts both hands.
+77. [ ] **"Took long to fall asleep" from the band** — "took too long to fall asleep can be replaced IMO w band data".
+78. [ ] **Explain the usual band on the heart chart** (his screenshot) — "is this supposed to be the average band? Looks a
+   bit weird, i just want explanation like why we have this, what reason it has, based on what it works. we dont want
+   things that makes zero sense. oh but it could be nice w lots of days of data. so dont remove this". Also check why it
+   only shows in parts and the line is red where there's no band.
+79. [ ] **ELI5 on the sleep nights table** (his screenshot) — "i really like this sleep data but can we get some eli5
+   explanations or comparisons here to see whats up". Also check two 8-hour nights showing Awake 0.
+
+### B · Workouts
+80. [ ] **Sets as he does them** — "For sets its 1 warmup 3 w normal weight but sometimes just 3 so makke sure i can do that.
+   And i i decide to do 5 sets i should br able to log all so it recommends me whats next but not forcing to switch
+   exercise".
+81. [ ] **More exercises, picked by muscle** — "Add more exercises and that i can choose when hitting a muscle- like i
+   should do shoulder and i can choose between exercises and machine or dumbbell etc".
+82. [ ] **Strength per muscle group** — "Should also do a muscle group strength average taking in data from diff exercises
+   that target same muscle".
+83. [ ] **Calories burned** — "one would assume calories burned are already in the app…pls include". From the band (Google
+   total / active calories) and workouts; into Today's energy balance.
+   - Training page and food ↔ strength: #64 (canvas up).
+
+### C · Food
+84. [ ] **A plate as one food, with plate sizes** — "if i input like chicken bread pasta ketchup, it tends to find these but
+   can we put these as one food, and not log as separate? also to calculate the size (gram) of these for 1 plate, and i
+   can put half plate, small plate, 2 plates etc".
+85. [ ] **Romanian food in the database** — "Most of the database foods are us foods and i live in romania and eat normal
+   food so pls make some changes"; "things like pityoka leves and also other soups not there?? criminal"; "i cant find the
+   lidl doughnuts … can u search and add to database? Lidl bakery and kaufland bakery can make it the same if similar".
+86. [ ] **Caffeine sipped, not chugged** — "for caffeine: whether coffee or energy drink, lets add a more realistic curve,
+   like after logging, it takes like 10-20 minutes while i sip on it, not chug it. and also lets confirm if the curve is
+   good".
+
+### D · Supplements
+87. [ ] **Log supplements like food** — "rn its like took or not - i want it to be able to log almost like food - one
+   click, but i can log morning and night too if i take something twice".
+
+### E · Sleep — brainstorm first
+88. [ ] **More from sleep** — "Feel like we need better or more about sleep like can ai or app determine more things about
+   sleep based on all the data it gets?" and "I'm big on sleep and how it affects me and foods and activities like late
+   might scrolling how it affects sleep score deep sleep etc sso can we brainstorm and track that too".
+
+### F · Telling the app more
+89. [ ] **Notes on mood logging** — "i should be able to leave notes on mood logging, like head hurts, or parents made me
+   mad, etc, so ai can see and take it into account when making assumptions". Found: a "Why?" note exists after a
+   check-in on Today; make it there wherever mood is logged, and visible later.
+90. [ ] **Events and people** — "we also need to work on telling more to the app, like i was sleeping w gf that night, ive
+   been up late night working, or been out w friends drinking, so app can see and learn what events, peoples affect me
+   and how".
+
+### G · AI and the bigger picture
+   - AI chat that can look things up: #67 (waits on the AI key). Smarter noticing, incl. food ↔ strength: #65 and #64.
+   - Steps: #66, done.
+91. [ ] **The watch, soon** — "We are integrating the watch soon, make sure the app/ai will be able to smartly look at all
+   the data it receives, connect w what i log, adn make assumptions, look at things, compare how i feel when doing X,
+   after doing X, and just smartly ,like a assistant agent, doing its job".
+92. [ ] **Tempo ↔ HealthOS (future)** — "in the future we should connect tempo and healthos apps so healthos can see what i
+   was doing at what times and how it affected me".
+93. [ ] **Too much?** — "Also lmk if its getting too much feature or functions". Answered in chat 13 Oct.
+
