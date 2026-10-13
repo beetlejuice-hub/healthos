@@ -7,7 +7,7 @@ import { notice } from "../lib/findings";
 import { StackAlert } from "../components/StackCheck";
 import { ScoutLine } from "../components/Scout";
 import { AiQuestions, MorningRead, NightRead } from "../components/Ai";
-import { caffeineAt, latestDoseFor } from "../lib/caffeine";
+import { caffeineAt, caffeineInBlood, latestDoseFor } from "../lib/caffeine";
 import { bedtimeVerdict, CAF_SLEEP, personalSleep, ratedNights, tierOf, tonightsBed, type Personal } from "../lib/caffeine-sleep";
 import { caffeineDoses } from "../lib/insights";
 import { add, byDay, macrosOf, ZERO } from "../lib/nutrition";
@@ -18,6 +18,8 @@ import { answerSlot, SLOTS, slotsOf } from "../lib/types";
 import { parseFat } from "../lib/bodyfat";
 import { HowNow } from "../components/HowNow";
 import { SuppAmount } from "../components/SuppAmount";
+import { SuppQuick } from "../components/SuppQuick";
+import { extrasOn } from "../lib/supplog";
 import { CatchUp } from "../components/CatchUp";
 import { DataCard, EveningRead, NowCard, Pad, Status, UsualPicker, useStackCount } from "../components/TodayParts";
 import { dayNumbers, momentOf } from "../lib/moment";
@@ -63,7 +65,9 @@ export function Today() {
   const doses = caffeineDoses(s.entries);
   const bed = tonightsBed(now, s.settings.bedMinute);
   const personal = useMemo(() => personalSleep(ratedNights(s.entries, s.settings.halfLifeMin, s.settings.bedMinute)), [s.entries, s.settings.halfLifeMin, s.settings.bedMinute]);
-  const cafNow = Math.round(caffeineAt(doses, now, s.settings.halfLifeMin));
+  // now: what's reached your blood; a drink is sipped and absorbed over the hour after it's logged (PLAN 86)
+  const cafNow = Math.round(caffeineInBlood(doses, now, s.settings.halfLifeMin));
+  const cafComing = Math.round(caffeineAt(doses, now, s.settings.halfLifeMin)) - cafNow;
   const cafBed = Math.round(caffeineAt(doses.filter((d) => d.at <= now), bed, s.settings.halfLifeMin));
   // calories burned from the band, today so far and yesterday's whole day (PLAN 83)
   const bandKcal = useBand().data?.kcal;
@@ -123,7 +127,7 @@ export function Today() {
         <a href="#settings">Settings</a>
       </div>
 
-      <Status kcal={totals.kcal} goalKcal={s.goals.kcal} protein={totals.p} goalP={s.goals.p} cafNow={cafNow} cafBed={cafBed} bed={bed} stack={stack} />
+      <Status kcal={totals.kcal} goalKcal={s.goals.kcal} protein={totals.p} goalP={s.goals.p} cafNow={cafNow} rising={cafComing >= 10} cafBed={cafBed} bed={bed} stack={stack} />
 
       <NowCard moment={moment}>
         {moment === "evening" ? <>{itemsList}{feelNow}</> : <>{feelNow}<CatchUp now={now} />{itemsList}</>}
@@ -140,7 +144,7 @@ export function Today() {
       {pickUsual && <UsualPicker onDone={() => setPickUsual(false)} />}
 
       <Stack now={now} />
-      <CaffeineCard doses={doses} now={now} bed={bed} halfLife={s.settings.halfLifeMin} cafNow={cafNow} cafBed={cafBed} personal={personal} coffeeMg={coffeeMg} />
+      <CaffeineCard doses={doses} now={now} bed={bed} halfLife={s.settings.halfLifeMin} cafNow={cafNow} cafComing={cafComing} cafBed={cafBed} personal={personal} coffeeMg={coffeeMg} />
       <Fuel totals={totals} goals={s.goals} usual={usual} burned={burned} yday={yday} />
       <DataCard>
         <NoticedLine />
@@ -183,17 +187,19 @@ function Fuel({ totals, goals, usual, burned, yday }: { totals: { kcal: number; 
   );
 }
 
-function CaffeineCard({ doses, now, bed, halfLife, cafNow, cafBed, personal, coffeeMg }: { doses: { at: number; mg: number }[]; now: number; bed: number; halfLife: number; cafNow: number; cafBed: number; personal: Personal; coffeeMg: number }) {
+function CaffeineCard({ doses, now, bed, halfLife, cafNow, cafComing, cafBed, personal, coffeeMg }: { doses: { at: number; mg: number }[]; now: number; bed: number; halfLife: number; cafNow: number; cafComing: number; cafBed: number; personal: Personal; coffeeMg: number }) {
   const d0 = new Date(now); d0.setHours(6, 0, 0, 0);
   const t0 = d0.getTime(), t1 = t0 + 18 * 60 * MIN;
   const W = 320, H = 110, pl = 26, pr = 6, pt = 18, pb = 16;
-  const peak = Math.max(...Array.from({ length: 37 }, (_, i) => caffeineAt(doses, t0 + i * 30 * MIN, halfLife)));
+  // the curve is what's in your blood: it rises over the hour after a drink instead of jumping (PLAN 86)
+  const peak = Math.max(...Array.from({ length: 217 }, (_, i) => caffeineInBlood(doses, t0 + i * 5 * MIN, halfLife)));
   const max = Math.max(200, Math.ceil(peak / 100) * 100);
   const x = (t: number) => pl + ((t - t0) / (t1 - t0)) * (W - pl - pr), y = (mg: number) => pt + (1 - mg / max) * (H - pt - pb);
   // Always end exactly on `b`, so the solid past meets the "now" dot instead of stopping up to 5 min short.
-  const pts = (a: number, b: number) => { const p: string[] = []; const push = (t: number) => p.push(`${x(t).toFixed(1)},${y(caffeineAt(doses, t, halfLife)).toFixed(1)}`); for (let t = a; t < b; t += 5 * MIN) push(t); push(b); return p.join(" "); };
+  const pts = (a: number, b: number) => { const p: string[] = []; const push = (t: number) => p.push(`${x(t).toFixed(1)},${y(caffeineInBlood(doses, t, halfLife)).toFixed(1)}`); for (let t = a; t < b; t += 5 * MIN) push(t); push(b); return p.join(" "); };
   const cut = Math.min(Math.max(now, t0), t1);
-  // Touch or hover anywhere on the curve to read it: "14:20 · 119 mg".
+  // Touch or hover anywhere on the curve to read it: "14:20 · 119 mg". A finger lifting "leaves" the curve, so on a phone
+  // the reading stays until the next touch — it used to vanish the moment a tap ended.
   const [probe, setProbe] = useState<number | null>(null);
   const onMove = (e: React.PointerEvent<SVGSVGElement>) => {
     const r = e.currentTarget.getBoundingClientRect();
@@ -201,13 +207,13 @@ function CaffeineCard({ doses, now, bed, halfLife, cafNow, cafBed, personal, cof
     const t = t0 + ((vx - pl) / (W - pl - pr)) * (t1 - t0);
     setProbe(Math.round(Math.max(t0, Math.min(t1, t)) / (5 * MIN)) * 5 * MIN);
   };
-  const pmg = probe != null ? Math.round(caffeineAt(doses, probe, halfLife)) : 0;
+  const pmg = probe != null ? Math.round(caffeineInBlood(doses, probe, halfLife)) : 0;
   const px = probe != null ? x(probe) : 0;
   return (
     <div className="card" id="caffeine">
-      <h3>Caffeine <span>{mgText(cafNow)} now · {mgText(cafBed)} at {clock(bed)}</span></h3>
+      <h3>Caffeine <span>{mgText(cafNow)} now{cafComing >= 10 ? ", rising" : ""} · {mgText(cafBed)} at {clock(bed)}</span></h3>
       <svg viewBox={`0 0 ${W} ${H}`} width="100%" role="img" aria-label={`Caffeine in your body today: ${cafNow} mg now, ${cafBed} mg at your planned bedtime`}
-        style={{ touchAction: "pan-y", cursor: "crosshair" }} onPointerMove={onMove} onPointerDown={onMove} onPointerLeave={() => setProbe(null)}>
+        style={{ touchAction: "pan-y", cursor: "crosshair" }} onPointerMove={onMove} onPointerDown={onMove} onPointerLeave={(e) => { if (e.pointerType !== "touch") setProbe(null); }}>
         {[0, max / 2, max].map((v) => <g key={v}><line x1={pl} x2={W - pr} y1={y(v)} y2={y(v)} stroke="var(--c-track)" /><text x={pl - 4} y={y(v) + 3} textAnchor="end" fontSize="9" fill="var(--c-dim)">{v}</text></g>)}
         {/* Where sleep effects become possible (30 mg) and more likely (100 mg) — CAF_SLEEP, faint. */}
         {[CAF_SLEEP.lowBelowMg, CAF_SLEEP.higherFromMg].map((v) => <line key={`t${v}`} x1={pl} x2={W - pr} y1={y(v)} y2={y(v)} stroke="var(--caf)" strokeOpacity=".3" strokeDasharray="1 3" />)}
@@ -225,6 +231,7 @@ function CaffeineCard({ doses, now, bed, halfLife, cafNow, cafBed, personal, cof
           <text x={px > W * 0.66 ? W - pr : px < W * 0.33 ? pl : px} y={10} textAnchor={px > W * 0.66 ? "end" : px < W * 0.33 ? "start" : "middle"} fontSize="10.5" fontWeight="600" fill="var(--c-ink)">{clock(probe)} · {pmg} mg{probe > now ? " (forecast)" : ""}</text>
         </g>}
       </svg>
+      {cafComing >= 10 && <p className="note caf-coming">About {cafComing} mg still on its way in — a drink is sipped over ~15 min and takes about 45 more to reach your blood.</p>}
       {doses.some((d) => d.at > now - 24 * 60 * MIN) && <BedtimeRead doses={doses.filter((d) => d.at <= now)} now={now} bed={bed} halfLife={halfLife} personal={personal} coffeeMg={coffeeMg} />}
       <UsualDrink />
     </div>
@@ -305,7 +312,10 @@ function Stack({ now }: { now: number }) {
   const supps = all.filter((x) => x.active);
   // One answer per supplement per slot: theanine at breakfast and again at lunch are two ticks.
   const key = (id: string, slot: Slot) => `${id}|${slot}`;
-  const answers = new Map(entries.filter((e): e is EntryOf<"supp"> => e.kind === "supp" && localDay(e.at) === day).map((e) => [key(e.suppId, answerSlot(e, all.find((x) => x.id === e.suppId))), e]));
+  // the plan's answers only: another intake logged on top (`again`) never stands in for the tick
+  const answers = new Map(entries.filter((e): e is EntryOf<"supp"> => e.kind === "supp" && !e.again && localDay(e.at) === day).map((e) => [key(e.suppId, answerSlot(e, all.find((x) => x.id === e.suppId))), e]));
+  // taken on top of the plan, or when it isn't planned (PLAN 87): listed in the slot it was taken in
+  const extras = extrasOn(entries, all, day);
   const set = (id: string, slot: Slot, status: "taken" | "skipped") => {
     const cur = answers.get(key(id, slot));
     if (cur && cur.status === status) act.removeEntry(cur.id);
@@ -316,10 +326,11 @@ function Stack({ now }: { now: number }) {
   const taken = doses.filter((k) => answers.get(k)?.status === "taken").length;
   return (
     <div className="card" id="stack">
-      <h3>Stack <span>{taken} of {doses.length} taken</span></h3>
+      <h3>Stack <span>{taken} of {doses.length} taken{extras.length ? ` · +${extras.length} more` : ""}</span></h3>
       {SLOTS.map((slot) => {
         const list = supps.filter((s) => slotsOf(s).includes(slot.id));
-        if (!list.length) return null;
+        const more = extras.filter((e) => answerSlot(e, all.find((x) => x.id === e.suppId)) === slot.id);
+        if (!list.length && !more.length) return null;
         const open = list.filter((s) => !answers.has(key(s.id, slot.id)));
         return (
           <div key={slot.id} style={{ display: "grid", gap: 8 }}>
@@ -339,9 +350,16 @@ function Stack({ now }: { now: number }) {
                 </div>
               );
             })}
+            {more.map((e) => { const s = all.find((x) => x.id === e.suppId)!; return (
+              <div className="stack-row extra" key={e.id}>
+                <span>{s.name} <small className="sq-when">{clock(e.at)} · {e.again ? "again" : "extra"}</small> <SuppAmount s={s} e={e} /></span>
+                <button type="button" className="x" aria-label={`Remove ${s.name} at ${clock(e.at)}`} onClick={() => act.removeEntry(e.id)}>×</button>
+              </div>
+            ); })}
           </div>
         );
       })}
+      <SuppQuick now={now} />
       {supps.length === 0 && <p className="note">No supplements set up. Add your stack in Log → Stack.</p>}
     </div>
   );

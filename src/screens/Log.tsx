@@ -29,6 +29,8 @@ import { findBarcode, type Lookup } from "../lib/barcode";
 import { ScanButton, Scanner } from "../components/Scanner";
 import { EntryEdit } from "../components/EntryEdit";
 import { NoteField } from "../components/HowNow";
+import { SuppQuick } from "../components/SuppQuick";
+import { useNow } from "./Today";
 import { nightLabel } from "../lib/lastnight";
 
 const fold = (t: string) => t.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
@@ -778,6 +780,7 @@ function DoseField({ s }: { s: Supplement }) {
 }
 
 function StackTab() {
+  const now = useNow();
   const list = useStore((s) => s.supplements);
   const profile = useStore((s) => s.profile);
   const upd = (id: string, patch: Partial<Supplement>) => act.setSupplements(list.map((s) => (s.id === id ? { ...s, ...patch } : s)));
@@ -805,6 +808,8 @@ function StackTab() {
   return (
     <div className="card">
       <h3>Your stack <span>ticked daily on Today · checked against <a href="#settings">About me</a></span></h3>
+      {/* log one now, like food — again tonight if you take it twice (PLAN 87) */}
+      <SuppQuick now={now} label="Took one now?" />
       <div className="list">
         {list.map((s) => editing === s.id ? (
           <div key={s.id} className="supp-edit">
@@ -905,7 +910,7 @@ const describe = (e: Entry, supps: Supplement[]): [string, string] => {
     case "food": return [e.name, `${e.unit && e.count ? `${amountText(e.count, e.unit)} · ≈ ${approx(e.macros.kcal)}` : Math.round(e.macros.kcal)} kcal · P ${Math.round(e.macros.p)}${!e.unit && e.grams ? ` · ${Math.round(e.grams)} g` : ""}`];
     // protein and fat when they're there (PLAN 70; owner, 13 Oct: a barcode protein drink "does not show protein")
     case "drink": return [e.name, [e.caffeineMg ? `${e.caffeineMg} mg caffeine` : "", e.alcoholG ? `${e.alcoholG} g alcohol` : "", e.kcal > 5 ? `${e.kcal} kcal` : "", (e.p ?? 0) >= 1 ? `P ${Math.round(e.p!)}` : "", (e.f ?? 0) >= 1 ? `F ${Math.round(e.f!)}` : ""].filter(Boolean).join(" · ")];
-    case "supp": return [supps.find((s) => s.id === e.suppId)?.name ?? "Supplement", e.status === "taken" && e.amount ? `taken · ${e.amount}` : e.status];
+    case "supp": return [supps.find((s) => s.id === e.suppId)?.name ?? "Supplement", `${e.status}${e.status === "taken" && e.amount ? ` · ${e.amount}` : ""}${e.again ? " · again" : ""}`];
     case "set": return [e.exercise, `${e.kg} kg × ${e.reps}`];
     case "weight": return ["Weight", `${e.kg} kg${e.fatPct != null ? ` · ${e.fatPct}% fat` : ""}`];
     // Only the sliders you set, all of them (stress was missing from this line).

@@ -27,7 +27,9 @@ const { chromium, APP, OUT, handle } = require('./harness.cjs');
   await pg.getByRole('button', { name: '+ Red Bull 250 ml' }).click(); await pg.waitForTimeout(200);
   check('undo toast appears', await pg.getByRole('status').filter({ hasText: 'Logged Red Bull' }).count() === 1);
   const cafBefore = await pg.locator('.card h3', { hasText: 'Caffeine' }).innerText();
-  check(`caffeine card counts the drink (${cafBefore.replace(/\s+/g, ' ')})`, /\b8\d mg now/.test(cafBefore) || /\b[6-8]\d mg now/.test(cafBefore));
+  // sipped, not chugged (PLAN 86): just logged, it's on its way in — none in the blood yet, the whole can counts for bedtime
+  const coming = await pg.locator('#caffeine .caf-coming').innerText().catch(() => '');
+  check(`caffeine card counts the drink, still going in (${cafBefore.replace(/\s+/g, ' ')} | ${coming})`, /none now, rising/.test(cafBefore) && /About [6-8]\d mg still on its way in/.test(coming));
   await pg.getByRole('button', { name: 'Undo' }).click(); await pg.waitForTimeout(200);
   check('undo removes it', /none now/.test(await pg.locator('.card h3', { hasText: 'Caffeine' }).innerText()));
   await pg.getByRole('button', { name: /Clear usual drink/ }).click();

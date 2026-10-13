@@ -100,7 +100,8 @@ export function doseCompare(entries: Entry[], supplements: Supplement[]): DoseCo
   }
   const out: DoseCompare[] = [];
   for (const s of supplements) {
-    // A day's dose: each slot counted once (the same slot logged twice is one intake), the slots added up.
+    // A day's dose: each slot's answer counted once (the same slot ticked twice is one intake), plus every intake logged
+    // again on top, all added up.
     const perSlot = new Map<string, number>(); // "day|slot" → amount
     let unit: string | null = null;
     for (const e of entries) {
@@ -109,7 +110,8 @@ export function doseCompare(entries: Entry[], supplements: Supplement[]): DoseCo
       if (!a) continue;
       unit ??= a.unit;
       if (a.unit !== unit) continue;
-      const k = `${localDay(e.at)}|${answerSlot(e, s)}`;
+      // another intake logged on top (PLAN 87) adds; a slot's own answer counts once
+      const k = e.again ? `${localDay(e.at)}|again|${e.id}` : `${localDay(e.at)}|${answerSlot(e, s)}`;
       perSlot.set(k, Math.max(perSlot.get(k) ?? 0, a.n));
     }
     const days = new Map<string, number>(); // day → amount

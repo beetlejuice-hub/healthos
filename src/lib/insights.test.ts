@@ -28,7 +28,9 @@ describe("dailyFacts", () => {
     const d = facts[0];
     expect(d.caffeineMg).toBe(190);
     expect(d.lastCaffeineMin).toBe(16 * 60);
-    expect(d.caffeineAtBed).toBeCloseTo(95 * 0.5 ** (15 / 5) + 95 * 0.5 ** (7 / 5), 6);
+    // hours after the drinks, what's left is the plain halving plus a few % (sipped and absorbed first: lib/caffeine)
+    const plain = 95 * 0.5 ** (15 / 5) + 95 * 0.5 ** (7 / 5);
+    expect(d.caffeineAtBed).toBeGreaterThan(plain); expect(d.caffeineAtBed).toBeLessThan(plain * 1.06);
     // 19.7 g at 21:00, cleared at ~7.8 g/h after absorbing → ~3.5 g left at 23:00.
     expect(d.alcoholAtBed).toBeGreaterThan(2.5);
     expect(d.alcoholAtBed).toBeLessThan(4.5);

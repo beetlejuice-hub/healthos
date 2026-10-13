@@ -55,6 +55,15 @@ export function slotTime(i: number, day0: number): number {
   return new Date(d.getFullYear(), d.getMonth(), d.getDate() + day, 0, (i - day * PER_DAY) * 10 + 5).getTime();
 }
 
+/**
+ * A curve sampled at slot starts, read at slot middles instead (each pair of neighbours averaged): heart rate and check-ins
+ * sit at the middle of their slot, so a driver read at the start was 5 min early — invisible while caffeine jumped up the
+ * moment it was logged, a 10-min pull on the delay once it rises over the hour (PLAN 86).
+ */
+export function atMiddles(points: [number, number][]): [number, number][] {
+  return points.map(([t, v], k) => { const nx = points[k + 1]; return [t, nx && nx[0] - t <= 10 * 60_000 ? (v + nx[1]) / 2 : v]; });
+}
+
 /** A curve (time, value) laid on slots from `day0` for `days` days; a slot with no point stays null. */
 export function slots(points: [number, number][], day0: number, days: number): (number | null)[] {
   const v: (number | null)[] = new Array(days * PER_DAY).fill(null);

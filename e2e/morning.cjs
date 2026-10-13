@@ -29,7 +29,9 @@ const { chromium, APP, OUT, handle } = require('./harness.cjs');
   const log = await pg.locator('text=Logged today').locator('..').innerText();
   check('coffee logged as a drink', /2 × Filter coffee[\s\S]*190 mg caffeine/.test(log));
   await pg.goto(APP + '#today'); await pg.waitForTimeout(200);
-  check('Today counts the caffeine', /Caffeine\s*[1-9]\d*\s*mg/i.test(await pg.locator('.t2-status').innerText()));
+  // just drunk, it's still going in (PLAN 86): "0 mg ↑" now, and counted in full for bedtime
+  const st = (await pg.locator('.t2-status').innerText()).replace(/\s+/g, ' '), cm = st.match(/Caffeine (\d+) mg( ↑)? (\d+) at/i);
+  check(`Today counts the caffeine (${cm && cm[0]})`, !!cm && (+cm[1] > 0 || !!cm[2]) && +cm[3] > 0);
 
   await pg.goto(APP + '#log/stack'); await pg.waitForTimeout(150);
   check('stack is a compact list', await pg.locator('.supp-row').count() === 5 && await pg.getByLabel('Name').count() === 0);

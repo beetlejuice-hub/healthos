@@ -25,8 +25,8 @@ export function useStackCount(now: number) {
 }
 
 /** The four numbers. Each one jumps to its detail further down. */
-export function Status({ kcal, goalKcal, protein, goalP, cafNow, cafBed, bed, stack }: {
-  kcal: number; goalKcal: number; protein: number; goalP: number; cafNow: number; cafBed: number; bed: number; stack: { total: number; taken: number };
+export function Status({ kcal, goalKcal, protein, goalP, cafNow, rising = false, cafBed, bed, stack }: {
+  kcal: number; goalKcal: number; protein: number; goalP: number; cafNow: number; /** a drink still going in (PLAN 86) */ rising?: boolean; cafBed: number; bed: number; stack: { total: number; taken: number };
 }) {
   const left = goalKcal - kcal;
   const tile = (label: string, value: ReactNode, pct: number, color: string, sub: string, target: string) => (
@@ -41,7 +41,7 @@ export function Status({ kcal, goalKcal, protein, goalP, cafNow, cafBed, bed, st
     <section className="t2-status" aria-label="Today in numbers">
       {tile("kcal", fmt(Math.abs(left)), (kcal / goalKcal) * 100, "var(--kcal)", left >= 0 ? "left today" : "over goal", "fuel")}
       {tile("Protein", `${fmt(protein)} g`, (protein / goalP) * 100, "var(--pro)", `of ${goalP} g`, "fuel")}
-      {tile("Caffeine", <>{cafNow}<small> mg</small></>, cafNow / 4, "var(--caf)", `${cafBed} at ${clock(bed)}`, "caffeine")}
+      {tile("Caffeine", <>{cafNow}<small> mg{rising ? " ↑" : ""}</small></>, cafNow / 4, "var(--caf)", `${cafBed} at ${clock(bed)}`, "caffeine")}
       {stack.total > 0
         ? tile("Stack", <>{stack.taken}<small> / {stack.total}</small></>, (stack.taken / stack.total) * 100, "var(--supp)", stack.taken >= stack.total ? "all taken" : `${stack.total - stack.taken} to go`, "stack")
         : tile("Stack", "–", 0, "var(--supp)", "none set up", "stack")}

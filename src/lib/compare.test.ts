@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { checkSamples, compare, hrSamples, slotOf, slots, slotTime } from "./compare";
+import { atMiddles, checkSamples, compare, hrSamples, slotOf, slots, slotTime } from "./compare";
 import { rng } from "./bench";
 
 const PER_DAY = 144, LAGS = Array.from({ length: 19 }, (_, k) => k); // 0–180 min
@@ -123,5 +123,14 @@ describe("samples", () => {
       expect(v[6 * PER_DAY + 54]).toBe(80); expect(v.filter((x) => x != null)).toHaveLength(1);
       expect(slotTime(6 * PER_DAY + 54, day0)).toBe(new Date(2026, 9, 26, 9, 5).getTime());
     } finally { process.env.TZ = tz; if (tz === undefined) delete process.env.TZ; }
+  });
+});
+
+describe("drivers read at the slot middle (PLAN 86)", () => {
+  it("a curve sampled at slot starts reads, for each slot, its value at the middle — where heart rate's slot sits", () => {
+    const M = 60_000, ramp = Array.from({ length: 6 }, (_, k) => [k * 10 * M, k * 10] as [number, number]); // 1 a minute
+    expect(atMiddles(ramp).map((p) => p[1])).toEqual([5, 15, 25, 35, 45, 50]); // the last has no neighbour: kept
+    // a gap longer than a slot isn't averaged across
+    expect(atMiddles([[0, 10], [30 * M, 40]])).toEqual([[0, 10], [30 * M, 40]]);
   });
 });

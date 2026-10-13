@@ -130,9 +130,13 @@ const EMPTY: State = {
 let KEY = "healthos.v1";
 export const storageKey = () => KEY;
 
+/** What this page last read from or wrote to its slot: a close only saves over that, never over someone else's write. */
+let lastSeen: string | null = null;
+
 function load(): State {
   try {
     const raw = localStorage.getItem(KEY);
+    lastSeen = raw;
     if (!raw) return EMPTY;
     const s = JSON.parse(raw) as Partial<State>;
     return { ...EMPTY, ...s, templates: upgradeStarter(s.templates ?? EMPTY.templates), supplements: normalizeStack(s.supplements ?? EMPTY.supplements), settings: { ...DEFAULT_SETTINGS, ...s.settings }, goals: { ...DEFAULT_GOALS, ...s.goals }, profile: { ...EMPTY_PROFILE, ...s.profile }, scout: s.scout ?? {}, ai: { ...EMPTY_AI, ...s.ai } };
@@ -151,7 +155,21 @@ let remote: Remote | null = null;
 export const setRemote = (r: Remote | null) => { remote = r; };
 
 function save() {
-  try { localStorage.setItem(KEY, JSON.stringify(state)); } catch { /* full or blocked: the in-memory copy still works */ }
+  saveTimer = null;
+  try { const raw = JSON.stringify(state); localStorage.setItem(KEY, raw); lastSeen = raw; } catch { /* full or blocked: the in-memory copy still works */ }
+}
+// Saving waits 150 ms so a burst of taps writes once — but a page closing (app swiped away, reload) doesn't wait: a log
+// made just before it was lost (found 13 Oct: a supplement tapped right before a reload was gone after it). Only when the
+// slot still holds what this page last saw: another tab or a reset that wrote it since keeps its write.
+if (typeof window !== "undefined") {
+  const flush = () => {
+    if (!saveTimer) return;
+    clearTimeout(saveTimer); saveTimer = null;
+    let cur: string | null = null; try { cur = localStorage.getItem(KEY); } catch { /* blocked */ }
+    if (cur === lastSeen) save();
+  };
+  window.addEventListener("pagehide", flush);
+  document.addEventListener("visibilitychange", () => { if (document.visibilityState === "hidden") flush(); });
 }
 
 function commit(next: State, fromServer = false) {

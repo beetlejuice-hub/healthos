@@ -40,7 +40,9 @@ const { chromium, APP, OUT, handle } = require('./harness.cjs');
   await pg.locator('.t2-pad button', { hasText: 'Coffee' }).click(); await pg.waitForTimeout(250);
   let drinks = (await st(pg)).entries.filter((e) => e.kind === 'drink');
   check('one tap logs it', drinks.length === 1 && drinks[0].caffeineMg === 126);
-  check(`the caffeine number moves (${(await tile(pg, 'Caffeine')).replace(/\s+/g, ' ')})`, /Caffeine\s*1[12]\d\s*mg/i.test(await tile(pg, 'Caffeine')));
+  // sipped and absorbed over the next hour (PLAN 86): "0 mg ↑" now, and counted for bedtime at once
+  const ct = (await tile(pg, 'Caffeine')).replace(/\s+/g, ' '), cm = ct.match(/Caffeine (\d+) mg( ↑)? (\d+) at/i);
+  check(`the caffeine number moves (${ct})`, !!cm && (+cm[1] > 0 || !!cm[2]) && +cm[3] > 0);
   check('Undo is offered', await pg.getByRole('button', { name: 'Undo' }).count() === 1);
   await pg.getByRole('button', { name: 'Undo' }).click(); await pg.waitForTimeout(250);
   check('…and takes it back', (await st(pg)).entries.filter((e) => e.kind === 'drink').length === 0 && /Caffeine\s*0\s*mg/i.test(await tile(pg, 'Caffeine')));

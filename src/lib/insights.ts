@@ -6,7 +6,7 @@
 import type { Entry, EntryOf, Supplement, Workout } from "./types";
 import type { Point } from "./series";
 import type { Settings } from "./store";
-import { caffeineAt, cleared, type Dose } from "./caffeine";
+import { caffeineAt, cleared, doseCaffeine, type Dose } from "./caffeine";
 import { bedtimeOn } from "./caffeine-sleep";
 import type { Check } from "./feelgraph";
 import { alcoholCurve, type AlcoholDose } from "./alcohol";
@@ -57,8 +57,9 @@ export function lanes(entries: Entry[], workouts: Workout[], supplements: Supple
   let lo = 0;
   for (let t = from; t <= now; t += step) {
     while (lo < doses.length && doses[lo].at < t - 48 * 60 * MIN) lo++;
+    // in the blood: sipped and absorbed over the hour after a drink (lib/caffeine, PLAN 86)
     let mg = 0;
-    for (let i = lo; i < doses.length && doses[i].at <= t; i++) mg += doses[i].mg * Math.pow(0.5, (t - doses[i].at) / MIN / settings.halfLifeMin);
+    for (let i = lo; i < doses.length && doses[i].at <= t; i++) mg += doseCaffeine(doses[i], t, settings.halfLifeMin).blood;
     caffeine.push([t, cleared(mg)]);
   }
   const alcohol = alcoholCurve(alcoholDoses(entries), from, now, { bodyKg: currentKg(entries, settings.bodyKg, now), stepMin: 10 });

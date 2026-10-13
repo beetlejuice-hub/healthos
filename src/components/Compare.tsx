@@ -6,7 +6,7 @@
  */
 
 import { useEffect, useMemo, useState, type ReactNode } from "react";
-import { checkSamples, compare, hrSamples, MIN_DAYS, PER_DAY, slots, slotTime, type Compared } from "../lib/compare";
+import { atMiddles, checkSamples, compare, hrSamples, MIN_DAYS, PER_DAY, slots, slotTime, type Compared } from "../lib/compare";
 import { FEELINGS, type FeelK } from "../lib/feelgraph";
 import type { Lanes } from "../lib/insights";
 import { loadBandBefore, type BandData } from "../lib/band-client";
@@ -59,7 +59,7 @@ export function Compare({ data, band, now, logged }: { data: Lanes; band: BandDa
   // Heart rate needs the band's older weeks. Each load changes `band`, so this asks again until they're all in.
   useEffect(() => { if (ok === "hr" && band) void loadBandBefore(day0); }, [ok, band, day0]);
   const input = useMemo(() => {
-    const drv = slots(dk === "caf" ? data.caffeine : data.alcohol, day0, span);
+    const drv = slots(atMiddles(dk === "caf" ? data.caffeine : data.alcohol), day0, span);
     // A day with nothing eaten or drunk logged is unknown, not "none": left out.
     for (let k = 0; k < span; k++) if (!logged.has(addDays(first, k))) drv.fill(null, k * PER_DAY, (k + 1) * PER_DAY);
     const raw = ok === "hr" ? (band ? hrSamples(day0, band.hr, data.workouts) : []) : checkSamples(day0, data.checks.map((c) => ({ at: c.at, v: c[ok] })));

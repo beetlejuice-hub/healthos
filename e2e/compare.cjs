@@ -1,6 +1,6 @@
 // Timeline → Compare (canvas board "Compare", owner's pick 8 Oct). Fake world, 21 days: coffee most mornings and
 // some afternoons; heart rate climbs after waking whatever you drink, plus 3.5 bpm per 100 mg of caffeine in the
-// body 40 minutes earlier (planted). Check-ins with nothing planted. Compare must find the caffeine one at about
+// blood 40 minutes earlier (planted). Check-ins with nothing planted. Compare must find the caffeine one at about
 // the right size and delay, and must NOT call the mood one clear. Laptop and phone.
 const { chromium, APP, OUT, handle } = require('./harness.cjs');
 
@@ -14,7 +14,10 @@ function rng(seed) {
 function world({ days, perMg = 0.035, seed = 7 }) {
   const { r, g } = rng(seed), hr = [], doses = [], meals = [], checks = [], workouts = [];
   const base = (md) => md < 390 ? 56 : md < 510 ? 56 + ((md - 390) / 120) * 14 : md < 1320 ? 70 + 2 * Math.sin((md - 510) / 180) : md < 1410 ? 70 - ((md - 1320) / 90) * 14 : 56;
-  const caf = (t) => doses.reduce((s, at) => s + (t >= at ? 95 * Math.pow(0.5, (t - at) / MIN / 300) : 0), 0);
+  // caffeine in the blood, as the app's lane has it since PLAN 86: sipped over 15 min, absorbed (half every 8 min), halving
+  // every 5 h — the planted effect follows that line 40 min later, so Compare should find 40 against it
+  const blood = (tau) => { if (tau <= 0) return 0; const e = Math.LN2 / 300, k = Math.LN2 / 8, T = 15, U = Math.min(T, tau), I = (c) => (Math.exp(-c * (tau - U)) - Math.exp(-c * tau)) / c; return (95 / T) * k * (I(e) - I(k)) / (k - e); };
+  const caf = (t) => doses.reduce((s, at) => s + blood((t - at) / MIN), 0);
   for (let k = days - 1; k >= 0; k--) {
     const mid = new Date(2026, 9, 8 - k).getTime();
     if (r() < 0.8) doses.push(mid + (450 + Math.floor(r() * 120)) * MIN);

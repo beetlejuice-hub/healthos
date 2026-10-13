@@ -958,13 +958,34 @@ below, in his words, grouped; A first (broken or wrong now), then the rest. Item
    already states), cross-checked with a Romanian and a Hungarian table, a portion in the everyday unit (a bowl = 350 g),
    and both names (pityókaleves / krumplileves / ciorbă de cartofi). Lidl / Kaufland bakery doughnuts: no label online —
    take the values off the shelf label (photo) or the exact product name.
-86. [ ] **Caffeine sipped, not chugged** — "for caffeine: whether coffee or energy drink, lets add a more realistic curve,
+86. [x] **Caffeine sipped, not chugged** — "for caffeine: whether coffee or energy drink, lets add a more realistic curve,
    like after logging, it takes like 10-20 minutes while i sip on it, not chug it. and also lets confirm if the curve is
-   good".
+   good". The curve wasn't good: it jumped to the whole drink the moment it was logged. Now (lib/caffeine): a drink goes
+   down over 15 min from when it's logged, and into the blood at first order (half of what's in the gut every 8 min), so
+   a gulped coffee peaks ~45 min later and a sipped one ~50 — the studies say 30–60 min for most people. Two numbers:
+   the curve and "now" are what's in the blood (Today says "none now, rising · about 95 mg still on its way in" right
+   after a coffee); bedtime and every sleep check count everything logged and not yet cleared, so a coffee at 22:55
+   counts in full at 23:00. Bedtime numbers barely move (a 36 mg day reads 37–38: absorbing first delays clearing).
+   The rest of the curve checked: the 5 h half-life is a setting (3–7 h is the normal range), and under 10 mg counts as
+   none. Also fixed: tapping the curve on a phone showed the reading for an instant — lifting the finger hid it; it now
+   stays until the next touch. Checked: the formula against a minute-by-minute simulation (0.15 mg), peak timing, a
+   bedtime coffee (caffeine.test); e2e/sipped.cjs at 390 px (none → 59 → 86 → 75 mg over two hours, bedtime fixed at 29).
+   And Compare read the caffeine (and alcohol) line 5 min early against heart rate — hidden while caffeine jumped, a
+   10-min pull on the delay once it rises; it reads slot middles now (compare.test; e2e/compare.cjs plants 40 min on
+   the blood curve: likely 30–40, was 30–30).
 
 ### D · Supplements
-87. [ ] **Log supplements like food** — "rn its like took or not - i want it to be able to log almost like food - one
-   click, but i can log morning and night too if i take something twice".
+87. [x] **Log supplements like food** — "rn its like took or not - i want it to be able to log almost like food - one
+   click, but i can log morning and night too if i take something twice". Built (lib/supplog, components/SuppQuick):
+   "+ Magnesium" chips on Today's Stack card and in Log → Stack log an intake now, as many times a day as you take it.
+   Due in this part of the day and not ticked → that's the tick; ticked "didn't take" → it becomes taken; otherwise it's
+   another intake, listed in the slot it was taken in ("23:30 · again", "08:15 · extra", × to remove), counted in the
+   header ("+1 more") and on the chip ("2×"). The ✓ / ✗ checklist stays: "didn't take" is what lets the app compare days
+   with and without (PLAN 74). A day's dose now adds intakes taken again (dose comparisons: 2 × 200 mg = 400). Also
+   fixed on the way: a log made in the 150 ms before the page closed (reload, app swiped away) was lost — the store now
+   saves on close, unless another tab or a reset wrote the slot since. Checked: supplog.test (each rule; the dose sum
+   fails with the old rule), e2e/supplog.cjs at 390 px (morning extra, evening tick, once more at 23:30, ✓ un-ticks only
+   the plan's answer, × removes an extra, Log → Stack logs too).
 
 ### E · Sleep — brainstorm first
 88. [ ] **More from sleep** — "Feel like we need better or more about sleep like can ai or app determine more things about
