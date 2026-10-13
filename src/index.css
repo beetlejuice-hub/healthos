@@ -702,6 +702,14 @@ a { color: inherit; }
 .hownow { display: grid; gap: 10px; }
 .hownow.calm-line { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 14px; background: var(--c-card); border-radius: 16px; font-size: 13.5px; color: var(--c-ink-2); }
 .hownow.calm-line .pill-btn { flex: none; }
+.hownow.calm-line { flex-wrap: wrap; }
+.hownow.calm-line > span:first-child { min-width: 0; flex: 1 1 160px; }
+.hownow.calm-line .hn-said { font-style: normal; color: var(--c-ink); overflow-wrap: anywhere; }
+.hownow.calm-line .hn-btns { display: flex; gap: 6px; flex: none; }
+.hownow.calm-line .hn-note { flex: 1 1 100%; }
+.hn-night { padding-bottom: 2px; }
+.hn-addnote { justify-self: start; border: 0; border-radius: 999px; min-height: 36px; padding: 6px 14px; background: transparent; box-shadow: inset 0 0 0 1px #ffffff22; color: var(--c-ink); font-size: 13px; font-weight: 600; }
+.hn-addnote em { font-style: normal; font-weight: 400; color: var(--c-ink-2); margin-left: 4px; }
 .hn-row { display: grid; gap: 5px; }
 .hn-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; font-size: 13.5px; }
 .hn-head em { font-style: normal; color: var(--c-ink-2); font-size: 12.5px; }
@@ -710,7 +718,7 @@ a { color: inherit; }
 .hn-nums button.ghost { box-shadow: inset 0 0 0 1.5px #ffffff2e; }
 .hn-nums button[aria-pressed="true"] { background: var(--mood); color: var(--c-bg); }
 .hn-note { display: grid; gap: 6px; }
-.hn-note input { width: 100%; border: 0; border-radius: 10px; padding: 10px 12px; background: var(--c-card-2); color: var(--c-ink); font-size: 15px; }
+.hn-note input { width: 100%; border: 0; border-radius: 10px; padding: 10px 12px; background: var(--c-card-2); color: var(--c-ink); font-size: 16px; }
 .hn-doing { display: grid; gap: 6px; padding-top: 4px; border-top: 1px solid #ffffff0d; }
 .hn-tags { display: flex; flex-wrap: wrap; gap: 6px; }
 .hn-slept { display: flex; align-items: center; justify-content: space-between; gap: 10px; font-size: 13.5px; color: var(--c-ink-2); }

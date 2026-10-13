@@ -61,6 +61,12 @@ describe("does it seem to affect your sleep (your own nights)", () => {
     expect(n[0].atBedMg).toBeGreaterThan(100);
   });
 
+  it("a rating at 00:30 is still last night, not a morning: it doesn't count for the night before", () => {
+    const d = "2026-10-01", next = addDays(d, 1);
+    expect(ratedNights([rate(atMinute(next, 30), 3)], 300, 23 * 60)).toHaveLength(0);
+    expect(ratedNights([rate(atMinute(next, CAF_SLEEP.morningFromHour * 60), 6)], 300, 23 * 60)).toHaveLength(1);
+  });
+
   // A fake person: 30 nights, half with a late coffee. `effect` = rating points lost on those nights.
   const world = (seed: number, effect: number, nights = 30): Night[] => {
     const { r, g } = rng(seed);

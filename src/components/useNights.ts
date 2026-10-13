@@ -16,6 +16,7 @@ export function useNights(band: BandData | null, data: Lanes, entries: Entry[], 
   const evs = useMemo(() => evenings(ns, {
     drinks: data.drinks, caffeineAt: (t) => caffeineAt(data.doses.map((d) => ({ at: d.at, mg: d.mg })), t, halfLifeMin),
     workouts: data.workouts, meals: entries.filter((e) => e.kind === "food"), ratings: entries.flatMap((e) => (e.kind === "sleep" ? [{ at: e.at, rating: e.rating }] : [])), steps,
+    sleeps: entries.filter((e) => e.kind === "sleep"),
   }), [ns, data, entries, halfLifeMin, steps]);
   return { ns, evs, steps };
 }

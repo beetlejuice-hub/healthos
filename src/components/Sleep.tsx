@@ -14,6 +14,7 @@ import type { Entry } from "../lib/types";
 import { useNights } from "./useNights";
 import { useWidth } from "./useWidth";
 import { NightWords } from "./NightWords";
+import { nightLabel, tagFactors, tagsComing } from "../lib/lastnight";
 
 const ST = { awake: "#eef1f2", rem: "#7fadf0", light: "#4f86dc", deep: "#2f5cc0" } as const;
 /** The same stages as text: the dark blues are fills, too dark to read as words on the panel. */
@@ -32,6 +33,8 @@ export function SleepNights({ data, band, now, entries, halfLifeMin }: { data: L
   // The nights need the band's older weeks; each load changes `band`, so this asks again until they're in.
   useEffect(() => { if (band) void loadBandBefore(now - (span + 2) * DAY); }, [band, now, span]);
   const { ns, evs } = useNights(band, data, entries, halfLifeMin, now, span);
+  // your last-night tags (PLAN 90) join the rows once each is on 5 nights
+  const factors = useMemo(() => [...FACTORS, ...tagFactors(evs)], [evs]);
   const [selId, setSel] = useState<string | null>(null);
   const si = Math.max(0, ns.findIndex((n) => n.id === selId) >= 0 ? ns.findIndex((n) => n.id === selId) : ns.length - 1);
   // Measured from the first render (useWidth only looks on mount), so the box is there before the band's data is.
@@ -52,7 +55,7 @@ export function SleepNights({ data, band, now, entries, halfLifeMin }: { data: L
       <LastNight n={n} e={e} ns={ns} evs={evs} band={band} data={data} wide={wide} w={w} />
       <Minis ns={ns.slice(-14)} sel={n.id} onSel={setSel} w={w} />
       <NightLog ns={ns} evs={evs} sel={n} onSel={setSel} wide={wide} w={w} workouts={data.workouts} meals={data.meals} />
-      <GoesWith ns={ns} evs={evs} wide={wide} w={w} />
+      <GoesWith ns={ns} evs={evs} wide={wide} w={w} factors={factors} />
     </div>
   );
 }
@@ -329,6 +332,7 @@ export function GoesWith({ ns, evs, wide, w, outcomes = OUTCOMES, factors = FACT
     return sgn(d, 1);
   };
   const shown = factors.filter((f) => cells.some((c) => c.factor === f.id && c.sure !== "too few"));
+  const coming = useMemo(() => tagsComing(evs), [evs]);
   const hidden = factors.filter((f) => !shown.includes(f)).map((f) => { const c = cells.find((x) => x.factor === f.id)!; return `${f.name.toLowerCase()} (${c.nWith} with, ${c.nWithout} without)`; });
   if (ns.length < copy.minNights) return <section className="sl-p sl-c" aria-label={copy.title}><span className="cmp-k">{copy.title}</span><p>Needs at least {copy.minNights} {copy.what} with the band, and 5 with and 5 without each thing — {ns.length} {copy.what} so far.</p></section>;
   return (
@@ -354,6 +358,7 @@ export function GoesWith({ ns, evs, wide, w, outcomes = OUTCOMES, factors = FACT
         {cur && <Opened ns={ns} evs={evs} cell={cells.find((c) => c.factor === cur.f && c.outcome === cur.o)!} outcomes={outcomes} factors={factors} what={copy.what} w={wide ? Math.min(460, w - 640) : w - 32} />}
       </div>
       {hidden.length > 0 && <p className="sl-note">Not enough {copy.what} yet — 5 with and 5 without — for: {hidden.join(", ")}.</p>}
+      {coming.length > 0 && <p className="sl-note sl-coming">Your last-night tags get a row from 5 nights each: {coming.map((c) => `${nightLabel(c.tag)} ${c.n} of 5`).join(", ")}.</p>}
       <div className="sl-c-key"><span><i style={{ background: "#4f86dc" }} />{copy.toward}</span><span><i style={{ background: "#d9822b" }} />the other way</span></div>
     </section>
   );
@@ -361,7 +366,8 @@ export function GoesWith({ ns, evs, wide, w, outcomes = OUTCOMES, factors = FACT
 
 function Opened({ ns, evs, cell, w, outcomes, factors, what }: { ns: Night[]; evs: Evening[]; cell: Cell; w: number; outcomes: Outcome[]; factors: Factor[]; what: string }) {
   const f = factors.find((x) => x.id === cell.factor)!, o = outcomes.find((x) => x.id === cell.outcome)!;
-  const pts = ns.flatMap((n, i) => { const v = o.of(n, evs[i]); return v == null ? [] : [{ v, has: f.has(n, evs[i]) }]; });
+  // the same nights the cell counted: a night the row doesn't know about (band off, morning not asked) is neither side
+  const pts = ns.flatMap((n, i) => { const v = o.of(n, evs[i]); return v == null || !Number.isFinite(v) || (f.known && !f.known(n, evs[i])) ? [] : [{ v, has: f.has(n, evs[i]) }]; });
   if (cell.sure === "too few" || pts.length < 2) return null;
   const vs = pts.map((p) => p.v), lo = Math.min(...vs), hi = Math.max(...vs), span = hi - lo || 1;
   const X = (v: number) => 20 + ((v - lo) / span) * (w - 40), fmtV = (v: number) => (o.unit === "clock" ? clock(atMinute("2026-01-01", 0) + v * MIN) : o.unit === "min" ? `${Math.round(v)}m` : (Math.round(v * 10) / 10).toString());

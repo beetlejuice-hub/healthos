@@ -11,6 +11,7 @@
 import type { HrMinute, SleepSession } from "./band";
 import { addDays, atMinute, localDay, minuteOfDay, startOfDay, MIN, HOUR } from "./time";
 import { usualSteps } from "./steps";
+import { CAF_SLEEP } from "./caffeine-sleep";
 
 export type StageType = "awake" | "rem" | "light" | "deep";
 export type Night = {
@@ -159,7 +160,9 @@ export function firstAt(hr: HrMinute[], t: number): number {
 /** What each night's evening held, from what you logged. */
 export type Evening = { drinks: number[]; caffeineAtBed: number; trained: boolean; ateLate: boolean; rating: number | null;
   /** The day's steps when the band was worn (lib/steps), and whether that's above the middle of the nights given (PLAN 66). */
-  steps?: number | null; moreSteps?: boolean | null };
+  steps?: number | null; moreSteps?: boolean | null;
+  /** What that morning's sleep entry says last night held (lib/lastnight); null when that morning wasn't asked. */
+  tags?: string[] | null };
 
 /** `known`: false leaves the night out of that row — a day the band was off has no steps, it isn't a day without. */
 export type Factor = { id: string; name: string; has: (n: Night, e: Evening) => boolean; known?: (n: Night, e: Evening) => boolean };
@@ -226,9 +229,14 @@ export function goesWith(ns: Night[], evs: Evening[], opts: { perms?: number; se
 export function evenings(ns: Night[], o: {
   drinks: { at: number; g: number }[]; caffeineAt: (t: number) => number; workouts: { start: number }[]; meals: { at: number }[]; ratings: { at: number; rating?: number }[];
   steps?: Map<string, number>;
+  /** Sleep entries (the morning's rating and last night's tags). Mornings from the first one with a tag count as asked. */
+  sleeps?: { at: number; tags?: string[] }[];
 }): Evening[] {
   const mid = o.steps ? usualSteps(o.steps, ns.map((n) => n.eve)) : null;
+  const morning = (t: number) => { const h = new Date(t).getHours(); return h >= CAF_SLEEP.morningFromHour && h < CAF_SLEEP.morningUntilHour; };
+  const tagged = o.sleeps?.filter((s) => s.tags?.length && morning(s.at)).map((s) => localDay(s.at)).sort()[0];
   return ns.map((n) => {
+    const sl = o.sleeps?.filter((s) => localDay(s.at) === n.day && morning(s.at)).at(-1);
     const st = o.steps?.get(n.eve) ?? null;
     const from = atMinute(n.eve, 12 * 60), late = atMinute(n.eve, 21 * 60);
     const rate = o.ratings.filter((r) => r.rating != null && localDay(r.at) === n.day && r.at >= n.up - HOUR && r.at <= n.up + 12 * HOUR).at(-1);
@@ -239,6 +247,8 @@ export function evenings(ns: Night[], o: {
       ateLate: o.meals.some((m) => m.at >= late && m.at < n.bed),
       rating: rate?.rating ?? null,
       ...(o.steps ? { steps: st, moreSteps: st != null && mid != null ? st > mid : null } : {}),
+      // Before the first tagged morning nobody was asking, so an untagged night then isn't a night without.
+      ...(o.sleeps ? { tags: sl && tagged != null && n.day >= tagged ? sl.tags ?? [] : null } : {}),
     };
   });
 }

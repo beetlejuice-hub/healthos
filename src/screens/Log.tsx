@@ -28,6 +28,8 @@ import { convert, cookKind, cookState, WORD, type CookState } from "../lib/cooke
 import { findBarcode, type Lookup } from "../lib/barcode";
 import { ScanButton, Scanner } from "../components/Scanner";
 import { EntryEdit } from "../components/EntryEdit";
+import { NoteField } from "../components/HowNow";
+import { nightLabel } from "../lib/lastnight";
 
 const fold = (t: string) => t.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
 /** A drink matches what you typed by its name or any other name it goes by ("sprite" → soft drink). */
@@ -907,9 +909,11 @@ const describe = (e: Entry, supps: Supplement[]): [string, string] => {
     case "set": return [e.exercise, `${e.kg} kg × ${e.reps}`];
     case "weight": return ["Weight", `${e.kg} kg${e.fatPct != null ? ` · ${e.fatPct}% fat` : ""}`];
     // Only the sliders you set, all of them (stress was missing from this line).
-    case "feel": return ["Feeling", (["energy", "mood", "focus", "stress", "anxiety"] as const).filter((k) => e[k] != null).map((k) => `${k} ${e[k]}`).join(" · ") + (e.doing?.length ? ` · ${e.doing.map(labelOf).join(", ")}` : "") + (e.note ? ` — “${e.note}”` : "") || "a note"];
+    // a note or a tag on its own reads cleanly too ("“head hurts”", not " — “head hurts”")
+    case "feel": { const r = [...(["energy", "mood", "focus", "stress", "anxiety"] as const).filter((k) => e[k] != null).map((k) => `${k} ${e[k]}`), ...(e.doing?.length ? [e.doing.map(labelOf).join(", ")] : [])].join(" · ");
+      return ["Feeling", [r, e.note ? `“${e.note}”` : ""].filter(Boolean).join(" — ") || "nothing rated"]; }
     case "answer": return [e.question, e.answer];
-    case "sleep": return ["Last night's sleep", `${e.rating != null ? `${e.rating} / 10` : "not rated"}${e.slow ? " · slow to fall asleep" : ""}`];
+    case "sleep": return ["Last night's sleep", `${e.rating != null ? `${e.rating} / 10` : "not rated"}${e.slow ? " · slow to fall asleep" : ""}${e.tags?.length ? ` · ${e.tags.map(nightLabel).join(", ")}` : ""}`];
   }
 };
 
@@ -924,12 +928,14 @@ function TodayLog() {
       <h3>Logged today <span>{list.length}</span></h3>
       {list.length === 0 && <p className="note">Nothing yet.</p>}
       <div className="list">
-        {list.map((e) => { const [a, b] = describe(e, supps), canEdit = e.kind === "food" || e.kind === "drink"; return (
+        {list.map((e) => { const [a, b] = describe(e, supps), canEdit = e.kind === "food" || e.kind === "drink" || e.kind === "feel"; return (
           <div className={`li${edit === e.id ? " editing" : ""}`} key={e.id}>
             {canEdit ? <button type="button" className="li-open" aria-expanded={edit === e.id} aria-label={`Change ${a}`} onClick={() => setEdit(edit === e.id ? null : e.id)}><span>{a}<small>{clock(e.at)} · {b}</small></span></button>
               : <span>{a}<small>{clock(e.at)} · {b}</small></span>}
             <button type="button" className="x" aria-label={`Delete ${a}`} onClick={() => act.removeEntry(e.id)}>×</button>
-            {edit === e.id && canEdit && <EntryEdit e={e} onDone={() => setEdit(null)} />}
+            {edit === e.id && (e.kind === "food" || e.kind === "drink") && <EntryEdit e={e} onDone={() => setEdit(null)} />}
+            {/* a note on any check-in, later too (PLAN 89) */}
+            {edit === e.id && e.kind === "feel" && <NoteField id={e.id} initial={e.note ?? ""} onSaved={() => setEdit(null)} autoFocus />}
           </div>
         ); })}
       </div>

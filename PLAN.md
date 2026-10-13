@@ -972,12 +972,27 @@ below, in his words, grouped; A first (broken or wrong now), then the rest. Item
    might scrolling how it affects sleep score deep sleep etc sso can we brainstorm and track that too".
 
 ### F · Telling the app more
-89. [ ] **Notes on mood logging** — "i should be able to leave notes on mood logging, like head hurts, or parents made me
-   mad, etc, so ai can see and take it into account when making assumptions". Found: a "Why?" note exists after a
-   check-in on Today; make it there wherever mood is logged, and visible later.
-90. [ ] **Events and people** — "we also need to work on telling more to the app, like i was sleeping w gf that night, ive
+89. [x] **Notes on mood logging** — "i should be able to leave notes on mood logging, like head hurts, or parents made me
+   mad, etc, so ai can see and take it into account when making assumptions". Found: a "Why?" note existed but only
+   showed in the 10 minutes after moving a slider — easy to never see. Now: "+ Add a note" is always on How now? (Today
+   and /now; one line, so the card is 337 px at 390 instead of 291 — the owner's "big and bad on phone" bar was 430);
+   written first, the note starts the check-in and the feelings you rate next join it; the folded line shows it with
+   "Add a note" / "Edit note"; in Log, tap any check-in to change its note later. The AI already quoted notes (every
+   call's context and the mood journal). Checked: e2e/tellmore.cjs at 390 px (one check-in, not two, on Enter; edits land
+   on the same check-in).
+90. [x] **Events and people** — "we also need to work on telling more to the app, like i was sleeping w gf that night, ive
    been up late night working, or been out w friends drinking, so app can see and learn what events, peoples affect me
-   and how".
+   and how". Built: under the morning sleep question, once it's rated (so the card stays small until you answer), "Last
+   night": with gf · worked late · out with friends · scrolled in bed · + your own word (remembered as a chip). Saved on that morning's sleep entry (`tags`, lib/lastnight). A tag on
+   5+ nights becomes a row in the Sleep, Heart and Mind grids (nights with it against nights without); under 5 the grid
+   says "with gf 3 of 5". Only mornings from your first tagged one count — an older rating without tags isn't a night
+   without. The AI sees them ("last night: with gf, worked late"). Also fixed on the way: at 00:30 the card asked about
+   "last night" (the night wasn't over) — the morning now starts at 04:00; and a grid cell's opened dots counted nights
+   the row leaves out (band off / morning not asked), so they disagreed with the cell. Checked: planted −40 min on gf
+   nights found, nothing on random "worked late", quiet across 20 empty worlds (lib/sleep.test); e2e/tellmore.cjs plants
+   −70 min sleep and mood −1.5 after "out with friends" and finds both, focus stays quiet.
+   Next, if wanted: tag it in the evening as it happens; people as their own list (who you were with) once the owner
+   says which people matter.
 
 ### G · AI and the bigger picture
    - AI chat that can look things up: #67 (waits on the AI key). Smarter noticing, incl. food ↔ strength: #65 and #64.

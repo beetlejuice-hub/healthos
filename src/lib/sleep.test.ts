@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { HrMinute, SleepSession } from "./band";
 import { clockH, eli5, evenings, facts, fellAsleep, goesWith, lowestHr, nights, regularity, usual, usualNightHr, weekendShift, type Evening, type Night } from "./sleep";
 import { rng } from "./bench";
+import { tagFactors } from "./lastnight";
 import { atMinute, addDays, MIN, HOUR } from "./time";
 
 const EVE0 = "2026-09-08";
@@ -211,5 +212,55 @@ describe("a night in plain words (PLAN 79)", () => {
   it("under 5 other nights: no comparison, only what it is", () => {
     const n = base(9, { asleep: 362 });
     expect(eli5(n, [n, ...ns.slice(0, 3)]).every((r) => r.side === null && /after 5 nights/.test(r.vs))).toBe(true);
+  });
+});
+
+/**
+ * 40 nights; from night 6 on, every morning has a sleep entry with last night's tags (PLAN 90). Planted: nights "with gf"
+ * (about a third) have `gfMin` more asleep. "worked late" is ticked at random and does nothing — it must stay quiet.
+ */
+function tagWorld(seed: number, gfMin: number) {
+  const { r, g } = rng(seed), ns: Night[] = [], sleeps: { at: number; tags?: string[] }[] = [];
+  for (let k = 0; k < 40; k++) {
+    const eve = addDays(EVE0, k), [n] = nights([session(eve, 23.3 + g() * 0.2, 31 + g() * 0.2)], [], {}, {});
+    const gf = r() < 0.35, late = r() < 0.4;
+    n.asleep += g() * 20 + (gf ? gfMin : 0); n.low = 50 + g(); n.hrv = 45 + g() * 4; ns.push(n);
+    if (k >= 6) sleeps.push({ at: atMinute(n.day, 8 * 60), tags: [...(gf ? ["gf"] : []), ...(late ? ["worklate"] : [])] });
+  }
+  return { ns, evs: evenings(ns, { drinks: [], caffeineAt: () => 0, workouts: [], meals: [], ratings: [], sleeps }), sleeps };
+}
+
+describe("last-night tags in the grid (PLAN 90)", () => {
+  it("finds a planted −40 min asleep on nights with gf, and leaves out the nights nobody asked about", () => {
+    const w = tagWorld(3, -40), rows = tagFactors(w.evs), gf = rows.find((f) => f.id === "tag:gf")!;
+    expect(gf.name).toBe("With gf");
+    const c = goesWith(w.ns, w.evs, { factors: rows }).find((x) => x.factor === "tag:gf" && x.outcome === "asleep")!;
+    // the first 6 nights had no morning entry, and mornings before the first tag weren't asked: unknown, not "without"
+    expect(c.nWith + c.nWithout).toBe(34 - w.sleeps.findIndex((s) => s.tags!.length > 0));
+    expect(c.nWith + c.nWithout).toBeLessThan(40);
+    expect(c.sure).toBe("clear"); expect(c.toward).toBe("worse"); expect(c.diff!).toBeLessThan(-25); expect(c.diff!).toBeGreaterThan(-55);
+    expect(goesWith(w.ns, w.evs, { factors: rows }).filter((x) => x.factor === "tag:worklate" && x.sure === "clear")).toHaveLength(0);
+  });
+  it("nothing planted: tag rows stay quiet across 20 worlds", () => {
+    let loud = 0;
+    for (let s = 300; s < 320; s++) { const w = tagWorld(s, 0); loud += goesWith(w.ns, w.evs, { perms: 1000, seed: s, factors: tagFactors(w.evs) }).filter((c) => c.sure === "clear").length; }
+    expect(loud).toBeLessThanOrEqual(2);
+  }, 30_000);
+  it("which morning is whose: 04:00–14:00 that day; 00:30 is still last night, 15:00 isn't a morning", () => {
+    const ns = [0, 1, 2, 3].map((k) => nights([session(addDays(EVE0, k), 23.5, 31)], [], {}, {})[0]);
+    const at = (k: number, h: number) => atMinute(ns[k].day, h * 60);
+    const evs = evenings(ns, { drinks: [], caffeineAt: () => 0, workouts: [], meals: [], ratings: [],
+      sleeps: [{ at: at(0, 7), tags: ["out"] }, { at: at(1, 0.5), tags: ["gf"] }, { at: at(2, 9) }, { at: at(3, 15), tags: ["gf"] }] });
+    expect(evs.map((e) => e.tags)).toEqual([["out"], null, [], null]);
+  });
+  it("before the first tagged morning nobody was asking: an old rating without tags isn't a night without", () => {
+    const ns = [0, 1, 2].map((k) => nights([session(addDays(EVE0, k), 23.5, 31)], [], {}, {})[0]);
+    const evs = evenings(ns, { drinks: [], caffeineAt: () => 0, workouts: [], meals: [], ratings: [],
+      sleeps: [{ at: atMinute(ns[0].day, 8 * 60) }, { at: atMinute(ns[1].day, 8 * 60), tags: ["gf"] }, { at: atMinute(ns[2].day, 8 * 60) }] });
+    expect(evs.map((e) => e.tags)).toEqual([null, ["gf"], []]);
+  });
+  it("without sleep entries passed, evenings stay as they were (no tags key)", () => {
+    const [n] = nights([session(EVE0, 23.5, 31)], [], {}, {});
+    expect("tags" in evenings([n], { drinks: [], caffeineAt: () => 0, workouts: [], meals: [], ratings: [] })[0]).toBe(false);
   });
 });

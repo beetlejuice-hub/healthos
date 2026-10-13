@@ -5,7 +5,7 @@
  * Owner, 2 Oct: keep the slider's detail; one word of your own; the small reward; not cluttered.
  */
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { act, getState, useStore } from "../lib/store";
 import type { Entry } from "../lib/types";
 import { clock } from "../lib/time";
@@ -19,6 +19,7 @@ import { localDay } from "../lib/time";
 import { FeelSlider } from "./FeelSlider";
 import { useBand } from "../lib/band-client";
 import { fellAsleep } from "../lib/sleep";
+import { nightLabel, nightTagOrder } from "../lib/lastnight";
 
 const WORDS: Record<FeelKey, string[]> = {
   energy: ["drained", "low", "ok", "steady", "high"], mood: ["low", "flat", "ok", "good", "great"],
@@ -40,6 +41,8 @@ export function HowNow({ now, always = false }: { now: number; always?: boolean 
   const [more, setMore] = useState(false);
   const [own, setOwn] = useState("");
   const [sleepEdit, setSleepEdit] = useState(false);
+  const [nightOwn, setNightOwn] = useState<string | null>(null);
+  const [noting, setNoting] = useState(false);
 
   const last = latestFeel(entries);
   const open = last && now - last.at < OPEN_MS && now >= last.at ? last : undefined;
@@ -62,6 +65,9 @@ export function HowNow({ now, always = false }: { now: number; always?: boolean 
     else act.addEntry({ ...c.entry, ...(inferred.length ? { doing: inferred } : {}) });
     setAgain(false);
   };
+  // A note on its own is a check-in too (PLAN 89; owner, 13 Oct: "leave notes on mood logging, like head hurts, or
+  // parents made me mad"): written first, the sliders you touch next join it.
+  const noteNew = (note: string) => { act.addEntry({ kind: "feel", at: Date.now(), note, ...(inferred.length ? { doing: inferred } : {}) }); setNoting(false); };
   const toggle = (tag: string) => {
     if (!open) return;
     const cur = open.doing ?? [];
@@ -71,9 +77,9 @@ export function HowNow({ now, always = false }: { now: number; always?: boolean 
 
   // Mornings: last night's sleep, one entry per night (re-tapping changes it). It's what tells the app
   // whether caffeine at bedtime goes with worse sleep for you (caffeine-sleep.ts).
-  const morning = new Date(now).getHours() < CAF_SLEEP.morningUntilHour;
+  const hour = new Date(now).getHours(), morning = hour >= CAF_SLEEP.morningFromHour && hour < CAF_SLEEP.morningUntilHour;
   const night = entries.find((e): e is Extract<Entry, { kind: "sleep" }> => e.kind === "sleep" && localDay(e.at) === localDay(now));
-  const rateSleep = (patch: { rating?: number; slow?: boolean }) => {
+  const rateSleep = (patch: { rating?: number; slow?: boolean; tags?: string[] }) => {
     if (night) act.updateEntry(night.id, patch as Partial<Entry>);
     else act.addEntry({ kind: "sleep", at: Date.now(), ...patch });
   };
@@ -81,6 +87,11 @@ export function HowNow({ now, always = false }: { now: number; always?: boolean 
   // it's rated, and for a moment after to adjust; from then on one line you can tap to change — "Rate again" is for feelings.
   const sleepOpen = morning && (!night || night.rating == null || now - night.at < OPEN_MS || sleepEdit);
   const sleptLine = morning && !sleepOpen && night?.rating != null;
+  // What last night held, in a tap (PLAN 90): with gf, worked late, out, scrolled — and your own words.
+  const nightOrder = useMemo(() => nightTagOrder(entries, now), [entries, now]);
+  const nightTags = night?.tags ?? [];
+  const toggleNight = (t: string) => rateSleep({ tags: nightTags.includes(t) ? nightTags.filter((x) => x !== t) : [...nightTags, t] });
+  const addNightOwn = () => { const t = tagOf(nightOwn ?? ""); if (t && !nightTags.includes(t)) toggleNight(t); setNightOwn(null); };
 
   const order = useMemo(() => doingOrder(entries, now), [entries, now]);
   // Last night's minutes to fall asleep from the band, when it has the night (PLAN 77) — no need to ask then.
@@ -97,8 +108,12 @@ export function HowNow({ now, always = false }: { now: number; always?: boolean 
     const set = FEEL_KEYS.filter((k) => recent[k] != null).map((k) => `${k} ${recent[k]}`).join(" · ");
     return (
       <div className="hownow calm-line" id="feel">
-        <span>Rated {clock(recent.at)}{set ? ` · ${set}` : ""}</span>
-        <button type="button" className="pill-btn" onClick={() => setAgain(true)}>{morning && night?.rating == null ? "Rate sleep" : "Rate again"}</button>
+        <span>{set ? "Rated" : "Noted"} {clock(recent.at)}{set ? ` · ${set}` : ""}{recent.note ? <em className="hn-said"> · “{recent.note}”</em> : null}</span>
+        <span className="hn-btns">
+          <button type="button" className="pill-btn" aria-expanded={noting} onClick={() => setNoting(!noting)}>{recent.note ? "Edit note" : "Add a note"}</button>
+          <button type="button" className="pill-btn" onClick={() => { setAgain(true); setNoting(false); }}>{morning && night?.rating == null ? "Rate sleep" : "Rate again"}</button>
+        </span>
+        {noting && <NoteField key={recent.id} id={recent.id} initial={recent.note ?? ""} onSaved={() => setNoting(false)} autoFocus />}
       </div>
     );
   }
@@ -106,12 +121,24 @@ export function HowNow({ now, always = false }: { now: number; always?: boolean 
   return (
     <div className="card hownow" id="feel">
       <h3>How now? <span>{open ? "saved as you tap" : last ? `last ${clock(last.at)}` : "tap or slide any you want to log"}</span></h3>
-      {sleptLine && <div className="hn-slept"><span>Last night <b>{night!.rating} / 10</b>{night!.slow ? " · slow to fall asleep" : ""}</span>
+      {sleptLine && <div className="hn-slept"><span>Last night <b>{night!.rating} / 10</b>{night!.slow ? " · slow to fall asleep" : ""}{nightTags.length ? ` · ${nightTags.map(nightLabel).join(", ")}` : ""}</span>
         <button type="button" aria-label="Change last night's sleep" onClick={() => setSleepEdit(true)}>change</button></div>}
       {sleepOpen && <div className="hn-sleep">
         <FeelSlider label="Sleep" name="sleep" value={night?.rating} word={sleepWord} color="var(--ok)" empty="last night" onChange={(n) => rateSleep({ rating: n })} />
         {fell ? <p className="hn-fell" data-fell={fell.min}>Fell asleep in <b>{fell.min} min</b> — from your band{fell.usual != null ? `, ${fell.min > fell.usual + 10 ? "longer than" : fell.min < fell.usual - 10 ? "quicker than" : "about"} your usual ${fell.usual}` : ""}</p>
           : <div className="hn-tags"><button type="button" aria-pressed={!!night?.slow} onClick={() => rateSleep({ slow: !night?.slow })}>took long to fall asleep</button></div>}
+        {/* once it's rated, like "What were you up to?" — the card stays small until you're answering (owner, 2 Oct: "big and bad on phone") */}
+        {(night?.rating != null || nightTags.length > 0) && <>
+        <div className="hn-head"><b>Last night</b><em>optional · what it held</em></div>
+        <div className="hn-tags hn-night" role="group" aria-label="Last night">
+          {[...new Set([...nightOrder, ...nightTags])].map((t) => <button key={t} type="button" aria-pressed={nightTags.includes(t)} onClick={() => toggleNight(t)}>{nightLabel(t)}</button>)}
+          {nightOwn == null && <button type="button" className="hn-more" onClick={() => setNightOwn("")}>+ your own</button>}
+        </div>
+        {nightOwn != null && <form className="hn-own" onSubmit={(e) => { e.preventDefault(); addNightOwn(); }}>
+          <input autoFocus value={nightOwn} onChange={(e) => setNightOwn(e.target.value)} placeholder="one word: sauna, argument, gaming…" aria-label="Last night, your own word" maxLength={24} />
+          <button type="submit" className="pill-btn" disabled={!tagOf(nightOwn)}>Add</button>
+        </form>}
+        </>}
       </div>}
       <div className="hn-sliders">
         {FEEL_KEYS.map((k) => (
@@ -134,7 +161,9 @@ export function HowNow({ now, always = false }: { now: number; always?: boolean 
         </form>}
       </div>}
 
-      {open && <NoteField key={open.id} id={open.id} initial={open.note ?? ""} />}
+      {open ? <NoteField key={open.id} id={open.id} initial={open.note ?? ""} />
+        : noting ? <NoteField key="new" initial="" onNew={noteNew} autoFocus />
+        : <button type="button" className="hn-addnote" onClick={() => setNoting(true)}>+ Add a note <em>why you feel this way</em></button>}
 
       {open && reward && reward.changes.length > 0 && <p className="hn-reward" role="status">
         Since {clock(reward.at)}: {reward.changes.map((c) => `${c.k} ${signed(c.d)}`).join(", ")}{reward.between.length ? ` · ${reward.between.map(phraseOf).join(", ")} in between` : ""}.
@@ -148,16 +177,25 @@ export function HowNow({ now, always = false }: { now: number; always?: boolean 
 
 /**
  * Why you feel this way, in your words (owner, 2 Oct: "a reason why i am stressed/sad… ai should take
- * this seriously"). Saved on the check-in when you leave the field or press Enter; the nightly
- * read-back quotes it.
+ * this seriously"; 13 Oct: "head hurts, or parents made me mad"). Saved on the check-in when you leave the
+ * field or press Enter; with no check-in open (`onNew`) the note starts one. The AI and the nightly read-back
+ * quote it.
  */
-function NoteField({ id, initial }: { id: string; initial: string }) {
+export function NoteField({ id, initial, onNew, onSaved, autoFocus }: { id?: string; initial: string; onNew?: (note: string) => void; onSaved?: () => void; autoFocus?: boolean }) {
   const [text, setText] = useState(initial);
-  const save = () => { const t = text.trim(); if (t !== initial) act.updateEntry(id, { note: t || undefined } as Partial<Entry>); };
+  // Enter saves and then blurs, which saves again: only write what changed since the last write (a second new check-in otherwise).
+  const wrote = useRef(initial.trim());
+  const save = () => {
+    const t = text.trim();
+    if (t === wrote.current) return;
+    wrote.current = t;
+    if (id) act.updateEntry(id, { note: t || undefined } as Partial<Entry>); else if (t) onNew?.(t);
+  };
+  const fid = `note-${id ?? "new"}`;
   return (
-    <form className="hn-note" onSubmit={(e) => { e.preventDefault(); save(); (document.activeElement as HTMLElement | null)?.blur(); }}>
-      <label className="hn-head" htmlFor={`note-${id}`}><b>Why?</b><em>optional · in your words</em></label>
-      <input id={`note-${id}`} value={text} onChange={(e) => setText(e.target.value)} onBlur={save} maxLength={200} placeholder="deadline, slept badly, good news…" aria-label="Why? A note on this check-in" />
+    <form className="hn-note" onSubmit={(e) => { e.preventDefault(); save(); (document.activeElement as HTMLElement | null)?.blur(); onSaved?.(); }}>
+      <label className="hn-head" htmlFor={fid}><b>Why?</b><em>optional · in your words</em></label>
+      <input id={fid} autoFocus={autoFocus} value={text} onChange={(e) => setText(e.target.value)} onBlur={save} maxLength={200} placeholder="head hurts, parents, deadline…" aria-label="Why? A note on this check-in" />
     </form>
   );
 }

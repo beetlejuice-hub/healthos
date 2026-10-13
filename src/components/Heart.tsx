@@ -14,7 +14,8 @@ import { doingOrder, labelOf, tagOf } from "../lib/feel";
 import { act, useStore } from "../lib/store";
 import { afterCoffee, afterWorkouts, usualAt, usualByHour, usualReady, workoutWindows } from "../lib/hrusual";
 import type { Lanes } from "../lib/insights";
-import { clockH, lowestHr, usual as middleHalf, type Evening, type Night } from "../lib/sleep";
+import { clockH, FACTORS, lowestHr, usual as middleHalf, type Evening, type Night } from "../lib/sleep";
+import { tagFactors } from "../lib/lastnight";
 import { stepsIn } from "../lib/steps";
 import { addDays, atMinute, clock, dayLabel, localDay, DAY, MIN } from "../lib/time";
 import type { Entry } from "../lib/types";
@@ -58,6 +59,7 @@ export function HeartPage({ data, band, now, entries, halfLifeMin }: { data: Lan
   const awake = useMemo(() => (band ? awakeByDay(band.hr, band.sleep, workouts) : new Map<string, AwakeDay>()), [band, workouts]);
   const outcomes = useMemo(() => heartOutcomes(awake), [awake]);
   const { ns, evs } = useNights(band, data, entries, halfLifeMin, now, span);
+  const factors = useMemo(() => [...FACTORS, ...tagFactors(evs)], [evs]);
   const after = useMemo(() => {
     if (!band?.hr.length) return null;
     const u = usualByHour(band.hr, workouts, today);
@@ -83,7 +85,7 @@ export function HeartPage({ data, band, now, entries, halfLifeMin }: { data: Lan
       </div>
       <div className={`hp-two${wide ? " wide" : ""}`}>
         <Mornings band={band} awake={awake} ns={ns} evs={evs} today={today} span={span} sel={day} onSel={(d) => setDay(d === today ? null : d)} w={wide ? Math.floor((w - 12) * 0.58) : w} />
-        <GoesWith ns={ns} evs={evs} wide={false} w={wide ? w - 12 - Math.floor((w - 12) * 0.58) : w} outcomes={outcomes} narrow={outcomes} copy={HEART_COPY} />
+        <GoesWith ns={ns} evs={evs} wide={false} w={wide ? w - 12 - Math.floor((w - 12) * 0.58) : w} outcomes={outcomes} factors={factors} narrow={outcomes} copy={HEART_COPY} />
       </div>
       {after && <AfterCards coffee={after.coffee} gym={after.gym} usual={after.usual} />}
       {checks && <AroundCheckIns a={checks} span={span} w={w} />}

@@ -135,6 +135,14 @@ describe("the AI knows everything about mood (owner, 2 Oct)", () => {
     expect(j).toHaveLength(3);
     expect(j[2]).toBe('2026-10-02: slept 6 (slow to fall asleep) · 10:00 E6 M7 [work] · 16:00 S8 "deadline at work"');
   });
+  it("last night's tags reach the AI, in words, with or without a rating (PLAN 90)", () => {
+    const st = many(1);
+    (st.entries as unknown[]).push({ id: "t1", kind: "sleep", at: now - D - 14 * 3600e3, tags: ["gf", "worklate", "sauna"] });
+    (st.entries[0] as { tags?: string[] }).tags = ["out"];
+    const j = moodJournal(st, now);
+    expect(j[0]).toBe("2026-10-01: night [last night: with gf, worked late, sauna]");
+    expect(j[1]).toMatch(/^2026-10-02: slept 6 \(slow to fall asleep\) \[last night: out with friends\] · /);
+  });
   it("two months of check-ins fit; a year is trimmed oldest-first to the budget, newest days kept", () => {
     const two = buildContext({ state: many(60), now, days: [], findings: [], patterns: [] });
     expect(two).toMatch(/## Mood journal[^\n]*— 60 days/);

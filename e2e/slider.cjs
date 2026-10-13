@@ -19,7 +19,8 @@ const { chromium, APP, OUT, handle, rate } = require('./harness.cjs');
     const sl = (n) => pg.locator(`#feel [role=slider][data-name="${n}"]`);
     const at = async (n, v) => { const bb = await sl(n).boundingBox(); return [bb.x + ((v - 1) / 9) * bb.width, bb.y + bb.height / 2]; };
     const card = await pg.locator('#feel').boundingBox();
-    if (w === 390) check(`compact: the card is ${Math.round(card.height)} px tall with sleep (grid was ~430)`, card.height < 330);
+    // ~291 px until 13 Oct; +46 for the one-line "+ Add a note" (PLAN 89: the owner couldn't find where to leave a note)
+    if (w === 390) check(`compact: the card is ${Math.round(card.height)} px tall with sleep (grid was ~430)`, card.height < 345);
 
     // A vertical swipe that starts on a slider scrolls; it doesn't rate.
     let [x, y] = await at('energy', 3);

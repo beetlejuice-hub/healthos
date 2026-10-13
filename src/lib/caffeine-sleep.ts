@@ -31,8 +31,10 @@ export const CAF_SLEEP = {
   higherFromMg: 100,
   /** Typical adult half-life range, minutes (≈3–7 h; faster in smokers, slower on the pill or pregnant). */
   halfLifeRangeMin: [180, 420] as [number, number],
-  /** A sleep rating counts for the night before if given before this hour. */
+  /** A sleep rating counts for the night before if given from `morningFromHour` until this hour. */
   morningUntilHour: 14,
+  /** Before this you're still in last night (00:30 isn't a morning yet): no sleep question, and a rating then isn't a morning's. */
+  morningFromHour: 4,
   personal: {
     /** Nights needed on each side before saying anything about you. */
     minNights: 6,
@@ -61,7 +63,8 @@ export function ratedNights(entries: Entry[], halfLifeMin: number, bedMinute: nu
   const seen = new Set<string>(), out: Night[] = [];
   const rated = entries.filter((e): e is Extract<Entry, { kind: "sleep" }> => e.kind === "sleep" && e.rating != null).sort((a, b) => a.at - b.at);
   for (const f of rated) {
-    if (new Date(f.at).getHours() >= CAF_SLEEP.morningUntilHour) continue;
+    const h = new Date(f.at).getHours();
+    if (h >= CAF_SLEEP.morningUntilHour || h < CAF_SLEEP.morningFromHour) continue;
     const day = addDays(localDay(f.at), -1);
     if (seen.has(day)) continue;
     seen.add(day);
