@@ -823,7 +823,19 @@ email get Dev tools (`#dev`): raw entry editor, generate/remove sample, wipe acc
        planted good sessions +3.5 % found; warm-ups never count; Monday weeks; no "usual" without 4 weeks behind it),
        e2e/training.cjs at 390 and 1280 px. Found on the way: a good day that always falls on the same template is
        absorbed by that lift's own line — by design (the line is the lift's normal), worth knowing for B.
-     - [ ] B · what goes with a strong session ← next
+     - [ ] B · what goes with a strong session — **B1 done 13 Oct** (lib/sessionfacts; the Sleep grid's shuffle made
+       generic): per session, carbs in the 4 h before, the band's night before, 400+ kcal a day under your usual over
+       the 3 days before ("3 days under maintenance" on the board — the app doesn't know your maintenance, so your usual
+       logged day; all 3 days must have food), HRV in your lowest quarter that morning, coffee in the 2 h before, evening
+       (from 15:00), each supplement that day (answered days only; a row from 5 each way) → strength against your
+       trend, and felt after. In words on top ("…has gone with carbs ≥ 60 g in the 4 h before (+2.9 %, clear) and under
+       6 h 30 asleep the night before (−3.7 %, clear)"), the grid with the opened cell, carbs as a number (slope per
+       10 g). Unknown left out (no food logged that day before the session; no night from the band). Found on the way:
+       a band load already running dropped the next page's request, and Training and Tonight asked only once — they
+       ask again on each band change now (Training saw a week of nights instead of 12). Checked: sessionfacts.test
+       (planted carbs +3.5 % and short night −4 % found at their sizes; coffee, creatine, evening not clear; ≤1 clear in
+       10 empty worlds; unknowns left out), e2e/trainingb.cjs at 390 px.
+       B2 ← next: every session against your trend with what came before it (the board's lanes).
      - [ ] C · what training goes with afterwards
 65. [ ] **Noticing, and digests** — owner: "App should have a pretty complex n smart system of noticing patterns especially
    focusing on sleep and focus" and "AI should look at data at eod, eow, eom, and make suggestions, summaries, etc, even

@@ -17,9 +17,9 @@ export function Tonight({ now }: { now: number }) {
   const band = useBand().data;
   const entries = useStore((s) => s.entries), workouts = useStore((s) => s.workouts), supplements = useStore((s) => s.supplements);
   const halfLife = useStore((s) => s.settings.halfLifeMin), bedMinute = useStore((s) => s.settings.bedMinute);
-  const have = !!band;
-  // the grid needs a month of nights, not the band's usual week
-  useEffect(() => { if (have) void loadBandBefore(Date.now() - 32 * DAY); }, [have]);
+  // the grid needs a month of nights, not the band's usual week; asked again whenever the band's data changes (a load
+  // already running drops this one)
+  useEffect(() => { if (band) void loadBandBefore(now - 32 * DAY); }, [band, now]);
   // still up past the planned bedtime (00:30): bedtime is now, not a time already gone
   const eve = tonightEve(now), bed = Math.max(tonightsBed(now, bedMinute), Math.ceil(now / 60_000) * 60_000);
   const ns = useMemo(() => (band ? nights(band.sleep, band.hr, band.rhr, band.hrv).filter((n) => n.eve < eve && n.up >= now - 32 * DAY) : []), [band, eve, now]);

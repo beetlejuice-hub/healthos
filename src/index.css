@@ -1296,3 +1296,4 @@ a { color: inherit; }
 .tp-mtrack .bar { position: absolute; left: 0; top: 1px; height: 10px; border-radius: 2px; background: var(--gym); }
 .tp-mtrack .bar.dim { opacity: .45; }
 .tp-mtrack .tick { position: absolute; top: -3px; width: 2px; height: 18px; margin-left: -1px; background: var(--i-ink); }
+.tp-b { display: grid; gap: 12px; min-width: 0; }

@@ -175,8 +175,9 @@ export type Evening = { drinks: number[]; caffeineAtBed: number; trained: boolea
   lastMealMin?: number | null; lateTrain?: boolean; eveStress?: number | null; supps?: Record<string, boolean | null> };
 
 /** `known`: false leaves the night out of that row — a day the band was off has no steps, it isn't a day without. */
-export type Factor = { id: string; name: string; has: (n: Night, e: Evening) => boolean; known?: (n: Night, e: Evening) => boolean };
-export type Outcome = { id: string; name: string; unit: "min" | "bpm" | "ms" | "/10" | "clock" | "×"; /** +1: more is toward longer, deeper, calmer sleep. */ better: 1 | -1; of: (n: Night, e: Evening) => number | null };
+/** A grid row. Generic so other grids (Training's sessions) use the same tested shuffle; the default is a night and its evening. */
+export type Factor<N = Night, E = Evening> = { id: string; name: string; has: (n: N, e: E) => boolean; known?: (n: N, e: E) => boolean };
+export type Outcome<N = Night, E = Evening> = { id: string; name: string; unit: "min" | "bpm" | "ms" | "/10" | "clock" | "×" | "%"; /** +1: more is toward longer, deeper, calmer sleep (or stronger). */ better: 1 | -1; of: (n: N, e: E) => number | null };
 export const FACTORS: Factor[] = [
   { id: "drinks", name: "Drinks that evening", has: (_, e) => e.drinks.length > 0 },
   { id: "caf", name: "Caffeine at bed ≥ 30 mg", has: (_, e) => e.caffeineAtBed >= 30 },
@@ -237,11 +238,11 @@ export function bars(cells: number): { clear: number; likely: number } {
  * looser) — so a grid of pure chance comes up clear about once in ten grids however many rows it grows (PLAN 88).
  * The Heart page passes its own columns (lib/heart HEART_OUTCOMES) and keeps these rows, so the two grids agree.
  */
-export function goesWith(ns: Night[], evs: Evening[], opts: { perms?: number; seed?: number; factors?: Factor[]; outcomes?: Outcome[] } = {}): Cell[] {
+export function goesWith<N = Night, E = Evening>(ns: N[], evs: E[], opts: { perms?: number; seed?: number; factors?: Factor<N, E>[]; outcomes?: Outcome<N, E>[] } = {}): Cell[] {
   // 32-bit integer generator (Math.imul): exact and fast — the old one multiplied past what a double holds exactly
   let seed = (opts.seed ?? 7) >>> 0;
   const rnd = () => { seed = (seed + 0x6d2b79f5) >>> 0; let t = seed; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
-  const fs = opts.factors ?? FACTORS, os = opts.outcomes ?? OUTCOMES;
+  const fs = opts.factors ?? (FACTORS as unknown as Factor<N, E>[]), os = opts.outcomes ?? (OUTCOMES as unknown as Outcome<N, E>[]);
   // every cell's nights first (known, with a value), so the bar knows how many cells are being tried
   const rows = fs.map((f) => {
     const has = ns.map((n, i) => f.has(n, evs[i])), known = ns.map((n, i) => !f.known || f.known(n, evs[i]));
@@ -255,7 +256,7 @@ export function goesWith(ns: Night[], evs: Evening[], opts: { perms?: number; se
   const done = new Map<string, Cell>();
   for (const r of rows) {
     // the columns of a row that count the same nights share one set of shuffles (a grid of 100 cells stays quick on a phone)
-    const groups = new Map<string, { o: Outcome; use: number[] }[]>();
+    const groups = new Map<string, { o: Outcome<N, E>; use: number[] }[]>();
     for (const c of r.cells) { const k = c.use.join(","); groups.set(k, [...(groups.get(k) ?? []), c]); }
     for (const g of groups.values()) {
       const use = g[0].use, [nWith, nWithout] = sides(r.has, use), m = use.length;

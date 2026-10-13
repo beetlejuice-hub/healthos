@@ -379,9 +379,9 @@ function Opened({ ns, evs, cell, w, outcomes, factors, what }: { ns: Night[]; ev
   const pts = ns.flatMap((n, i) => { const v = o.of(n, evs[i]); return v == null || !Number.isFinite(v) || (f.known && !f.known(n, evs[i])) ? [] : [{ v, has: f.has(n, evs[i]) }]; });
   if (cell.sure === "too few" || pts.length < 2) return null;
   const vs = pts.map((p) => p.v), lo = Math.min(...vs), hi = Math.max(...vs), span = hi - lo || 1;
-  const X = (v: number) => 20 + ((v - lo) / span) * (w - 40), fmtV = (v: number) => (o.unit === "clock" ? clock(atMinute("2026-01-01", 0) + v * MIN) : o.unit === "min" ? `${Math.round(v)}m` : (Math.round(v * 10) / 10).toString());
+  const X = (v: number) => 20 + ((v - lo) / span) * (w - 40), fmtV = (v: number) => (o.unit === "clock" ? clock(atMinute("2026-01-01", 0) + v * MIN) : o.unit === "min" ? `${Math.round(v)}m` : `${Math.round(v * 10) / 10}${o.unit === "%" ? " %" : ""}`);
   const mean = (a: number[]) => a.reduce((s, x) => s + x, 0) / a.length, mW = mean(pts.filter((p) => p.has).map((p) => p.v)), mWo = mean(pts.filter((p) => !p.has).map((p) => p.v));
-  const unit = o.unit === "min" ? " min" : o.unit === "bpm" ? " bpm" : o.unit === "ms" ? " ms" : o.unit === "/10" ? " points" : o.unit === "×" ? " times" : "";
+  const unit = o.unit === "min" ? " min" : o.unit === "bpm" ? " bpm" : o.unit === "ms" ? " ms" : o.unit === "/10" ? " points" : o.unit === "×" ? " times" : o.unit === "%" ? " %" : "";
   const d = cell.diff!, words = o.unit === "clock" ? `${Math.round(Math.abs(d))} min ${d > 0 ? "later" : "earlier"}` : `${sgn(d, o.unit === "min" ? 0 : 1)}${unit}`;
   return (
     <div className="sl-open" data-factor={cell.factor} data-outcome={cell.outcome}>
@@ -395,7 +395,7 @@ function Opened({ ns, evs, cell, w, outcomes, factors, what }: { ns: Night[]; ev
         <text x={20} y={142} className="he-t">{fmtV(lo)}</text><text x={w - 20} y={142} textAnchor="end" className="he-t">{fmtV(hi)}</text>
       </svg>
       <p className="sl-open-v"><b>{words}</b> on {what} with it · {cell.sure}{cell.p != null ? ` (p ${cell.p < 0.001 ? "<0.001" : cell.p.toFixed(3)})` : ""}</p>
-      <p className="sl-note">Every {what.replace(/s$/, "")} is a dot, so you can see what the average hides. Evenings with one thing often have others too (drinks, weekends, late bedtimes) — read the rows together.</p>
+      <p className="sl-note">Every {what.replace(/s$/, "")} is a dot, so you can see what the average hides. {what === "nights" ? "Evenings with one thing often have others too (drinks, weekends, late bedtimes)" : `${what[0].toUpperCase()}${what.slice(1)} with one thing often have others too`} — read the rows together.</p>
     </div>
   );
 }

@@ -5,8 +5,12 @@
  * training goes with afterwards). Numbers from lib/liftstrength; this file only draws.
  */
 
-import { useMemo } from "react";
+import { useEffect, useMemo, type ReactElement } from "react";
 import { useStore } from "../lib/store";
+import { loadBandBefore, useBand } from "../lib/band-client";
+import { goesWith, nights, type Factor, type Outcome } from "../lib/sleep";
+import { sessionFacts, sessionFactors, SESSION_OUTCOMES, slopeTest, type SessionFacts } from "../lib/sessionfacts";
+import { GoesWith, type GridCopy } from "./Sleep";
 import { mainLifts, sessions, setsPerMuscleWeek, thisWeek, type LiftTrend, type Session } from "../lib/liftstrength";
 import { nextTemplate, suggestNext, type LoggedSet } from "../lib/training";
 import { clock, dayLabel } from "../lib/time";
@@ -27,6 +31,13 @@ export function TrainingPage({ now }: { now: number }) {
   const feels = useMemo(() => entries.filter((e): e is EntryOf<"feel"> => e.kind === "feel" && (e.energy != null || e.mood != null)), [entries]);
   const [ref, w] = useWidth<HTMLDivElement>();
   const wide = w >= 900;
+  // B needs the band's nights for the 12 weeks (its usual load is a week)
+  // asked again whenever the band's data changes: a load already running (another page's) drops this one
+  const band = useBand().data;
+  useEffect(() => { if (band) void loadBandBefore(now - 90 * 86_400_000); }, [band, now]);
+  const ns = useMemo(() => (band ? nights(band.sleep, band.hr, band.rhr, band.hrv) : []), [band]);
+  const supplements = useStore((x) => x.supplements);
+  const facts = useMemo(() => sessionFacts(ss, entries, ns), [ss, entries, ns]);
   if (!ss.length) return null;
   // what's next: the template after the last one done, its first lift as last time said (double progression)
   const next = nextTemplate(templates, workouts), first = next?.exercises[0];
@@ -55,6 +66,7 @@ export function TrainingPage({ now }: { now: number }) {
         <Recent ss={ss} feels={feels} />
         {muscles.length > 0 && <Muscles rows={muscles} />}
       </div>
+      <StrongSessions ss={ss} facts={facts} supplements={supplements} w={w} wide={wide} />
     </div>
   );
 }
@@ -126,6 +138,63 @@ function Muscles({ rows }: { rows: { muscle: string; usual: number; now: number 
         ))}
       </div>
       <p className="sl-note">Bar: your usual week. White tick: this week so far. Shaded: 10–20 working sets a week, what most programs aim for. Half a set for a muscle that only helps (triceps on bench).</p>
+    </section>
+  );
+}
+
+/* ------------------------------------------------------------------ B · what goes with a strong session */
+
+const B_COPY: GridCopy = {
+  title: "What goes with a strong session", what: "sessions", toward: "toward stronger, or feeling better after", minNights: 10,
+  sub: "Each cell: sessions with the thing against sessions without. Filled: clear · faint: likely · empty: not clear yet. Goes with, not proof of cause.",
+};
+
+function StrongSessions({ ss, facts, supplements, w, wide }: { ss: Session[]; facts: SessionFacts[]; supplements: { id: string; name: string }[]; w: number; wide: boolean }) {
+  const factors = useMemo(() => sessionFactors(supplements, facts), [supplements, facts]);
+  const cells = useMemo(() => goesWith<Session, SessionFacts>(ss, facts, { factors, outcomes: SESSION_OUTCOMES }), [ss, facts, factors]);
+  const measured = ss.filter((s) => s.pct != null).length;
+  const found = cells.filter((c) => c.outcome === "pct" && (c.sure === "clear" || c.sure === "likely")).sort((a, b) => a.p! - b.p!);
+  const nameOf = (id: string) => factors.find((f) => f.id === id)!.name.toLowerCase();
+  const words = measured < B_COPY.minNights ? `Needs ${B_COPY.minNights} sessions measured against your trend — ${measured} so far. Each lift needs 3 sessions before its sessions count.`
+    : found.length ? `Your strength against your trend has gone with ${found.map((c) => `${nameOf(c.factor)} (${c.diff! >= 0 ? "+" : "−"}${Math.abs(c.diff!).toFixed(1)} %, ${c.sure})`).join(" and ")}.`
+      : "Nothing goes clearly with your strength yet.";
+  // carbs as a number, not only yes / no
+  const pts = useMemo(() => ss.flatMap((s, i) => (facts[i].carbs4h != null && s.pct != null ? [[facts[i].carbs4h!, s.pct] as [number, number]] : [])), [ss, facts]);
+  const sl = useMemo(() => slopeTest(pts), [pts]);
+  // the grid component is the Sleep page's (same shuffle, same look); its row and column types are generic in lib/sleep
+  const G = GoesWith as unknown as (p: { ns: Session[]; evs: SessionFacts[]; wide: boolean; w: number; outcomes: Outcome<Session, SessionFacts>[]; factors: Factor<Session, SessionFacts>[]; narrow: Outcome<Session, SessionFacts>[]; copy: GridCopy }) => ReactElement;
+  return (
+    <div className="tp-b" data-sec="training">
+      <section className="sl-p tp-bwords" aria-label="Your strong sessions">
+        <span className="cmp-k">Your strong sessions · {measured} sessions</span>
+        <p className="mp-big" data-found={found.map((c) => c.factor).join(",")}>{words}</p>
+      </section>
+      <div className={`tp-row${wide ? " wide" : ""}`}>
+        <G ns={ss} evs={facts} wide={false} w={wide ? Math.floor(w * 0.58) : w} outcomes={SESSION_OUTCOMES} factors={factors} narrow={SESSION_OUTCOMES} copy={B_COPY} />
+        {pts.length >= 10 && <CarbsScatter pts={pts} sl={sl} w={wide ? Math.floor(w * 0.4) : w} />}
+      </div>
+    </div>
+  );
+}
+
+function CarbsScatter({ pts, sl, w }: { pts: [number, number][]; sl: ReturnType<typeof slopeTest>; w: number }) {
+  const cw = w - 30, H = 200, L = 34, R = 10, T = 10, B = 26;
+  const xmax = Math.max(120, Math.ceil(Math.max(...pts.map((p) => p[0])) / 20) * 20), ylim = Math.max(6, Math.ceil(Math.max(...pts.map((p) => Math.abs(p[1])))));
+  const X = (g: number) => L + (g / xmax) * (cw - L - R), Y = (v: number) => T + (1 - (v + ylim) / (2 * ylim)) * (H - T - B);
+  const mx = pts.reduce((a, p) => a + p[0], 0) / pts.length, my = pts.reduce((a, p) => a + p[1], 0) / pts.length;
+  const per10 = sl.slope != null ? sl.slope * 10 : null;
+  const words = sl.sure === "too few" ? "" : sl.sure === "not clear" ? `No clear line yet: ${per10! >= 0 ? "+" : "−"}${Math.abs(per10!).toFixed(1)} % per 10 g, which chance alone could give.`
+    : `Strength goes with ${per10! >= 0 ? "+" : "−"}${Math.abs(per10!).toFixed(1)} % per 10 g of carbs in the 4 h before · ${sl.sure}.`;
+  return (
+    <section className="sl-p tp-carbs" aria-label="Carbs in the 4 hours before against strength">
+      <span className="cmp-k">Carbs in the 4 h before → strength</span>
+      <svg width={cw} height={H} viewBox={`0 0 ${cw} ${H}`} role="img" aria-label={`Each session a dot: grams of carbs in the 4 hours before, and strength against your trend`}>
+        {[-ylim, 0, ylim].map((v) => <g key={v}><line x1={L} x2={cw - R} y1={Y(v)} y2={Y(v)} className="he-grid" /><text x={L - 5} y={Y(v) + 3} textAnchor="end" className="hp-t">{v > 0 ? "+" : ""}{v} %</text></g>)}
+        {[0, xmax / 2, xmax].map((g) => <text key={g} x={X(g)} y={H - 8} textAnchor={g === 0 ? "start" : g === xmax ? "end" : "middle"} className="hp-t">{g} g</text>)}
+        {pts.map((p, i) => <circle key={i} cx={X(p[0])} cy={Y(Math.max(-ylim, Math.min(ylim, p[1])))} r={3.4} fill="var(--carb)" fillOpacity=".8" stroke="var(--i-panel)" strokeWidth="1"><title>{`${Math.round(p[0])} g carbs · ${p[1] >= 0 ? "+" : ""}${p[1].toFixed(1)} %`}</title></circle>)}
+        {sl.slope != null && <line x1={X(0)} x2={X(xmax)} y1={Y(my + sl.slope * (0 - mx))} y2={Y(my + sl.slope * (xmax - mx))} stroke="var(--i-ink)" strokeDasharray="5 4" strokeWidth="1.3" />}
+      </svg>
+      {words && <p className="he-words" data-sure={sl.sure}>{words}</p>}
     </section>
   );
 }
