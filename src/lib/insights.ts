@@ -10,6 +10,7 @@ import { caffeineAt, cleared, type Dose } from "./caffeine";
 import { bedtimeOn } from "./caffeine-sleep";
 import type { Check } from "./feelgraph";
 import { alcoholCurve, type AlcoholDose } from "./alcohol";
+import { currentKg } from "./body";
 import { atMinute, localDay, minuteOfDay, addDays, startOfDay, DAY, MIN } from "./time";
 import { correlation, difference, mean, median, sd, type Range } from "./stats";
 
@@ -59,7 +60,7 @@ export function lanes(entries: Entry[], workouts: Workout[], supplements: Supple
     for (let i = lo; i < doses.length && doses[i].at <= t; i++) mg += doses[i].mg * Math.pow(0.5, (t - doses[i].at) / MIN / settings.halfLifeMin);
     caffeine.push([t, cleared(mg)]);
   }
-  const alcohol = alcoholCurve(alcoholDoses(entries), from, now, { bodyKg: settings.bodyKg, stepMin: 10 });
+  const alcohol = alcoholCurve(alcoholDoses(entries), from, now, { bodyKg: currentKg(entries, settings.bodyKg, now), stepMin: 10 });
   const rows = new Map(supplements.map((s, i) => [s.id, i]));
   const setsByWorkout = new Map<string, number[]>();
   for (const s of of(entries, "set")) setsByWorkout.set(s.workoutId, [...(setsByWorkout.get(s.workoutId) ?? []), s.at]);
@@ -99,6 +100,12 @@ export type DayFacts = {
   focus: number | null;
   stress: number | null;
   taken: Set<string>;
+  /**
+   * Supplements answered "didn't take" that day and not taken. A supplement's day without it is only one of these — not a
+   * day it simply wasn't ticked (PLAN 74; owner, 13 Oct: "i dont have much data in app where i didnt take it..so how does
+   * it make an assumption that it causes my off mood"). Use `suppDay` for the three-way answer.
+   */
+  skipped: Set<string>;
   /** Anything eaten or drunk was logged that day — so "no caffeine" means none, not unknown. */
   logged: boolean;
   /** At least one supplement was ticked or skipped — so an unticked one was really not taken. */
@@ -129,7 +136,7 @@ export const LATE_CAFFEINE_MIN = 14 * 60;
 
 /** One row per day from `fromDay` to `toDay` inclusive. Days with no food logged get `kcal: null`. */
 export function dailyFacts(entries: Entry[], workouts: Workout[], settings: Settings, fromDay: string, toDay: string): DayFacts[] {
-  const doses = caffeineDoses(entries), drinks = alcoholDoses(entries);
+  const doses = caffeineDoses(entries), drinks = alcoholDoses(entries), weighIns = of(entries, "weight");
   const byDay = new Map<string, Entry[]>();
   for (const e of entries) { const d = localDay(e.at); byDay.set(d, [...(byDay.get(d) ?? []), e]); }
   const trainedDays = new Set(workouts.map((w) => localDay(w.startedAt)));
@@ -143,7 +150,7 @@ export function dailyFacts(entries: Entry[], workouts: Workout[], settings: Sett
     const feel = of(es, "feel");
     const avg = (k: "energy" | "mood" | "focus" | "stress") => { const v = feel.map((f) => f[k]).filter((x): x is number => x != null); return v.length ? mean(v) : null; };
     const bed = bedtimeOn(day, settings.bedMinute);
-    const alcBed = (() => { const pts = alcoholCurve(drinks.filter((d) => d.at > bed - 24 * 60 * MIN && d.at <= bed), bed - 12 * 60 * MIN, bed, { bodyKg: settings.bodyKg }); return pts.length ? pts[pts.length - 1][1] : 0; })();
+    const alcBed = (() => { const pts = alcoholCurve(drinks.filter((d) => d.at > bed - 24 * 60 * MIN && d.at <= bed), bed - 12 * 60 * MIN, bed, { bodyKg: currentKg(weighIns, settings.bodyKg, bed) }); return pts.length ? pts[pts.length - 1][1] : 0; })();
     out.push({
       day,
       caffeineMg: caf.reduce((a, d) => a + d.caffeineMg, 0),
@@ -156,6 +163,7 @@ export function dailyFacts(entries: Entry[], workouts: Workout[], settings: Sett
       proteinG: foods.length ? foods.reduce((a, f) => a + f.macros.p, 0) : null,
       energy: avg("energy"), mood: avg("mood"), focus: avg("focus"), stress: avg("stress"),
       taken: new Set(of(es, "supp").filter((s) => s.status === "taken").map((s) => s.suppId)),
+      skipped: new Set(of(es, "supp").filter((s) => s.status === "skipped" && !of(es, "supp").some((t) => t.suppId === s.suppId && t.status === "taken")).map((s) => s.suppId)),
       logged: foods.length > 0 || of(es, "drink").length > 0,
       stackAnswered: of(es, "supp").length > 0,
       lateCaffeineMg: caf.filter((d) => minuteOfDay(d.at) >= LATE_CAFFEINE_MIN).reduce((a, d) => a + d.caffeineMg, 0),
@@ -210,6 +218,12 @@ export function pairs(facts: DayFacts[]): Pair[] {
 
 export type SuppEffect = { suppId: string; metric: "energy" | "mood" | "focus"; on: number; off: number; diff: Range | null; need: number };
 
+/** Took it (true), answered "didn't" (false), or no answer for it that day (null — unknown, never a day without). */
+export const suppDay = (d: { taken: Set<string> | string[]; skipped?: Set<string> | string[] }, id: string): boolean | null => {
+  const has = (x: Set<string> | string[] | undefined) => (x instanceof Set ? x.has(id) : !!x?.includes(id));
+  return has(d.taken) ? true : has(d.skipped) ? false : null;
+};
+
 /**
  * On vs off for each supplement: next-day energy/mood/focus on days after you took it vs days
  * after you didn't. Only meaningful with enough "off" days — which is why the page suggests a
@@ -220,7 +234,7 @@ export function suppEffects(facts: DayFacts[], supplements: Supplement[]): SuppE
   for (const s of supplements.filter((x) => x.active)) {
     for (const metric of ["energy", "mood", "focus"] as const) {
       const on: number[] = [], off: number[] = [];
-      facts.forEach((d, i) => { const n = facts[i + 1]; const v = n?.[metric]; if (v == null) return; (d.taken.has(s.id) ? on : off).push(v); });
+      facts.forEach((d, i) => { const n = facts[i + 1], v = n?.[metric], had = suppDay(d, s.id); if (v == null || had == null) return; (had ? on : off).push(v); });
       const need = Math.max(0, 5 - Math.min(on.length, off.length));
       out.push({ suppId: s.id, metric, on: on.length, off: off.length, diff: need ? null : difference(on, off), need });
     }

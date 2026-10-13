@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { act, newId, useStore } from "../lib/store";
-import { EXERCISES, e1rm, exerciseHistory, isBest, mainMuscle, nextTemplate, restLeft, sameMuscle, sessionPlan, sessionSummary, suggestNext, templateProblems, volume, type Suggestion } from "../lib/training";
+import { EXERCISES, e1rm, exerciseHistory, isBest, isDumbbell, mainMuscle, nextTemplate, restLeft, sameMuscle, sessionPlan, sessionSummary, suggestNext, templateProblems, volume, type Suggestion } from "../lib/training";
 import { PROGRAMS, asSplit, asTemplate } from "../lib/programs";
 import { MuscleMap } from "../components/MuscleMap";
 import { DayCard } from "../components/DayCard";
+import { SessionHeart } from "../components/SessionHeart";
 import { dayLabel } from "../lib/time";
 import type { EntryOf, Template, Workout } from "../lib/types";
 
@@ -263,7 +264,7 @@ function Session({ w }: { w: Workout }) {
         </div>
         {showHist && <History sets={sets.filter((x) => x.workoutId !== w.id)} exercise={cur.name} />}
         <div className="steppers">
-          <div className="step"><span className="lbl">kg</span><div className="row">
+          <div className="step"><span className="lbl">{isDumbbell(cur.name) ? "kg per dumbbell" : "kg"}</span><div className="row">
             <button type="button" aria-label="Less weight" onClick={() => setKg((v) => Math.max(0, +(v - 2.5).toFixed(2)))}>−</button>
             <input inputMode="decimal" aria-label="Weight in kg" value={kg} onChange={(e) => setKg(Number(e.target.value.replace(",", ".")) || 0)} />
             <button type="button" aria-label="More weight" onClick={() => setKg((v) => +(v + 2.5).toFixed(2))}>+</button></div></div>
@@ -329,7 +330,7 @@ function Session({ w }: { w: Workout }) {
 
       <div className="grid2">
         <div className="tile" style={{ gap: 2 }}><span className="k">Volume</span><span className="big">{Math.round(vol).toLocaleString("en-GB")}<small>kg</small></span><span className="s">{lastSame ? `${Math.round((vol / lastSame) * 100)}% of last ${w.template}` : "first time on this split"}</span></div>
-        <div className="tile" style={{ gap: 2 }}><span className="k" style={{ color: "var(--hr)" }}>Heart rate</span><span className="big" style={{ color: "var(--k-dim)" }}>–</span><span className="s">Connect a wearable</span></div>
+        <SessionHeart start={w.startedAt} now={now} />
       </div>
 
       <div className="tile plan">

@@ -224,3 +224,16 @@ export function wakeFor(sessions: SleepSession[], day: string, tzMin: number): {
   const main = nights.reduce((a, b) => (slept(b) > slept(a) ? b : a));
   return { wokeAt: new Date(main.end).toISOString(), asleepMin: main.asleepMin };
 }
+
+/**
+ * Which side is behind when the newest reading is old (PLAN 69; owner, 13 Oct: "For some reason my last reading from the
+ * band came in like 9h ago"). "us": HealthOS hasn't asked Google for 45+ minutes. "phone": we asked Google recently but it
+ * has nothing newer — the band hands its readings to the Fitbit app on the phone, which passes them to Google, so the
+ * phone hasn't. Null when all is well (or there's nothing to judge yet).
+ */
+export function behind(s: { lastSync: number | null; latest: number | null }, now: number): "us" | "phone" | null {
+  if (s.lastSync == null) return null;
+  if (now - s.lastSync > 45 * 60_000) return "us";
+  if (s.latest != null && now - s.latest > 2 * 3_600_000) return "phone";
+  return null;
+}

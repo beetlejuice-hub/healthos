@@ -22,6 +22,7 @@ import { CatchUp } from "../components/CatchUp";
 import { DataCard, EveningRead, NowCard, Pad, Status, UsualPicker, useStackCount } from "../components/TodayParts";
 import { dayNumbers, momentOf } from "../lib/moment";
 import { restDay } from "../lib/programs";
+import { currentKg } from "../lib/body";
 
 /**
  * The current time, re-read on every render and re-rendered every `ms` while open. Read fresh
@@ -249,7 +250,7 @@ function UsualDrink() {
   const custom = useStore((s) => s.drinks);
   const [picking, setPicking] = useState(false);
   const log = (d: Drink) => {
-    const e = act.addEntry({ kind: "drink", at: Date.now(), drinkId: d.id, name: d.name, ml: d.ml, caffeineMg: d.caffeineMg, alcoholG: d.alcoholG, kcal: d.kcal });
+    const e = act.addEntry({ kind: "drink", at: Date.now(), drinkId: d.id, name: d.name, ml: d.ml, caffeineMg: d.caffeineMg, alcoholG: d.alcoholG, kcal: d.kcal, p: d.p, c: d.c, f: d.f });
     offerUndo([e.id], `Logged ${d.name}`);
   };
   if (picking) return (
@@ -343,7 +344,7 @@ function NoticedLine() {
   const workouts = useStore((x) => x.workouts);
   const supplements = useStore((x) => x.supplements);
   // Today shows one line: the strongest finding that isn't just a description of you.
-  const top = useMemo(() => notice(entries, goals, now, settings.bodyKg, { workouts, supplements, settings }).found.find((f) => f.id !== "baseline"), [entries, goals, now, settings, workouts, supplements]);
+  const top = useMemo(() => notice(entries, goals, now, currentKg(entries, settings.bodyKg, now), { workouts, supplements, settings }).found.find((f) => f.id !== "baseline"), [entries, goals, now, settings, workouts, supplements]);
   const key = top ? `${top.id}:${top.value}` : "";
   const [hidden, setHidden] = useState(() => { try { return localStorage.getItem("healthos.noticed.hidden") ?? ""; } catch { return ""; } });
   if (!top || hidden === key) return null;
@@ -396,7 +397,7 @@ function NextAnswer() {
   const settings = useStore((x) => x.settings);
   const workouts = useStore((x) => x.workouts);
   const supplements = useStore((x) => x.supplements);
-  const next = useMemo(() => notice(entries, goals, now, settings.bodyKg, { workouts, supplements, settings }).checking[0], [entries, goals, now, settings, workouts, supplements]);
+  const next = useMemo(() => notice(entries, goals, now, currentKg(entries, settings.bodyKg, now), { workouts, supplements, settings }).checking[0], [entries, goals, now, settings, workouts, supplements]);
   if (!next) return null;
   return (
     <a className="nextanswer" href="#insights">

@@ -15,7 +15,7 @@
  *   - shown when |r| ≥ 0.35, p < 0.005 and 14+ days; at most 5, strongest first.
  */
 
-import type { DayFacts } from "./insights";
+import { suppDay, type DayFacts } from "./insights";
 import type { Supplement } from "./types";
 import { pTwoSided } from "./regress";
 import { mean, median } from "./stats";
@@ -54,7 +54,7 @@ export function signals(supplements: Supplement[]): Signal[] {
     { id: "stress", family: "feel", name: "stress", get: (d) => d.stress, lane: "stress" },
   ];
   for (const x of supplements) {
-    s.push({ id: `supp-${x.id}`, family: `supp-${x.id}`, name: x.name, yes: `a ${x.name} day`, get: (d) => (!d.stackAnswered ? null : d.taken.has(x.id) ? 1 : 0), lane: "supps" });
+    s.push({ id: `supp-${x.id}`, family: `supp-${x.id}`, name: x.name, yes: `a ${x.name} day`, get: (d) => { const had = suppDay(d, x.id); return had == null ? null : had ? 1 : 0; }, lane: "supps" });
   }
   return s;
 }

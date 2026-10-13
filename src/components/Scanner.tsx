@@ -7,6 +7,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { normalizeGtin } from "../lib/barcode";
+import { pickCamera } from "../lib/camera";
 
 type ZBar = typeof import("@undecaf/zbar-wasm");
 let zbarP: Promise<ZBar> | null = null;
@@ -47,6 +48,42 @@ async function imageOf(file: File): Promise<ImageData> {
 
 type CamState = "starting" | "live" | "none";
 
+/**
+ * The camera (PLAN 72; owner, 13 Oct: "it asks me if i give permission every single time, and it opens idk the wrong
+ * camera, its always a bit blurry, like its using the macro camera automatically"): the main back lens (lib/camera),
+ * remembered on this device; asked at 1080p so a barcode held a bit further off — where the main lens focuses — still
+ * reads; continuous focus where the camera offers it. Closing the scanner keeps the camera 30 s, so scanning the next
+ * thing doesn't ask again.
+ */
+const CAM_KEY = "healthos.cam", KEEP_MS = 30_000;
+let held: { stream: MediaStream; stop: number } | null = null;
+const SIZE = { width: { ideal: 1920 }, height: { ideal: 1080 } };
+const open = (video: MediaTrackConstraints) => navigator.mediaDevices.getUserMedia({ video, audio: false });
+async function openCamera(): Promise<MediaStream> {
+  if (held && held.stream.getVideoTracks().some((t) => t.readyState === "live")) { clearTimeout(held.stop); const s = held.stream; held = null; return s; }
+  let pref: string | null = null;
+  try { pref = localStorage.getItem(CAM_KEY); } catch { /* private mode */ }
+  let s: MediaStream | null = pref ? await open({ deviceId: { exact: pref }, ...SIZE }).catch(() => null) : null;
+  if (!s) {
+    s = await open({ facingMode: { ideal: "environment" }, ...SIZE });
+    // Now that it's allowed, the cameras have names: move to the main lens if this isn't it, and remember it.
+    try {
+      const pick = pickCamera(await navigator.mediaDevices.enumerateDevices());
+      if (pick && pick !== s.getVideoTracks()[0]?.getSettings().deviceId) {
+        const main = await open({ deviceId: { exact: pick }, ...SIZE }).catch(() => null);
+        if (main) { s.getTracks().forEach((t) => t.stop()); s = main; }
+      }
+      if (pick) localStorage.setItem(CAM_KEY, pick); else localStorage.removeItem(CAM_KEY);
+    } catch { /* keep the one we have */ }
+  }
+  const track = s.getVideoTracks()[0], caps = track?.getCapabilities?.() as { focusMode?: string[] } | undefined;
+  if (caps?.focusMode?.includes("continuous")) await track.applyConstraints({ advanced: [{ focusMode: "continuous" } as MediaTrackConstraintSet] }).catch(() => {});
+  return s;
+}
+function releaseCamera(s: MediaStream) {
+  held = { stream: s, stop: window.setTimeout(() => { s.getTracks().forEach((t) => t.stop()); if (held?.stream === s) held = null; }, KEEP_MS) };
+}
+
 export function Scanner({ onCode, onClose, busy, message }: { onCode: (code: string) => void; onClose: () => void; busy?: boolean; message?: string | null }) {
   const video = useRef<HTMLVideoElement>(null);
   const photo = useRef<HTMLInputElement>(null);
@@ -68,10 +105,8 @@ export function Scanner({ onCode, onClose, busy, message }: { onCode: (code: str
     void zbar(); // start loading the decoder while the camera warms up
     (async () => {
       if (!navigator.mediaDevices?.getUserMedia) { setCam("none"); return; }
-      try {
-        stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: "environment" }, width: { ideal: 1280 }, height: { ideal: 720 } }, audio: false });
-      } catch { if (alive) setCam("none"); return; }
-      if (!alive) { stream.getTracks().forEach((t) => t.stop()); return; }
+      try { stream = await openCamera(); } catch { if (alive) setCam("none"); return; }
+      if (!alive) { releaseCamera(stream); return; }
       const v = video.current!;
       v.srcObject = stream;
       await v.play().catch(() => {});
@@ -91,7 +126,7 @@ export function Scanner({ onCode, onClose, busy, message }: { onCode: (code: str
       };
       void tick();
     })();
-    return () => { alive = false; clearTimeout(timer); stream?.getTracks().forEach((t) => t.stop()); };
+    return () => { alive = false; clearTimeout(timer); if (stream) releaseCamera(stream); };
     // found/onCode are stable for the life of the scanner
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);

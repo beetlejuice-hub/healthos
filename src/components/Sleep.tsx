@@ -13,6 +13,7 @@ import { addDays, atMinute, clock, dayLabel, DAY, HOUR, MIN } from "../lib/time"
 import type { Entry } from "../lib/types";
 import { useNights } from "./useNights";
 import { useWidth } from "./useWidth";
+import { NightWords } from "./NightWords";
 
 const ST = { awake: "#eef1f2", rem: "#7fadf0", light: "#4f86dc", deep: "#2f5cc0" } as const;
 /** The same stages as text: the dark blues are fills, too dark to read as words on the panel. */
@@ -299,6 +300,7 @@ function NightLog({ ns, evs, sel, onSel, wide, w, workouts, meals }: { ns: Night
           {list.map((n, j) => <button key={n.id} type="button" className="sl-rowbtn" style={{ top: top + j * RH, height: RH }} aria-pressed={n.id === sel.id} aria-label={`Open the night of ${nightName(n)}`} onClick={() => { onSel(n.id); document.querySelector(".sl-b")?.scrollIntoView({ behavior: "smooth", block: "start" }); }} />)}
         </div>
         <p className="sl-note">Tap a night to open it at the top. Naps: Fitbit records one by itself from about an hour; a shorter one shows if you log it.</p>
+        <NightWords n={sel} ns={ns} />
       </div>
     </section>
   );

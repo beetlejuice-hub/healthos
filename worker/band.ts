@@ -205,7 +205,10 @@ export class BandHub {
     if (path === "sync") {
       const s = await this.sync();
       // Opening the app or "Pull now" pulls, but not more than once every 20 s (a double tap, two devices).
-      if ((await this.status()).connected && !(s.lastRun && this.now() - s.lastRun < PULL_GAP_MS)) await this.pull();
+      const st = await this.status();
+      if (st.connected && !(s.lastRun && this.now() - s.lastRun < PULL_GAP_MS)) await this.pull();
+      // and the 15-minute pulls carry on from here, even if their chain had broken (PLAN 69: a reading 9 h old)
+      if (st.connected) await this.storage.setAlarm(this.now() + PULL_EVERY_MS);
       return json(await this.status());
     }
     if (path === "data") {

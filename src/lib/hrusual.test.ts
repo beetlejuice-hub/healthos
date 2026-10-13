@@ -122,3 +122,15 @@ describe("the lane's scale", () => {
     expect(everydayRange(w.hr.slice(0, 10), [])).toBeNull();
   });
 });
+
+describe("the usual band with sparse readings (PLAN 78)", () => {
+  it("a reading every 5 minutes still makes a band (it needed 10 per half hour, so daytime had none)", () => {
+    const hr: [number, number, number, number][] = [];
+    for (let d = 1; d <= 6; d++) for (let m = 9 * 60; m < 17 * 60; m += 5) { const t = atMinute(addDays("2026-10-13", -d), m); hr.push([t, 70 + (d % 3), 68, 74]); }
+    const u = usualByHour(hr, [], "2026-10-13");
+    const noon = usualAt(u, atMinute("2026-10-13", 12 * 60));
+    expect(noon).not.toBeNull();
+    expect(noon!.mid).toBeGreaterThanOrEqual(70); expect(noon!.mid).toBeLessThanOrEqual(72);
+    expect(usualAt(u, atMinute("2026-10-13", 3 * 60))).toBeNull(); // no readings at 3 am: no band there
+  });
+});

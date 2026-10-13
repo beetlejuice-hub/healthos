@@ -3,6 +3,7 @@ import { adherence, dailyFacts, lanes, pairs, suppEffects } from "./insights";
 import { makeSample } from "./sample";
 import { DEFAULT_SETTINGS } from "./store";
 import type { Entry, Supplement } from "./types";
+import type { DayFacts } from "./insights";
 import { addDays, localDay } from "./time";
 
 const NOW = new Date(2026, 8, 29, 14, 20).getTime();
@@ -32,6 +33,14 @@ describe("dailyFacts", () => {
     expect(d.alcoholAtBed).toBeGreaterThan(2.5);
     expect(d.alcoholAtBed).toBeLessThan(4.5);
     expect(d.kcal).toBe(800);
+  });
+
+  it("alcohol clears by your latest weigh-in, not Settings' number (PLAN 73)", () => {
+    // 19.7 g at 21:00: at 78 kg (Settings) ~3.5 g left at 23:00; weighing 55 kg that morning it clears slower → more left.
+    const light = dailyFacts([...entries, { id: "w", kind: "weight", at: at(27, 7), kg: 55 }], [], DEFAULT_SETTINGS, "2026-09-27", "2026-09-27")[0];
+    expect(light.alcoholAtBed).toBeGreaterThan(facts[0].alcoholAtBed + 2);
+    const old = dailyFacts([...entries, { id: "w", kind: "weight", at: at(27, 7) - 90 * 86_400_000, kg: 55 }], [], DEFAULT_SETTINGS, "2026-09-27", "2026-09-27")[0];
+    expect(old.alcoholAtBed).toBeCloseTo(facts[0].alcoholAtBed, 6); // a weigh-in from 3 months ago doesn't count
   });
 
   it("leaves calories null on a day with no food logged", () => {
@@ -74,5 +83,16 @@ describe("on sample data", () => {
   it("only compares on vs off once both sides have enough days", () => {
     const e = suppEffects(facts, stack);
     expect(e.every((x) => (x.need > 0) === (x.diff === null))).toBe(true);
+  });
+
+  it("off days are only days answered \"didn't take\" — not days it wasn't ticked, or nothing was logged (PLAN 74)", () => {
+    const day = (i: number, o: Partial<DayFacts>): DayFacts => ({ ...facts[0], day: addDays(today, -40 + i), taken: new Set(), skipped: new Set(), mood: 6, ...o });
+    // taken 30 days; 10 days not ticked (mood 3 the next day); never answered "didn't"
+    const forgot = Array.from({ length: 40 }, (_, i) => day(i, i % 4 === 0 ? { mood: 6 } : { taken: new Set(["creatine"]), mood: i % 4 === 3 ? 3 : 6 }));
+    const m = suppEffects(forgot, stack).find((x) => x.suppId === "creatine" && x.metric === "mood")!;
+    expect(m.off).toBe(0); expect(m.diff).toBeNull();
+    // the same with 10 real "didn't take" days: those are compared
+    const skipped = forgot.map((d, i) => (i % 4 === 0 ? { ...d, skipped: new Set(["creatine"]) } : d));
+    expect(suppEffects(skipped, stack).find((x) => x.suppId === "creatine" && x.metric === "mood")!.off).toBe(10);
   });
 });

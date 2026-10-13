@@ -13,6 +13,7 @@ import { useStore } from "../lib/store";
 import { feelAfter, FEEL_AFTER_MIN, type FeelKey } from "../lib/suppafter";
 import { Aligned } from "./HeartEffects";
 import { useWidth } from "./useWidth";
+import { localDay } from "../lib/time";
 
 const KEYS: [FeelKey, string][] = [["mood", "Mood"], ["energy", "Energy"], ["stress", "Stress"], ["focus", "Focus"]];
 const sgn = (v: number, d = 1) => { const t = Math.abs(v).toFixed(d); return Number(t) === 0 ? `±${t}` : `${v > 0 ? "+" : "−"}${t}`; };
@@ -21,12 +22,15 @@ const HR_MIN = 6;
 
 export function SuppAfter({ band, data }: { band: BandData | null; data: Lanes }) {
   const entries = useStore((s) => s.entries), supps = useStore((s) => s.supplements);
-  const taken = useMemo(() => supps.map((s) => ({ s, times: entries.flatMap((e) => (e.kind === "supp" && e.suppId === s.id && e.status === "taken" ? [e.at] : [])) })).filter((x) => x.times.length >= 3), [entries, supps]);
+  const taken = useMemo(() => supps.map((s) => ({ s, times: entries.flatMap((e) => (e.kind === "supp" && e.suppId === s.id && e.status === "taken" ? [e.at] : [])),
+    // days it was answered at all — taken at any time, or "didn't": the only days that can stand for "without" (PLAN 74)
+    known: new Set(entries.flatMap((e) => (e.kind === "supp" && e.suppId === s.id ? [localDay(e.at)] : []))),
+    offDays: new Set(entries.flatMap((e) => (e.kind === "supp" && e.suppId === s.id && e.status === "skipped" ? [localDay(e.at)] : []))).size })).filter((x) => x.times.length >= 3), [entries, supps]);
   const [pick, setPick] = useState<string | null>(null);
   const cur = taken.find((x) => x.s.id === pick) ?? taken[0];
   const caf = useMemo(() => data.doses.filter((d) => d.mg >= 40).map((d) => d.at), [data.doses]);
-  const hr = useMemo(() => (cur && band?.hr.length ? afterEach(cur.times, band.hr, data.workouts, { avoid: caf, minN: HR_MIN }) : null), [cur, band, data.workouts, caf]);
-  const feels = useMemo(() => (cur ? KEYS.map(([k]) => feelAfter(cur.times, data.checks, k)) : []), [cur, data.checks]);
+  const hr = useMemo(() => (cur && band?.hr.length ? afterEach(cur.times, band.hr, data.workouts, { avoid: caf, minN: HR_MIN, known: cur.known }) : null), [cur, band, data.workouts, caf]);
+  const feels = useMemo(() => (cur ? KEYS.map(([k]) => feelAfter(cur.times, data.checks, k, { known: cur.known })) : []), [cur, data.checks]);
   const [ref, w] = useWidth<HTMLDivElement>();
   if (!cur) return null;
   const name = cur.s.name;
@@ -36,6 +40,8 @@ export function SuppAfter({ band, data }: { band: BandData | null; data: Lanes }
         : hr.sure === "not clear" ? `Heart rate: no clear change — ${sgn(hr.effect)} bpm 30–90 min after, which chance alone could give.`
           : `Heart rate goes with ${sgn(hr.effect)} bpm 30–90 min after ${name}, against the same hours on days without it. How sure: ${hr.sure}.`;
   const sameTime = feels.length > 0 && feels.every((f) => f.nWith === 0) && cur.times.length >= 5;
+  // no day answered "didn't take": nothing honest to compare with (PLAN 74) — say how to get some
+  const noOff = cur.offDays === 0 && !sameTime;
   return (
     <section className="p" id="supp-after" ref={ref}>
       <h2>After a supplement <span>heart rate and how you felt, in the hours after</span></h2>
@@ -54,6 +60,7 @@ export function SuppAfter({ band, data }: { band: BandData | null; data: Lanes }
             <td className="n">{f.diff == null ? <span className="dimt">{FEEL_AFTER_MIN}+ each</span> : <>{sgn(f.diff)} <span className={`tag ${f.sure === "clear" || f.sure === "likely" ? "s" : "w"}`}>{f.sure}</span></>}</td></tr>
         ))}
       </tbody></table></div>
+      {noOff && <p className="he-words" data-off="none">Days without {name} are the days you answer “Didn't take” — on Today's stack, or when the morning catch-up asks. Days it just wasn't ticked don't count: you may have taken it.</p>}
       <p className="muted" style={{ margin: 0, fontSize: 12.5 }}>{sameTime
         ? `You take ${name} at the same time every day, so there's nothing to compare yet — the days you skip it, or take it at another time, are the comparison.`
         : "After: check-ins 1–4 hours after taking it. Without: check-ins at about the same time of day on days without it — so a supplement taken at noon isn't credited with your usual afternoon. Goes with, not proof of cause."}</p>

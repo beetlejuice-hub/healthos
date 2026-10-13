@@ -13,6 +13,7 @@ import { bodyDays, weightTrend } from "../tdee";
 import { addDays, localDay } from "../time";
 import { buildContext, dayTimeline } from "./context";
 import type { AiAnswer, AiRequest, Task, UsageDoc } from "./tasks";
+import { currentKg } from "../body";
 
 export type AiStatus = { on: boolean | null; usage: UsageDoc | null; cap: number; busy: number };
 let status: AiStatus = { on: null, usage: null, cap: 50, busy: 0 };
@@ -62,7 +63,7 @@ export async function askAi<T extends Task>(req: Extract<AiRequest, { task: T }>
 export function contextNow(state: State = getState(), now = Date.now()): string {
   const today = localDay(now), from = addDays(today, -90), to = addDays(today, -1);
   const days = dailyFacts(state.entries, state.workouts, state.settings, from, to);
-  const report = notice(state.entries, state.goals, now, state.settings.bodyKg, { workouts: state.workouts, supplements: state.supplements, settings: state.settings });
+  const report = notice(state.entries, state.goals, now, currentKg(state.entries, state.settings.bodyKg, now), { workouts: state.workouts, supplements: state.supplements, settings: state.settings });
   const patterns = scout(days, state.supplements, (id) => !!state.scout[id]?.dismissed);
   const t = weightTrend(bodyDays(state.entries, addDays(today, -27), today));
   return buildContext({ state, now, days, findings: report.found, patterns, weight: t ? { kg: t.nowKg, perWeek: t.perDay * 7 } : null });

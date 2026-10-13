@@ -9,6 +9,7 @@ import { CAF_SLEEP } from "../lib/caffeine-sleep";
 import type { BandData } from "../lib/band-client";
 import { lastNight, type SleepSession } from "../lib/band";
 import { coffeeWindows, everydayRange, minuteMap, usualAt, usualByHour, usualReady, workoutWindows, USUAL_MIN_DAYS } from "../lib/hrusual";
+import { UsualBandWhy } from "./UsualBandWhy";
 
 /**
  * One timeline for everything (owner: "one master graph that has everything on it and things can
@@ -362,7 +363,8 @@ export function MasterGraph({ data, supplements, focus, days, band, onView }: { 
         }
         flush();
       }
-      // The line: grey inside your usual, red above it, blue below, the gap to the band filled. No usual yet: red.
+      // The line: grey inside your usual, red above it, blue below, the gap to the band filled. No usual at that time of day:
+      // grey — red means "above your usual", never "nothing to compare with" (PLAN 78). No usual anywhere yet: the series red.
       const bk = buckets(l.pts ?? [], t0, view.t1, Math.floor(pw));
       const lines = { n: new Path2D(), w: new Path2D(), c: new Path2D(), r: new Path2D() }, fills = { w: new Path2D(), c: new Path2D() };
       const pts: { x: number; y: number; t1: number; v: number; joined: boolean }[] = [];
@@ -371,7 +373,7 @@ export function MasterGraph({ data, supplements, focus, days, band, onView }: { 
         const cur = { x: LEFT + i + .5, y: Y(k.mean), t1: k.t1, v: k.mean, joined: false }, prev = pts.at(-1);
         if (prev && k.t0 - prev.t1 <= heart.join) {
           const u = usual ? usualAt(usual, (k.t0 + k.t1) / 2) : null, m = (prev.v + cur.v) / 2;
-          const kind = !u ? "r" : m > u.hi ? "w" : m < u.lo ? "c" : "n";
+          const kind = !u ? (usualReady(usual) ? "n" : "r") : m > u.hi ? "w" : m < u.lo ? "c" : "n";
           lines[kind].moveTo(prev.x, prev.y); lines[kind].lineTo(cur.x, cur.y);
           if (u && (kind === "w" || kind === "c")) { const e = Y(kind === "w" ? u.hi : u.lo), f = fills[kind]; f.moveTo(prev.x, prev.y); f.lineTo(cur.x, cur.y); f.lineTo(cur.x, e); f.lineTo(prev.x, e); f.closePath(); }
           prev.joined = true; cur.joined = true;
@@ -635,6 +637,7 @@ export function MasterGraph({ data, supplements, focus, days, band, onView }: { 
           onPointerMove={(e) => { if (ovDrag.current) ovMove(e.clientX, false); }}
           onPointerUp={() => { ovDrag.current = null; }} onPointerCancel={() => { ovDrag.current = null; }} />
         <div className="mg-bar mg-key"><span className="hint-i"><b>Feelings</b> · each its own row, 1–10 · {view.span <= 7 * DAY ? "dots are check-ins, joined within a day · ring = a note" : "each day’s average · zoom to a week or less for each check-in"} · <b>Events</b> <i className="sw" style={{ background: C.caf, borderRadius: 9 }} />coffee <i className="sw" style={{ background: C.kcal }} />meal <i className="sw" style={{ background: C.alc, transform: "rotate(45deg) scale(.8)" }} />drink <i className="sw ln" style={{ background: C.supp }} />supplement <i className="sw" style={{ background: C.gym }} />workout</span></div>
+        {heart && <UsualBandWhy usual={heart.usual} />}
         <div className="mg-bar"><span className="hint-i">Point anywhere to read every pane at that moment · drag the chart or the overview to move · ⌘/Ctrl + wheel to zoom · tick panes on and off; "on top" draws a line over {host?.name.toLowerCase() ?? "the first pane"} with its own axis.</span></div>
       </div>
       <aside className="mg-side">

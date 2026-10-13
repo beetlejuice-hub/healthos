@@ -19,7 +19,7 @@ function world(seed = 11): GlanceDay[] {
     out.push({
       day: addDays("2026-07-13", i), mood: 6 + (trained ? 1.5 : 0) + gauss(r) * 0.8, energy: 6 + gauss(r) * 0.8, focus: null, stress: 4 + gauss(r) * 0.8,
       sleep: Math.round(7 - (prevLate ? 1.5 : 0) + gauss(r) * 0.8), kcal: 2300, protein: 140, cafBed: late ? 60 : 10, drinks, weight: null,
-      trained, lateCaffeine: late, note: false, checkins: 2, taken: mag ? ["mag"] : [], stackAnswered: true,
+      trained, lateCaffeine: late, note: false, checkins: 2, taken: mag ? ["mag"] : [], skipped: mag ? [] : ["mag"], stackAnswered: true,
     });
   }
   return out;
@@ -46,6 +46,12 @@ describe("comparisons", () => {
     for (let seed = 1; seed <= 40; seed++) for (const id of ["supp-mag-mood", "supp-mag-sleep"]) if (comparisons(world(seed), [MAG]).find((c) => c.id === id)!.diff!.clear) clear++;
     expect(clear / 80).toBeLessThan(0.15); // ~5% by chance; far more would mean a broken comparison
   });
+  it("a supplement taken every day but not always ticked: unticked days aren't days without it (PLAN 74)", () => {
+    // the owner's case: L-theanine every day; on the days he forgot to tick it his mood was lower (busy, bad days)
+    const w = world(3).map((d, i) => { const ticked = i % 4 !== 0; return { ...d, taken: ticked ? ["mag"] : [], skipped: [], mood: d.mood! - (ticked ? 0 : 1.5) }; });
+    const c = comparisons(w, [MAG]).find((x) => x.id === "supp-mag-mood")!;
+    expect(c.diff).toBeNull(); // no "didn't take" answers → nothing to compare, not a finding
+  });
   it("flips stress so right is always better", () => {
     const c = { ...get("train-stress"), diff: { value: -1, lo: -1.5, hi: -0.5, n: 30, clear: true } };
     expect(better(c)).toEqual({ d: 1, lo: 0.5, hi: 1.5 });
@@ -59,7 +65,7 @@ describe("comparisons", () => {
     expect(few.diff).toBeNull(); expect(few.need).toBeGreaterThan(0);
   });
   it("leaves days without a stack answer out of the supplement comparison", () => {
-    const ds = world().map((d, i) => (i % 2 ? { ...d, stackAnswered: false, taken: [] } : d));
+    const ds = world().map((d, i) => (i % 2 ? { ...d, stackAnswered: false, taken: [], skipped: [] } : d));
     const c = comparisons(ds, [MAG]).find((x) => x.id === "supp-mag-mood")!;
     expect(c.nWith + c.nWithout).toBeLessThanOrEqual(42);
   });

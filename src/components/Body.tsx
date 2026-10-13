@@ -9,7 +9,7 @@
 import { useMemo, type ReactNode } from "react";
 import { useStore } from "../lib/store";
 import type { GlanceDay } from "../lib/glance";
-import { avg7, drinkWeeks, nights, tierOfMg } from "../lib/body";
+import { avg7, currentKg, drinkWeeks, nights, tierOfMg } from "../lib/body";
 import { comparisons } from "../lib/connections";
 import { bodyDays, weightTrend } from "../lib/tdee";
 import { byDay } from "../lib/nutrition";
@@ -160,7 +160,7 @@ function DrinksPanel({ days, period }: { days: GlanceDay[]; period: number }) {
 
 function KcalPanel({ list }: { list: GlanceDay[] }) {
   const [ref, w] = useWidth<HTMLDivElement>();
-  const entries = useStore((s) => s.entries), goals = useStore((s) => s.goals), bodyKg = useStore((s) => s.settings.bodyKg);
+  const entries = useStore((s) => s.entries), goals = useStore((s) => s.goals), bodyKg = currentKg(entries, useStore((s) => s.settings.bodyKg), Date.now());
   const intake = useMemo(() => byDay(entries), [entries]);
   const rows = list.map((d) => ({ day: d.day, t: intake.get(d.day) })).map((r) => ({ day: r.day, m: r.t?.logged ? r.t.totals : null }));
   const logged = rows.filter((r) => r.m);

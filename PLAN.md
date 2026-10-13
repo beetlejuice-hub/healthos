@@ -844,35 +844,81 @@ OUT"* and *"This is a lot of info so rn just take all this in, understand it and
 below, in his words, grouped; A first (broken or wrong now), then the rest. Items already in the plan point to their number.
 
 ### A · Broken or wrong now — fix first
-68. [ ] **Workout says "Connect a wearable" though the band is connected** — "wearable is connected but it says connect
+68. [x] **Workout says "Connect a wearable" though the band is connected** — "wearable is connected but it says connect
    wearable". Found: screens/Workout.tsx's heart-rate tile is hard-coded "Connect a wearable". Show the band's bpm.
-69. [ ] **Last band reading 9 h old** — "For some reason my last reading from the band came in like 9h ago". Find out where
+   Done 13 Oct: components/SessionHeart.tsx — this session's latest bpm, average and peak from the band, how old the
+   latest is when it's late (readings come through the Fitbit app), "connect" only when it isn't. Checked: heart.test
+   `sessionHr`; e2e/workoutheart.cjs (fails on the old code: all four cases said "Connect a wearable").
+69. [x] **Last band reading 9 h old** — "For some reason my last reading from the band came in like 9h ago". Find out where
    it waits: the Fitbit app syncing to Google, or our pull (Worker status/error). Can't see his account from here — check
    what the band card says and make it say plainly which side is behind.
-70. [ ] **Barcode drink shows no protein** — "Logged a protein and caffeine drink w bar code it worked but it does not show
+   Done 13 Oct, as far as it can be from here: Settings → Band now says which side is behind — "Google has nothing from
+   your band newer than 07:00, and we checked 5 min ago … it's waiting on the phone" (the Fitbit app hasn't passed the
+   readings on), or "that's on our side" when we haven't asked Google for 45 min (lib/band `behind`). And opening the app
+   restarts the Worker's 15-minute pulls if that chain ever broke (worker/band.ts sync). Checked: band.test, worker
+   band.test, e2e/bandbehind.cjs. Not checked: his account — the card will say which it was next time.
+70. [x] **Barcode drink shows no protein** — "Logged a protein and caffeine drink w bar code it worked but it does not show
    protein … and also add protein and even fat data if u find it w bar code and its significant".
-71. [ ] **Edit a logged food or drink's macros** — "i should be able to click on the logged food or drink and modify its
+   Done 13 Oct (the logging was right — the drink kept its protein — the screens didn't show it): logged drinks show
+   P and F; a database/barcode drink shows protein and fat per 100 ml and per size. Found on the way: Today's one-tap
+   usual drink dropped protein, carbs and fat — fixed. Checked: e2e/editentry.cjs.
+71. [x] **Edit a logged food or drink's macros** — "i should be able to click on the logged food or drink and modify its
    macros if it wont cause a big database problem" (it won't: each entry keeps its own numbers).
-72. [ ] **Barcode camera** — "it asks me if i give permission every single time, and it opens idk the wrong camera, its
+   Done 13 Oct: tap a food or drink in Log → Logged today to change kcal, protein, carbs, fat (and caffeine for a
+   drink); that entry only (lib/entryedit.ts, components/EntryEdit.tsx). Checked: entryedit.test, e2e/editentry.cjs.
+72. [x] **Barcode camera** — "it asks me if i give permission every single time, and it opens idk the wrong camera, its
    always a bit blurry, like its using the macro camera automatically". Keep the permission; pick the main back camera.
-73. [ ] **Settings body weight** — "In the settings i have body weight its nonsense cus i log every morning". Use the latest
+   Done 13 Oct: the main back lens by name ("Back Camera" on iPhone — not the multi-lens one that jumps to macro; the
+   first "facing back" on Android), remembered on the phone; 1080p so it reads from a little further off where the main
+   lens focuses; continuous focus where offered; the camera kept 30 s after closing, so the next scan doesn't ask again
+   (lib/camera `pickCamera`, components/Scanner.tsx). Checked: camera.test (iPhone Pro / Android / unknown names),
+   e2e/camhold.cjs (no second ask within 30 s; off after), e2e/scan.cjs. Not checked: a real iPhone. If it still asks
+   on every app launch, that's iOS for home-screen apps; in Safari, "Allow" for the site in its settings sticks.
+73. [x] **Settings body weight** — "In the settings i have body weight its nonsense cus i log every morning". Use the latest
    weigh-in; Settings only as a fallback before the first one.
-74. [ ] **Findings about supplements he almost never skips** — "I see app making findings like days w and w/o things like l
+   Done 13 Oct: lib/body `currentKg` — the latest weigh-in in 60 days sets alcohol clearance, caffeine and protein per
+   kg and findings; Settings shows it ("your weigh-in, Tue 13 Oct") and only asks before the first. Checked:
+   body.test, insights.test (55 kg that morning → alcohol clears slower), e2e/fixes13.cjs.
+74. [x] **Findings about supplements he almost never skips** — "I see app making findings like days w and w/o things like l
    theanine or black cumin…i dont have much data in app where i didnt take it..so how does it make an assumption that it
    causes my off mood". Audit the findings engine on that shape: enough days without, counts shown, never "causes".
-75. [ ] **Too soon after a supplement to count** — "if i take X and after 2 minutes i log very bad mood, you shouldnt
+   Done 13 Oct — the cause: a day counted as "without" a supplement whenever any other supplement was ticked (and
+   Insights' card counted every untaken day, logged or not). So forgetting to tick it, or the days before starting it,
+   became days without — and forgetful days are often worse days. Now only an explicit "didn't take" is a day without;
+   an unticked day is unknown (insights `suppDay`, used by Noticed, Insights' supplement card, connections, the scout and
+   the after-a-supplement card). Checked: tests with his case (taken daily, unticked on bad days) find an effect the old
+   way and nothing now. Note: the morning catch-up's "Didn't" is what creates real days without.
+75. [x] **Too soon after a supplement to count** — "if i take X and after 2 minutes i log very bad mood, you shouldnt
    connect X and low mood..the supp had no chance to dissolve and have an effect in 2 mins". Every engine and the AI's
    context skip check-ins in the first hour after taking it (the after-a-supplement card already does).
-76. [ ] **Dumbbell weight: one hand or both?** — "not sure if for exp on db press its one hand kg or both hand kg in total".
+   Done 13 Oct: the day engines already compare the next day, and the after-a-supplement card skips the first hour;
+   the AI now has a hard timing rule in every task (nothing linked to a check-in under 30 min after; supplements an
+   hour). Checked: ai.test.
+76. [x] **Dumbbell weight: one hand or both?** — "not sure if for exp on db press its one hand kg or both hand kg in total".
    Say "kg per dumbbell" on dumbbell exercises; volume counts both hands.
-77. [ ] **"Took long to fall asleep" from the band** — "took too long to fall asleep can be replaced IMO w band data".
-78. [ ] **Explain the usual band on the heart chart** (his screenshot) — "is this supposed to be the average band? Looks a
+   Done 13 Oct: dumbbell exercises say "kg per dumbbell"; kg lifted counts both hands (training `isDumbbell`).
+   Checked: training.test, e2e/fixes13.cjs.
+77. [x] **"Took long to fall asleep" from the band** — "took too long to fall asleep can be replaced IMO w band data".
+   Done 13 Oct: when the band has last night, Today's sleep question shows "Fell asleep in 40 min — from your band,
+   longer than your usual 12" instead of the tag (lib/sleep `fellAsleep`); without a band the tag stays. Checked:
+   sleep.test, e2e/fixes13.cjs.
+78. [x] **Explain the usual band on the heart chart** (his screenshot) — "is this supposed to be the average band? Looks a
    bit weird, i just want explanation like why we have this, what reason it has, based on what it works. we dont want
    things that makes zero sense. oh but it could be nice w lots of days of data. so dont remove this". Also check why it
    only shows in parts and the line is red where there's no band.
-79. [ ] **ELI5 on the sleep nights table** (his screenshot) — "i really like this sleep data but can we get some eli5
+   Done 13 Oct: two real faults behind "looks a bit weird": where there was no band the Timeline drew the line red —
+   the red that means "above your usual" — so most of his day looked raised; and a quarter hour needed 10 readings a day
+   to count, which a band reading every few minutes never reaches in the day (lib/hrusual `SLOT_READINGS` = 5). Now grey
+   where there's nothing to compare, and "What's the grey band on heart rate?" under the Timeline and the Heart page's
+   day: what it is, how it's made (middle 60 % of the last 14 days at that quarter hour, training left out), why parts
+   are missing, and how many of 96 quarter hours have one so far (components/UsualBandWhy.tsx). Checked: hrusual.test
+   (a reading every 5 min makes a band; failed at 10), e2e/explain.cjs.
+79. [x] **ELI5 on the sleep nights table** (his screenshot) — "i really like this sleep data but can we get some eli5
    explanations or comparisons here to see whats up". Also check two 8-hour nights showing Awake 0.
-
+   Done 13 Oct: under the nights table, the opened night in plain words — each number against his usual (middle half of
+   his other nights) and one line on what it is, with most-adults figures as a rough guide (lib/sleep `eli5`,
+   components/NightWords.tsx). Checked: sleep.test, e2e/explain.cjs. Awake 0 on two 8-hour nights: Awake counts only
+   after first falling asleep; can't check his real nights from here.
 ### B · Workouts
 80. [ ] **Sets as he does them** — "For sets its 1 warmup 3 w normal weight but sometimes just 3 so makke sure i can do that.
    And i i decide to do 5 sets i should br able to log all so it recommends me whats next but not forcing to switch
@@ -883,6 +929,9 @@ below, in his words, grouped; A first (broken or wrong now), then the rest. Item
    that target same muscle".
 83. [ ] **Calories burned** — "one would assume calories burned are already in the app…pls include". From the band (Google
    total / active calories) and workouts; into Today's energy balance.
+   Research 13 Oct: Google gives `total-calories` (daily roll-up only, per civil day: POST …/total-calories/dataPoints:
+   dailyRollUp, {range: {start: {date}, end: {date}}, windowSizeDays: 1} → kcalSum) and `active-energy-burned` (roll-up
+   per window). Same permission as steps.
    - Training page and food ↔ strength: #64 (canvas up).
 
 ### C · Food
@@ -892,6 +941,13 @@ below, in his words, grouped; A first (broken or wrong now), then the rest. Item
 85. [ ] **Romanian food in the database** — "Most of the database foods are us foods and i live in romania and eat normal
    food so pls make some changes"; "things like pityoka leves and also other soups not there?? criminal"; "i cant find the
    lidl doughnuts … can u search and add to database? Lidl bakery and kaufland bakery can make it the same if similar".
+   Research 13 Oct (not built yet): the built-in list (lib/foods-basic.ts) has Hungarian names but almost no cooked
+   dishes — lángos only; no ciorbă, leves, sarmale, mici, mămăligă, gogoși. Web values are thin and recipe-dependent
+   (ciorbă de perișoare: folositor.ro ~55 kcal / 4 P / 5 C / 2 F per 100 g; a restaurant label ~60 kcal / 1.6 P / 7.5 C /
+   2.6 F). Plan: each dish from a typical recipe built on per-ingredient values (the same "typical, rounded" rule the list
+   already states), cross-checked with a Romanian and a Hungarian table, a portion in the everyday unit (a bowl = 350 g),
+   and both names (pityókaleves / krumplileves / ciorbă de cartofi). Lidl / Kaufland bakery doughnuts: no label online —
+   take the values off the shelf label (photo) or the exact product name.
 86. [ ] **Caffeine sipped, not chugged** — "for caffeine: whether coffee or energy drink, lets add a more realistic curve,
    like after logging, it takes like 10-20 minutes while i sip on it, not chug it. and also lets confirm if the curve is
    good".

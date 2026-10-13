@@ -1186,3 +1186,33 @@ a { color: inherit; }
 /* Steps under the Heart page's day chart (PLAN 66): its own small scale, quiet ink — where you walked. */
 .hp-steps rect { fill: var(--i-ink-2); fill-opacity: .45; }
 .hp-key i.stp { width: 4px; height: 9px; background: var(--i-ink-2); opacity: .55; vertical-align: -1px; }
+
+/* Settings: a value the app keeps for you (your latest weigh-in), not a field to fill in (PLAN 73). */
+.field > b { font-size: 16px; font-weight: 500; color: var(--c-ink); padding-top: 6px; }
+.field > small { font-size: 11.5px; color: var(--c-ink-2); opacity: .8; }
+.hn-fell { margin: 6px 0 0; font-size: 13px; color: var(--c-ink-2); }
+.hn-fell b { color: var(--c-ink); font-weight: 600; }
+
+/* Logged today: tap a food or drink to change its numbers (PLAN 71). */
+.li-open { all: unset; cursor: pointer; min-width: 0; }
+.li-open:focus-visible { outline: 2px solid var(--c-ink-2); outline-offset: 2px; border-radius: 6px; }
+.entry-edit { grid-column: 1 / -1; display: grid; gap: 8px; padding: 8px 0 4px; }
+.entry-edit .ee-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(76px, 1fr)); gap: 8px; }
+.entry-edit .note { margin: 0; }
+.entry-edit .ee-btns { display: flex; gap: 8px; justify-content: flex-end; }
+.band-behind { color: var(--c-ink); border-left: 2px solid var(--caf); padding-left: 10px; }
+
+/* What the usual band is (PLAN 78) — under the Timeline and the Heart page's day chart. */
+.usual-why { margin: 4px 14px 10px; font-size: 12.5px; color: var(--i-ink-2, var(--c-ink-2)); }
+.usual-why summary { cursor: pointer; color: var(--i-ink, var(--c-ink)); font-weight: 500; padding: 6px 0; min-height: 32px; }
+.usual-why p { margin: 4px 0 6px; line-height: 1.5; max-width: 72ch; }
+.usual-why b { color: var(--i-ink, var(--c-ink)); font-weight: 600; }
+
+/* The opened night in plain words, under the nights table (PLAN 79). */
+.night-words { margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--i-line); }
+.night-words ul { list-style: none; margin: 8px 0 4px; padding: 0; display: grid; gap: 8px; }
+.night-words li { display: grid; gap: 2px; font-size: 13px; }
+.night-words .nw-h { color: var(--i-ink-2); }
+.night-words .nw-h b { color: var(--i-ink); font-weight: 600; }
+.night-words li[data-side="more"] .nw-h b, .night-words li[data-side="less"] .nw-h b { text-decoration: underline; text-decoration-color: var(--i-line-2); text-underline-offset: 3px; }
+.night-words .nw-what { font-size: 12px; color: var(--i-dim); line-height: 1.45; max-width: 70ch; }

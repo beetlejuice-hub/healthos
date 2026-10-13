@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { fromDescribed, judge } from "./apply";
 import { CONTEXT_MAX, buildContext, dayTimeline, feelByTime, moodJournal } from "./context";
-import { checkDescribe, checkNight, costUsd, jsonFrom } from "./tasks";
+import { checkDescribe, checkNight, costUsd, jsonFrom, SYSTEM } from "./tasks";
 import { parseItem } from "../quickadd";
 import { feelWorld } from "../bench";
 import { EMPTY_AI, type State } from "../store";
@@ -142,5 +142,15 @@ describe("the AI knows everything about mood (owner, 2 Oct)", () => {
     expect(year.length).toBeLessThanOrEqual(CONTEXT_MAX);
     expect(year).toContain('2026-10-02: slept 6');
     expect(year).not.toContain("2025-10-05:");
+  });
+});
+
+describe("the AI's timing rule (PLAN 75)", () => {
+  it("every task is told a supplement can't change a check-in minutes later, and an unticked day isn't a day without", () => {
+    // owner, 13 Oct: "if i take X and after 2 minutes i log very bad mood, you shouldnt connect X and low mood"
+    for (const [task, text] of Object.entries(SYSTEM)) {
+      expect(text, task).toMatch(/Never link a check-in to something logged less than 30 minutes before it, and for supplements not less than an hour/);
+      expect(text, task).toMatch(/an unticked day is unknown, not a day without/);
+    }
   });
 });

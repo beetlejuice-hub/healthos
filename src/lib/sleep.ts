@@ -269,3 +269,46 @@ export function facts(n: Night, e: Evening, all: Night[], fmt: { clock: (t: numb
   return out.slice(0, 6);
 }
 
+
+/**
+ * How long last night took to fall asleep, from the band (PLAN 77; owner, 13 Oct: "took too long to fall asleep can be
+ * replaced IMO w band data"), against the middle of your other nights in the last 2 weeks (needs 5). Null without a night.
+ */
+export function fellAsleep(sessions: SleepSession[], now: number): { min: number; usual: number | null } | null {
+  const main = sessions.filter((s) => !s.nap && s.end <= now && s.end > now - 36 * HOUR).sort((a, b) => b.end - a.end)[0];
+  if (!main) return null;
+  const lat = (s: SleepSession) => nights([s], [], {}, {})[0]?.latency ?? null;
+  const min = lat(main);
+  if (min == null) return null;
+  const others = sessions.filter((s) => !s.nap && s !== main && s.end > now - 15 * 24 * HOUR && s.end <= now).map(lat).filter((v): v is number => v != null).sort((a, b) => a - b);
+  return { min: Math.round(min), usual: others.length >= 5 ? Math.round(others[Math.floor(others.length / 2)]) : null };
+}
+
+/**
+ * One night in plain words (PLAN 79; owner, 13 Oct, on the nights table: "i really like this sleep data but can we get some
+ * eli5 explanations or comparisons here to see whats up"). Each measure against your own usual (the middle half of your
+ * other nights, needs 5) and one line on what it is. General figures are "most adults", never a verdict on you.
+ */
+export type Eli5 = { key: string; name: string; value: string; vs: string; what: string; side: "more" | "less" | "usual" | null };
+export function eli5(n: Night, ns: Night[]): Eli5[] {
+  const others = ns.filter((x) => x.id !== n.id);
+  const hm = (m: number) => { const t = Math.round(m); return t >= 60 ? `${Math.floor(t / 60)} h ${String(t % 60).padStart(2, "0")}` : `${t} min`; };
+  const row = (key: string, name: string, v: number | null, of: (x: Night) => number | null, fmt: (v: number) => string, slack: number, what: string): Eli5 | null => {
+    if (v == null) return null;
+    const u = usual(others.map(of));
+    if (!u) return { key, name, value: fmt(v), vs: "your usual shows after 5 nights", what, side: null };
+    const side = v > u.hi + slack ? "more" : v < u.lo - slack ? "less" : "usual";
+    // "237–246 min", not "237 min–246 min" (the unit once, at the end)
+    const lo = fmt(u.lo), hi = fmt(u.hi), unit = / (min|bpm|ms)$/.exec(hi)?.[0] ?? "";
+    const range = Math.round(u.lo) === Math.round(u.hi) ? fmt(u.mid) : `${unit && lo.endsWith(unit) ? lo.slice(0, -unit.length) : lo}–${hi}`;
+    return { key, name, value: fmt(v), side, what, vs: side === "usual" ? `about your usual (${range})` : `${side} than your usual ${range}` };
+  };
+  return [
+    row("asleep", "Asleep", n.asleep, (x) => x.asleep, hm, 10, "Time actually asleep, not just in bed. Most adults need about 7–9 hours."),
+    row("deep", "Deep", n.deep, (x) => x.deep, (v) => `${Math.round(v)} min`, 3, "The heaviest sleep: the body repairs itself and the heart slows down most. Most adults get about 1–1½ hours, mostly early in the night."),
+    row("rem", "REM", n.rem, (x) => x.rem, (v) => `${Math.round(v)} min`, 3, "Dreaming sleep: the brain sorts memories and feelings. Most adults get about 1½–2 hours, mostly towards morning."),
+    row("awake", "Awake", n.awake, (x) => x.awake, (v) => `${Math.round(v)} min`, 3, "Awake after first falling asleep (not the time before). A few short wakings are normal; long ones leave you more tired."),
+    row("low", "Lowest heart rate", n.low, (x) => x.low, (v) => `${Math.round(v)} bpm`, 0.5, "How far your heart settled in the night. Lower than your usual usually means a calmer, more restful night."),
+    row("hrv", "HRV", n.hrv, (x) => x.hrv, (v) => `${Math.round(v)} ms`, 0.5, "How much the time between heartbeats varies. Higher than your usual usually means more recovered; it swings a lot night to night, so the trend matters more than one night."),
+  ].filter((x): x is Eli5 => x != null);
+}

@@ -279,6 +279,15 @@ describe("BandHub", () => {
     expect((rolls().at(-1)!.json!.range as { startTime: string }).startTime).toBe("2026-10-06T22:15:00Z");
   });
 
+  it("opening the app restarts the 15-minute pulls if their chain broke (PLAN 69)", async () => {
+    const { h, st, at } = setup();
+    await connect(h); await h.alarm();
+    await st.deleteAlarm(); // the chain broke (an alarm that gave up)
+    at(T0 + 3 * 3600_000);
+    await h.fetch(post("sync"));
+    expect(st.alarm()).toBe(T0 + 3 * 3600_000 + PULL_EVERY_MS);
+  });
+
   it("data returns the minutes in range across days, and the nights that touch it", async () => {
     const { h, st } = setup();
     const a = Date.UTC(2026, 9, 6, 23, 58), b = Date.UTC(2026, 9, 7, 0, 1);

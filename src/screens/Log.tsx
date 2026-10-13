@@ -27,6 +27,7 @@ import { tasteOf } from "../lib/rank";
 import { convert, cookKind, cookState, WORD, type CookState } from "../lib/cooked";
 import { findBarcode, type Lookup } from "../lib/barcode";
 import { ScanButton, Scanner } from "../components/Scanner";
+import { EntryEdit } from "../components/EntryEdit";
 
 const fold = (t: string) => t.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
 /** A drink matches what you typed by its name or any other name it goes by ("sprite" → soft drink). */
@@ -702,11 +703,11 @@ function DbDrink({ f, open: on, onToggle, onLog }: { f: Food; open: boolean; onT
     <button type="button" className="dbrow" aria-expanded={on} onClick={onToggle}>
       {f.img && <img src={f.img} alt="" loading="lazy" />}
       <span>{f.name}{f.brand && !f.name.toLowerCase().includes(f.brand.toLowerCase()) ? <i> · {f.brand}</i> : null}
-        <small>{f.per100.kcal} kcal / 100 ml{caf.mg ? ` · ${Math.round(caf.mg)} mg caffeine / 100 ml${caf.typical ? " (typical)" : ""}` : ""}{f.alcohol100 ? ` · ${f.alcohol100}% alcohol` : ""}</small></span>
+        <small>{f.per100.kcal} kcal / 100 ml{f.per100.p >= 0.5 ? ` · P ${Math.round(f.per100.p * 10) / 10} g` : ""}{f.per100.f >= 0.5 ? ` · F ${Math.round(f.per100.f * 10) / 10} g` : ""}{caf.mg ? ` · ${Math.round(caf.mg)} mg caffeine / 100 ml${caf.typical ? " (typical)" : ""}` : ""}{f.alcohol100 ? ` · ${f.alcohol100}% alcohol` : ""}</small></span>
       <span className="r">{on ? "–" : "+"}</span>
     </button>
     {on && <div className="sizes" role="group" aria-label={`Size of ${f.name}`}>
-      {sizes.map((ml) => { const d = drinkFromFood(f, ml); return <button key={ml} type="button" className="pill-btn" onClick={() => onLog(d)}>{ml >= 1000 ? `${ml / 1000} l` : `${ml} ml`}<small>{d.kcal} kcal{d.caffeineMg ? ` · ${d.caffeineMg} mg` : ""}</small></button>; })}
+      {sizes.map((ml) => { const d = drinkFromFood(f, ml); return <button key={ml} type="button" className="pill-btn" onClick={() => onLog(d)}>{ml >= 1000 ? `${ml / 1000} l` : `${ml} ml`}<small>{d.kcal} kcal{(d.p ?? 0) >= 1 ? ` · ${Math.round(d.p!)} g protein` : ""}{d.caffeineMg ? ` · ${d.caffeineMg} mg` : ""}</small></button>; })}
     </div>}
   </div>;
 }
@@ -900,7 +901,8 @@ function BodyFatCard({ s }: { s: ReturnType<typeof bodyFat> }) {
 const describe = (e: Entry, supps: Supplement[]): [string, string] => {
   switch (e.kind) {
     case "food": return [e.name, `${e.unit && e.count ? `${amountText(e.count, e.unit)} · ≈ ${approx(e.macros.kcal)}` : Math.round(e.macros.kcal)} kcal · P ${Math.round(e.macros.p)}${!e.unit && e.grams ? ` · ${Math.round(e.grams)} g` : ""}`];
-    case "drink": return [e.name, [e.caffeineMg ? `${e.caffeineMg} mg caffeine` : "", e.alcoholG ? `${e.alcoholG} g alcohol` : "", e.kcal > 5 ? `${e.kcal} kcal` : ""].filter(Boolean).join(" · ")];
+    // protein and fat when they're there (PLAN 70; owner, 13 Oct: a barcode protein drink "does not show protein")
+    case "drink": return [e.name, [e.caffeineMg ? `${e.caffeineMg} mg caffeine` : "", e.alcoholG ? `${e.alcoholG} g alcohol` : "", e.kcal > 5 ? `${e.kcal} kcal` : "", (e.p ?? 0) >= 1 ? `P ${Math.round(e.p!)}` : "", (e.f ?? 0) >= 1 ? `F ${Math.round(e.f!)}` : ""].filter(Boolean).join(" · ")];
     case "supp": return [supps.find((s) => s.id === e.suppId)?.name ?? "Supplement", e.status === "taken" && e.amount ? `taken · ${e.amount}` : e.status];
     case "set": return [e.exercise, `${e.kg} kg × ${e.reps}`];
     case "weight": return ["Weight", `${e.kg} kg${e.fatPct != null ? ` · ${e.fatPct}% fat` : ""}`];
@@ -916,15 +918,18 @@ function TodayLog() {
   const supps = useStore((s) => s.supplements);
   const today = localDay(Date.now());
   const list = entries.filter((e) => localDay(e.at) === today && e.kind !== "set").reverse();
+  const [edit, setEdit] = useState<string | null>(null);
   return (
     <div className="card">
       <h3>Logged today <span>{list.length}</span></h3>
       {list.length === 0 && <p className="note">Nothing yet.</p>}
       <div className="list">
-        {list.map((e) => { const [a, b] = describe(e, supps); return (
-          <div className="li" key={e.id}>
-            <span>{a}<small>{clock(e.at)} · {b}</small></span>
+        {list.map((e) => { const [a, b] = describe(e, supps), canEdit = e.kind === "food" || e.kind === "drink"; return (
+          <div className={`li${edit === e.id ? " editing" : ""}`} key={e.id}>
+            {canEdit ? <button type="button" className="li-open" aria-expanded={edit === e.id} aria-label={`Change ${a}`} onClick={() => setEdit(edit === e.id ? null : e.id)}><span>{a}<small>{clock(e.at)} · {b}</small></span></button>
+              : <span>{a}<small>{clock(e.at)} · {b}</small></span>}
             <button type="button" className="x" aria-label={`Delete ${a}`} onClick={() => act.removeEntry(e.id)}>×</button>
+            {edit === e.id && canEdit && <EntryEdit e={e} onDone={() => setEdit(null)} />}
           </div>
         ); })}
       </div>

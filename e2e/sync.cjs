@@ -42,7 +42,7 @@ const { chromium, APP, OUT, handle, tables, users } = require('./harness.cjs');
 
   await laptop.goto(APP + '#log');
   const before = await laptop.locator('.li', { hasText: 'Filter coffee' }).count();
-  await laptop.locator('.li', { hasText: 'Filter coffee' }).last().getByRole('button').click();
+  await laptop.locator('.li', { hasText: 'Filter coffee' }).last().getByRole('button', { name: /^Delete/ }).click();
   await syncNow(laptop);
   await syncNow(phone);
   await phone.goto(APP + '#log');

@@ -12,6 +12,7 @@
 import type { Supplement } from "./types";
 import type { GlanceDay } from "./glance";
 import { correlation, difference, type Range } from "./stats";
+import { suppDay } from "./insights";
 
 export const MIN_EACH = 5;
 export type Outcome = "mood" | "energy" | "stress" | "sleep";
@@ -65,7 +66,7 @@ export function comparisons(days: GlanceDay[], supplements: Supplement[] = []): 
   // Each supplement: taken vs not, on days the stack was answered. Next-day mood and energy, and
   // that night's sleep for an evening one.
   for (const s of supplements.filter((x) => x.active)) {
-    const took: Pred = (d) => (d.stackAnswered ? (d.taken ?? []).includes(s.id) : null);
+    const took: Pred = (d) => suppDay({ taken: d.taken ?? [], skipped: d.skipped ?? [] }, s.id);
     rows.push(row(`supp-${s.id}-mood`, "Mood", `${s.name} taken`, "mood next day", 1, took, nextDay("mood")));
     rows.push(row(`supp-${s.id}-energy`, "Energy", `${s.name} taken`, "energy next day", 1, took, nextDay("energy")));
     if (s.slot === "evening") rows.push(row(`supp-${s.id}-sleep`, "Sleep", `${s.name} taken`, "that night's sleep rating", 1, took, thatNight));

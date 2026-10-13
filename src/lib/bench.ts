@@ -85,9 +85,12 @@ export function feelWorld(w: FeelWorld): DayFacts[] {
       day: `d${i}`, caffeineMg: 190 + late, lastCaffeineMin: late ? 15 * 60 : 9 * 60, caffeineAtBed: late * 0.5 + 20, alcoholG: alc, alcoholAtBed: alc ? 10 : 0,
       trained, kcal, proteinG: kcal == null ? null : Math.round(130 + g() * 25),
       energy: rated ? clamp(energy) : null, mood: rated ? clamp(mood) : null, focus: rated ? clamp(6 + g()) : null, stress: rated ? clamp(4 + g()) : null,
-      taken: new Set(saffron ? ["saffron", "creatine"] : ["creatine"]), logged: true, stackAnswered: r() < 0.9, lateCaffeineMg: late,
+      taken: new Set(saffron ? ["saffron", "creatine"] : ["creatine"]), skipped: new Set<string>(), logged: true, stackAnswered: r() < 0.9, lateCaffeineMg: late,
       lateEat: r() < 0.3, volumeKg: trained ? 8000 + Math.round(g() * 1500) : 0, weekend, bigMealKcal: kcal == null ? null : Math.round(kcal * (0.35 + r() * 0.2)), sleep: null,
     };
+    // the stack answered: saffron "didn't take" on its off days; not answered: nothing known (PLAN 74)
+    if (day.stackAnswered && !saffron) day.skipped = new Set(["saffron"]);
+    if (!day.stackAnswered) day.taken = new Set();
     out.push(day); prev = day;
   }
   return out;

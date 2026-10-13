@@ -129,7 +129,12 @@ export function setsPerMuscle(sets: { exercise: string }[]): Record<string, numb
   return out;
 }
 
-export const volume = (sets: { kg: number; reps: number }[]) => sets.reduce((a, s) => a + s.kg * s.reps, 0);
+/**
+ * Dumbbell exercises are logged per dumbbell — the number printed on it (PLAN 76; owner, 13 Oct: "not sure if for exp on db
+ * press its one hand kg or both hand kg in total"). Their kg lifted counts both hands.
+ */
+export const isDumbbell = (exercise: string) => /\b(db|dumbbells?)\b/i.test(exercise);
+export const volume = (sets: { kg: number; reps: number; exercise?: string }[]) => sets.reduce((a, s) => a + s.kg * s.reps * (s.exercise && isDumbbell(s.exercise) ? 2 : 1), 0);
 
 /**
  * Workouts that end themselves (owner: "sessions could easily get forgotten to end"). An open

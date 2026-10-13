@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { HrMinute, SleepSession } from "./band";
-import { clockH, evenings, facts, goesWith, lowestHr, nights, regularity, usual, usualNightHr, weekendShift, type Evening, type Night } from "./sleep";
+import { clockH, eli5, evenings, facts, fellAsleep, goesWith, lowestHr, nights, regularity, usual, usualNightHr, weekendShift, type Evening, type Night } from "./sleep";
 import { rng } from "./bench";
 import { atMinute, addDays, MIN, HOUR } from "./time";
 
@@ -178,5 +178,38 @@ describe("evenings and facts", () => {
     expect(at.mid).toBeGreaterThanOrEqual(51); expect(at.mid).toBeLessThanOrEqual(53);
     expect(usualNightHr(ns.slice(0, 5), hr, ns[4].id)).toEqual([]); // only 4 others
     expect(usual([1, 2, 3, 4])).toBeNull(); expect(usual([1, 2, 3, 4, 5])!.mid).toBe(3);
+  });
+});
+
+describe("fell asleep, from the band (PLAN 77)", () => {
+  it("last night's minutes to fall asleep against the middle of the other nights; null without a night", () => {
+    const ss = Array.from({ length: 7 }, (_, k) => session(addDays(EVE0, k), 23.5, 31, `n${k}`)); // asleep 15 min after bed
+    const now = atMinute(addDays(EVE0, 7), 9 * 60);
+    expect(fellAsleep(ss, now)).toEqual({ min: 15, usual: 15 });
+    const late = [...ss.slice(0, 6), session(addDays(EVE0, 6), 23.5, 31, "late", { stages: session(addDays(EVE0, 6), 23.5, 31).stages.map((s, i) => (i === 0 ? { ...s, end: s.start + 50 * MIN } : i === 1 ? { ...s, start: s.start + 35 * MIN } : s)) })];
+    expect(fellAsleep(late, now)!.min).toBe(50);
+    expect(fellAsleep(ss.slice(0, 3), now)).toBeNull(); // the latest ended over 36 h ago
+    expect(fellAsleep(ss.slice(3), now)!.usual).toBeNull(); // 3 other nights: too few for a usual
+  });
+});
+
+describe("a night in plain words (PLAN 79)", () => {
+  const base = (k: number, o: Partial<Night>): Night => ({ ...nights([session(addDays(EVE0, k), 23.5, 31)], [], {}, {})[0], id: `n${k}`, ...o });
+  const ns = Array.from({ length: 8 }, (_, k) => base(k, { asleep: 420 + (k % 3) * 5, deep: 75 + (k % 2), rem: 95 + (k % 3), awake: 10 + (k % 2), low: 50, hrv: 55 + (k % 3) }));
+  it("each measure against your usual, with what it is", () => {
+    const n = base(9, { asleep: 362, deep: 77, rem: 69, awake: 69, low: 50, hrv: 65 });
+    const by = Object.fromEntries(eli5(n, [...ns, n]).map((r) => [r.key, r]));
+    expect(by.asleep).toMatchObject({ value: "6 h 02", side: "less" });
+    expect(by.asleep.vs).toBe("less than your usual 7 h 00–7 h 05");
+    expect(by.deep.side).toBe("usual");
+    expect(by.rem).toMatchObject({ side: "less", value: "69 min" });
+    expect(by.awake).toMatchObject({ side: "more", value: "69 min" });
+    expect(by.hrv.side).toBe("more");
+    expect(by.deep.what).toMatch(/repairs/);
+    expect(by.rem.vs).toMatch(/^less than your usual 9\d–9\d min$/); // the unit once
+  });
+  it("under 5 other nights: no comparison, only what it is", () => {
+    const n = base(9, { asleep: 362 });
+    expect(eli5(n, [n, ...ns.slice(0, 3)]).every((r) => r.side === null && /after 5 nights/.test(r.vs))).toBe(true);
   });
 });

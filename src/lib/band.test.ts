@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { authUrl, BAND_SCOPES, dailyFilter, lastNight, mergeBand, mergeMinutes, refreshFrom, perMinute, readDaily, readHeartRate, readHrv, readSleep, readState, readSteps, rollUpBody, sampleFilter, signState, sleepFilter, wakeFor, type SleepSession } from "./band";
+import { authUrl, BAND_SCOPES, behind, dailyFilter, lastNight, mergeBand, mergeMinutes, refreshFrom, perMinute, readDaily, readHeartRate, readHrv, readSleep, readState, readSteps, rollUpBody, sampleFilter, signState, sleepFilter, wakeFor, type SleepSession } from "./band";
 
 // Shapes as Google's CLI reads them (pkg/output/simplify.go): the type object holds sampleTime / interval / date.
 const hr = (t: string, bpm: unknown) => ({ name: `users/me/dataTypes/heart-rate/dataPoints/${t}`, dataSource: { device: { displayName: "Charge 6" } }, heartRate: { sampleTime: { physicalTime: t, utcOffset: "7200s" }, beatsPerMinute: bpm } });
@@ -153,5 +153,19 @@ describe("wakeFor (PLAN 56, for Tempo)", () => {
   it("bad day or time zone: nothing", () => {
     expect(wakeFor([main], "8 Oct", 120)).toBeNull();
     expect(wakeFor([main], "2026-10-08", Number.NaN)).toBeNull();
+  });
+});
+
+describe("which side is behind (PLAN 69)", () => {
+  const now = Date.UTC(2026, 9, 13, 16), H = 3_600_000;
+  it("we checked Google recently but it has nothing newer than 9 h ago: the phone hasn't passed it on", () => {
+    expect(behind({ lastSync: now - 5 * 60_000, latest: now - 9 * H }, now)).toBe("phone");
+  });
+  it("we haven't checked Google for an hour: that's on our side", () => {
+    expect(behind({ lastSync: now - H, latest: now - 9 * H }, now)).toBe("us");
+  });
+  it("fresh enough, or nothing to judge: nothing to say", () => {
+    expect(behind({ lastSync: now - 5 * 60_000, latest: now - 40 * 60_000 }, now)).toBeNull();
+    expect(behind({ lastSync: null, latest: null }, now)).toBeNull();
   });
 });

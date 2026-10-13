@@ -5,7 +5,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { bandLatest, disconnectBand, refreshBand, startConnect, useBand } from "../lib/band-client";
-import { lastNight } from "../lib/band";
+import { behind, lastNight } from "../lib/band";
 import { clock, dayLabel, localDay } from "../lib/time";
 
 /** "14:05" today, "Tue 6 Oct 23:10" before. */
@@ -82,6 +82,8 @@ export function Band() {
           {s.lastSync && !lastHr && <li className="wide">No heart rate yet — open the Fitbit app so the band syncs to it.</li>}
         </ul>
         {lastHr && <p className="note">Readings go band → Fitbit app → Google, usually every 15–30 minutes, so the newest is often a few minutes old. Opening the Fitbit app makes the band send now.</p>}
+        {behind(s, Date.now()) === "phone" && <p className="note band-behind" data-behind="phone">Google has nothing from your band newer than {ago(s.latest!)}, and we checked {age(s.lastSync!, Date.now())}. The band hands its readings to the Fitbit app on your phone, which passes them to Google — so it's waiting on the phone. Open the Fitbit app (and let it run in the background) to send them.</p>}
+        {behind(s, Date.now()) === "us" && <p className="note band-behind" data-behind="us">HealthOS last checked Google {ago(s.lastSync!)} — that's on our side, not your band. Tap Pull now; the 15-minute checks restart from here.</p>}
         {s.error && <p className="note">Some of the last pull didn't come through ({s.error}); the next one tries again.</p>}
         <div className="row2">
           <button type="button" className="pill-btn" disabled={busy || loading} onClick={() => void run(pullNow)}>{loading ? "Pulling…" : "Pull now"}</button>

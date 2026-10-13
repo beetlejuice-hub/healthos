@@ -67,3 +67,19 @@ describe("heart rate after a supplement (afterEach)", () => {
     expect(a.sure).toBe("too few");
   });
 });
+
+describe("days without it are days it was answered (PLAN 74)", () => {
+  it("taken every day, unticked on bad days: no 'without' to compare — not a finding", () => {
+    // ticked on most days; on every 3rd day he took it but didn't tick it, and those were worse days (mood −1.5)
+    const { g } = rng(5), checks: Check[] = [], times: number[] = [], known = new Set<string>();
+    for (let i = 0; i < 30; i++) {
+      const day = addDays(D0, i), ticked = i % 3 !== 0;
+      if (ticked) { times.push(atMinute(day, 12 * 60)); known.add(day); }
+      for (const h of [9, 14, 19]) checks.push({ at: atMinute(day, h * 60), mood: 6 + (ticked ? 0 : -1.5) + g() * 0.5 });
+    }
+    const naive = feelAfter(times, checks, "mood");
+    expect(naive.sure === "clear" || naive.sure === "likely").toBe(true); // the old way: forgetful bad days read as "without"
+    const fair = feelAfter(times, checks, "mood", { known });
+    expect(fair.sure).toBe("too few");
+  });
+});

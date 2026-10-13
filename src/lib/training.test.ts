@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { dayStats, exerciseHistory, mainMuscle, nextTemplate, sameMuscle, sessionPlan, templateProblems, tidyWorkouts, e1rm, e1rmHistory, setsPerMuscle, suggestNext, volume } from "./training";
+import { dayStats, exerciseHistory, mainMuscle, nextTemplate, sameMuscle, sessionPlan, templateProblems, tidyWorkouts, e1rm, e1rmHistory, setsPerMuscle, suggestNext, volume, isDumbbell } from "./training";
 
 describe("e1rm — Epley", () => {
   it("estimates a one-rep max", () => {
@@ -132,5 +132,14 @@ describe("a split day at a glance", () => {
     expect(dayStats(d)).toEqual({ exercises: 3, sets: 9, liftMin: 25, cardioMin: 20, muscles: ["Quads", "Chest"] });
     expect(dayStats({ exercises: [] })).toMatchObject({ exercises: 0, sets: 0, liftMin: 5, cardioMin: null, muscles: [] });
     expect(dayStats({ exercises: [], cardio: "stairmaster, easy" }).cardioMin).toBeNull();
+  });
+});
+
+describe("dumbbells (PLAN 76)", () => {
+  it("logged per dumbbell; kg lifted counts both hands", () => {
+    expect(["DB bench press", "Incline DB curl", "Dumbbell lateral raise"].every(isDumbbell)).toBe(true);
+    expect(["Bench press", "Deadlift", "Lat pulldown"].some(isDumbbell)).toBe(false);
+    expect(volume([{ exercise: "DB bench press", kg: 20, reps: 10 }, { exercise: "Bench press", kg: 60, reps: 5 }])).toBe(20 * 10 * 2 + 300);
+    expect(volume([{ kg: 20, reps: 10 }])).toBe(200);
   });
 });

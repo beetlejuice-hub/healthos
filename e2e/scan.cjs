@@ -52,7 +52,7 @@ const PRODUCTS = {
   await pg.waitForSelector('.scanner', { state: 'detached', timeout: 8000 }).catch(() => {});
   const basket = await pg.locator('body').innerText();
   check('Sprite photo → decoded → in the meal as a 500 ml drink', /Sprite 500 ml/.test(basket));
-  check('camera is released after the scan', await pg.evaluate(() => [...document.querySelectorAll('video')].every((v) => !v.srcObject || v.srcObject.getTracks().every((t) => t.readyState === 'ended'))));
+  check('the scanner\'s video lets go of the camera when it closes (the camera itself stays 30 s for the next scan — e2e/camhold.cjs)', await pg.evaluate(() => [...document.querySelectorAll('video')].every((v) => !v.srcObject || v.srcObject.getTracks().every((t) => t.readyState === 'ended'))));
 
   // A chocolate bar is a food.
   await pg.getByRole('button', { name: 'Scan a barcode' }).first().click();

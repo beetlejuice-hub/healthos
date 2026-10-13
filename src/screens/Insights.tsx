@@ -32,6 +32,7 @@ import { useScout, WorthALook } from "../components/Scout";
 import { Experiments } from "../components/Ai";
 import type { GraphFocus } from "../components/MasterGraph";
 import { DOSE_MIN_DAYS, doseCompare } from "../lib/dose";
+import { currentKg } from "../lib/body";
 
 const f1 = (v: number) => v.toFixed(1);
 const sgn = (v: number, f = f1) => `${v >= 0 ? "+" : "−"}${f(Math.abs(v))}`;
@@ -116,7 +117,7 @@ export function Insights() {
   }, [shown, tabs, openTab, phone]);
   useEffect(() => { const on = () => { const t = tabOf(readRoute()[1]); if (t) setTab(t); if (t === "timeline") setCmp(location.hash.split("/")[2] === "compare"); }; addEventListener("hashchange", on); return () => removeEventListener("hashchange", on); }, []);
   const showOnGraph = (f: GraphFocus) => { setFocus(f); cmpRef.current = false; setCmp(false); openTab("timeline"); };
-  const report = useMemo(() => notice(s.entries, s.goals, now, s.settings.bodyKg, { workouts: s.workouts, supplements: s.supplements, settings: s.settings }), [s.entries, s.goals, now, s.settings, s.workouts, s.supplements]);
+  const report = useMemo(() => notice(s.entries, s.goals, now, currentKg(s.entries, s.settings.bodyKg, now), { workouts: s.workouts, supplements: s.supplements, settings: s.settings }), [s.entries, s.goals, now, s.settings, s.workouts, s.supplements]);
   // Show a section only once there's something in it; list the rest in one line each, so a new
   // account sees a short page instead of ten empty panels (owner: "looks really complex").
   const has = useMemo(() => {

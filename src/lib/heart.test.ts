@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { HrMinute } from "./band";
 import { rng } from "./bench";
 import type { Check } from "./feelgraph";
-import { aroundChecks, awakeByDay, dayNumbers, heartOutcomes, raisedStretches, roll, whyRaised, type AwakeDay } from "./heart";
+import { aroundChecks, awakeByDay, dayNumbers, heartOutcomes, raisedStretches, roll, sessionHr, whyRaised, type AwakeDay } from "./heart";
 import { usualByHour } from "./hrusual";
 import { FACTORS, goesWith, type Evening, type Night } from "./sleep";
 import { addDays, atMinute, HOUR, MIN } from "./time";
@@ -203,5 +203,14 @@ describe("raised stretches", () => {
     const potter = Array.from({ length: 9 }, (_, i) => [T(D0, 14) + i * 5 * 60_000, 5, 40] as [number, number, number]);
     expect(whyRaised(r, [], potter)).toEqual([]);
     expect(whyRaised(r, [], walk.map(([t, m, n]) => [t + 3 * 3600_000, m, n]))).toEqual([]); // a walk later that day
+  });
+});
+
+describe("the workout's heart-rate tile (PLAN 68)", () => {
+  it("this session's minutes: latest, average, peak; nothing from before it; null before any arrive", () => {
+    const t0 = Date.UTC(2026, 9, 13, 17), m = (min: number, v: number, hi = v + 4): [number, number, number, number] => [t0 + min * 60_000, v, v - 3, hi];
+    const hr = [m(-30, 62), m(-5, 64), m(0, 90), m(1, 120, 141), m(2, 110)];
+    expect(sessionHr(hr, t0, t0 + 3 * 60_000)).toEqual({ last: 110, at: t0 + 2 * 60_000, avg: 107, peak: 141, n: 3 });
+    expect(sessionHr(hr.slice(0, 2), t0, t0 + 3 * 60_000)).toBeNull();
   });
 });

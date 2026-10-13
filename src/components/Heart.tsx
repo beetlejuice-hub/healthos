@@ -22,6 +22,7 @@ import { AfterCards } from "./HeartEffects";
 import { GoesWith, type GridCopy } from "./Sleep";
 import { useNights } from "./useNights";
 import { useWidth } from "./useWidth";
+import { UsualBandWhy } from "./UsualBandWhy";
 
 /** Above / below your usual (the warm and cool ends checked for the heat map on the canvas, 8 Oct), and in it. */
 const HOT = "#f0806e", COOL = "#7aa3ea", IN = "#c3cdd0";
@@ -216,6 +217,7 @@ function OneDay({ band, data, day, today, now, onDay, w }: { band: BandData; dat
           {raised.length > 0 && <span><i className="raised" />raised: 20+ min above your usual</span>}
           {S > 0 && <span><i className="stp" />steps · {stepTotal.toLocaleString("en-US")}{isToday ? " so far" : " this day"}</span>}
         </div>
+        <UsualBandWhy usual={u} />
       </div>
       <RaisedList raised={raised} data={data} steps={band.steps ?? []} isToday={isToday} now={now} />
     </section>

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { avg7, drinkWeeks, nights, tierOfMg } from "./body";
+import { avg7, currentKg, drinkWeeks, latestWeighIn, nights, tierOfMg } from "./body";
 import type { GlanceDay } from "./glance";
 import { addDays } from "./time";
 
@@ -53,5 +53,17 @@ describe("coverage", () => {
     expect(row("Drinks & coffee").fill).toEqual([0, 1, 0]); // 0 drinks logged still counts as logged
     expect(row("Supplements").days).toBe(1);
     expect(row("Workouts").fill).toEqual([0, 0, 1]);
+  });
+});
+
+describe("your weight now (PLAN 73)", () => {
+  const D = 86_400_000, now = Date.UTC(2026, 9, 13, 9);
+  const w = (daysAgo: number, kg: number) => ({ id: `w${daysAgo}`, kind: "weight" as const, at: now - daysAgo * D, kg });
+  it("the latest weigh-in in the last 60 days; Settings' number only before the first", () => {
+    expect(latestWeighIn([w(3, 79.1), w(0.1, 78.4), w(10, 80)], now)).toEqual({ kg: 78.4, at: now - 0.1 * D });
+    expect(currentKg([w(3, 79.1)], 70, now)).toBe(79.1);
+    expect(currentKg([w(61, 79.1)], 70, now)).toBe(70);
+    expect(currentKg([{ ...w(0, 81), at: now + D }], 70, now)).toBe(70); // not one dated tomorrow
+    expect(currentKg([], 70, now)).toBe(70);
   });
 });

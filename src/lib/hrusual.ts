@@ -24,6 +24,12 @@ const SLOT = 15;
 const SLOTS = (24 * 60) / SLOT;
 /** Days with data before "usual" means anything. */
 export const USUAL_MIN_DAYS = 4;
+/**
+ * Readings a day needs around a quarter hour to count toward its usual. 5, not 10 (PLAN 78; owner, 13 Oct, on the band
+ * showing only in places: "is this supposed to be the average band? Looks a bit weird"): when the band sends a reading
+ * every few minutes rather than every minute, 10 was never reached in the day and the band only showed at night.
+ */
+export const SLOT_READINGS = 5;
 /** Coffees before the card says anything about them. */
 export const COFFEE_MIN_N = 8;
 /** Back to usual = within this many bpm of it, five minutes running. */
@@ -68,7 +74,7 @@ export function usualByHour(hr: HrMinute[], workouts: Span[], today: string, loo
   const slots: (Band | null)[] = [];
   for (let s = 0; s < SLOTS; s++) {
     const vals: number[] = [];
-    for (const m of perDay.values()) { const a = m.get(s); if (a && a.length >= 10) vals.push(mean(a)); }
+    for (const m of perDay.values()) { const a = m.get(s); if (a && a.length >= SLOT_READINGS) vals.push(mean(a)); }
     if (vals.length < USUAL_MIN_DAYS) { slots.push(null); continue; }
     vals.sort((a, b) => a - b);
     const mid = quantile(vals, 0.5);
@@ -195,7 +201,7 @@ export function afterCoffee(doses: Dose[], hrMinutes: HrMinute[], workouts: Span
  * for a supplement) leaves out intakes with one of those within 2 hours either side — the coffee would be measured — and
  * days with one near that hour as controls. `minN`: intakes before it says anything.
  */
-export function afterEach(times: number[], hrMinutes: HrMinute[], workouts: Span[], opts: { avoid?: number[]; minN?: number } = {}): AfterCoffee {
+export function afterEach(times: number[], hrMinutes: HrMinute[], workouts: Span[], opts: { avoid?: number[]; minN?: number; known?: Set<string> } = {}): AfterCoffee {
   const mins = minuteMap(hrMinutes), avoid = opts.avoid ?? [], minN = opts.minN ?? COFFEE_MIN_N;
   const days = [...new Set(hrMinutes.map((m) => localDay(m[0])))].sort();
   const caf = [...times].sort((a, b) => a - b).map((at) => ({ at, mg: 1 }));
@@ -211,7 +217,8 @@ export function afterEach(times: number[], hrMinutes: HrMinute[], workouts: Span
     const mine = rise(c.at);
     if (mine == null) continue;
     const day = localDay(c.at), cm = minuteOfDay(c.at);
-    const ctl = days.filter((d) => d !== day).map((d) => ({ day: d, t0: atMinute(d, 0) + cm * MIN }))
+    // days compared against: with `known`, only days it was answered (taken at another time, or "didn't") — PLAN 74
+    const ctl = days.filter((d) => d !== day && (!opts.known || opts.known.has(d))).map((d) => ({ day: d, t0: atMinute(d, 0) + cm * MIN }))
       .filter((x) => !isCaffeineNear(caf, x.t0) && !avoided(x.t0, 3) && clear(x.t0))
       .flatMap((x) => { const v = rise(x.t0); return v == null ? [] : [{ day: x.day, v, t0: x.t0 }]; });
     if (ctl.length < 2) continue;

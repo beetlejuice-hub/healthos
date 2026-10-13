@@ -15,7 +15,8 @@ function world() {
   const { g } = rng(9), hr = [], entries = [];
   for (let k = 29; k >= 0; k--) {
     const mid = new Date(2026, 9, 9 - k).getTime(), T = (h) => mid + h * HOUR, took = k % 2 === 0;
-    if (took) entries.push({ id: 'th' + k, kind: 'supp', at: T(15), suppId: 'thea', status: 'taken', slot: 'midday' });
+    // off days answered "didn't take" (the morning catch-up asks) — only those count as days without (PLAN 74)
+    entries.push(took ? { id: 'th' + k, kind: 'supp', at: T(15), suppId: 'thea', status: 'taken', slot: 'midday' } : { id: 'th' + k, kind: 'supp', at: T(15), suppId: 'thea', status: 'skipped', slot: 'midday' });
     entries.push({ id: 'mg' + k, kind: 'supp', at: T(21.5), suppId: 'mag', status: 'taken', slot: 'evening' });
     for (const h of [9.5, 17, 20.5]) entries.push({ id: `f${k}${h}`, kind: 'feel', at: T(h), mood: cl(6 + (took && h === 17 ? 1 : 0) + g() * 0.6), energy: cl(6 + g() * 0.6), stress: cl(4 + g() * 0.6), focus: cl(6 + g() * 0.6) });
     for (let m = 7 * 60; m < 23 * 60; m++) { const t = mid + m * MIN; if (t > NOW) break; const x = (t - T(15)) / MIN; const v = Math.round(64 + g() * 1.5 + (took && x >= 30 && x < 120 ? 6 : 0)); hr.push([t, v, v - 2, v + 2]); }
@@ -59,6 +60,7 @@ function world() {
   check(`fits the phone (${await pg.evaluate(() => document.documentElement.scrollWidth)} px)`, await pg.evaluate(() => document.documentElement.scrollWidth) <= 390);
   await card.screenshot({ path: OUT + 'suppafter.png' });
   await card.getByRole('button', { name: 'Magnesium' }).click(); await pg.waitForTimeout(300);
+  check(`no "didn't take" days for magnesium: says what counts as a day without (or that it's taken at the same time daily)`, /Days without Magnesium are the days you answer/.test(await card.innerText()) || /at the same time every day/.test(await card.innerText()));
   check('Magnesium, same time every night: says there\'s nothing to compare yet, no finding', /at the same time every day, so there's nothing to compare yet/.test(await card.innerText()) && await card.locator('tr[data-sure="clear"], tr[data-sure="likely"]').count() === 0);
   console.log('errors:', JSON.stringify(errs));
   await b.close();

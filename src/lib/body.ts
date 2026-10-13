@@ -7,6 +7,19 @@ import type { GlanceDay } from "./glance";
 import type { BodyDay } from "./tdee";
 import { CAF_SLEEP } from "./caffeine-sleep";
 import { mean } from "./stats";
+import type { Entry } from "./types";
+
+/**
+ * Your weight now (PLAN 73; owner, 13 Oct: "In the settings i have body weight its nonsense cus i log every morning"):
+ * the latest weigh-in from the last 60 days. Settings' number only stands in before the first one. It sets how fast
+ * alcohol clears, caffeine per kg and protein per kg.
+ */
+export function latestWeighIn(entries: Entry[], now: number): { kg: number; at: number } | null {
+  let best: { kg: number; at: number } | null = null;
+  for (const e of entries) if (e.kind === "weight" && e.at <= now && e.at > now - 60 * 86_400_000 && (!best || e.at > best.at)) best = { kg: e.kg, at: e.at };
+  return best;
+}
+export const currentKg = (entries: Entry[], fallback: number, now: number) => latestWeighIn(entries, now)?.kg ?? fallback;
 
 /** Each day's average of the weigh-ins in the 7 days ending that day; null with fewer than 3. */
 export function avg7(days: BodyDay[]): (number | null)[] {

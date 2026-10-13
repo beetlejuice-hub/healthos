@@ -1,7 +1,8 @@
 import { act, getState, useStore } from "../lib/store";
 import { makeSample } from "../lib/sample";
 import { signOut, useSyncStatus, currentSyncer } from "../lib/session";
-import { clock } from "../lib/time";
+import { clock, dayLabel } from "../lib/time";
+import { latestWeighIn } from "../lib/body";
 import { AboutMe } from "../components/StackCheck";
 import { AiSettings } from "../components/Ai";
 import { ResetAll } from "../components/ResetAll";
@@ -15,6 +16,7 @@ export function Settings({ tester, email }: { tester: boolean; email: string }) 
   const sync = useSyncStatus();
   const goals = useStore((s) => s.goals);
   const st = useStore((s) => s.settings);
+  const weighIn = latestWeighIn(useStore((s) => s.entries), Date.now());
   const hasSample = useStore((s) => s.entries.some((e) => e.id.startsWith("sample:")));
   const num = (v: string) => Number(v.replace(",", ".")) || 0;
 
@@ -63,9 +65,11 @@ export function Settings({ tester, email }: { tester: boolean; email: string }) 
         <h3>Sleep and body</h3>
         <div className="row2">
           <label className="field">Planned bedtime<input type="time" value={hhmm(st.bedMinute)} onChange={(e) => { const [h, m] = e.target.value.split(":").map(Number); act.setSettings({ bedMinute: h * 60 + m }); }} /></label>
-          <label className="field">Body weight (kg)<input inputMode="decimal" value={st.bodyKg} onChange={(e) => act.setSettings({ bodyKg: num(e.target.value) })} /></label>
+          {weighIn
+            ? <div className="field" data-weight="logged">Body weight<b>{weighIn.kg} kg</b><small>your weigh-in, {dayLabel(weighIn.at)} — the app uses your latest one</small></div>
+            : <label className="field">Body weight (kg)<input inputMode="decimal" value={st.bodyKg} onChange={(e) => act.setSettings({ bodyKg: num(e.target.value) })} /><small>until your first weigh-in</small></label>}
         </div>
-        <p className="note">Planned bedtime is what caffeine is measured against for now; your real bedtime will come from the wearable. Body weight sets how fast alcohol clears. How fast you clear caffeine and how much bothers your sleep aren't settings: they'll be learned from your own data.</p>
+        <p className="note">Planned bedtime is what caffeine is measured against for now; your real bedtime will come from the wearable. Body weight (your latest weigh-in) sets how fast alcohol clears. How fast you clear caffeine and how much bothers your sleep aren't settings: they'll be learned from your own data.</p>
       </div>
 
       <div className="card">

@@ -9,7 +9,7 @@
 
 import type { Check } from "./feelgraph";
 import type { Sure } from "./sleep";
-import { minuteOfDay } from "./time";
+import { localDay, minuteOfDay } from "./time";
 
 export type FeelKey = "mood" | "energy" | "stress" | "focus";
 export type FeelAfter = { key: FeelKey; nWith: number; nWithout: number; diff: number | null; p: number | null; sure: Sure };
@@ -19,13 +19,15 @@ export const FEEL_AFTER_MIN = 5;
 
 const mean = (v: number[]) => v.reduce((a, b) => a + b, 0) / v.length;
 
-export function feelAfter(times: number[], checks: Check[], key: FeelKey, opts: { perms?: number; seed?: number } = {}): FeelAfter {
+export function feelAfter(times: number[], checks: Check[], key: FeelKey, opts: { perms?: number; seed?: number; known?: Set<string> } = {}): FeelAfter {
   // with: 1–4 h after an intake · without: none in the 4 h before · the first hour after is neither (too soon to tell)
   const pts: { bin: number; v: number; after: boolean }[] = [];
   for (const c of checks) {
     const v = c[key]; if (v == null) continue;
     const since = times.filter((t) => t <= c.at && c.at - t <= 4 * H).map((t) => c.at - t);
     if (since.length && since.every((d) => d < H)) continue;
+    // a "without" check-in only on a day it was answered — an unticked day is unknown, not a day without (PLAN 74)
+    if (!since.some((d) => d >= H) && opts.known && !opts.known.has(localDay(c.at))) continue;
     pts.push({ bin: Math.floor(minuteOfDay(c.at) / WINDOW_MIN), v, after: since.some((d) => d >= H) });
   }
   // Only windows that hold both: a window with no "without" (taken every day at that time) can't be compared.

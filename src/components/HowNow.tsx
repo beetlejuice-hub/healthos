@@ -17,6 +17,8 @@ import { BETWEEN, gaps } from "../lib/detectors/between";
 import { CAF_SLEEP } from "../lib/caffeine-sleep";
 import { localDay } from "../lib/time";
 import { FeelSlider } from "./FeelSlider";
+import { useBand } from "../lib/band-client";
+import { fellAsleep } from "../lib/sleep";
 
 const WORDS: Record<FeelKey, string[]> = {
   energy: ["drained", "low", "ok", "steady", "high"], mood: ["low", "flat", "ok", "good", "great"],
@@ -81,6 +83,9 @@ export function HowNow({ now, always = false }: { now: number; always?: boolean 
   const sleptLine = morning && !sleepOpen && night?.rating != null;
 
   const order = useMemo(() => doingOrder(entries, now), [entries, now]);
+  // Last night's minutes to fall asleep from the band, when it has the night (PLAN 77) — no need to ask then.
+  const bandSleep = useBand().data?.sleep;
+  const fell = useMemo(() => (bandSleep ? fellAsleep(bandSleep, now) : null), [bandSleep, now]);
   const ticked = open?.doing ?? [];
   const shown = [...new Set([...ticked, ...order.slice(0, DOING_SHOWN)])];
   const hidden = order.filter((t) => !shown.includes(t));
@@ -105,7 +110,8 @@ export function HowNow({ now, always = false }: { now: number; always?: boolean 
         <button type="button" aria-label="Change last night's sleep" onClick={() => setSleepEdit(true)}>change</button></div>}
       {sleepOpen && <div className="hn-sleep">
         <FeelSlider label="Sleep" name="sleep" value={night?.rating} word={sleepWord} color="var(--ok)" empty="last night" onChange={(n) => rateSleep({ rating: n })} />
-        <div className="hn-tags"><button type="button" aria-pressed={!!night?.slow} onClick={() => rateSleep({ slow: !night?.slow })}>took long to fall asleep</button></div>
+        {fell ? <p className="hn-fell" data-fell={fell.min}>Fell asleep in <b>{fell.min} min</b> — from your band{fell.usual != null ? `, ${fell.min > fell.usual + 10 ? "longer than" : fell.min < fell.usual - 10 ? "quicker than" : "about"} your usual ${fell.usual}` : ""}</p>
+          : <div className="hn-tags"><button type="button" aria-pressed={!!night?.slow} onClick={() => rateSleep({ slow: !night?.slow })}>took long to fall asleep</button></div>}
       </div>}
       <div className="hn-sliders">
         {FEEL_KEYS.map((k) => (

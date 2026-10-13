@@ -13,7 +13,7 @@
  * checking with what would settle it. Plan: the "HealthOS — Noticed phase 2" doc.
  */
 
-import type { DayFacts } from "../insights";
+import { suppDay, type DayFacts } from "../insights";
 import type { Supplement } from "../types";
 import type { Area, Checking, Finding, Quiet } from "../findings";
 import { bh, ols, tCrit } from "../regress";
@@ -60,7 +60,7 @@ export function questions(supplements: Supplement[], usualKcal: number | null): 
   if (usualKcal) qs.push({ id: "kcal-dev", group: "kcal-dev", area: "food", kind: "dose", lag: 1, thing: "Calories vs your usual", phrase: "500 kcal above your usual", x: (d) => (d.kcal == null ? null : (d.kcal - usualKcal) / 500), outcomes: FEEL });
   // Every supplement, paused or out included: out-of-stock days are exactly the "off" days that answer the question.
   for (const s of supplements) {
-    qs.push({ id: `supp-${s.id}`, group: `supp-${s.id}`, area: "stack", kind: "binary", lag: 1, thing: s.name, phrase: `The day after taking ${s.name}`, x: (d) => (!d.stackAnswered ? null : d.taken.has(s.id) ? 1 : 0), outcomes: FEEL, more: [`days taking ${s.name}`, `days skipping ${s.name}`] });
+    qs.push({ id: `supp-${s.id}`, group: `supp-${s.id}`, area: "stack", kind: "binary", lag: 1, thing: s.name, phrase: `The day after taking ${s.name}`, x: (d) => { const had = suppDay(d, s.id); return had == null ? null : had ? 1 : 0; }, outcomes: FEEL, more: [`days taking ${s.name}`, `days skipping ${s.name}`] });
   }
   return qs;
 }
