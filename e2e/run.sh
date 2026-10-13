@@ -1,19 +1,45 @@
 #!/usr/bin/env bash
-# Build the app, serve dist/ on :4321, run every browser suite against a fake Supabase.
-# Each suite prints PASS/FAIL lines and "errors: [...]" (console errors seen); exit 1 on any FAIL.
+# Build the app, serve dist/, and run the browser suites against a fake Supabase — several at a time.
+# Each suite is its own process with its own fake backend, browser and screenshots, so they don't share state.
+#   e2e/run.sh                  every suite, E2E_JOBS at a time (default: the CPU count)
+#   e2e/run.sh sleep sipped     just these (names as in the list below), for a quick loop while working
+# Each suite prints PASS/FAIL lines and "errors: [...]" (console errors seen). Live: one line per suite as it ends.
+# Then every suite's output in list order, the slowest five, and exit 1 on any FAIL, CRASH, error or non-zero exit.
 set -u
 cd "$(dirname "$0")/.."
-npx vite build >/dev/null || exit 1
-python3 -m http.server 4321 --directory dist >/dev/null 2>&1 &
+ALL=(
+  features search noticed stackcheck simple workout morning scout round ai sync drinks scan reset fixes between
+  bodyfat hownow push searchpass now cafsleep earlier night slider workoutplus muscles dose labelphoto graph glance
+  mind connections body stack top phone plan session checkin today2 polish band heart compare sleep heartpage
+  mindpage sleeponce suppamount catchup suppafter steps workoutheart fixes13 editentry bandbehind camhold explain
+  workoutsets burned tellmore sipped supplog sleepfood
+)
+if [ $# -gt 0 ]; then SUITES=("$@"); else SUITES=("${ALL[@]}"); fi
+JOBS=${E2E_JOBS:-$(nproc)}
+PORT=${E2E_PORT:-4321}
+DIST=${E2E_DIST:-dist}   # another folder (and E2E_PORT) lets a second run go while one is serving dist/
+npx vite build --outDir "$DIST" --emptyOutDir >/dev/null || exit 1
+python3 -m http.server "$PORT" --directory "$DIST" >/dev/null 2>&1 &
 server=$!
-trap 'kill $server 2>/dev/null' EXIT
+tmp=$(mktemp -d)
+trap 'kill $server 2>/dev/null; rm -rf "$tmp"' EXIT
 sleep 1
+export APP_URL="http://localhost:$PORT/" tmp
+t0=$(date +%s)
+one() {
+  local s=$1 f="$tmp/$1.out" a b
+  a=$(date +%s); node "e2e/$s.cjs" >"$f" 2>&1; echo "exit $?" >>"$f"; b=$(date +%s)
+  echo "$((b - a)) $s" >"$tmp/$s.time"
+  if grep -q "^FAIL\|^CRASH" "$f" || ! grep -q '^errors: \[\]' "$f" || ! grep -q '^exit 0$' "$f"; then echo "FAIL $s ($((b - a))s)"; else echo "ok   $s ($((b - a))s)"; fi
+}
+export -f one
+printf '%s\n' "${SUITES[@]}" | xargs -P "$JOBS" -I{} bash -c 'one "$1"' _ {}
 fail=0
-for suite in e2e/features.cjs e2e/search.cjs e2e/noticed.cjs e2e/stackcheck.cjs e2e/simple.cjs e2e/workout.cjs e2e/morning.cjs e2e/scout.cjs e2e/round.cjs e2e/ai.cjs e2e/sync.cjs e2e/drinks.cjs e2e/scan.cjs e2e/reset.cjs e2e/fixes.cjs e2e/between.cjs e2e/bodyfat.cjs e2e/hownow.cjs e2e/push.cjs e2e/searchpass.cjs e2e/now.cjs e2e/cafsleep.cjs e2e/earlier.cjs e2e/night.cjs e2e/slider.cjs e2e/workoutplus.cjs e2e/muscles.cjs e2e/dose.cjs e2e/labelphoto.cjs e2e/graph.cjs e2e/glance.cjs e2e/mind.cjs e2e/connections.cjs e2e/body.cjs e2e/stack.cjs e2e/top.cjs e2e/phone.cjs e2e/plan.cjs e2e/session.cjs e2e/checkin.cjs e2e/today2.cjs e2e/polish.cjs e2e/band.cjs e2e/heart.cjs e2e/compare.cjs e2e/sleep.cjs e2e/heartpage.cjs e2e/mindpage.cjs e2e/sleeponce.cjs e2e/suppamount.cjs e2e/catchup.cjs e2e/suppafter.cjs e2e/steps.cjs e2e/workoutheart.cjs e2e/fixes13.cjs e2e/editentry.cjs e2e/bandbehind.cjs e2e/camhold.cjs e2e/explain.cjs e2e/workoutsets.cjs e2e/burned.cjs e2e/tellmore.cjs e2e/sipped.cjs e2e/supplog.cjs e2e/sleepfood.cjs; do
-  echo "== $suite"
-  out=$(node "$suite") || fail=1
-  echo "$out"
-  grep -q "^FAIL\|^CRASH" <<<"$out" && fail=1
-  grep -q '^errors: \[\]' <<<"$out" || fail=1
+for s in "${SUITES[@]}"; do
+  f="$tmp/$s.out"
+  echo "== e2e/$s.cjs"
+  grep -v '^exit [0-9]*$' "$f"
+  if grep -q "^FAIL\|^CRASH" "$f" || ! grep -q '^errors: \[\]' "$f" || ! grep -q '^exit 0$' "$f"; then fail=1; fi
 done
+echo "== $(( $(date +%s) - t0 ))s for ${#SUITES[@]} suites, $JOBS at a time · slowest: $(cat "$tmp"/*.time | sort -rn | head -5 | awk '{printf "%s %ss  ", $2, $1}')"
 exit $fail

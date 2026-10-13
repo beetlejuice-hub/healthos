@@ -35,8 +35,13 @@ Work like an owner, not a ticket-taker.
 
 ```
 bun run typecheck && bun run lint && bun run test    # unit tests, incl. the Worker against a fake internet
-bun run e2e                                          # builds, serves dist/ on :4321, runs every browser suite
+bun run e2e                                          # builds, serves dist/ on :4321, runs every browser suite, 4 at a time
+e2e/run.sh sleep sipped                              # just these suites — the quick loop while working
 ```
+
+The full e2e run is the check before pushing; while working, run the suites you touched by name. Each suite is its own
+process with its own fake backend, so they run side by side (`E2E_JOBS` sets how many); `E2E_PORT` and `E2E_DIST` let a
+second run go while one is serving `dist/`.
 
 `e2e/` suites drive Chromium against a **fake Supabase** (`e2e/harness.cjs`, request interception)
 and fake food databases, so they need no network or real accounts. Each prints PASS/FAIL lines and
