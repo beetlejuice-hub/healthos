@@ -19,6 +19,7 @@ import { parseFat } from "../lib/bodyfat";
 import { HowNow } from "../components/HowNow";
 import { SuppAmount } from "../components/SuppAmount";
 import { SuppQuick } from "../components/SuppQuick";
+import { Tonight } from "../components/Tonight";
 import { extrasOn } from "../lib/supplog";
 import { CatchUp } from "../components/CatchUp";
 import { DataCard, EveningRead, NowCard, Pad, Status, UsualPicker, useStackCount } from "../components/TodayParts";
@@ -138,6 +139,7 @@ export function Today() {
         <CheckInCard now={now} />
         <StackAlert />
         {moment === "evening" && <EveningRead cafBed={cafBed} bed={bed} tier={tierOf(cafBed)} day={dayNumbers(s.entries, now)} rest={restDay(s.templates, s.workouts, now)} />}
+        {moment === "evening" && <Tonight now={now} />}
       </NowCard>
 
       <Pad now={now} stack={stack} onPickUsual={() => setPickUsual(true)} />

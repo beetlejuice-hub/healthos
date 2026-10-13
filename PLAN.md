@@ -1031,9 +1031,17 @@ below, in his words, grouped; A first (broken or wrong now), then the rest. Item
       workout, evening stress, supplements taken or not, last-night tags, the rating). Only what's known: an evening with
       nothing logged says nothing, not "0 kcal". In every AI call and in Settings → AI → What the AI sees. Checked:
       ai/nights.test (exact line; from band data + log; under its heading). Not checked live: no AI key yet.
-   3. *Phone down* — the one tap at night for scrolling minutes (canvas first).
+      **Tonight done 13 Oct** (lib/tonight, components/Tonight): in the evening card on Today, under "Caffeine at 23:00",
+      up to three lines from your own grid — the rows that hold this evening so far ("Ate after 21:00: nights like that
+      went with 23 min less asleep · clear"), and magnesium when it isn't logged yet and its nights went with better
+      sleep. Only what's known in the evening (no planned bedtime as a fact, no unfinished steps); "after 21:00" and
+      "within 2 h of bed" are one fact, the surer shows; past 00:00 still up, bedtime is now. Nothing to say → nothing
+      shown. Built straight from the Mind page's "This morning" pattern, so no canvas. Checked: tonight.test (planted
+      late meal and magnesium; silent when answered "didn't take"), e2e/tonight.cjs at 390 px.
+   3. *Phone before bed* — owner, 13 Oct: no tap at night; "a question in the morning would be better, like estimated
+      time of phone before bed, and i can put 0 to like an hour or more". ← next
    4. *Your sleep need and best bedtime window.*
-   Open questions for the owner: is "phone down" a tap you'd really do? Which supplements are the sleep ones?
+   Owner's answers, 13 Oct: no "phone down" tap (the morning question instead); sleep supplements: "Rn only magnesium".
 
 ### F · Telling the app more
 89. [x] **Notes on mood logging** — "i should be able to leave notes on mood logging, like head hurts, or parents made me

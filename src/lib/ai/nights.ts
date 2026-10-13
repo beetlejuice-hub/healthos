@@ -5,8 +5,7 @@
  */
 
 import type { BandData } from "../band";
-import { caffeineAt } from "../caffeine";
-import { alcoholDoses, caffeineDoses } from "../insights";
+import { eveningInputs } from "../eveninputs";
 import { nightLabel } from "../lastnight";
 import { evenings, nights, type Evening, type Night } from "../sleep";
 import { clock, DAY } from "../time";
@@ -36,15 +35,6 @@ export function nightLines(ns: Night[], evs: Evening[], supplements: Pick<Supple
 export function nightsForAi(st: { entries: Entry[]; workouts: Workout[]; supplements: Supplement[]; halfLifeMin: number }, band: BandData, now: number, days = 14): string[] {
   const ns = nights(band.sleep, band.hr, band.rhr, band.hrv).filter((n) => n.up <= now && n.up >= now - days * DAY);
   if (!ns.length) return [];
-  const doses = caffeineDoses(st.entries), es = st.entries;
-  const evs = evenings(ns, {
-    drinks: alcoholDoses(es), caffeineAt: (t) => caffeineAt(doses, t, st.halfLifeMin), workouts: st.workouts.map((w) => ({ start: w.startedAt })),
-    meals: es.filter((e) => e.kind === "food"), ratings: es.flatMap((e) => (e.kind === "sleep" ? [{ at: e.at, rating: e.rating }] : [])),
-    sleeps: es.filter((e) => e.kind === "sleep"),
-    foods: es.flatMap((e) => (e.kind === "food" ? [{ at: e.at, kcal: e.macros.kcal, c: e.macros.c }] : [])),
-    sessions: st.workouts.map((w) => ({ start: w.startedAt, end: w.endedAt ?? w.startedAt + 3_600_000 })),
-    checks: es.flatMap((e) => (e.kind === "feel" && e.stress != null ? [{ at: e.at, stress: e.stress }] : [])),
-    supps: es.flatMap((e) => (e.kind === "supp" ? [{ at: e.at, suppId: e.suppId, status: e.status }] : [])),
-  });
+  const evs = evenings(ns, eveningInputs(st.entries, st.workouts, st.halfLifeMin));
   return nightLines(ns, evs, st.supplements);
 }
