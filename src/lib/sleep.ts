@@ -162,11 +162,19 @@ export type Evening = { drinks: number[]; caffeineAtBed: number; trained: boolea
   /** The day's steps when the band was worn (lib/steps), and whether that's above the middle of the nights given (PLAN 66). */
   steps?: number | null; moreSteps?: boolean | null;
   /** What that morning's sleep entry says last night held (lib/lastnight); null when that morning wasn't asked. */
-  tags?: string[] | null };
+  tags?: string[] | null;
+  /**
+   * Food and activities of the evening (PLAN 88), each null when it isn't known — an evening with no food logged isn't an
+   * evening you ate nothing. kcal and carbs from 17:00 to bed, and whether that's above the middle of the nights given;
+   * minutes from the last real meal (150+ kcal, from 15:00) to bed; a workout ending within 3 h of bed; stress at the
+   * last check-in from 17:00; each supplement that day: taken, said "didn't take", or no answer (null).
+   */
+  eveKcal?: number | null; eveCarbs?: number | null; moreEveKcal?: boolean | null; moreEveCarbs?: boolean | null;
+  lastMealMin?: number | null; lateTrain?: boolean; eveStress?: number | null; supps?: Record<string, boolean | null> };
 
 /** `known`: false leaves the night out of that row — a day the band was off has no steps, it isn't a day without. */
 export type Factor = { id: string; name: string; has: (n: Night, e: Evening) => boolean; known?: (n: Night, e: Evening) => boolean };
-export type Outcome = { id: string; name: string; unit: "min" | "bpm" | "ms" | "/10" | "clock"; /** +1: more is toward longer, deeper, calmer sleep. */ better: 1 | -1; of: (n: Night, e: Evening) => number | null };
+export type Outcome = { id: string; name: string; unit: "min" | "bpm" | "ms" | "/10" | "clock" | "×"; /** +1: more is toward longer, deeper, calmer sleep. */ better: 1 | -1; of: (n: Night, e: Evening) => number | null };
 export const FACTORS: Factor[] = [
   { id: "drinks", name: "Drinks that evening", has: (_, e) => e.drinks.length > 0 },
   { id: "caf", name: "Caffeine at bed ≥ 30 mg", has: (_, e) => e.caffeineAtBed >= 30 },
@@ -175,12 +183,32 @@ export const FACTORS: Factor[] = [
   { id: "nap", name: "Napped that day", has: (n) => !!n.nap },
   { id: "latebed", name: "In bed after 00:15", has: (n) => clockH(n.bed, n.eve) >= 24.25 },
   { id: "steps", name: "More steps than usual that day", has: (_, e) => e.moreSteps === true, known: (_, e) => e.moreSteps != null },
+  // PLAN 88 (owner: "foods and activities … how it affects sleep score deep sleep"): from what's already logged
+  { id: "meal2h", name: "Ate within 2 h of bed", has: (_, e) => e.lastMealMin != null && e.lastMealMin < 120, known: (_, e) => e.lastMealMin != null },
+  { id: "bigeve", name: "Ate more than usual in the evening", has: (_, e) => e.moreEveKcal === true, known: (_, e) => e.moreEveKcal != null },
+  { id: "carbeve", name: "More carbs than usual in the evening", has: (_, e) => e.moreEveCarbs === true, known: (_, e) => e.moreEveCarbs != null },
+  { id: "latetrain", name: "Trained within 3 h of bed", has: (_, e) => e.lateTrain === true, known: (_, e) => e.lateTrain != null },
+  { id: "stress", name: "Stressed in the evening (7+)", has: (_, e) => e.eveStress != null && e.eveStress >= 7, known: (_, e) => e.eveStress != null },
 ];
+
+/**
+ * One row per supplement: days you took it against days you said you didn't; days with no answer are left out (PLAN 74).
+ * Only supplements with MIN_SIDE answered nights each way get a row, so a stack of ten doesn't fill the grid with dots.
+ */
+export function suppFactors(supplements: { id: string; name: string }[], evs: Evening[]): Factor[] {
+  return supplements.filter((s) => {
+    const a = evs.map((e) => e.supps?.[s.id]);
+    return a.filter((x) => x === true).length >= MIN_SIDE && a.filter((x) => x === false).length >= MIN_SIDE;
+  }).map((s) => ({ id: `supp:${s.id}`, name: `${s.name} that day`, has: (_, e) => e.supps?.[s.id] === true, known: (_, e) => e.supps?.[s.id] != null }));
+}
 export const OUTCOMES: Outcome[] = [
   { id: "asleep", name: "Asleep", unit: "min", better: 1, of: (n) => n.asleep },
+  // how long it took, and how often you woke (PLAN 88) — the band has both
+  { id: "latency", name: "Fell asleep", unit: "min", better: -1, of: (n) => n.latency },
   { id: "deep", name: "Deep", unit: "min", better: 1, of: (n) => n.deep },
   { id: "rem", name: "REM", unit: "min", better: 1, of: (n) => n.rem },
   { id: "awake", name: "Awake", unit: "min", better: -1, of: (n) => n.awake },
+  { id: "wakes", name: "Woke up", unit: "×", better: -1, of: (n) => n.wakes },
   { id: "low", name: "Low HR", unit: "bpm", better: -1, of: (n) => n.low },
   { id: "lowAt", name: "Low at", unit: "clock", better: -1, of: (n) => (n.lowAt == null ? null : clockH(n.lowAt, n.eve) * 60) },
   { id: "hrv", name: "HRV", unit: "ms", better: 1, of: (n) => n.hrv },
@@ -192,37 +220,63 @@ export type Cell = { factor: string; outcome: string; nWith: number; nWithout: n
 /** Under these on either side, a cell says "too few". */
 export const MIN_SIDE = 5;
 
+/** How sure a cell must be when `cells` are tried at once: never looser than 0.002 / 0.02 (right for ~48 cells). */
+export function bars(cells: number): { clear: number; likely: number } {
+  const n = Math.max(1, cells);
+  return { clear: Math.min(0.002, 0.1 / n), likely: Math.min(0.02, 1 / n) };
+}
+
 /**
  * Nights with a thing against nights without it, for every factor × outcome. How sure: shuffle which nights had the
- * thing (2,000 times) and see how often a difference this big turns up anyway. With ~48 cells tried at once, "clear"
- * needs p < 0.002 and "likely" p < 0.02 — so a grid of pure chance comes up clear about once in ten grids, not every time.
+ * thing (2,000 times or more) and see how often a difference this big turns up anyway. The bar scales with how many cells
+ * have enough nights to try: "clear" needs p < 0.1 ÷ cells and "likely" 1 ÷ cells (with ~48 cells: 0.002 and 0.02, never
+ * looser) — so a grid of pure chance comes up clear about once in ten grids however many rows it grows (PLAN 88).
  * The Heart page passes its own columns (lib/heart HEART_OUTCOMES) and keeps these rows, so the two grids agree.
  */
 export function goesWith(ns: Night[], evs: Evening[], opts: { perms?: number; seed?: number; factors?: Factor[]; outcomes?: Outcome[] } = {}): Cell[] {
-  const perms = opts.perms ?? 2000; let seed = opts.seed ?? 7;
-  const rnd = () => { seed = (seed * 1103515245 + 12345) % 2147483648; return seed / 2147483648; };
-  const out: Cell[] = [];
-  for (const f of opts.factors ?? FACTORS) {
+  // 32-bit integer generator (Math.imul): exact and fast — the old one multiplied past what a double holds exactly
+  let seed = (opts.seed ?? 7) >>> 0;
+  const rnd = () => { seed = (seed + 0x6d2b79f5) >>> 0; let t = seed; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
+  const fs = opts.factors ?? FACTORS, os = opts.outcomes ?? OUTCOMES;
+  // every cell's nights first (known, with a value), so the bar knows how many cells are being tried
+  const rows = fs.map((f) => {
     const has = ns.map((n, i) => f.has(n, evs[i])), known = ns.map((n, i) => !f.known || f.known(n, evs[i]));
-    for (const o of opts.outcomes ?? OUTCOMES) {
-      const pairs: [boolean, number][] = []; ns.forEach((n, i) => { const v = o.of(n, evs[i]); if (known[i] && v != null && Number.isFinite(v)) pairs.push([has[i], v]); });
-      const nWith = pairs.filter((p) => p[0]).length, nWithout = pairs.length - nWith;
-      if (nWith < MIN_SIDE || nWithout < MIN_SIDE) { out.push({ factor: f.id, outcome: o.id, nWith, nWithout, diff: null, p: null, sure: "too few", toward: null }); continue; }
-      const vals = pairs.map((p) => p[1]), total = vals.reduce((s, v) => s + v, 0);
-      const diffOf = (sumWith: number) => sumWith / nWith - (total - sumWith) / nWithout;
-      const obs = diffOf(pairs.reduce((s, p) => s + (p[0] ? p[1] : 0), 0));
-      // Shuffle: pick nWith nights at random (partial Fisher–Yates) and take the same difference.
-      let hits = 0; const idx = vals.map((_, i) => i);
+    return { f, has, cells: os.map((o) => ({ o, use: ns.flatMap((n, i) => { const v = o.of(n, evs[i]); return known[i] && v != null && Number.isFinite(v) ? [i] : []; }) })) };
+  });
+  const sides = (has: boolean[], use: number[]) => { const w = use.filter((i) => has[i]).length; return [w, use.length - w] as const; };
+  const tried = rows.reduce((a, r) => a + r.cells.filter((c) => { const [w, wo] = sides(r.has, c.use); return w >= MIN_SIDE && wo >= MIN_SIDE; }).length, 0);
+  const bar = bars(tried);
+  // enough shuffles that "clear" can be reached at all (p can't go under 1 ÷ shuffles)
+  const perms = opts.perms ?? Math.max(2000, Math.ceil(4 / bar.clear));
+  const done = new Map<string, Cell>();
+  for (const r of rows) {
+    // the columns of a row that count the same nights share one set of shuffles (a grid of 100 cells stays quick on a phone)
+    const groups = new Map<string, { o: Outcome; use: number[] }[]>();
+    for (const c of r.cells) { const k = c.use.join(","); groups.set(k, [...(groups.get(k) ?? []), c]); }
+    for (const g of groups.values()) {
+      const use = g[0].use, [nWith, nWithout] = sides(r.has, use), m = use.length;
+      if (nWith < MIN_SIDE || nWithout < MIN_SIDE) { for (const c of g) done.set(`${r.f.id}|${c.o.id}`, { factor: r.f.id, outcome: c.o.id, nWith, nWithout, diff: null, p: null, sure: "too few", toward: null }); continue; }
+      const vals = g.map((c) => Float64Array.from(use, (i) => c.o.of(ns[i], evs[i])!)), G = g.length;
+      const total = vals.map((v) => v.reduce((a, x) => a + x, 0));
+      const diffOf = (c: number, sumWith: number) => sumWith / nWith - (total[c] - sumWith) / nWithout;
+      const obs = vals.map((v, c) => diffOf(c, use.reduce((a, i, k) => a + (r.has[i] ? v[k] : 0), 0)));
+      // Shuffle: pick nWith nights at random (partial Fisher–Yates) and take the same difference, for every column at once.
+      const hits = new Int32Array(G), idx = Int32Array.from({ length: m }, (_, k) => k), sw = new Float64Array(G);
       for (let k = 0; k < perms; k++) {
-        let sw = 0;
-        for (let i = 0; i < nWith; i++) { const j = i + Math.floor(rnd() * (idx.length - i)); [idx[i], idx[j]] = [idx[j], idx[i]]; sw += vals[idx[i]]; }
-        if (Math.abs(diffOf(sw)) >= Math.abs(obs) - 1e-9) hits++;
+        sw.fill(0);
+        for (let i = 0; i < nWith; i++) {
+          const j = i + Math.floor(rnd() * (m - i)), t = idx[i]; idx[i] = idx[j]; idx[j] = t;
+          const x = idx[i]; for (let c = 0; c < G; c++) sw[c] += vals[c][x];
+        }
+        for (let c = 0; c < G; c++) if (Math.abs(diffOf(c, sw[c])) >= Math.abs(obs[c]) - 1e-9) hits[c]++;
       }
-      const p = (hits + 1) / (perms + 1);
-      out.push({ factor: f.id, outcome: o.id, nWith, nWithout, diff: obs, p, sure: p < 0.002 ? "clear" : p < 0.02 ? "likely" : "not clear", toward: obs === 0 ? null : obs * o.better > 0 ? "better" : "worse" });
+      g.forEach((cell, c) => {
+        const p = (hits[c] + 1) / (perms + 1), d = obs[c];
+        done.set(`${r.f.id}|${cell.o.id}`, { factor: r.f.id, outcome: cell.o.id, nWith, nWithout, diff: d, p, sure: p < bar.clear ? "clear" : p < bar.likely ? "likely" : "not clear", toward: d === 0 ? null : d * cell.o.better > 0 ? "better" : "worse" });
+      });
     }
   }
-  return out;
+  return fs.flatMap((f) => os.map((o) => done.get(`${f.id}|${o.id}`)!));
 }
 
 /** The evening before each night, from logged entries: drinks, caffeine left at bed, a workout, food after 21:00, the next morning's rating; and the day's steps from the band (lib/steps `stepsByDay`). */
@@ -231,11 +285,21 @@ export function evenings(ns: Night[], o: {
   steps?: Map<string, number>;
   /** Sleep entries (the morning's rating and last night's tags). Mornings from the first one with a tag count as asked. */
   sleeps?: { at: number; tags?: string[] }[];
+  /** PLAN 88: food with kcal and carbs; workouts with their end; check-ins with stress; supplement answers. */
+  foods?: { at: number; kcal: number; c: number }[];
+  sessions?: { start: number; end: number }[];
+  checks?: { at: number; stress?: number }[];
+  supps?: { at: number; suppId: string; status: "taken" | "skipped" }[];
 }): Evening[] {
   const mid = o.steps ? usualSteps(o.steps, ns.map((n) => n.eve)) : null;
+  // the evening's food: from 17:00 to bed; unknown when nothing was logged in that stretch
+  const eveFood = (n: Night) => { const f = o.foods!.filter((x) => x.at >= atMinute(n.eve, 17 * 60) && x.at < n.bed); return f.length ? { kcal: f.reduce((a, x) => a + x.kcal, 0), c: f.reduce((a, x) => a + x.c, 0) } : null; };
+  const eves = o.foods ? ns.map(eveFood) : [];
+  const median = (v: number[]) => { const s = [...v].sort((a, b) => a - b); return s.length >= 8 ? s[Math.floor((s.length - 1) / 2)] : null; };
+  const kMid = o.foods ? median(eves.flatMap((x) => (x ? [x.kcal] : []))) : null, cMid = o.foods ? median(eves.flatMap((x) => (x ? [x.c] : []))) : null;
   const morning = (t: number) => { const h = new Date(t).getHours(); return h >= CAF_SLEEP.morningFromHour && h < CAF_SLEEP.morningUntilHour; };
   const tagged = o.sleeps?.filter((s) => s.tags?.length && morning(s.at)).map((s) => localDay(s.at)).sort()[0];
-  return ns.map((n) => {
+  return ns.map((n, i) => {
     const sl = o.sleeps?.filter((s) => localDay(s.at) === n.day && morning(s.at)).at(-1);
     const st = o.steps?.get(n.eve) ?? null;
     const from = atMinute(n.eve, 12 * 60), late = atMinute(n.eve, 21 * 60);
@@ -249,6 +313,18 @@ export function evenings(ns: Night[], o: {
       ...(o.steps ? { steps: st, moreSteps: st != null && mid != null ? st > mid : null } : {}),
       // Before the first tagged morning nobody was asking, so an untagged night then isn't a night without.
       ...(o.sleeps ? { tags: sl && tagged != null && n.day >= tagged ? sl.tags ?? [] : null } : {}),
+      ...(o.foods ? (() => {
+        const e = eves[i], last = o.foods!.filter((x) => x.kcal >= 150 && x.at >= atMinute(n.eve, 15 * 60) && x.at < n.bed).at(-1);
+        return { eveKcal: e?.kcal ?? null, eveCarbs: e?.c ?? null, moreEveKcal: e && kMid != null ? e.kcal > kMid : null, moreEveCarbs: e && cMid != null ? e.c > cMid : null,
+          lastMealMin: last ? (n.bed - last.at) / MIN : null };
+      })() : {}),
+      ...(o.sessions ? { lateTrain: o.sessions.some((w) => w.start < n.bed && w.end > n.bed - 3 * HOUR) } : {}),
+      ...(o.checks ? { eveStress: o.checks.filter((c) => c.stress != null && c.at >= atMinute(n.eve, 17 * 60) && c.at < n.bed).at(-1)?.stress ?? null } : {}),
+      ...(o.supps ? { supps: (() => {
+        const r: Record<string, boolean | null> = {};
+        for (const x of o.supps!) if (localDay(x.at) === n.eve) r[x.suppId] = r[x.suppId] === true || x.status === "taken" ? true : false;
+        return r;
+      })() } : {}),
     };
   });
 }

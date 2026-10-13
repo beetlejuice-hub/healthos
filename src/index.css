@@ -1100,6 +1100,10 @@ a { color: inherit; }
 .sl-c-grid { display: grid; gap: 16px; grid-template-columns: minmax(0, 1fr); }
 .sl-c-grid.wide { grid-template-columns: auto minmax(0, 1fr); align-items: start; }
 .sl-matrix { display: grid; gap: 4px; align-items: center; }
+/* phone: the grid scrolls sideways, the row names stay (PLAN 88) */
+.sl-mscroll { overflow-x: auto; margin: 0 -4px; padding: 0 4px 4px; -webkit-overflow-scrolling: touch; }
+.sl-mscroll .sl-matrix { width: max-content; }
+.sl-mscroll .sl-mf, .sl-mscroll [role="columnheader"]:first-child { position: sticky; left: 0; z-index: 1; background: var(--i-panel); align-self: stretch; padding-right: 6px; }
 .sl-mh { font: 500 10.5px var(--f-plex); color: var(--i-ink-2); text-align: center; }
 .sl-mf { font: 500 12.5px var(--f-plex); color: var(--i-ink); display: grid; } .sl-mf small { font: 400 10.5px var(--f-mono); color: var(--i-dim); }
 .sl-cell { height: 40px; border-radius: 4px; border: 1px solid var(--i-line); background: transparent; color: var(--i-dim); font: 500 11px var(--f-mono); padding: 0; }
@@ -1244,3 +1248,5 @@ a { color: inherit; }
 .supp-quick .sq-chip em { font-style: normal; font-weight: 500; color: var(--c-ink-2); margin-left: 6px; }
 .stack-row.extra .sq-when { color: var(--c-ink-2); font-size: 12px; }
 .stack-row.extra .x { border: 0; background: transparent; color: var(--c-ink-2); font-size: 18px; min-width: 36px; min-height: 36px; }
+.sl-hidden summary { cursor: pointer; }
+.sl-hidden p { margin: 6px 0 0; }

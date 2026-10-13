@@ -116,7 +116,9 @@ function world(seed = 5) {
   check(`drinks → HRV: lower (${hrvC.text} ${hrvC.sure})`, hrvC.sure === 'clear' && /^−/.test(hrvC.text));
   const others = await pg.locator('.sl .sl-cell').evaluateAll((cs) => cs.filter((c) => !c.getAttribute('aria-label').startsWith('Drinks') && c.dataset.sure === 'clear').map((c) => c.getAttribute('aria-label')));
   check(`nothing planted in the other rows — none of them clear (${others.join('; ') || 'none'})`, others.length === 0);
-  check('things no night (or every night) had are named once, not drawn as empty rows', await pg.locator('.sl .sl-mf').count() === 3 && /Not enough nights yet .*caffeine at bed ≥ 30 mg \(0 with, 30 without\)/.test(await pg.locator('.sl .sl-c').innerText()));
+  // folded since PLAN 88 (the list got long): a tap shows which
+  await pg.locator('.sl .sl-hidden summary').click();
+  check('things no night (or every night) had are named once, not drawn as empty rows', await pg.locator('.sl .sl-mf').count() === 3 && /Not enough nights yet for \d+ more rows[\s\S]*caffeine at bed ≥ 30 mg \(0 with, 30 without\)/.test(await pg.locator('.sl .sl-c').innerText()));
   check('a clear cell is opened to show every night behind it', await pg.locator('.sl .sl-open').count() === 1 && await pg.locator('.sl .sl-open circle').count() >= nN - 2);
   await cell('Trained that day', 'Deep').click();
   check('tapping another cell opens it', (await pg.locator('.sl .sl-open').getAttribute('data-factor')) === 'trained' && (await pg.locator('.sl .sl-open').getAttribute('data-outcome')) === 'deep');
@@ -134,7 +136,8 @@ function world(seed = 5) {
   const yNums = (await pg.locator('.sl .sl-nums').boundingBox()).y, yChart = (await pg.locator('.sl .sl-chart').boundingBox()).y;
   check('phone: the numbers and what was different come before the chart', yNums < yChart);
   check('phone: the log keeps one number per night, with naps marked', await pg.locator('.sl .sl-colh').count() === 1 && await pg.locator('.sl .sl-nap').count() >= 1);
-  check('phone: the grid fits (6 measures)', await pg.locator('.sl .sl-mh').count() === 6 && (await pg.locator('.sl .sl-matrix').boundingBox()).width <= 370);
+  // since PLAN 88 every measure, scrolling sideways inside the card (was 6 that fit)
+  check('phone: the grid has every measure and scrolls inside its card', await pg.locator('.sl .sl-mh').count() === 10 && (await pg.locator('.sl .sl-mscroll').boundingBox()).width <= 370 && await pg.evaluate(() => document.documentElement.scrollWidth) <= 390);
   const bb = await pg.locator('.sl .sl-bar .ibtn').first().boundingBox();
   check(`phone: night arrows big enough to tap (${Math.round(bb.width)}×${Math.round(bb.height)})`, bb.height >= 34 && bb.width >= 44);
   await pg.locator('.sl .sl-b').screenshot({ path: OUT + 'sleep-b-phone.png' });

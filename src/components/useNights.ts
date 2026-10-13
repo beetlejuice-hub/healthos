@@ -17,6 +17,11 @@ export function useNights(band: BandData | null, data: Lanes, entries: Entry[], 
     drinks: data.drinks, caffeineAt: (t) => caffeineAt(data.doses.map((d) => ({ at: d.at, mg: d.mg })), t, halfLifeMin),
     workouts: data.workouts, meals: entries.filter((e) => e.kind === "food"), ratings: entries.flatMap((e) => (e.kind === "sleep" ? [{ at: e.at, rating: e.rating }] : [])), steps,
     sleeps: entries.filter((e) => e.kind === "sleep"),
+    // PLAN 88: the evening's food, a late workout, evening stress, supplement answers
+    foods: entries.flatMap((e) => (e.kind === "food" ? [{ at: e.at, kcal: e.macros.kcal, c: e.macros.c }] : [])),
+    sessions: data.workouts.map((w) => ({ start: w.start, end: w.end })),
+    checks: entries.flatMap((e) => (e.kind === "feel" && e.stress != null ? [{ at: e.at, stress: e.stress }] : [])),
+    supps: entries.flatMap((e) => (e.kind === "supp" ? [{ at: e.at, suppId: e.suppId, status: e.status }] : [])),
   }), [ns, data, entries, halfLifeMin, steps]);
   return { ns, evs, steps };
 }

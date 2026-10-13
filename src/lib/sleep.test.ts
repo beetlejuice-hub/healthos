@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { HrMinute, SleepSession } from "./band";
-import { clockH, eli5, evenings, facts, fellAsleep, goesWith, lowestHr, nights, regularity, usual, usualNightHr, weekendShift, type Evening, type Night } from "./sleep";
+import { bars, clockH, eli5, evenings, FACTORS, facts, fellAsleep, goesWith, lowestHr, nights, regularity, suppFactors, usual, usualNightHr, weekendShift, type Evening, type Night } from "./sleep";
 import { rng } from "./bench";
 import { tagFactors } from "./lastnight";
 import { atMinute, addDays, MIN, HOUR } from "./time";
@@ -262,5 +262,64 @@ describe("last-night tags in the grid (PLAN 90)", () => {
   it("without sleep entries passed, evenings stay as they were (no tags key)", () => {
     const [n] = nights([session(EVE0, 23.5, 31)], [], {}, {});
     expect("tags" in evenings([n], { drinks: [], caffeineAt: () => 0, workouts: [], meals: [], ratings: [] })[0]).toBe(false);
+  });
+});
+
+/**
+ * 40 nights with food, workouts, evening check-ins and magnesium answers (PLAN 88). Planted when `plant`: the last meal
+ * within 2 h of bed → 18 min longer to fall asleep and 15 min less deep; magnesium taken that day → 14 min more deep.
+ * Nothing for: more food or carbs than usual (sizes drawn apart from timing), a late workout, evening stress.
+ */
+function foodWorld(seed: number, plant: boolean) {
+  const { r, g } = rng(seed), ns: Night[] = [];
+  const foods: { at: number; kcal: number; c: number }[] = [], sessions: { start: number; end: number }[] = [], checks: { at: number; stress?: number }[] = [];
+  const supps: { at: number; suppId: string; status: "taken" | "skipped" }[] = [];
+  for (let k = 0; k < 40; k++) {
+    const eve = addDays(EVE0, k), [n] = nights([session(eve, 23.3 + g() * 0.15, 31 + g() * 0.2)], [], {}, {});
+    const logged = r() > 0.15, mealH = 18 + r() * 5, late = logged && n.bed - atMinute(eve, mealH * 60) < 2 * HOUR;
+    if (logged) { foods.push({ at: atMinute(eve, 13 * 60), kcal: 700, c: 80 }, { at: atMinute(eve, mealH * 60), kcal: Math.round(600 + r() * 700), c: Math.round(40 + r() * 120) }); }
+    if (r() < 0.3) { const st = atMinute(eve, (r() < 0.5 ? 18 : 21.5) * 60); sessions.push({ start: st, end: st + HOUR }); }
+    if (r() < 0.8) checks.push({ at: atMinute(eve, 20 * 60), stress: Math.round(3 + r() * 6) });
+    const ans = r(), mag = ans < 0.45;
+    if (ans < 0.45) supps.push({ at: atMinute(eve, 21 * 60), suppId: "mag", status: "taken" });
+    else if (ans < 0.8) supps.push({ at: atMinute(eve, 21 * 60), suppId: "mag", status: "skipped" });
+    n.latency = 12 + Math.abs(g() * 5) + (plant && late ? 18 : 0);
+    n.deep = 75 + g() * 7 - (plant && late ? 15 : 0) + (plant && mag ? 14 : 0);
+    n.asleep += g() * 15; n.low = 50 + g(); n.hrv = 45 + g() * 4; ns.push(n);
+  }
+  const evs = evenings(ns, { drinks: [], caffeineAt: () => 0, workouts: [], meals: foods, ratings: [], foods, sessions, checks, supps });
+  return { ns, evs, factors: [...FACTORS, ...suppFactors([{ id: "mag", name: "Magnesium" }], evs)] };
+}
+
+describe("food and activities against sleep (PLAN 88)", () => {
+  it("finds the planted late meal (fell asleep, deep) and magnesium (deep) — and nothing on the rows with nothing planted", () => {
+    const w = foodWorld(11, true), cells = goesWith(w.ns, w.evs, { factors: w.factors });
+    const c = (f: string, o: string) => cells.find((x) => x.factor === f && x.outcome === o)!;
+    for (const [f, o, toward] of [["meal2h", "latency", "worse"], ["meal2h", "deep", "worse"], ["supp:mag", "deep", "better"]] as const) {
+      expect(["clear", "likely"]).toContain(c(f, o).sure); expect(c(f, o).toward).toBe(toward);
+    }
+    expect(c("meal2h", "latency").diff!).toBeGreaterThan(10); expect(c("meal2h", "latency").diff!).toBeLessThan(26);
+    // magnesium: only answered days count (taken or "didn't take")
+    expect(c("supp:mag", "deep").nWith + c("supp:mag", "deep").nWithout).toBe(w.evs.filter((e) => e.supps?.mag != null).length);
+    expect(w.evs.filter((e) => e.supps?.mag == null).length).toBeGreaterThan(3);
+    for (const f of ["bigeve", "carbeve", "latetrain", "stress"]) expect(cells.filter((x) => x.factor === f && x.sure === "clear")).toHaveLength(0);
+  });
+  it("an evening with no food logged is unknown, not 'ate nothing'; a median needs 8 evenings", () => {
+    const w = foodWorld(11, true), unknown = w.evs.filter((e) => e.eveKcal == null);
+    expect(unknown.length).toBeGreaterThan(2);
+    expect(unknown.every((e) => e.lastMealMin == null && e.moreEveKcal == null)).toBe(true);
+    const few = evenings(w.ns.slice(0, 5), { drinks: [], caffeineAt: () => 0, workouts: [], meals: [], ratings: [], foods: [{ at: atMinute(w.ns[0].eve, 19 * 60), kcal: 900, c: 100 }] });
+    expect(few[0].eveKcal).toBe(900); expect(few[0].moreEveKcal).toBeNull();
+  });
+  it("nothing planted: the whole bigger grid stays quiet across 20 worlds (about one clear cell in ten grids)", () => {
+    let clear = 0, likely = 0;
+    for (let s = 400; s < 420; s++) { const w = foodWorld(s, false), cells = goesWith(w.ns, w.evs, { factors: w.factors, seed: s }); clear += cells.filter((c) => c.sure === "clear").length; likely += cells.filter((c) => c.sure === "likely").length; }
+    expect(clear).toBeLessThanOrEqual(3);
+    expect(likely).toBeLessThanOrEqual(30);
+  }, 60_000);
+  it("the bar gets stricter with more cells tried, never looser than for ~48", () => {
+    expect(bars(48).clear).toBeCloseTo(0.002, 6); expect(bars(48).likely).toBeCloseTo(0.02, 6);
+    expect(bars(10)).toEqual({ clear: 0.002, likely: 0.02 });
+    expect(bars(125).clear).toBeCloseTo(0.0008, 6); expect(bars(125).likely).toBeCloseTo(0.008, 6);
   });
 });

@@ -14,7 +14,7 @@ import { doingOrder, labelOf, tagOf } from "../lib/feel";
 import { act, useStore } from "../lib/store";
 import { afterCoffee, afterWorkouts, usualAt, usualByHour, usualReady, workoutWindows } from "../lib/hrusual";
 import type { Lanes } from "../lib/insights";
-import { clockH, FACTORS, lowestHr, usual as middleHalf, type Evening, type Night } from "../lib/sleep";
+import { clockH, FACTORS, lowestHr, suppFactors, usual as middleHalf, type Evening, type Night } from "../lib/sleep";
 import { tagFactors } from "../lib/lastnight";
 import { stepsIn } from "../lib/steps";
 import { addDays, atMinute, clock, dayLabel, localDay, DAY, MIN } from "../lib/time";
@@ -59,7 +59,8 @@ export function HeartPage({ data, band, now, entries, halfLifeMin }: { data: Lan
   const awake = useMemo(() => (band ? awakeByDay(band.hr, band.sleep, workouts) : new Map<string, AwakeDay>()), [band, workouts]);
   const outcomes = useMemo(() => heartOutcomes(awake), [awake]);
   const { ns, evs } = useNights(band, data, entries, halfLifeMin, now, span);
-  const factors = useMemo(() => [...FACTORS, ...tagFactors(evs)], [evs]);
+  const supplements = useStore((x) => x.supplements);
+  const factors = useMemo(() => [...FACTORS, ...suppFactors(supplements, evs), ...tagFactors(evs)], [evs, supplements]);
   const after = useMemo(() => {
     if (!band?.hr.length) return null;
     const u = usualByHour(band.hr, workouts, today);

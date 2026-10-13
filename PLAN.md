@@ -988,9 +988,47 @@ below, in his words, grouped; A first (broken or wrong now), then the rest. Item
    the plan's answer, × removes an extra, Log → Stack logs too).
 
 ### E · Sleep — brainstorm first
-88. [ ] **More from sleep** — "Feel like we need better or more about sleep like can ai or app determine more things about
-   sleep based on all the data it gets?" and "I'm big on sleep and how it affects me and foods and activities like late
-   might scrolling how it affects sleep score deep sleep etc sso can we brainstorm and track that too".
+88. [ ] (claimed 13 Oct — lib/sleep, Sleep/Heart grids, ai/context; phase 1 done) **More from sleep** — "Feel like
+   we need better or more about sleep like can ai or app determine more things about sleep based on all the data it gets?"
+   and "I'm big on sleep and how it affects me and foods and activities like late might scrolling how it affects sleep
+   score deep sleep etc sso can we brainstorm and track that too".
+
+   **Brainstorm — what the app could tell you, from what it already gets** (band: stages, heart rate every minute, HRV,
+   resting HR, steps, calories; your logs: food with times and macros, drinks, caffeine, workouts, check-ins with
+   notes, supplements, last-night tags):
+   - *Food → sleep.* Ate within 2 h of bed; more than usual in the evening; more carbs than usual in the evening; the
+     last meal's distance from bed. (Studies: a big or late meal goes with longer to fall asleep and less deep sleep
+     for many people; high-carb dinners with falling asleep faster for some. Yours may differ — that's the point.)
+   - *Activities → sleep.* Trained within 3 h of bed (vs trained that day); more steps than usual (have it); stressed at
+     the evening check-in; each supplement on the days you took it vs days you said you didn't (magnesium, saffron…).
+   - *Late-night scrolling.* The band can't see the phone. Now: the "scrolled in bed" tag (PLAN 90). Next, a dose: one
+     tap "phone down" at night → minutes from phone down to asleep, and from in bed to phone down. Later: Tempo (92).
+   - *More from the night itself.* How long it took to fall asleep (the band has it) and how often you woke, as
+     columns next to deep, REM and HRV; how far your heart rate dips at night and how late it bottoms out.
+   - *Tonight.* In the evening, what the grid says about nights like the one you're having ("caffeine 40 mg at bed and
+     ate late — nights like that averaged 25 min less deep") — goes with, never "will".
+   - *Your sleep need and best bedtime.* The hours asleep and the bedtime window that go with your best next days.
+   - *The AI sees the nights.* Today it sees your ratings but not one night from the band: give it each night (bed,
+     asleep, deep, REM, fell asleep, woke, low HR, HRV) next to the evening before.
+   - Not doing: a made-up "sleep score" (the rating is yours; the band's numbers stay separate), anything that says why.
+
+   **Phases** (defaults picked; owner can reorder):
+   1. *Food and activities in the grid* — the rows above from what's already logged, plus "Fell asleep" and "Woke up"
+      columns; the grid scrolls sideways on a phone with the names fixed. With more cells, "clear" and "likely" get
+      stricter so the grid doesn't find more by chance (clear p < 0.1 ÷ cells, never looser than now). Planted effects
+      in fake nights must be found; empty worlds must stay quiet. **Done 13 Oct:** rows "Ate within 2 h of bed", "Ate
+      more than usual in the evening", "More carbs than usual in the evening", "Trained within 3 h of bed", "Stressed in
+      the evening (7+)", and one per supplement ("Magnesium that day": answered days only, a row once 5 each way);
+      columns "Fell asleep" and "Woke up"; on a phone all 10 columns, sideways, names fixed; the rows without enough
+      nights fold into one line. An evening with no food logged is unknown, not "ate nothing". Checked: planted late
+      meal (+18 min to fall asleep, −15 deep) and magnesium (+14 deep) found at their sizes, nothing on the unplanted
+      rows, 2 clear cells across 20 empty grids (lib/sleep.test); e2e/sleepfood.cjs at 390 px. Kept quick: the columns
+      of a row share one set of shuffles, and the shuffle's random numbers are exact 32-bit ones (the old generator
+      multiplied past what a double holds) — twice the cells for about the old cost (~30 ms for 30 nights on a laptop).
+   2. *The AI sees every night*, and the evening "Tonight" line (canvas first).
+   3. *Phone down* — the one tap at night for scrolling minutes (canvas first).
+   4. *Your sleep need and best bedtime window.*
+   Open questions for the owner: is "phone down" a tap you'd really do? Which supplements are the sleep ones?
 
 ### F · Telling the app more
 89. [x] **Notes on mood logging** — "i should be able to leave notes on mood logging, like head hurts, or parents made me
