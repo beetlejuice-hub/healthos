@@ -24,7 +24,7 @@ server=$!
 tmp=$(mktemp -d)
 trap 'kill $server 2>/dev/null; rm -rf "$tmp"' EXIT
 sleep 1
-export APP_URL="http://localhost:$PORT/" tmp
+export APP_URL="http://localhost:$PORT/" E2E_DIST="$(cd "$DIST" && pwd)" tmp   # suites that read the built page (now.cjs) read this one
 t0=$(date +%s)
 one() {
   local s=$1 f="$tmp/$1.out" a b

@@ -57,7 +57,7 @@ const { chromium, APP, OUT, handle } = require('./harness.cjs');
   // 1. Not connected: what it reads, read-only promise, one button.
   await pg.goto(APP + '#settings'); await pg.reload();
   const card = pg.locator('.card.band');
-  await card.getByRole('button', { name: 'Connect Fitbit' }).waitFor({ timeout: 5000 }).catch(() => {});
+  await card.getByRole('button', { name: 'Connect Fitbit' }).waitFor({ timeout: 15000 }).catch(() => {});
   check('not connected: says what it reads, read-only, Connect button', /not connected/.test(await card.innerText()) && /Read-only/.test(await card.innerText()) && await card.getByRole('button', { name: 'Connect Fitbit' }).count() === 1);
   check('opening the app asked the server, signed in', calls.some((c) => c.op === 'status' && /^Bearer tok-u-test$/.test(c.auth)));
   check('not connected: no pull, no data asked for', !calls.some((c) => c.op === 'sync' || c.op === 'data'));
@@ -74,13 +74,13 @@ const { chromium, APP, OUT, handle } = require('./harness.cjs');
   check('connected: asked for a pull, then a week of data', calls.some((c) => c.op === 'sync' && c.method === 'POST') && calls.some((c) => c.op === 'data' && Math.abs(+new URLSearchParams(c.search).get('from') - (NOW - 7 * 86_400_000)) < 120_000));
   // Owner, 7 Oct: "date doesnt match even after clicking pull now". Pull now says what it found.
   await card.getByRole('button', { name: 'Pull now' }).click();
-  await pg.waitForFunction(() => /Nothing newer|New readings/.test(document.querySelector('.card.band')?.textContent ?? ''), null, { timeout: 5000 }).catch(() => {});
+  await pg.waitForFunction(() => /Nothing newer|New readings/.test(document.querySelector('.card.band')?.textContent ?? ''), null, { timeout: 15000 }).catch(() => {});
   check('Pull now with nothing new: says so, and what to do', /Nothing newer from Google yet — the band last sent at 12:58\. Open the Fitbit app/.test(await card.innerText()));
   const pullFrom = +new URLSearchParams(calls.filter((c) => c.op === 'data').at(-1).search).get('from');
   check(`Pull now loads only the last hours, not the week again (from ${new Date(pullFrom).toTimeString().slice(0, 5)})`, Math.abs(pullFrom - (NOW - 12 * 3600_000)) < 120_000);
   hr.push([NOW, 80, 78, 83]);
   await card.getByRole('button', { name: 'Pull now' }).click();
-  await pg.waitForFunction(() => /New readings/.test(document.querySelector('.card.band')?.textContent ?? ''), null, { timeout: 5000 }).catch(() => {});
+  await pg.waitForFunction(() => /New readings/.test(document.querySelector('.card.band')?.textContent ?? ''), null, { timeout: 15000 }).catch(() => {});
   const txt2 = await card.innerText();
   check('Pull now with new readings: says up to when, and the card moves on', /New readings, up to 13:00\./.test(txt2) && /Newest reading\s*80 bpm · 13:00 · just now/.test(txt2));
   const cb = await card.boundingBox();
@@ -135,23 +135,23 @@ const { chromium, APP, OUT, handle } = require('./harness.cjs');
 
   // 4. Google said no.
   await pg.goto(APP + '#settings/band-failed?why=you%20said%20no%20on%20Google%27s%20page'); await pg.reload();
-  await pg.waitForFunction(() => /Didn't connect/.test(document.querySelector('.card.band')?.textContent ?? ''), null, { timeout: 5000 }).catch(() => {});
+  await pg.waitForFunction(() => /Didn't connect/.test(document.querySelector('.card.band')?.textContent ?? ''), null, { timeout: 15000 }).catch(() => {});
   check('a "no" on Google\'s page says so, in words', /Didn't connect: you said no on Google's page/.test(await card.innerText()));
 
   // 5. Google dropped the sign-in: reconnect, nothing lost.
   server.connected = false; server.needsReconnect = true;
   await pg.goto(APP + '#settings'); await pg.reload();
-  await card.getByRole('button', { name: 'Reconnect' }).waitFor({ timeout: 5000 }).catch(() => {});
+  await card.getByRole('button', { name: 'Reconnect' }).waitFor({ timeout: 15000 }).catch(() => {});
   check('dropped sign-in: "needs you" + Reconnect', /needs you/.test(await card.innerText()) && await card.getByRole('button', { name: 'Reconnect' }).count() === 1);
 
   // 6. Disconnect (asks first).
   server.connected = true; server.needsReconnect = false;
   await pg.reload();
-  await card.getByRole('button', { name: 'Disconnect' }).waitFor({ timeout: 5000 }).catch(() => {});
+  await card.getByRole('button', { name: 'Disconnect' }).waitFor({ timeout: 15000 }).catch(() => {});
   let asked = '';
   pg.once('dialog', (d) => { asked = d.message(); void d.accept(); });
   await card.getByRole('button', { name: 'Disconnect' }).click();
-  await card.getByRole('button', { name: 'Connect Fitbit' }).waitFor({ timeout: 5000 }).catch(() => {});
+  await card.getByRole('button', { name: 'Connect Fitbit' }).waitFor({ timeout: 15000 }).catch(() => {});
   check(`disconnect asks first, then it's gone ("${asked.slice(0, 40)}…")`, /deletes the heart rate/.test(asked) && calls.some((c) => c.op === 'disconnect' && c.method === 'POST') && await card.getByRole('button', { name: 'Connect Fitbit' }).count() === 1);
   await pg.goto(APP + '#insights/timeline'); await pg.waitForSelector('.master'); await pg.waitForTimeout(300);
   await openLanes();

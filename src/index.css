@@ -1297,3 +1297,7 @@ a { color: inherit; }
 .tp-mtrack .bar.dim { opacity: .45; }
 .tp-mtrack .tick { position: absolute; top: -3px; width: 2px; height: 18px; margin-left: -1px; background: var(--i-ink); }
 .tp-b { display: grid; gap: 12px; min-width: 0; }
+.tp-lanes .tp-lname { fill: var(--i-ink); font: 500 11px var(--f-plex, inherit); }
+.tp-lanes rect.up { fill: rgba(79, 134, 220, .85); } .tp-lanes rect.down { fill: rgba(217, 130, 43, .85); }
+.tp-lanes .hot { fill: var(--i-ink); } .tp-lanes .dim { fill: var(--i-line-2); }
+.tp-lanes .dim-fill { fill: var(--i-ink-2); } .tp-lanes .hollow { fill: none; stroke: var(--i-ink-2); stroke-width: 1.2; }

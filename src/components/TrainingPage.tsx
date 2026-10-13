@@ -9,7 +9,7 @@ import { useEffect, useMemo, type ReactElement } from "react";
 import { useStore } from "../lib/store";
 import { loadBandBefore, useBand } from "../lib/band-client";
 import { goesWith, nights, type Factor, type Outcome } from "../lib/sleep";
-import { sessionFacts, sessionFactors, SESSION_OUTCOMES, slopeTest, type SessionFacts } from "../lib/sessionfacts";
+import { CARBS_G, sessionFacts, sessionFactors, SESSION_OUTCOMES, SHORT_MIN, slopeTest, UNDER_KCAL, type SessionFacts } from "../lib/sessionfacts";
 import { GoesWith, type GridCopy } from "./Sleep";
 import { mainLifts, sessions, setsPerMuscleWeek, thisWeek, type LiftTrend, type Session } from "../lib/liftstrength";
 import { nextTemplate, suggestNext, type LoggedSet } from "../lib/training";
@@ -169,6 +169,7 @@ function StrongSessions({ ss, facts, supplements, w, wide }: { ss: Session[]; fa
         <span className="cmp-k">Your strong sessions · {measured} sessions</span>
         <p className="mp-big" data-found={found.map((c) => c.factor).join(",")}>{words}</p>
       </section>
+      {measured >= 2 && <SessionLanes ss={ss} facts={facts} supps={factors.filter((f) => f.id.startsWith("supp:")).map((f) => ({ id: f.id.slice(5), name: f.name.replace(/ that day$/, "") }))} w={w} />}
       <div className={`tp-row${wide ? " wide" : ""}`}>
         <G ns={ss} evs={facts} wide={false} w={wide ? Math.floor(w * 0.58) : w} outcomes={SESSION_OUTCOMES} factors={factors} narrow={SESSION_OUTCOMES} copy={B_COPY} />
         {pts.length >= 10 && <CarbsScatter pts={pts} sl={sl} w={wide ? Math.floor(w * 0.4) : w} />}
@@ -199,3 +200,43 @@ function CarbsScatter({ pts, sl, w }: { pts: [number, number][]; sl: ReturnType<
   );
 }
 
+/**
+ * Every session against your trend, and what came before it — the lanes share the dates (board B). Highlighted: what
+ * the grid's rows test (under 6 h 30, 60 g+ carbs, 400+ kcal under your usual), so the eye sees what the grid says.
+ */
+function SessionLanes({ ss, facts, supps, w }: { ss: Session[]; facts: SessionFacts[]; supps: { id: string; name: string }[]; w: number }) {
+  const rows = ss.map((s, i) => ({ s, f: facts[i] })).filter((r) => r.s.pct != null);
+  const phone = w < 600, cw = w - 30, x0 = phone ? 74 : 150, x1 = cw - 8, t0 = rows[0].s.startedAt, t1 = rows[rows.length - 1].s.startedAt;
+  const X = (t: number) => x0 + ((t - t0) / Math.max(1, t1 - t0)) * (x1 - x0), bw = Math.max(2, Math.min(8, ((x1 - x0) / rows.length) * 0.6));
+  const top = 8, sH = 96, mid = top + sH / 2, lane = phone ? 26 : 32, lanes: [string, string][] = [["Sleep", "h, the night before"], ["Carbs", "g, 4 h before"], ["Food", "3 days vs usual"], ["Coffee", "2 h before"], ...supps.map((x) => [x.name, "that day"] as [string, string])];
+  const ly = (k: number) => top + sH + 14 + k * lane, H = ly(lanes.length) + 18;
+  const months: [number, string][] = [];
+  for (let d = new Date(t0); d.getTime() <= t1; d = new Date(d.getFullYear(), d.getMonth() + 1, 1)) { const m = new Date(d.getFullYear(), d.getMonth(), 1).getTime(); if (m >= t0) months.push([m, MON[d.getMonth()]]); }
+  const bar = (k: number, frac: number, hot: boolean, key: string) => { const y1 = ly(k) + lane - 6, h = Math.max(1.5, Math.min(1, frac) * (lane - 8)); return <rect key={key} x={0} y={y1 - h} width={bw} height={h} rx="1" className={hot ? "hot" : "dim"} />; };
+  return (
+    <section className="sl-p tp-lanes" aria-label="Every session against your trend, and what came before it">
+      <span className="cmp-k">Every session against your trend, and what came before it</span>
+      <svg width={cw} height={H} viewBox={`0 0 ${cw} ${H}`} role="img" aria-label={`${rows.length} sessions: strength against your trend, with sleep, carbs, food, coffee and supplements before each`}>
+        <line x1={x0} x2={x1} y1={mid} y2={mid} className="he-grid" />
+        <text x={x0 - 8} y={top + 10} textAnchor="end" className="hp-t">+6 %</text><text x={x0 - 8} y={top + sH} textAnchor="end" className="hp-t">−6 %</text>
+        <text x={4} y={mid + 4} className="tp-lname">Strength</text>
+        {lanes.map(([n, u], k) => <g key={n}><text x={4} y={ly(k) + 12} className="tp-lname">{n}</text>{!phone && <text x={4} y={ly(k) + 23} className="hp-t">{u}</text>}<line x1={x0} x2={x1} y1={ly(k) + lane - 6} y2={ly(k) + lane - 6} className="he-grid" /></g>)}
+        {rows.map(({ s, f }) => {
+          const x = X(s.startedAt) - bw / 2, v = Math.max(-6, Math.min(6, s.pct!)), h = (Math.abs(v) / 6) * (sH / 2);
+          const sk = (k: number) => `${s.id}-${k}`;
+          return (
+            <g key={s.id} transform={`translate(${x} 0)`} data-session={s.id} data-pct={s.pct!.toFixed(1)} data-hot={[f.asleep != null && f.asleep < SHORT_MIN && "short", f.carbs4h != null && f.carbs4h >= CARBS_G && "carbs", f.under3 != null && f.under3 >= UNDER_KCAL && "under"].filter(Boolean).join(",")}>
+              <rect x={0} y={v >= 0 ? mid - h : mid} width={bw} height={Math.max(1, h)} rx="1" className={v >= 0 ? "up" : "down"}><title>{`${dayLabel(s.startedAt)} · ${s.template} · ${sgn(s.pct!)} %`}</title></rect>
+              {f.asleep != null && bar(0, (f.asleep / 60 - 5) / 4, f.asleep < SHORT_MIN, sk(0))}
+              {f.carbs4h != null && bar(1, f.carbs4h / 150, f.carbs4h >= CARBS_G, sk(1))}
+              {f.under3 != null && (() => { const y0 = ly(2) + lane / 2 - 3, d = Math.max(-800, Math.min(800, -f.under3)) / 800 * ((lane - 8) / 2); return <rect key={sk(2)} x={0} y={d >= 0 ? y0 - d : y0} width={bw} height={Math.max(1.5, Math.abs(d))} rx="1" className={f.under3 >= UNDER_KCAL ? "hot" : "dim"} />; })()}
+              {f.coffee && <circle key={sk(3)} cx={bw / 2} cy={ly(3) + lane / 2 - 3} r={2.6} className="dim-fill" />}
+              {supps.map((x, j) => (f.supps[x.id] == null ? null : <circle key={sk(4 + j)} cx={bw / 2} cy={ly(4 + j) + lane / 2 - 3} r={2.6} className={f.supps[x.id] ? "dim-fill" : "hollow"} />))}
+            </g>);
+        })}
+        {months.map(([t, m]) => <text key={t} x={X(t)} y={H - 4} className="hp-t">{m}</text>)}
+      </svg>
+      <p className="sl-note">Top: each session against your trend, blue above it, orange below. Under it, what came before; in white: under 6 h 30 asleep, {CARBS_G} g+ carbs, eating {UNDER_KCAL}+ kcal a day under your usual. Supplements: filled taken, hollow skipped, nothing when not answered.</p>
+    </section>
+  );
+}

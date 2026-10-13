@@ -13,7 +13,7 @@ function rng(seed) {
 }
 const LIFTS = { Push: [['Bench press', 100], ['Overhead press', 60]], Pull: [['Deadlift', 160], ['Barbell row', 85]], Legs: [['Squat', 130], ['Romanian deadlift', 110]] };
 function world() {
-  const { r, g } = rng(41), entries = [], workouts = [], sleep = [], hr = [];
+  const { r, g } = rng(41), entries = [], workouts = [], sleep = [], hr = [], truth = {};
   const t0 = new Date(2026, 6, 20).getTime(); let n = 0;
   for (let k = 0; k < 84; k++) {
     const day0 = t0 + k * D; if (day0 > NOW) break;
@@ -36,6 +36,7 @@ function world() {
       : { id: `m${k}`, kind: 'food', at: start - (1 + r() * 2) * H, name: 'Eggs', grams: 200, macros: { kcal: 300, p: 25, c: Math.round(5 + r() * 25), f: 20 } });
     if (coffee) entries.push({ id: `cf${k}`, kind: 'drink', at: start - (0.3 + r()) * H, name: 'Coffee', ml: 250, caffeineMg: 95, alcoholG: 0, kcal: 2 });
     const eff = (carbs ? 3.5 : 0) - (short ? 4 : 0);
+    truth[id] = { carbs, short };
     workouts.push({ id, template: tpl, startedAt: start, endedAt: start + H });
     for (const [ex, b] of LIFTS[tpl]) {
       const e1 = b * (1 + 0.006 * wk) * (1 + (eff + g() * 1.2) / 100), kg = e1 / (1 + 5 / 30);
@@ -43,7 +44,7 @@ function world() {
     }
     entries.push({ id: `fa${k}`, kind: 'feel', at: start + 1.5 * H, energy: Math.max(1, Math.min(10, Math.round(6.5 + g() * 0.8))) });
   }
-  return { entries: entries.sort((a, b) => a.at - b.at), workouts, sleep, hr: hr.sort((a, b) => a[0] - b[0]) };
+  return { entries: entries.sort((a, b) => a.at - b.at), workouts, sleep, hr: hr.sort((a, b) => a[0] - b[0]), truth };
 }
 
 (async () => {
@@ -78,6 +79,15 @@ function world() {
   check(`grid: coffee and creatine, nothing planted, nothing clear (${c2} | ${c3})`, c2 && c2[0] !== 'clear' && c3 && c3[0] !== 'clear');
   const sw = await pg.locator('.tp-carbs .he-words').innerText().catch(() => '');
   check(`carbs as a number: a rising line (${sw})`, /^Strength goes with \+\d\.\d % per 10 g of carbs in the 4 h before · (clear|likely)\.$/.test(sw));
+  // B2: every session in the lanes, highlighted where the fake world put carbs before or a short night
+  const measured = +(await pg.locator('.tp-b .cmp-k', { hasText: 'Your strong sessions' }).innerText()).match(/(\d+) sessions/i)[1];
+  const lanes = await pg.locator('.tp-lanes g[data-session]').evaluateAll((els) => els.map((e) => [e.dataset.session, e.dataset.hot.split(','), +e.dataset.pct, !!e.querySelector('rect.up')]));
+  check(`lanes: one column per measured session (${lanes.length} of ${measured})`, lanes.length === measured && measured >= 30);
+  const off = (k) => lanes.filter(([id, hot]) => w.truth[id] && hot.includes(k) !== w.truth[id][k]).map(([id]) => id);
+  check(`lanes: carbs highlighted exactly where the meal before had 60 g+ (${lanes.filter((l) => l[1].includes('carbs')).length} sessions, off: ${off('carbs').join(' ') || 'none'})`, off('carbs').length === 0);
+  check(`lanes: short nights highlighted exactly where the band's night was under 6 h 30 (${lanes.filter((l) => l[1].includes('short')).length}, off: ${off('short').join(' ') || 'none'})`, off('short').length === 0);
+  check(`lanes: each strength bar points the way of its session's % (${lanes.filter((l) => Math.abs(l[2]) >= 0.1 && (l[2] > 0) !== l[3]).length} wrong)`, lanes.every((l) => Math.abs(l[2]) < 0.1 || (l[2] > 0) === l[3]));
+  await pg.locator('.tp-lanes').screenshot({ path: OUT + 'training-b2-lanes-phone.png' });
   await pg.locator('.tp-b').screenshot({ path: OUT + 'training-b-phone.png' });
   check(`phone: nothing wider than the screen (${await pg.evaluate(() => document.documentElement.scrollWidth)} px)`, await pg.evaluate(() => document.documentElement.scrollWidth) <= 390);
   console.log('errors:', JSON.stringify(errs));

@@ -2,7 +2,7 @@
 const fs = require('node:fs'), path = require('node:path');
 const { chromium, APP, OUT, handle, rate } = require('./harness.cjs');
 // What the Worker serves at /now (worker/index.ts nowPage; its unit test checks the real one).
-const nowHtml = () => fs.readFileSync(path.join(__dirname, '..', 'dist', 'index.html'), 'utf8')
+const nowHtml = () => fs.readFileSync(path.join(process.env.E2E_DIST || path.join(__dirname, '..', 'dist'), 'index.html'), 'utf8')
   .replace('<title>HealthOS</title>', '<title>How now?</title>').replace('href="/manifest.webmanifest"', 'href="/now.webmanifest"')
   .replace('href="/icon-180.png"', 'href="/now-180.png"').replace('content="HealthOS" />', 'content="How now?" />');
 

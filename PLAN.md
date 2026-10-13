@@ -823,7 +823,7 @@ email get Dev tools (`#dev`): raw entry editor, generate/remove sample, wipe acc
        planted good sessions +3.5 % found; warm-ups never count; Monday weeks; no "usual" without 4 weeks behind it),
        e2e/training.cjs at 390 and 1280 px. Found on the way: a good day that always falls on the same template is
        absorbed by that lift's own line — by design (the line is the lift's normal), worth knowing for B.
-     - [ ] B · what goes with a strong session — **B1 done 13 Oct** (lib/sessionfacts; the Sleep grid's shuffle made
+     - [x] B · what goes with a strong session — **B1 done 13 Oct** (lib/sessionfacts; the Sleep grid's shuffle made
        generic): per session, carbs in the 4 h before, the band's night before, 400+ kcal a day under your usual over
        the 3 days before ("3 days under maintenance" on the board — the app doesn't know your maintenance, so your usual
        logged day; all 3 days must have food), HRV in your lowest quarter that morning, coffee in the 2 h before, evening
@@ -835,8 +835,16 @@ email get Dev tools (`#dev`): raw entry editor, generate/remove sample, wipe acc
        ask again on each band change now (Training saw a week of nights instead of 12). Checked: sessionfacts.test
        (planted carbs +3.5 % and short night −4 % found at their sizes; coffee, creatine, evening not clear; ≤1 clear in
        10 empty worlds; unknowns left out), e2e/trainingb.cjs at 390 px.
-       B2 ← next: every session against your trend with what came before it (the board's lanes).
-     - [ ] C · what training goes with afterwards
+       **B2 done 13 Oct**: every session against your trend (blue above, orange below, the grid's colours) with lanes
+       under it on the same dates: the night before, carbs in the 4 h before, the 3 days' food against usual, coffee,
+       each supplement (filled taken, hollow skipped, blank unanswered). What the grid's rows test is in white (under
+       6 h 30, 60 g+ carbs, 400+ kcal under), so the eye can check what the words say. Checked: e2e/trainingb.cjs — one
+       column per measured session, carbs and short nights highlighted exactly where the fake world put them, every bar
+       the way of its %, 390 px; a laptop screenshot looked at once. Seen on the way: the fake world's evening sessions
+       came out "likely −2.0 %" with nothing planted — they happened to follow more short nights (44 % vs 14 %), which
+       predicts −1.8 %. Honest for a raw "goes with", and the lanes show it, but the words could say when one row is
+       mostly another (idea, not built).
+     - [ ] C · what training goes with afterwards ← next
 65. [ ] **Noticing, and digests** — owner: "App should have a pretty complex n smart system of noticing patterns especially
    focusing on sleep and focus" and "AI should look at data at eod, eow, eom, and make suggestions, summaries, etc, even
    make graphs or like interesting notices". The grids (Sleep, Heart, Mind) already test what goes with sleep and focus;
