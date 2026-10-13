@@ -103,8 +103,9 @@ export type Entry =
   | { id: string; kind: "weight"; at: number; kg: number; /** From a smart scale, optional: its body-fat estimate. */ fatPct?: number }
   | { id: string; kind: "feel"; at: number; energy?: number; mood?: number; focus?: number; anxiety?: number; stress?: number; note?: string; /** What you were up to since the last check-in: "gym", "outside", your own words. */ doing?: string[] }
   /** Last night's sleep, rated in the morning check-in: 1–10, and whether falling asleep took long. One per night.
-   *  `tags`: what last night held, in a tap — "gf", "worklate", "out", "scrolled", your own words (lib/lastnight). */
-  | { id: string; kind: "sleep"; at: number; rating?: number; slow?: boolean; tags?: string[] }
+   *  `tags`: what last night held, in a tap — "gf", "worklate", "out", your own words (lib/lastnight).
+   *  `phoneMin`: about how long on the phone before sleep, 0–60 (60 = "1 h+"; PLAN 88). */
+  | { id: string; kind: "sleep"; at: number; rating?: number; slow?: boolean; tags?: string[]; phoneMin?: number }
   /** An answer to one of the AI's questions; repeated ones (same key) become a daily signal. */
   | { id: string; kind: "answer"; at: number; key: string; question: string; answer: string };
 

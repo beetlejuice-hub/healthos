@@ -323,3 +323,32 @@ describe("food and activities against sleep (PLAN 88)", () => {
     expect(bars(125).clear).toBeCloseTo(0.0008, 6); expect(bars(125).likely).toBeCloseTo(0.008, 6);
   });
 });
+
+/** 40 nights; mornings from night 4 answer "phone before sleep" (some skip it). Planted when `plant`: 30+ min → 12 min less deep, 10 min longer to fall asleep. */
+function phoneWorld(seed: number, plant: boolean) {
+  const { r, g } = rng(seed), ns: Night[] = [], sleeps: { at: number; phoneMin?: number }[] = [];
+  for (let k = 0; k < 40; k++) {
+    const eve = addDays(EVE0, k), [n] = nights([session(eve, 23.3 + g() * 0.15, 31 + g() * 0.2)], [], {}, {});
+    const phone = [0, 15, 30, 45, 60][Math.floor(r() * 5)], answered = k >= 4 && r() > 0.15, long = phone >= 30;
+    n.deep = 75 + g() * 6 - (plant && long ? 12 : 0); n.latency = 12 + Math.abs(g() * 4) + (plant && long ? 10 : 0);
+    n.asleep += g() * 15; n.low = 50 + g(); n.hrv = 45 + g() * 3; ns.push(n);
+    if (answered) sleeps.push({ at: atMinute(n.day, 8 * 60), phoneMin: phone });
+  }
+  return { ns, evs: evenings(ns, { drinks: [], caffeineAt: () => 0, workouts: [], meals: [], ratings: [], sleeps }), answered: sleeps.length };
+}
+
+describe("phone before sleep, asked in the morning (PLAN 88)", () => {
+  it("finds a planted 30+ min → less deep and longer to fall asleep; mornings not answered are left out", () => {
+    const w = phoneWorld(21, true), cells = goesWith(w.ns, w.evs, { factors: FACTORS.filter((f) => f.id === "phone") });
+    const deep = cells.find((c) => c.outcome === "deep")!, lat = cells.find((c) => c.outcome === "latency")!;
+    expect(["clear", "likely"]).toContain(deep.sure); expect(deep.toward).toBe("worse");
+    expect(["clear", "likely"]).toContain(lat.sure); expect(lat.toward).toBe("worse");
+    expect(deep.nWith + deep.nWithout).toBe(w.answered);
+    expect(w.answered).toBeLessThan(36);
+  });
+  it("nothing planted: the phone row stays quiet across 20 worlds", () => {
+    let clear = 0;
+    for (let s = 500; s < 520; s++) { const w = phoneWorld(s, false); clear += goesWith(w.ns, w.evs, { factors: FACTORS.filter((f) => f.id === "phone"), seed: s }).filter((c) => c.sure === "clear").length; }
+    expect(clear).toBeLessThanOrEqual(1);
+  }, 30_000);
+});

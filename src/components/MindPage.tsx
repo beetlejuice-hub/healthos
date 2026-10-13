@@ -11,7 +11,7 @@ import { loadBandBefore } from "../lib/band-client";
 import type { GlanceDay } from "../lib/glance";
 import type { Lanes } from "../lib/insights";
 import { FEELING_NAMES, mindFactors, mindOutcomes, moodMonth, sleepSlope, thisMorning, type CalDay, type Feeling, type MorningLink } from "../lib/mind";
-import { goesWith, type Evening, type Night } from "../lib/sleep";
+import { FACTORS, goesWith, type Evening, type Night } from "../lib/sleep";
 import { tagFactors } from "../lib/lastnight";
 import { atMinute, dayLabel, localDay, DAY } from "../lib/time";
 import type { Entry } from "../lib/types";
@@ -40,7 +40,7 @@ export function MindPage({ data, band, now, entries, halfLifeMin, days, period }
   const doneDays = useMemo(() => new Map(days.filter((d) => d.day < today).map((d) => [d.day, d])), [days, today]);
   const outcomes = useMemo(() => mindOutcomes(doneDays), [doneDays]);
   // plus your last-night tags (PLAN 90), each once it's on 5 nights; known by the morning, so this morning's line uses them
-  const factors = useMemo(() => [...mindFactors(ns, (d) => byDay.get(d)?.trained ?? false, steps), ...tagFactors(evs).map((f) => ({ ...f, when: "last night" as const }))], [ns, byDay, steps, evs]);
+  const factors = useMemo(() => [...mindFactors(ns, (d) => byDay.get(d)?.trained ?? false, steps), ...[...FACTORS.filter((f) => f.id === "phone"), ...tagFactors(evs)].map((f) => ({ ...f, when: "last night" as const }))], [ns, byDay, steps, evs]);
   const cells = useMemo(() => goesWith(ns, evs, { factors, outcomes }), [ns, evs, factors, outcomes]);
   const asleepOn = useMemo(() => { const m = new Map(ns.map((n) => [n.day, n.asleep])); return (d: string) => m.get(d) ?? null; }, [ns]);
   const month = useMemo(() => moodMonth(days, span, asleepOn), [days, span, asleepOn]);

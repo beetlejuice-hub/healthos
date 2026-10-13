@@ -19,7 +19,7 @@ import { localDay } from "../lib/time";
 import { FeelSlider } from "./FeelSlider";
 import { useBand } from "../lib/band-client";
 import { fellAsleep } from "../lib/sleep";
-import { nightLabel, nightTagOrder } from "../lib/lastnight";
+import { nightLabel, nightTagOrder, PHONE_STEPS, phoneLabel } from "../lib/lastnight";
 
 const WORDS: Record<FeelKey, string[]> = {
   energy: ["drained", "low", "ok", "steady", "high"], mood: ["low", "flat", "ok", "good", "great"],
@@ -79,7 +79,7 @@ export function HowNow({ now, always = false }: { now: number; always?: boolean 
   // whether caffeine at bedtime goes with worse sleep for you (caffeine-sleep.ts).
   const hour = new Date(now).getHours(), morning = hour >= CAF_SLEEP.morningFromHour && hour < CAF_SLEEP.morningUntilHour;
   const night = entries.find((e): e is Extract<Entry, { kind: "sleep" }> => e.kind === "sleep" && localDay(e.at) === localDay(now));
-  const rateSleep = (patch: { rating?: number; slow?: boolean; tags?: string[] }) => {
+  const rateSleep = (patch: { rating?: number; slow?: boolean; tags?: string[]; phoneMin?: number }) => {
     if (night) act.updateEntry(night.id, patch as Partial<Entry>);
     else act.addEntry({ kind: "sleep", at: Date.now(), ...patch });
   };
@@ -87,7 +87,7 @@ export function HowNow({ now, always = false }: { now: number; always?: boolean 
   // it's rated, and for a moment after to adjust; from then on one line you can tap to change — "Rate again" is for feelings.
   const sleepOpen = morning && (!night || night.rating == null || now - night.at < OPEN_MS || sleepEdit);
   const sleptLine = morning && !sleepOpen && night?.rating != null;
-  // What last night held, in a tap (PLAN 90): with gf, worked late, out, scrolled — and your own words.
+  // What last night held, in a tap (PLAN 90): with gf, worked late, out — and your own words; and the phone (PLAN 88).
   const nightOrder = useMemo(() => nightTagOrder(entries, now), [entries, now]);
   const nightTags = night?.tags ?? [];
   const toggleNight = (t: string) => rateSleep({ tags: nightTags.includes(t) ? nightTags.filter((x) => x !== t) : [...nightTags, t] });
@@ -121,14 +121,14 @@ export function HowNow({ now, always = false }: { now: number; always?: boolean 
   return (
     <div className="card hownow" id="feel">
       <h3>How now? <span>{open ? "saved as you tap" : last ? `last ${clock(last.at)}` : "tap or slide any you want to log"}</span></h3>
-      {sleptLine && <div className="hn-slept"><span>Last night <b>{night!.rating} / 10</b>{night!.slow ? " · slow to fall asleep" : ""}{nightTags.length ? ` · ${nightTags.map(nightLabel).join(", ")}` : ""}</span>
+      {sleptLine && <div className="hn-slept"><span>Last night <b>{night!.rating} / 10</b>{night!.slow ? " · slow to fall asleep" : ""}{nightTags.length ? ` · ${nightTags.map(nightLabel).join(", ")}` : ""}{night?.phoneMin != null ? ` · ${phoneLabel(night.phoneMin)}` : ""}</span>
         <button type="button" aria-label="Change last night's sleep" onClick={() => setSleepEdit(true)}>change</button></div>}
       {sleepOpen && <div className="hn-sleep">
         <FeelSlider label="Sleep" name="sleep" value={night?.rating} word={sleepWord} color="var(--ok)" empty="last night" onChange={(n) => rateSleep({ rating: n })} />
         {fell ? <p className="hn-fell" data-fell={fell.min}>Fell asleep in <b>{fell.min} min</b> — from your band{fell.usual != null ? `, ${fell.min > fell.usual + 10 ? "longer than" : fell.min < fell.usual - 10 ? "quicker than" : "about"} your usual ${fell.usual}` : ""}</p>
           : <div className="hn-tags"><button type="button" aria-pressed={!!night?.slow} onClick={() => rateSleep({ slow: !night?.slow })}>took long to fall asleep</button></div>}
         {/* once it's rated, like "What were you up to?" — the card stays small until you're answering (owner, 2 Oct: "big and bad on phone") */}
-        {(night?.rating != null || nightTags.length > 0) && <>
+        {(night?.rating != null || nightTags.length > 0 || night?.phoneMin != null) && <>
         <div className="hn-head"><b>Last night</b><em>optional · what it held</em></div>
         <div className="hn-tags hn-night" role="group" aria-label="Last night">
           {[...new Set([...nightOrder, ...nightTags])].map((t) => <button key={t} type="button" aria-pressed={nightTags.includes(t)} onClick={() => toggleNight(t)}>{nightLabel(t)}</button>)}
@@ -138,6 +138,11 @@ export function HowNow({ now, always = false }: { now: number; always?: boolean 
           <input autoFocus value={nightOwn} onChange={(e) => setNightOwn(e.target.value)} placeholder="one word: sauna, argument, gaming…" aria-label="Last night, your own word" maxLength={24} />
           <button type="submit" className="pill-btn" disabled={!tagOf(nightOwn)}>Add</button>
         </form>}
+        {/* owner, 13 Oct: "a question in the morning … estimated time of phone before bed … 0 to like an hour or more" */}
+        <div className="hn-head"><b>Phone before sleep</b><em>about how long</em></div>
+        <div className="hn-tags hn-phone" role="radiogroup" aria-label="Phone before sleep">
+          {PHONE_STEPS.map((p) => <button key={p.min} type="button" role="radio" aria-checked={night?.phoneMin === p.min} onClick={() => rateSleep({ phoneMin: night?.phoneMin === p.min ? undefined : p.min })}>{p.label}</button>)}
+        </div>
         </>}
       </div>}
       <div className="hn-sliders">

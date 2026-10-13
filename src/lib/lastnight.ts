@@ -15,10 +15,20 @@ export const NIGHT_TAGS: { tag: string; label: string }[] = [
   { tag: "gf", label: "with gf" },
   { tag: "worklate", label: "worked late" },
   { tag: "out", label: "out with friends" },
-  { tag: "scrolled", label: "scrolled in bed" },
 ];
+/** Tags no longer offered but still on old mornings: "scrolled in bed" became the phone question (PLAN 88). */
+const OLD_LABELS: Record<string, string> = { scrolled: "scrolled in bed" };
 
-export const nightLabel = (tag: string) => NIGHT_TAGS.find((t) => t.tag === tag)?.label ?? tag;
+export const nightLabel = (tag: string) => NIGHT_TAGS.find((t) => t.tag === tag)?.label ?? OLD_LABELS[tag] ?? tag;
+
+/**
+ * About how long on the phone before sleep, asked in the morning (owner, 13 Oct: "a question in the morning would be
+ * better, like estimated time of phone before bed, and i can put 0 to like an hour or more"). Minutes; 60 is "1 h+".
+ */
+export const PHONE_STEPS: { min: number; label: string }[] = [
+  { min: 0, label: "none" }, { min: 15, label: "~15 min" }, { min: 30, label: "~30 min" }, { min: 45, label: "~45 min" }, { min: 60, label: "1 h+" },
+];
+export const phoneLabel = (min: number) => (min <= 0 ? "no phone" : min >= 60 ? "phone 1 h+" : `phone ~${min} min`);
 const cap = (s: string) => s[0].toUpperCase() + s.slice(1);
 
 /** The chips to offer: the built-in ones, then your own from the last 60 days, most used first. */

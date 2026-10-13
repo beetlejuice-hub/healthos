@@ -1039,8 +1039,15 @@ below, in his words, grouped; A first (broken or wrong now), then the rest. Item
       shown. Built straight from the Mind page's "This morning" pattern, so no canvas. Checked: tonight.test (planted
       late meal and magnesium; silent when answered "didn't take"), e2e/tonight.cjs at 390 px.
    3. *Phone before bed* — owner, 13 Oct: no tap at night; "a question in the morning would be better, like estimated
-      time of phone before bed, and i can put 0 to like an hour or more". ← next
-   4. *Your sleep need and best bedtime window.*
+      time of phone before bed, and i can put 0 to like an hour or more". **Done 13 Oct:** after rating last night,
+      "Phone before sleep — about how long": none · ~15 min · ~30 min · ~45 min · 1 h+ (one choice, tap again to clear;
+      saved on that morning's sleep entry as `phoneMin`). It replaces the "scrolled in bed" chip (old mornings still
+      read). Row "On the phone 30+ min before sleep" in the Sleep, Heart and Mind grids; unanswered mornings are left
+      out; the slept line, Log and the AI say it ("phone ~30 min before sleep"). Not in Tonight (it's a morning answer).
+      Checked: sleep.test (planted 30+ min → −12 deep, +10 to fall asleep, found; quiet across 20 empty worlds; only
+      answered mornings count), e2e/tellmore.cjs at 390 px. Later, if useful: minutes as a dose (a slope) once there
+      are enough mornings.
+   4. *Your sleep need and best bedtime window.* ← next (canvas first)
    Owner's answers, 13 Oct: no "phone down" tap (the morning question instead); sleep supplements: "Rn only magnesium".
 
 ### F · Telling the app more

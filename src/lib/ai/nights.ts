@@ -6,7 +6,7 @@
 
 import type { BandData } from "../band";
 import { eveningInputs } from "../eveninputs";
-import { nightLabel } from "../lastnight";
+import { nightLabel, phoneLabel } from "../lastnight";
 import { evenings, nights, type Evening, type Night } from "../sleep";
 import { clock, DAY } from "../time";
 import type { Entry, Supplement, Workout } from "../types";
@@ -26,7 +26,7 @@ export function nightLines(ns: Night[], evs: Evening[], supplements: Pick<Supple
     const eve = [e.drinks.length > 0 && `${e.drinks.length} drink${e.drinks.length > 1 ? "s" : ""}`, e.caffeineAtBed >= 10 && `${Math.round(e.caffeineAtBed)} mg caffeine at bed`,
       e.lastMealMin != null && `last meal ${hm(e.lastMealMin)} before bed`, e.eveKcal != null && `${Math.round(e.eveKcal)} kcal from 17:00`,
       e.trained && (e.lateTrain ? "trained within 3 h of bed" : "trained that day"), e.eveStress != null && `evening stress ${e.eveStress}/10`, ...supps,
-      e.tags?.length && `last night: ${e.tags.map(nightLabel).join(", ")}`, e.rating != null && `rated it ${e.rating}/10`].filter(Boolean);
+      e.tags?.length && `last night: ${e.tags.map(nightLabel).join(", ")}`, e.phoneMin != null && `${phoneLabel(e.phoneMin)} before sleep`, e.rating != null && `rated it ${e.rating}/10`].filter(Boolean);
     return `${n.day} (night from ${n.eve}): ${band.join(", ")}${eve.length ? ` · evening before: ${eve.join(", ")}` : ""}`;
   });
 }

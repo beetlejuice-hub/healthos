@@ -56,12 +56,17 @@ function world() {
   // ---- 07:30: the card stays small until you answer; rate last night, then what it held
   check('before rating: no chips yet (the card stays compact)', await sl('sleep').count() === 1 && await pg.getByRole('group', { name: 'Last night' }).count() === 0);
   await tap('sleep', 6);
-  check('rated: "Last night" chips under the sleep question', await chip('with gf').count() === 1 && await chip('worked late').count() === 1 && await chip('out with friends').count() === 1 && await chip('scrolled in bed').count() === 1);
-  await chip('with gf').click(); await chip('worked late').click(); await chip('worked late').click(); await chip('scrolled in bed').click();
+  check('rated: "Last night" chips under the sleep question', await chip('with gf').count() === 1 && await chip('worked late').count() === 1 && await chip('out with friends').count() === 1 && await chip('scrolled in bed').count() === 0);
+  await chip('with gf').click(); await chip('worked late').click(); await chip('worked late').click();
+  // the phone, asked as a question now (PLAN 88; owner: "estimated time of phone before bed … 0 to like an hour or more")
+  const phone = (label) => pg.getByRole('radiogroup', { name: 'Phone before sleep' }).getByRole('radio', { name: label, exact: true });
+  check('"Phone before sleep": none to 1 h+', await phone('none').count() === 1 && await phone('1 h+').count() === 1);
+  await phone('~15 min').click(); await phone('~30 min').click();
   await pg.getByRole('group', { name: 'Last night' }).getByRole('button', { name: '+ your own' }).click();
   await pg.getByLabel('Last night, your own word').fill('Sauna!'); await pg.getByLabel('Last night, your own word').press('Enter');
   let s = await saved('sleep');
-  check(`one sleep entry: rating 6 and the tags, untapped "worked late" gone, own word cleaned (${JSON.stringify(s.map((x) => [x.rating, x.tags]))})`, s.length === 1 && s[0].rating === 6 && JSON.stringify(s[0].tags) === '["gf","scrolled","sauna"]');
+  check(`one sleep entry: rating 6, the tags (untapped "worked late" gone, own word cleaned), phone 30 — one answer, the last tap (${JSON.stringify(s.map((x) => [x.rating, x.tags, x.phoneMin]))})`, s.length === 1 && s[0].rating === 6 && JSON.stringify(s[0].tags) === '["gf","sauna"]' && s[0].phoneMin === 30);
+  check('…the phone answer shows as chosen', await phone('~30 min').getAttribute('aria-checked') === 'true' && await phone('~15 min').getAttribute('aria-checked') === 'false');
   check('the chips show what\'s ticked', await chip('with gf').getAttribute('aria-pressed') === 'true' && await chip('worked late').getAttribute('aria-pressed') === 'false' && await chip('sauna').getAttribute('aria-pressed') === 'true');
   await pg.locator('#feel').screenshot({ path: OUT + 'tellmore-morning.png' });
 
@@ -91,7 +96,7 @@ function world() {
   // ---- Log: tap a check-in to change its note later; last night's tags on the sleep row
   await pg.goto(APP + '#log'); await pg.waitForSelector('text=Logged today');
   const sleepRow = await pg.locator('.li', { hasText: "Last night's sleep" }).innerText();
-  check(`Log: the sleep row says what last night held (${sleepRow.replace(/\n/g, ' ')})`, /with gf, scrolled in bed, sauna/.test(sleepRow));
+  check(`Log: the sleep row says what last night held (${sleepRow.replace(/\n/g, ' ')})`, /with gf, sauna · phone ~30 min/.test(sleepRow));
   await pg.getByRole('button', { name: /^Change Feeling/ }).click();
   await pg.getByLabel('Why? A note on this check-in').fill('head hurts, parents made me mad, slept badly'); await pg.getByLabel('Why? A note on this check-in').press('Enter');
   f = await saved('feel');

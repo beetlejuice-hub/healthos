@@ -13,7 +13,7 @@ import { addDays, clock, localDay } from "../time";
 import { weekly } from "../weekly";
 import { personalSleep, ratedNights } from "../caffeine-sleep";
 import { doseCompare } from "../dose";
-import { nightLabel } from "../lastnight";
+import { nightLabel, phoneLabel } from "../lastnight";
 
 const BANDS: [string, number, number][] = [["morning (5–11)", 5, 11], ["midday (11–14)", 11, 14], ["afternoon (14–18)", 14, 18], ["evening (18–24)", 18, 24]];
 const avg = (xs: number[]) => (xs.length ? Math.round((xs.reduce((a, b) => a + b, 0) / xs.length) * 10) / 10 : null);
@@ -45,7 +45,7 @@ export function dayTimeline(state: Pick<State, "entries" | "workouts">, day: str
     if (e.kind === "food") lines.push(`${t} ate ${e.name} (${Math.round(e.macros.kcal)} kcal, P ${Math.round(e.macros.p)} g)`);
     else if (e.kind === "drink") lines.push(`${t} drank ${e.name}${e.caffeineMg ? ` (${e.caffeineMg} mg caffeine)` : ""}${e.alcoholG ? ` (${e.alcoholG} g alcohol)` : ""}`);
     else if (e.kind === "feel") lines.push(`${t} check-in: ${feelText(e) || "no ratings"}${e.doing?.length ? ` · up to: ${e.doing.join(", ")}` : ""}${e.note ? ` · my note: "${e.note}"` : ""}`);
-    else if (e.kind === "sleep" && (e.rating != null || e.tags?.length)) lines.push(`${t} ${e.rating != null ? `rated last night's sleep ${e.rating}/10` : "about last night"}${e.slow ? ", slow to fall asleep" : ""}${e.tags?.length ? ` · last night: ${e.tags.map(nightLabel).join(", ")}` : ""}`);
+    else if (e.kind === "sleep" && (e.rating != null || e.tags?.length || e.phoneMin != null)) lines.push(`${t} ${e.rating != null ? `rated last night's sleep ${e.rating}/10` : "about last night"}${e.slow ? ", slow to fall asleep" : ""}${e.tags?.length ? ` · last night: ${e.tags.map(nightLabel).join(", ")}` : ""}${e.phoneMin != null ? ` · ${phoneLabel(e.phoneMin)} before sleep` : ""}`);
     else if (e.kind === "weight") lines.push(`${t} weighed ${e.kg} kg`);
     else if (e.kind === "supp" && e.status === "skipped") lines.push(`${t} skipped a supplement`);
   }
@@ -78,7 +78,7 @@ export function moodJournal(state: Pick<State, "entries">, now: number, days = 6
   for (const e of [...state.entries].sort((a, b) => a.at - b.at)) {
     const d = localDay(e.at);
     if (d < from || e.at > now) continue;
-    if (e.kind === "sleep" && (e.rating != null || e.tags?.length) && !sleep.has(d)) sleep.set(d, `${e.rating != null ? `slept ${e.rating}` : "night"}${e.slow ? " (slow to fall asleep)" : ""}${e.tags?.length ? ` [last night: ${e.tags.map(nightLabel).join(", ")}]` : ""}`);
+    if (e.kind === "sleep" && (e.rating != null || e.tags?.length || e.phoneMin != null) && !sleep.has(d)) sleep.set(d, `${e.rating != null ? `slept ${e.rating}` : "night"}${e.slow ? " (slow to fall asleep)" : ""}${e.tags?.length ? ` [last night: ${e.tags.map(nightLabel).join(", ")}]` : ""}${e.phoneMin != null ? ` [${phoneLabel(e.phoneMin)} before sleep]` : ""}`);
     if (e.kind === "feel") {
       const v = (["energy", "mood", "focus", "stress"] as const).filter((k) => e[k] != null).map((k) => `${short(k)}${e[k]}`).join(" ");
       byDay.set(d, [...(byDay.get(d) ?? []), `${clock(e.at)} ${v}${e.doing?.length ? ` [${e.doing.join(",")}]` : ""}${e.note ? ` "${e.note}"` : ""}`]);

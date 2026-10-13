@@ -9,7 +9,7 @@ import { MIN, HOUR, addDays, localDay } from "./time";
 import type { Cell, Evening, Factor, Night } from "./sleep";
 
 /** Rows that need the night itself or a finished day, or a morning answer: not known in the evening. */
-const NOT_TONIGHT = new Set(["latebed", "nap", "steps"]);
+const NOT_TONIGHT = new Set(["latebed", "nap", "steps", "phone"]);
 
 export type TonightLine = { factor: Factor; cell: Cell; kind: "holds" | "missing" };
 

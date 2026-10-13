@@ -163,6 +163,8 @@ export type Evening = { drinks: number[]; caffeineAtBed: number; trained: boolea
   steps?: number | null; moreSteps?: boolean | null;
   /** What that morning's sleep entry says last night held (lib/lastnight); null when that morning wasn't asked. */
   tags?: string[] | null;
+  /** About how long on the phone before sleep, from that morning's answer (PLAN 88); null when not answered. */
+  phoneMin?: number | null;
   /**
    * Food and activities of the evening (PLAN 88), each null when it isn't known — an evening with no food logged isn't an
    * evening you ate nothing. kcal and carbs from 17:00 to bed, and whether that's above the middle of the nights given;
@@ -188,6 +190,8 @@ export const FACTORS: Factor[] = [
   { id: "bigeve", name: "Ate more than usual in the evening", has: (_, e) => e.moreEveKcal === true, known: (_, e) => e.moreEveKcal != null },
   { id: "carbeve", name: "More carbs than usual in the evening", has: (_, e) => e.moreEveCarbs === true, known: (_, e) => e.moreEveCarbs != null },
   { id: "latetrain", name: "Trained within 3 h of bed", has: (_, e) => e.lateTrain === true, known: (_, e) => e.lateTrain != null },
+  // owner, 13 Oct: "late night scrolling how it affects sleep score deep sleep" — the morning's answer
+  { id: "phone", name: "On the phone 30+ min before sleep", has: (_, e) => e.phoneMin != null && e.phoneMin >= 30, known: (_, e) => e.phoneMin != null },
   { id: "stress", name: "Stressed in the evening (7+)", has: (_, e) => e.eveStress != null && e.eveStress >= 7, known: (_, e) => e.eveStress != null },
 ];
 
@@ -284,7 +288,7 @@ export function evenings(ns: Night[], o: {
   drinks: { at: number; g: number }[]; caffeineAt: (t: number) => number; workouts: { start: number }[]; meals: { at: number }[]; ratings: { at: number; rating?: number }[];
   steps?: Map<string, number>;
   /** Sleep entries (the morning's rating and last night's tags). Mornings from the first one with a tag count as asked. */
-  sleeps?: { at: number; tags?: string[] }[];
+  sleeps?: { at: number; tags?: string[]; phoneMin?: number }[];
   /** PLAN 88: food with kcal and carbs; workouts with their end; check-ins with stress; supplement answers. */
   foods?: { at: number; kcal: number; c: number }[];
   sessions?: { start: number; end: number }[];
@@ -312,7 +316,7 @@ export function evenings(ns: Night[], o: {
       rating: rate?.rating ?? null,
       ...(o.steps ? { steps: st, moreSteps: st != null && mid != null ? st > mid : null } : {}),
       // Before the first tagged morning nobody was asking, so an untagged night then isn't a night without.
-      ...(o.sleeps ? { tags: sl && tagged != null && n.day >= tagged ? sl.tags ?? [] : null } : {}),
+      ...(o.sleeps ? { tags: sl && tagged != null && n.day >= tagged ? sl.tags ?? [] : null, phoneMin: sl?.phoneMin ?? null } : {}),
       ...(o.foods ? (() => {
         const e = eves[i], last = o.foods!.filter((x) => x.kcal >= 150 && x.at >= atMinute(n.eve, 15 * 60) && x.at < n.bed).at(-1);
         return { eveKcal: e?.kcal ?? null, eveCarbs: e?.c ?? null, moreEveKcal: e && kMid != null ? e.kcal > kMid : null, moreEveCarbs: e && cMid != null ? e.c > cMid : null,
