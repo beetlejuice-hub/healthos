@@ -4,6 +4,7 @@
  * last: what the band measured, then what the evening before held — the same facts the Sleep grid tests. Pure.
  */
 
+import { sleepScore } from "../sleepscore";
 import type { BandData } from "../band";
 import { eveningInputs } from "../eveninputs";
 import { nightLabel, phoneLabel } from "../lastnight";
@@ -27,7 +28,9 @@ export function nightLines(ns: Night[], evs: Evening[], supplements: Pick<Supple
       e.lastMealMin != null && `last meal ${hm(e.lastMealMin)} before bed`, e.eveKcal != null && `${Math.round(e.eveKcal)} kcal from 17:00`,
       e.trained && (e.lateTrain ? "trained within 3 h of bed" : "trained that day"), e.eveStress != null && `evening stress ${e.eveStress}/10`, ...supps,
       e.tags?.length && `last night: ${e.tags.map(nightLabel).join(", ")}`, e.phoneMin != null && `${phoneLabel(e.phoneMin)} before sleep`, e.rating != null && `rated it ${e.rating}/10`].filter(Boolean);
-    return `${n.day} (night from ${n.eve}): ${band.join(", ")}${eve.length ? ` · evening before: ${eve.join(", ")}` : ""}`;
+    // the night out of 100 as the Sleep page shows it (PLAN 97), so the AI and the page say the same number
+    const sc = sleepScore(n, e.rating, ns);
+    return `${n.day} (night from ${n.eve}): score ${sc.score}/100${sc.left.length ? ` (without ${sc.left.map((l) => l.name.toLowerCase()).join(", ")})` : ""}, ${band.join(", ")}${eve.length ? ` · evening before: ${eve.join(", ")}` : ""}`;
   });
 }
 

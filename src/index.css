@@ -1319,3 +1319,14 @@ a { color: inherit; }
 .exp-list .exp-new b { color: var(--k-ink-2); }
 .addcardio { display: grid; gap: 8px; padding-top: 6px; }
 .addcardio .grid2 { grid-template-columns: minmax(0, 1fr) auto; }
+/* the night out of 100 (PLAN 97) */
+.sl-score { display: grid; gap: 10px; padding-bottom: 12px; border-bottom: 1px solid var(--i-line); }
+.sl-score-n { display: flex; align-items: baseline; gap: 8px; }
+.sl-score-n b { font: 600 40px/1 var(--f-mono); color: var(--i-ink); }
+.sl-score-n span { font-size: 14px; color: var(--i-ink-2); }
+.sl-score-parts { display: grid; gap: 6px; }
+.sl-sp { display: grid; grid-template-columns: 86px minmax(0, 1fr) 52px; grid-template-areas: "nm tr pt" ". why why"; column-gap: 8px; align-items: center; font-size: 12.5px; color: var(--i-ink); }
+.sl-sp .nm { grid-area: nm; } .sl-sp b { grid-area: pt; font: 500 12px var(--f-mono); text-align: right; } .sl-sp b small { color: var(--i-dim); font-weight: 400; }
+.sl-sp .tr { grid-area: tr; height: 6px; border-radius: 3px; background: var(--i-line); overflow: hidden; } .sl-sp .tr i { display: block; height: 100%; border-radius: 3px; background: var(--i-ink-2); }
+.sl-sp .why { grid-area: why; font: 400 11px var(--f-mono); color: var(--i-dim); margin-top: -2px; }
+.sl-mini .v .sc { color: var(--i-ink); font-weight: 600; }

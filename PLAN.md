@@ -1169,7 +1169,17 @@ below, in his words, grouped; A first (broken or wrong now), then the rest. Item
 96. [ ] **Good / bad shades** — "think about using green and red shades for some numbers, to highlight if bad or good, and
    use shades to determine how bad or good..just subtly".
 97. [ ] **Sleep score out of 100** — "should do a 100/… pointing for my sleep based on all the sleep data, length, etc i
-   get and also add in my rating".
+   get and also add in my rating". (owner, 14 Oct: "do 1" — lib/sleepscore, components/SleepScore, Sleep page, AI lines)
+   **Phase 1 done 14 Oct:** each night out of 100 from parts shown with their points and why — length 35 (full from 7 h,
+   12.5 a missing hour), deep 10 (full from 13 %), REM 10 (from 20 %), restful 10 (awake in the night), fell asleep 5,
+   timing 5 (bedtime against your usual), heart 5 (HRV, else lowest HR, against your usual), your rating 20. What isn't
+   known (no rating yet, no stages, under 5 other nights, a measure the band didn't send) is left out, named, and the
+   rest scaled to 100. Words: 85+ great, 70+ good, 55+ okay, else rough. On the Sleep page above the night's numbers, on
+   each night in the 14-night strip, and in the AI's night lines. First weights gave a 5-hour night "71 · good" — length
+   went 30 → 35 and 12.5 an hour, heart 10 → 5: now 64 · okay. Found on the way: a night missing a measure scored NaN.
+   Checked: sleepscore.test (known answers: perfect 100, 5 h → 75, unrated scaled, 4.5/5 shown as 4.5, no NaN),
+   e2e/sleepscore.cjs at 390 px. **Phase 2 ← next:** your own sleep need (the Mind page's best window) instead of 7 h, and
+   last night's score on Today.
 99. [x] **Raised just after waking said "you said: sleep"** (14 Oct, owner: "explain the raised 1 stretch so far, and that
    7:20 - 7:45, why its elevated, waht u mean i said sleep"). The band's night ended 07:20; the 25 minutes after were
    awake, so they counted, and against a usual for 07:20–07:45 made mostly of mornings you were still asleep then, waking

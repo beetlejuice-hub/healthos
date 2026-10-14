@@ -13,6 +13,8 @@ import { addDays, atMinute, clock, dayLabel, DAY, HOUR, MIN } from "../lib/time"
 import type { Entry } from "../lib/types";
 import { useNights } from "./useNights";
 import { useWidth } from "./useWidth";
+import { SleepScore } from "./SleepScore";
+import { sleepScore, type SleepScore as SleepScoreT } from "../lib/sleepscore";
 import { NightWords } from "./NightWords";
 import { nightLabel, tagFactors, tagsComing } from "../lib/lastnight";
 import { useStore } from "../lib/store";
@@ -37,6 +39,8 @@ export function SleepNights({ data, band, now, entries, halfLifeMin }: { data: L
   // your last-night tags and your supplements (PLAN 90, 88) join the rows once each has enough nights
   const supplements = useStore((x) => x.supplements);
   const factors = useMemo(() => [...FACTORS, ...suppFactors(supplements, evs), ...tagFactors(evs)], [evs, supplements]);
+  // each night out of 100 (PLAN 97), against the nights shown
+  const scores = useMemo(() => ns.map((x, i) => sleepScore(x, evs[i]?.rating, ns)), [ns, evs]);
   const [selId, setSel] = useState<string | null>(null);
   const si = Math.max(0, ns.findIndex((n) => n.id === selId) >= 0 ? ns.findIndex((n) => n.id === selId) : ns.length - 1);
   // Measured from the first render (useWidth only looks on mount), so the box is there before the band's data is.
@@ -54,8 +58,8 @@ export function SleepNights({ data, band, now, entries, halfLifeMin }: { data: L
           {([14, 30, 90] as const).map((d) => <button key={d} type="button" aria-pressed={span === d} onClick={() => setSpan(d)}>{d} nights</button>)}
         </div>
       </div>
-      <LastNight n={n} e={e} ns={ns} evs={evs} band={band} data={data} wide={wide} w={w} />
-      <Minis ns={ns.slice(-14)} sel={n.id} onSel={setSel} w={w} />
+      <LastNight n={n} e={e} ns={ns} evs={evs} band={band} data={data} wide={wide} w={w} score={scores[si]} />
+      <Minis ns={ns.slice(-14)} scores={scores.slice(-14).map((x) => x.score)} sel={n.id} onSel={setSel} w={w} />
       <NightLog ns={ns} evs={evs} sel={n} onSel={setSel} wide={wide} w={w} workouts={data.workouts} meals={data.meals} />
       <GoesWith ns={ns} evs={evs} wide={wide} w={w} factors={factors} />
     </div>
@@ -64,7 +68,7 @@ export function SleepNights({ data, band, now, entries, halfLifeMin }: { data: L
 
 /* ------------------------------------------------------------------ B · last night, in depth */
 
-function LastNight({ n, e, ns, evs, band, data, wide, w }: { n: Night; e: Evening; ns: Night[]; evs: Evening[]; band: BandData; data: Lanes; wide: boolean; w: number }) {
+function LastNight({ n, e, ns, evs, band, data, wide, w, score }: { n: Night; e: Evening; ns: Night[]; evs: Evening[]; band: BandData; data: Lanes; wide: boolean; w: number; score: SleepScoreT }) {
   const others = ns.filter((x) => x.id !== n.id);
   const said = facts(n, e, ns, { clock, dur: (m) => (m < 60 ? `${Math.round(m)} min` : dur(m)) });
   const cw = wide ? w - 360 - 12 : w;
@@ -73,6 +77,7 @@ function LastNight({ n, e, ns, evs, band, data, wide, w }: { n: Night; e: Evenin
       <div className={`sl-b-grid${wide ? " wide" : ""}`}>
         <div className="sl-p sl-chart"><NightChart n={n} ns={ns} band={band} data={data} w={cw - 2} wide={wide} /></div>
         <div className="sl-p sl-nums">
+          <SleepScore s={score} />
           <div className="sl-asleep"><b>{dur(n.asleep)}</b> <span>asleep · {dur((n.up - n.bed) / MIN)} in bed · {Math.round((n.asleep / ((n.up - n.bed) / MIN)) * 100)} % of it asleep</span></div>
           <Bullets n={n} e={e} ns={ns} ratings={evs.map((x) => x.rating)} />
           <div className="sl-facts">
@@ -203,15 +208,15 @@ function Bullets({ n, e, ns, ratings }: { n: Night; e: Evening; ns: Night[]; rat
 }
 
 /** The last 14 nights, small; tap one to open it above. */
-function Minis({ ns, sel, onSel, w }: { ns: Night[]; sel: string; onSel: (id: string) => void; w: number }) {
+function Minis({ ns, scores, sel, onSel, w }: { ns: Night[]; scores: number[]; sel: string; onSel: (id: string) => void; w: number }) {
   const per = w >= 760 ? ns.length : 7, cw = Math.floor((w - 2) / per) - 4;
   return (
     <div className="sl-minis" role="group" aria-label="The last nights, small — tap one to open it">
-      {ns.map((n) => {
+      {ns.map((n, i) => {
         const X = (t: number) => 4 + ((clockH(t, n.eve) - 21.5) / (34 - 21.5)) * (cw - 8);
         return (
-          <button key={n.id} type="button" className="sl-mini" aria-pressed={n.id === sel} onClick={() => onSel(n.id)} style={{ width: cw }} aria-label={`Night of ${nightName(n)}: ${dur(n.asleep)} asleep`}>
-            <span className="d">{short(n)}</span><span className="v">{hmm(n.asleep)}</span>
+          <button key={n.id} type="button" className="sl-mini" aria-pressed={n.id === sel} onClick={() => onSel(n.id)} style={{ width: cw }} aria-label={`Night of ${nightName(n)}: ${dur(n.asleep)} asleep, score ${scores[i]}`} data-score={scores[i]}>
+            <span className="d">{short(n)}</span><span className="v"><b className="sc">{scores[i]}</b> · {hmm(n.asleep)}</span>
             <svg width={cw - 2} height={52} viewBox={`0 0 ${cw - 2} 52`} aria-hidden="true">
               {n.stages.map((s) => <rect key={s.start} x={X(s.start)} y={2 + ROW[s.type] * 12} width={Math.max(0.5, X(s.end) - X(s.start))} height={10} fill={ST[s.type]} />)}
             </svg>
