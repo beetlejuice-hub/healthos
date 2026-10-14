@@ -346,7 +346,7 @@ function Session({ w }: { w: Workout }) {
       {addBox}
       {cardio && cardioOn && (
         <div className="tile cardio">
-          <span className="k">{cardio.startedAt && !allDone ? `Cardio · started ${clock(cardio.startedAt)}` : "Then cardio"}</span>
+          <span className="k">{cardio.startedAt ? `Cardio · started ${clock(cardio.startedAt)}` : "Then cardio"}</span>
           <b>{cardio.what}</b>
           {!allDone && setsLeft > 0 && <span className="s">{setsLeft} set{setsLeft === 1 ? "" : "s"} still planned — they're there after, or finish without them.</span>}
           {cardio.done == null

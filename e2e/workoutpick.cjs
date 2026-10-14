@@ -61,6 +61,10 @@ const { chromium, APP, OUT, handle } = require('./harness.cjs');
   const ct = (await pg.locator('.tile.cardio').innerText()).replace(/\n/g, ' ');
   check(`started early: its tile shows, with the sets still planned (${ct})`, /Cardio · started \d\d:\d\d/i.test(ct) && /\d+ sets still planned/.test(ct));
   check('…and the sets are still there to log', await pg.getByRole('button', { name: 'Log set' }).count() === 1);
+  // the sets left done after it: still says when it started, not "Then cardio"
+  // (only "Next" waits: it ignores a tap within 0.9 s of a set, by design)
+  for (let k = 0; k < 40 && await pg.getByRole('button', { name: 'Log set' }).count(); k++) { await pg.getByRole('button', { name: 'Log set' }).click(); const nx = pg.getByRole('button', { name: /^Next:/ }); if (await nx.count()) { await pg.waitForTimeout(950); await nx.click(); } }
+  check(`all sets done after the cardio: it still says when it started (${(await pg.locator('.tile.cardio .k').innerText())})`, /Cardio · started \d\d:\d\d/i.test(await pg.locator('.tile.cardio .k').innerText()) && !/still planned/.test(await pg.locator('.tile.cardio').innerText()));
   await pg.locator('.tile.cardio').getByRole('button', { name: 'Done' }).click(); await pg.waitForTimeout(150);
   check(`cardio done (${(await pg.locator('.tile.cardio').innerText()).replace(/\n/g, ' ')})`, /✓ Done/.test(await pg.locator('.tile.cardio').innerText()));
   const w1 = (await pg.evaluate(() => JSON.parse(localStorage.getItem('healthos.v1:u-test') || '{}'))).workouts.find((w) => w.endedAt === null);
