@@ -1139,7 +1139,7 @@ below, in his words, grouped; A first (broken or wrong now), then the rest. Item
 92. [ ] **Tempo ↔ HealthOS (future)** — "in the future we should connect tempo and healthos apps so healthos can see what i
    was doing at what times and how it affected me".
 93. [ ] **Too much?** — "Also lmk if its getting too much feature or functions". Answered in chat 13 Oct.
-94. [ ] **Workout screen, 14 Oct** (owner's notes, "after ur done") — "Can take out heartrate btw from workout screen";
+94. [x] **Workout screen, 14 Oct** (owner's notes, "after ur done") — "Can take out heartrate btw from workout screen";
    "Add more exercise options so i can change if i dont wanna do an exericse or machine is used"; "Add leg pushing
    machine"; "for like biceps dumbbels is the sets count as per hand or both..guess both?..so its doubled overall?";
    "Add things like csuklya and forearm and muscles for that, and also a bit more complex muscle character"; "When i
@@ -1159,7 +1159,12 @@ below, in his words, grouped; A first (broken or wrong now), then the rest. Item
    one can be added with a tap when the day has none. Found on the way: the suggestion list closing on blur moved "+ Add
    exercise" from under the finger, so the tap missed — it now closes after the tap lands. Checked: exsearch.test (his
    words, Hungarian, every library name finds itself first, joined spellings), e2e/workoutpick.cjs at 390 px.
-   **Phase 2 ← next:** the more detailed muscle figure.
+   **Phase 2 done 14 Oct:** the figure has 16 muscles (lib/training FINE, fineOf, fineWeek): the shoulder as front, side and
+   rear delts (laterals → side, face pulls → rear, overhead presses → front + half side), the back as upper back (rows,
+   shrugs), lats (pulldowns, pull-ups; rows half) and lower back (deadlifts, back extensions), abs and obliques, forearms.
+   Counting, swaps, the weekly sets heatmap and the Training page keep the 11 groups. Checked: training.test (every library
+   exercise lands on the figure, every figure muscle has one; 9 OHP + 3 laterals → front 9, side 7.5), e2e/muscles.cjs
+   (each muscle's sets, tapping the side delts, all 16 on the figure, 390 px), screenshot looked at.
 95. [ ] **Calories from what you burn** — "My calorie intake should be calculated based on how much i burn too".
 96. [ ] **Good / bad shades** — "think about using green and red shades for some numbers, to highlight if bad or good, and
    use shades to determine how bad or good..just subtly".

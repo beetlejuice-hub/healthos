@@ -31,5 +31,22 @@ const { chromium, APP, OUT, handle } = require('./harness.cjs');
   await pg.locator('.mm').scrollIntoViewIfNeeded(); await pg.locator('.mm').screenshot({ path: OUT + 'muscles.png' });
   await pg.getByRole('button', { name: '4 weeks' }).click();
   check('4 weeks shows the weekly average (deadlifts 3 weeks ago + squats: (10 + 2) / 4 = 3)', /^Glutes: 3 hard sets$/.test(await pg.locator('.mm-fig path[aria-label^="Glutes:"]').first().getAttribute('aria-label')));
+  // the finer figure (PLAN 94; owner, 14 Oct: "a bit more complex muscle character"): side delts apart from the front ones,
+  // the back in three, abs and obliques. Add this week: 9 overhead press, 3 lateral raises, 6 rows, 4 Russian twists.
+  await pg.getByRole('button', { name: '7 days' }).click();
+  await pg.evaluate(() => { const k = 'healthos.v1:u-test', s = JSON.parse(localStorage.getItem(k) || '{}'), now = new Date('2026-10-02T12:00:00').getTime(), D = 864e5;
+    const add = (ex, n, i0) => { for (let i = 0; i < n; i++) s.entries.push({ id: ex + i, kind: 'set', at: now - 3 * D + (i0 + i) * 6e4, workoutId: 'w4', exercise: ex, kg: 20, reps: 10 }); };
+    add('Overhead press', 9, 0); add('Lateral raise', 3, 20); add('Barbell row', 6, 40); add('Russian twist', 4, 60);
+    s.workouts.push({ id: 'w4', template: 'Upper B', startedAt: now - 3 * D, endedAt: now - 3 * D + 36e5 }); localStorage.setItem(k, JSON.stringify(s)); });
+  await pg.reload(); await pg.waitForSelector('.mm');
+  const lab = (m) => pg.locator(`.mm-fig path[aria-label^="${m}:"]`).first().getAttribute('aria-label');
+  const fine = await Promise.all(['Front delts', 'Side delts', 'Rear delts', 'Upper back', 'Lats', 'Lower back', 'Abs', 'Obliques', 'Forearms'].map(lab));
+  check(`finer muscles: ${fine.join(' · ')}`, fine.join('|') === 'Front delts: 15 hard sets|Side delts: 7.5 hard sets|Rear delts: 0 hard sets|Upper back: 6 hard sets|Lats: 3 hard sets|Lower back: 0 hard sets|Abs: 0 hard sets|Obliques: 4 hard sets|Forearms: 0 hard sets');
+  await pg.locator('.mm-fig path[aria-label^="Side delts:"]').first().click();
+  check(`tap the side delts (${await pg.locator('.mm-say').innerText()})`, /^Side delts · 7\.5 hard sets in the last 7 days · moderate$/.test(await pg.locator('.mm-say').innerText()));
+  const both = await pg.locator('.mm-fig').evaluateAll((els) => els.map((f) => [...new Set([...f.querySelectorAll('path[aria-label]')].map((p) => p.getAttribute('aria-label').split(':')[0]))]));
+  check(`every muscle on the figure, front or back (${both.map((x) => x.length).join(' + ')})`, new Set(both.flat()).size === 16);
+  check(`fits the phone (${await pg.evaluate(() => document.documentElement.scrollWidth)} px)`, await pg.evaluate(() => document.documentElement.scrollWidth) <= 390);
+  await pg.locator('.mm').screenshot({ path: OUT + 'muscles-fine.png' });
   console.log('errors:', JSON.stringify(errs)); await b.close();
 })().catch((e) => { console.log('CRASH', e.message); process.exit(1); });

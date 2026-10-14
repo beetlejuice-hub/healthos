@@ -309,6 +309,51 @@ export function muscleWeek(sets: { at: number; exercise: string }[], now: number
 }
 
 /**
+ * The figure's muscles (PLAN 94, phase 2; owner, 14 Oct: "a bit more complex muscle character"): the shoulders as front,
+ * side and rear delts, the back as lats, upper back and lower back, the core as abs and obliques — so the figure can say
+ * "side delts 3 sets" while pressing covers the front ones. Counting, swaps and the Training page keep MUSCLE_GROUPS.
+ */
+export const FINE = ["Chest", "Front delts", "Side delts", "Rear delts", "Biceps", "Triceps", "Forearms", "Upper back", "Lats", "Lower back", "Abs", "Obliques", "Quads", "Hamstrings", "Glutes", "Calves"] as const;
+export type Fine = (typeof FINE)[number];
+const SIDE_DELTS = new Set(["Lateral raise", "Cable lateral raise", "Machine lateral raise", "Upright row"]);
+const REAR_DELTS = new Set(["Face pull", "Rear delt fly", "Reverse pec deck"]);
+const OVERHEAD = new Set(["Overhead press", "DB shoulder press", "Shoulder press machine", "Arnold press"]);
+const ROWS = new Set(["Barbell row", "DB row", "Seated cable row", "T-bar row", "Chest-supported row", "Machine row", "Pendlay row"]);
+const UPPER_BACK = new Set(["Shrugs", "Rack pull", "Upright row", "Face pull", "Reverse pec deck", "Farmer's carry"]);
+const LOWER_BACK = new Set(["Back extension", "Deadlift", "Good morning"]);
+const OBLIQUES = new Set(["Russian twist", "Side plank", "Pallof press", "Farmer's carry"]);
+
+/** An exercise's figure muscles, from its groups: which delts, which part of the back, abs or obliques. */
+export function fineOf(exercise: string): Partial<Record<Fine, number>> {
+  const out: Partial<Record<Fine, number>> = {};
+  const add = (m: Fine, f: number) => { out[m] = Math.max(out[m] ?? 0, f); };
+  for (const [g, f] of Object.entries(MUSCLES[exercise] ?? {})) {
+    if (g === "Shoulders") {
+      if (SIDE_DELTS.has(exercise)) add("Side delts", f);
+      else if (REAR_DELTS.has(exercise)) add("Rear delts", f);
+      else { add("Front delts", f); if (OVERHEAD.has(exercise)) add("Side delts", 0.5); }
+    } else if (g === "Back") {
+      if (ROWS.has(exercise)) { add("Upper back", f); add("Lats", f / 2); }
+      else if (UPPER_BACK.has(exercise)) add("Upper back", f);
+      else if (LOWER_BACK.has(exercise)) add("Lower back", f);
+      else add("Lats", f);
+    } else if (g === "Core") add(OBLIQUES.has(exercise) ? "Obliques" : "Abs", f);
+    else add(g as Fine, f);
+  }
+  return out;
+}
+
+/** Hard sets per figure muscle, per week, over the last `weeks` weeks before `now` (secondary muscles count half). */
+export function fineWeek(sets: { at: number; exercise: string }[], now: number, weeks = 1): Record<Fine, number> {
+  const per: Partial<Record<Fine, number>> = {};
+  for (const s of working(sets as { at: number; exercise: string; warmup?: boolean }[])) {
+    if (s.at > now || s.at <= now - weeks * 7 * 86_400_000) continue;
+    for (const [m, f] of Object.entries(fineOf(s.exercise)) as [Fine, number][]) per[m] = (per[m] ?? 0) + f;
+  }
+  return Object.fromEntries(FINE.map((m) => [m, Math.round(((per[m] ?? 0) / weeks) * 10) / 10])) as Record<Fine, number>;
+}
+
+/**
  * Does this exercise usually start with a warm-up? (PLAN 80; owner, 13 Oct: "1 warmup 3 w normal weight but sometimes just
  * 3"). Yes when at least half of its last 3 sessions before this workout had one; never done before: no — the first set
  * offers "Warm-up first" instead, and the habit is learned from there.

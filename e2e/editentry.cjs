@@ -47,7 +47,10 @@ const drink = { id: 'drink:off:59900:330', name: 'Protein coffee 330 ml', ml: 33
   check('Cancel leaves it as it was', (await st()).entries.find((e) => e.id === 'e2').macros.f === 35);
   // the usual drink, one tap on Today: protein comes along
   await pg.goto(APP + '#today'); await pg.waitForTimeout(300);
-  await pg.getByRole('button', { name: '+ Protein coffee 330 ml' }).click(); await pg.waitForTimeout(150);
+  // wait for it to be saved: the store writes 150 ms after a change, and a read at 150 ms lost the race under load
+  const drinks0 = (await st()).entries.filter((e) => e.kind === 'drink').length;
+  await pg.getByRole('button', { name: '+ Protein coffee 330 ml' }).click();
+  await pg.waitForFunction((n) => JSON.parse(localStorage.getItem('healthos.v1:u-test') || '{}').entries.filter((e) => e.kind === 'drink').length > n, drinks0, { timeout: 5000 }).catch(() => {});
   const last = (await st()).entries.filter((e) => e.kind === 'drink').sort((a, b) => b.at - a.at)[0];
   check(`one-tap usual drink keeps its protein (${JSON.stringify({ p: last.p, c: last.c, f: last.f })})`, last.p === 25 && last.c === 9 && last.f === 2.5);
   check(`fits the phone (${await pg.evaluate(() => document.documentElement.scrollWidth)} px)`, await pg.evaluate(() => document.documentElement.scrollWidth) <= 390);

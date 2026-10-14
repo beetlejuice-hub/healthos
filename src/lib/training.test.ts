@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { dayStats, exerciseHistory, mainMuscle, nextTemplate, sameMuscle, sessionPlan, templateProblems, tidyWorkouts, e1rm, e1rmHistory, setsPerMuscle, suggestNext, volume, isDumbbell, warmsUp, warmKg, working, isBest } from "./training";
+import { dayStats, exerciseHistory, mainMuscle, nextTemplate, sameMuscle, sessionPlan, templateProblems, tidyWorkouts, e1rm, e1rmHistory, setsPerMuscle, suggestNext, volume, isDumbbell, warmsUp, warmKg, working, isBest, MUSCLES } from "./training";
 
 describe("e1rm — Epley", () => {
   it("estimates a one-rep max", () => {
@@ -168,5 +168,33 @@ describe("warm-ups (PLAN 80)", () => {
     expect(warmKg(62.5, "Bench press")).toBe(32.5);
     expect(warmKg(22, "Incline DB press")).toBe(11);
     expect(warmKg(2.5, "Bench press")).toBe(2.5);
+  });
+});
+
+describe("the figure's muscles (PLAN 94, phase 2)", () => {
+  it("which delts, which part of the back, abs or obliques", async () => {
+    const { fineOf } = await import("./training");
+    expect(fineOf("Lateral raise")).toEqual({ "Side delts": 1 });
+    expect(fineOf("Face pull")).toEqual({ "Rear delts": 1, "Upper back": 0.5 });
+    expect(fineOf("Overhead press")).toEqual({ "Front delts": 1, "Side delts": 0.5, Triceps: 0.5 });
+    expect(fineOf("Bench press")).toEqual({ Chest: 1, Triceps: 0.5, "Front delts": 0.5 });
+    expect(fineOf("Lat pulldown")).toEqual({ Lats: 1, Biceps: 0.5 });
+    expect(fineOf("Barbell row")).toEqual({ "Upper back": 1, Lats: 0.5, Biceps: 0.5 });
+    expect(fineOf("Deadlift")).toEqual({ Glutes: 1, Hamstrings: 0.5, "Lower back": 0.5 });
+    expect(fineOf("Russian twist")).toEqual({ Obliques: 1 });
+    expect(fineOf("Plank")).toEqual({ Abs: 1 });
+    expect(fineOf("My own lift")).toEqual({});
+  });
+  it("every library exercise lands on the figure, and every figure muscle has an exercise", async () => {
+    const { fineOf, FINE } = await import("./training");
+    const hit = new Set<string>();
+    for (const n of Object.keys(MUSCLES)) { const f = fineOf(n); expect(Object.keys(f).length).toBeGreaterThan(0); for (const m of Object.keys(f)) { expect(FINE).toContain(m); hit.add(m); } }
+    expect([...hit].sort()).toEqual([...FINE].sort());
+  });
+  it("a week: side delts counted apart from the front — 9 sets of OHP + 3 of lateral raises", async () => {
+    const { fineWeek } = await import("./training");
+    const now = Date.UTC(2026, 9, 14, 18), sets = [...Array(9)].map((_, i) => ({ at: now - (i + 1) * 3600_000, exercise: "Overhead press" })).concat([...Array(3)].map((_, i) => ({ at: now - (i + 1) * 60_000, exercise: "Lateral raise" })));
+    const w = fineWeek(sets, now);
+    expect([w["Front delts"], w["Side delts"], w["Rear delts"], w.Triceps]).toEqual([9, 7.5, 0, 4.5]);
   });
 });

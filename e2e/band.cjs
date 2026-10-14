@@ -134,7 +134,9 @@ const { chromium, APP, OUT, handle } = require('./harness.cjs');
   await pg.mouse.move(0, 0);
 
   // 4. Google said no.
-  await pg.goto(APP + '#settings/band-failed?why=you%20said%20no%20on%20Google%27s%20page'); await pg.reload();
+  // a fresh load at that address, as Google's redirect is — not a hash change and a reload: the card reads the address and
+  // tidies it to #settings, so a reload after that (slower when 4 suites run at once) found no message to show
+  await pg.goto('about:blank'); await pg.goto(APP + '#settings/band-failed?why=you%20said%20no%20on%20Google%27s%20page');
   await pg.waitForFunction(() => /Didn't connect/.test(document.querySelector('.card.band')?.textContent ?? ''), null, { timeout: 15000 }).catch(() => {});
   check('a "no" on Google\'s page says so, in words', /Didn't connect: you said no on Google's page/.test(await card.innerText()));
 
