@@ -1301,3 +1301,10 @@ a { color: inherit; }
 .tp-lanes rect.up { fill: rgba(79, 134, 220, .85); } .tp-lanes rect.down { fill: rgba(217, 130, 43, .85); }
 .tp-lanes .hot { fill: var(--i-ink); } .tp-lanes .dim { fill: var(--i-line-2); }
 .tp-lanes .dim-fill { fill: var(--i-ink-2); } .tp-lanes .hollow { fill: none; stroke: var(--i-ink-2); stroke-width: 1.2; }
+.tp-c { display: grid; gap: 12px; min-width: 0; }
+.tp-row.halves { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: start; }
+.tp-weeks .tp-lname, .tp-back .tp-lname { fill: var(--i-ink-2); font: 500 11px var(--f-plex, inherit); }
+.tp-weeks rect.kg { fill: var(--gym); } .tp-weeks rect.kg.so-far { fill-opacity: .4; }
+.tp-weeks .en-line { fill: none; stroke: var(--mood); stroke-width: 2; stroke-linejoin: round; }
+.tp-weeks .en-dot { fill: var(--mood); stroke: var(--i-panel); stroke-width: 1.5; } .tp-weeks .en-dot.so-far { fill: var(--i-panel); stroke: var(--mood); }
+.tp-back .back-dot { fill: var(--hr); fill-opacity: .85; stroke: var(--i-panel); stroke-width: 1; }

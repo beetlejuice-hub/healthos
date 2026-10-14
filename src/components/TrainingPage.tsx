@@ -1,8 +1,8 @@
 /**
  * Insights → Training (PLAN 64; owner, 13 Oct, on the three boards: "I like all of them … looks like all serve a diff
  * thing" → "go"). A · your lifts: this week against your usual weeks, each main lift against its own trend, recent
- * sessions as ±% against those trends, working sets per muscle. B and C follow (what goes with a strong session; what
- * training goes with afterwards). Numbers from lib/liftstrength; this file only draws.
+ * sessions as ±% against those trends, working sets per muscle. B: what goes with a strong session. C (TrainingAfter):
+ * what training goes with afterwards. Numbers from lib/liftstrength and lib/sessionfacts; this file only draws.
  */
 
 import { useEffect, useMemo, type ReactElement } from "react";
@@ -15,10 +15,13 @@ import { mainLifts, sessions, setsPerMuscleWeek, thisWeek, type LiftTrend, type 
 import { nextTemplate, suggestNext, type LoggedSet } from "../lib/training";
 import { clock, dayLabel } from "../lib/time";
 import type { EntryOf } from "../lib/types";
+import type { HrMinute } from "../lib/band";
 import { useWidth } from "./useWidth";
+import { TrainingAfter } from "./TrainingAfter";
 
 const kg0 = (v: number) => Math.round(v).toLocaleString("en-GB");
 const sgn = (v: number, d = 1) => { const t = Math.abs(v).toFixed(d); return Number(t) === 0 ? `±${t}` : `${v > 0 ? "+" : "−"}${t}`; };
+const NO_HR: HrMinute[] = [];
 const MON = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
 export function TrainingPage({ now }: { now: number }) {
@@ -38,6 +41,8 @@ export function TrainingPage({ now }: { now: number }) {
   const ns = useMemo(() => (band ? nights(band.sleep, band.hr, band.rhr, band.hrv) : []), [band]);
   const supplements = useStore((x) => x.supplements);
   const facts = useMemo(() => sessionFacts(ss, entries, ns), [ss, entries, ns]);
+  // C: every workout (cardio too) is left out of your usual heart rate, and the hour after it
+  const spans = useMemo(() => workouts.flatMap((x) => (x.endedAt ? [{ start: x.startedAt, end: x.endedAt }] : [])), [workouts]);
   if (!ss.length) return null;
   // what's next: the template after the last one done, its first lift as last time said (double progression)
   const next = nextTemplate(templates, workouts), first = next?.exercises[0];
@@ -67,6 +72,7 @@ export function TrainingPage({ now }: { now: number }) {
         {muscles.length > 0 && <Muscles rows={muscles} />}
       </div>
       <StrongSessions ss={ss} facts={facts} supplements={supplements} w={w} wide={wide} />
+      <TrainingAfter ss={ss} ns={ns} entries={entries} hr={band?.hr ?? NO_HR} spans={spans} now={now} w={w} wide={wide} band={!!band} />
     </div>
   );
 }

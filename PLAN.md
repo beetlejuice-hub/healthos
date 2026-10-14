@@ -795,7 +795,7 @@ email get Dev tools (`#dev`): raw entry editor, generate/remove sample, wipe acc
    times stricter. Taken at the same time every day → says there's nothing to compare yet. Checked: suppafter.test
    (planted +6 bpm found, coffee-adjacent intakes left out, planted mood found, nothing found where nothing's planted,
    time-of-day not credited), e2e/suppafter.cjs (30 fake days, 390 px phone).
-64. [ ] **Training page** — canvas first. Owner: "track strength trends, how good i felt against how much work i do in gym,
+64. [x] **Training page** (A, B, C all done 13–14 Oct) — canvas first. Owner: "track strength trends, how good i felt against how much work i do in gym,
    add in heart bpm, add in sleep quality, when im going gym, supplements, food". And (9 Oct): "Make sure app sees
    connection between food intake, calorie, carbs, and strength in gym, etc." Idea: a session's strength as each lift's
    best set against that lift's own trend (so progress isn't credited to food), tested against carbs/kcal in the 4 h
@@ -844,7 +844,22 @@ email get Dev tools (`#dev`): raw entry editor, generate/remove sample, wipe acc
        came out "likely −2.0 %" with nothing planted — they happened to follow more short nights (44 % vs 14 %), which
        predicts −1.8 %. Honest for a raw "goes with", and the lanes show it, but the words could say when one row is
        mostly another (idea, not built).
-     - [ ] C · what training goes with afterwards ← next
+     - [x] C · what training goes with afterwards — **done 14 Oct** (lib/aftertraining, components/TrainingAfter):
+       the grid — trained that day (training days against rest days), heavy session (more kg than that workout's last
+       6 times, once it has 3) and trained from 17:00 (both only on training days, so sessions against sessions) →
+       asleep and deep that night, HRV and resting HR the next morning, energy and mood the next day; days from your
+       first logged session only (before it a day without one isn't a known rest day). Each week's kg lifted, and under
+       it on the same weeks the average energy from check-ins (two charts; the weeks' link tested, whole weeks only).
+       Heart rate back to usual after each session, each against the usual of its own two weeks before (so getting
+       fitter doesn't move the bar), with the line through them and how sure. Checked: aftertraining.test (planted
+       heavy → HRV −6 found at −3.5…−8.5; nothing else clear; ≤1 clear in 10 empty worlds; heavy unknown until 3 of a
+       template, ~half heavy despite progression; weeks to now; a planted kg ↔ energy link found, none not clear;
+       recovery 1 min/week faster found; flat not clear; everyday HR falling 6 bpm not read as a recovery change —
+       fails with one usual for all; band off after a session → left out, band on and never back → counted),
+       e2e/trainingc.cjs at 390 and 1280 px (HRV −5.0 found, clear; nothing else clear; 13 weekly bars with the world's
+       kg; recovery "about 13 min faster than in Jul (clear)" for ~11 planted). Limit: the board's 0.6 min/week only
+       reaches p ≈ 0.02 in 12 weeks with a reading a minute — a real change needs to be about a minute a week, or more
+       weeks, to show.
 65. [ ] **Noticing, and digests** — owner: "App should have a pretty complex n smart system of noticing patterns especially
    focusing on sleep and focus" and "AI should look at data at eod, eow, eom, and make suggestions, summaries, etc, even
    make graphs or like interesting notices". The grids (Sleep, Heart, Mind) already test what goes with sleep and focus;
@@ -1124,4 +1139,19 @@ below, in his words, grouped; A first (broken or wrong now), then the rest. Item
 92. [ ] **Tempo ↔ HealthOS (future)** — "in the future we should connect tempo and healthos apps so healthos can see what i
    was doing at what times and how it affected me".
 93. [ ] **Too much?** — "Also lmk if its getting too much feature or functions". Answered in chat 13 Oct.
+94. [ ] **Workout screen, 14 Oct** (owner's notes, "after ur done") — "Can take out heartrate btw from workout screen";
+   "Add more exercise options so i can change if i dont wanna do an exericse or machine is used"; "Add leg pushing
+   machine"; "for like biceps dumbbels is the sets count as per hand or both..guess both?..so its doubled overall?";
+   "Add things like csuklya and forearm and muscles for that, and also a bit more complex muscle character"; "When i
+   want to do a diff exercise that not in day i should be able to choose one from all the already made ones and when
+   typing it should appear not make a completely new exercise thats the same"; "Should be able to start cardio even
+   when not done w all exercises..like starting early".
+95. [ ] **Calories from what you burn** — "My calorie intake should be calculated based on how much i burn too".
+96. [ ] **Good / bad shades** — "think about using green and red shades for some numbers, to highlight if bad or good, and
+   use shades to determine how bad or good..just subtly".
+97. [ ] **Sleep score out of 100** — "should do a 100/… pointing for my sleep based on all the sleep data, length, etc i
+   get and also add in my rating".
+98. [ ] **AI, soon** — "it should look at all the data, see whatsup, tell me clever tips, what to improve, and a whole bunch
+   of stuff.. it should recommend me, or just understand protocols i give him, and help me set up in app, or just tell
+   me to tell you to set up correctly in app". With #65, #67, #91 (waits on the AI key).
 
