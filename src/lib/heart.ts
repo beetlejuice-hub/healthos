@@ -182,14 +182,22 @@ export function raisedStretches(hr: HrMinute[], sleep: Pick<SleepSession, "start
   return out;
 }
 
-export type Why = { kind: "moving" | "coffee" | "drinks" | "meal" | "said" | "stress"; at: number; tags?: string[]; level?: number; steps?: number };
+export type Why = { kind: "woke" | "moving" | "coffee" | "drinks" | "meal" | "said" | "stress"; at: number; tags?: string[]; level?: number; steps?: number };
+/** A stretch starting this soon after the band says you woke is waking up (owner, 14 Oct, on 07:20–07:45 "you said: sleep"). */
+export const WOKE_MIN = 60;
+/** Your own words for having slept say what came before a check-in, not what raised your heart rate after waking. */
+const SLEEP_WORDS = /^(sleep|sleeping|slept|asleep|bed|nap|napping|napped|woke|wakeup)$/;
 /**
- * What's around a stretch that could go with it: walking during it (the band's steps, PLAN 66 — so a walk isn't asked
+ * What's around a stretch that could go with it: waking up just before it (the band's night ending in the hour before —
+ * your usual for that time is mostly asleep), walking during it (the band's steps, PLAN 66 — so a walk isn't asked
  * about), coffee in the 2 hours before, drinks in the 3, a meal in the 90 minutes, what you said you were doing or a
  * stressful check-in around it.
  */
-export function whyRaised(r: Pick<Raised, "start" | "end">, entries: { kind: string; at: number; [k: string]: unknown }[], steps: StepBucket[] = []): Why[] {
+export function whyRaised(r: Pick<Raised, "start" | "end">, entries: { kind: string; at: number; [k: string]: unknown }[], steps: StepBucket[] = [], sleep: Pick<SleepSession, "start" | "end">[] = []): Why[] {
   const out: Why[] = [];
+  // the stretch's 5-minute buckets can start up to 5 minutes before the minute you woke
+  const woke = sleep.filter((s) => s.end <= r.start + 5 * MIN && s.end >= r.start - WOKE_MIN * MIN).sort((a, b) => b.end - a.end)[0];
+  if (woke) out.push({ kind: "woke", at: woke.end });
   const w = walked(steps, r.start, r.end);
   if (w != null) out.push({ kind: "moving", at: r.start, steps: w });
   for (const e of entries) {
@@ -198,7 +206,7 @@ export function whyRaised(r: Pick<Raised, "start" | "end">, entries: { kind: str
     else if (e.kind === "drink" && (e.alcoholG as number) > 0 && before(180)) out.push({ kind: "drinks", at: e.at });
     else if (e.kind === "food" && ((e.macros as { kcal: number } | undefined)?.kcal ?? 0) >= 300 && before(90)) out.push({ kind: "meal", at: e.at });
     else if (e.kind === "feel" && e.at >= r.start - 30 * MIN && e.at <= r.end + 30 * MIN) {
-      const doing = (e.doing as string[] | undefined) ?? [];
+      const doing = ((e.doing as string[] | undefined) ?? []).filter((t) => !SLEEP_WORDS.test(t));
       if (doing.length) out.push({ kind: "said", at: e.at, tags: doing });
       else if ((e.stress as number | undefined) != null && (e.stress as number) >= 7) out.push({ kind: "stress", at: e.at, level: e.stress as number });
     }

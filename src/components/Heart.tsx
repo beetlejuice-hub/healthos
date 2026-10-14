@@ -6,7 +6,7 @@
  */
 
 import { useEffect, useMemo, useState, type MouseEvent, type PointerEvent } from "react";
-import type { BandData, HrMinute, StepBucket } from "../lib/band";
+import type { BandData, HrMinute, SleepSession, StepBucket } from "../lib/band";
 import { loadBandBefore } from "../lib/band-client";
 import type { Check } from "../lib/feelgraph";
 import { aroundChecks, awakeByDay, dayNumbers, heartOutcomes, raisedStretches, roll, whyRaised, CHECK_MIN_N, type AroundChecks, type AwakeDay, type Raised, type Why } from "../lib/heart";
@@ -222,12 +222,12 @@ function OneDay({ band, data, day, today, now, onDay, w }: { band: BandData; dat
         </div>
         <UsualBandWhy usual={u} />
       </div>
-      <RaisedList raised={raised} data={data} steps={band.steps ?? []} isToday={isToday} now={now} />
+      <RaisedList raised={raised} data={data} steps={band.steps ?? []} sleep={band.sleep} isToday={isToday} now={now} />
     </section>
   );
 }
 
-const WHY_WORDS: Record<Why["kind"], string> = { moving: "on the move", coffee: "after coffee", drinks: "after drinks", meal: "after a meal", said: "you said", stress: "a stressful check-in" };
+const WHY_WORDS: Record<Why["kind"], string> = { woke: "just woke up", moving: "on the move", coffee: "after coffee", drinks: "after drinks", meal: "after a meal", said: "you said", stress: "a stressful check-in" };
 /** What explains a stretch, in words: "on the move — 1,240 steps · after coffee 13:40 · you said: outside". */
 const whyText = (ws: Why[]) => ws.map((w) => (w.kind === "moving" ? `on the move — ${w.steps!.toLocaleString("en-US")} steps` : w.kind === "said" ? `you said: ${w.tags!.map(labelOf).join(", ")}` : w.kind === "stress" ? `stress ${w.level} at ${clock(w.at)}` : `${WHY_WORDS[w.kind]} ${clock(w.at)}`)).join(" · ");
 
@@ -236,7 +236,7 @@ const whyText = (ws: Why[]) => ws.map((w) => (w.kind === "moving" ? `on the move
  * what i was doing by either reading data, or straigh up asking me"). An answer is saved like a check-in's "what I was
  * doing", in the middle of the stretch, so it explains it from then on and counts wherever "doing" counts.
  */
-function RaisedList({ raised, data, steps, isToday, now }: { raised: Raised[]; data: Lanes; steps: StepBucket[]; isToday: boolean; now: number }) {
+function RaisedList({ raised, data, steps, sleep, isToday, now }: { raised: Raised[]; data: Lanes; steps: StepBucket[]; sleep: SleepSession[]; isToday: boolean; now: number }) {
   const entries = useStore((s) => s.entries);
   const tags = useMemo(() => doingOrder(entries, now).slice(0, 6), [entries, now]);
   const [own, setOwn] = useState<Record<number, string>>({});
@@ -253,7 +253,7 @@ function RaisedList({ raised, data, steps, isToday, now }: { raised: Raised[]; d
     <div className="sl-p hp-raised" aria-label="Raised stretches">
       <span className="cmp-k">Raised · {raised.length} {raised.length === 1 ? "stretch" : "stretches"}{isToday ? " so far" : ""}</span>
       {raised.map((r) => {
-        const why = whyRaised(r, logged, steps);
+        const why = whyRaised(r, logged, steps, sleep);
         return (
           <div key={r.start} className="hp-raised-row" data-level={r.level} data-explained={why.length > 0}>
             <div className="hp-raised-h"><b>{clock(r.start)}–{clock(r.end)}</b><span className="hp-raised-x">+{Math.round(r.excess)} bpm · {r.level}</span><span className="hp-raised-p">peak {Math.round(r.peak)}</span></div>

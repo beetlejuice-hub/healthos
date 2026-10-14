@@ -47,12 +47,15 @@ function world({ seed = 7, everyMin = 1 } = {}) {
         v += g() * 2;
         // planted raised stretches (PLAN 62): today after the 14:15 coffee; yesterday morning with nothing logged near it
         if ((today && h >= 15.6 && h < 16.25) || (k === 1 && h >= 10.75 && h < 11.5)) v += 18;
+        // two days ago, the 25 minutes after the band's night ends (owner, 14 Oct: 07:20–07:45 "you said: sleep")
+        if (k === 2 && m >= up && m < up + 25 * MIN) v += 22;
       }
       if (m >= T(-0.6) && m < T(24)) { const a = Math.round(v); hr.push([m, a, a - 2, a + 3]); }
     }
     coffees.forEach((at, i) => entries.push({ id: `c${k}${i}`, kind: 'drink', at, name: 'Coffee', ml: 250, caffeineMg: 95, alcoholG: 0, kcal: 2 }));
     if (drinks) [20.6, 21.7].forEach((hh, i) => entries.push({ id: `b${k}${i}`, kind: 'drink', at: T(hh), name: 'Beer', ml: 500, caffeineMg: 0, alcoholG: 20, kcal: 210 }));
     checks.forEach((c, i) => entries.push({ id: `f${k}${i}`, kind: 'feel', at: c.at, stress: c.stress, mood: 6 }));
+    if (k === 2) entries.push({ id: 'fwake', kind: 'feel', at: up + 20 * MIN, mood: 6, doing: ['sleep'] });
     entries.push({ id: 'l' + k, kind: 'food', at: T(12.9), name: 'Lunch', grams: 400, macros: { kcal: 700, p: 40, c: 80, f: 22 } });
     prevDrinks = drinks;
   }
@@ -133,6 +136,11 @@ function world({ seed = 7, everyMin = 1 } = {}) {
   const said = (await pg.evaluate(() => JSON.parse(localStorage.getItem('healthos.v1:u-test') || '{}'))).entries.filter((e) => e.kind === 'feel' && e.doing?.includes('outside') && e.mood == null);
   check(`answered "outside": saved as what you were doing, mid-stretch, and now explained (${rr && rr[2].slice(0, 60)})`, said.length === 1 && new Date(said[0].at).getHours() === 11 && !!rr && rr[1] === 'true' && /you said: outside/.test(rr[2]));
   await pg.locator('.hp-raised').screenshot({ path: OUT + 'heartpage-raised.png' });
+  // the day before that: raised just after the band's night ended, and a check-in saying "sleep" — waking up, not "you said"
+  await pg.getByRole('button', { name: 'The day before' }).first().click(); await pg.waitForTimeout(250);
+  const woke = (await rrows()).find((x) => /^0[67]:/.test(x[2]));
+  check(`raised just after waking: "just woke up", not "you said: sleep" (${woke && woke[2].slice(0, 70)})`, !!woke && woke[1] === 'true' && /just woke up 0[67]:\d\d/.test(woke[2]) && !/you said/.test(woke[2]));
+  await pg.getByRole('button', { name: 'The day after' }).first().click(); await pg.waitForTimeout(200);
   await pg.getByRole('button', { name: 'The day after' }).first().click(); await pg.waitForTimeout(200);
 
   // mornings

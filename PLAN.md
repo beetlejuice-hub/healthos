@@ -1151,6 +1151,13 @@ below, in his words, grouped; A first (broken or wrong now), then the rest. Item
    use shades to determine how bad or good..just subtly".
 97. [ ] **Sleep score out of 100** — "should do a 100/… pointing for my sleep based on all the sleep data, length, etc i
    get and also add in my rating".
+99. [x] **Raised just after waking said "you said: sleep"** (14 Oct, owner: "explain the raised 1 stretch so far, and that
+   7:20 - 7:45, why its elevated, waht u mean i said sleep"). The band's night ended 07:20; the 25 minutes after were
+   awake, so they counted, and against a usual for 07:20–07:45 made mostly of mornings you were still asleep then, waking
+   looks +21. The only thing logged near it was a check-in tagged with his own word "sleep" (what came *before* it), shown
+   as the reason. Now a stretch starting within an hour of the band's night ending says "just woke up 07:20" (not asked),
+   and sleep words on a check-in aren't offered as a reason. Checked: heart.test (fails without the fix — gave "said"),
+   e2e/heartpage.cjs plants it two days back (without the fix the row read "you said: sleep", with it "just woke up").
 98. [ ] **AI, soon** — "it should look at all the data, see whatsup, tell me clever tips, what to improve, and a whole bunch
    of stuff.. it should recommend me, or just understand protocols i give him, and help me set up in app, or just tell
    me to tell you to set up correctly in app". With #65, #67, #91 (waits on the AI key).

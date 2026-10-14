@@ -195,6 +195,14 @@ describe("raised stretches", () => {
     expect(whyRaised(r, [{ kind: "feel", at: T(D0, 14.2), stress: 8 }])).toEqual([{ kind: "stress", at: T(D0, 14.2), level: 8 }]);
     expect(whyRaised(r, [])).toEqual([]);
   });
+  it("just after waking (owner, 14 Oct: 07:20–07:45 said \"you said: sleep\"): waking up explains it; sleep words don't", () => {
+    const r = { start: T(D0, 7) + 20 * 60_000, end: T(D0, 7) + 45 * 60_000 }, night = [{ start: T(D0, 0) - 30 * 60_000, end: T(D0, 7) + 22 * 60_000 }];
+    const said = [{ kind: "feel", at: T(D0, 7) + 40 * 60_000, doing: ["sleep"] }];
+    expect(whyRaised(r, said, [], night)).toEqual([{ kind: "woke", at: night[0].end }]);
+    expect(whyRaised(r, said)).toEqual([]); // no night from the band: asked, not "you said: sleep"
+    expect(whyRaised(r, [{ kind: "feel", at: T(D0, 7.6), doing: ["sleep", "phone"] }]).map((w) => w.tags)).toEqual([["phone"]]);
+    expect(whyRaised({ start: T(D0, 9), end: T(D0, 9.5) }, [], [], night)).toEqual([]); // 1 h 40 after waking: not waking up
+  });
   it("walking during it (PLAN 66): explained by the band's steps — no need to ask; pottering about isn't walking", () => {
     const r = { start: T(D0, 14), end: T(D0, 14.75) };
     const walk = [0, 1, 2, 3].map((i) => [T(D0, 14) + i * 5 * 60_000, 5, 480] as [number, number, number]);
