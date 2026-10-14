@@ -1330,3 +1330,4 @@ a { color: inherit; }
 .sl-sp .tr { grid-area: tr; height: 6px; border-radius: 3px; background: var(--i-line); overflow: hidden; } .sl-sp .tr i { display: block; height: 100%; border-radius: 3px; background: var(--i-ink-2); }
 .sl-sp .why { grid-area: why; font: 400 11px var(--f-mono); color: var(--i-dim); margin-top: -2px; }
 .sl-mini .v .sc { color: var(--i-ink); font-weight: 600; }
+.hn-score { color: var(--c-ink); font-weight: 600; text-decoration: underline; text-decoration-color: color-mix(in srgb, currentColor 35%, transparent); text-underline-offset: 2px; }

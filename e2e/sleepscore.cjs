@@ -62,6 +62,13 @@ function world() {
   check(`the strip: every night's score, last night's the lowest (${minis.join(' ')})`, minis.length === 14 && minis.every((x) => x > 0 && x <= 100) && minis.at(-1) === score && minis.slice(0, -1).every((x) => x > score + 10));
   check(`fits the phone (${await pg.evaluate(() => document.documentElement.scrollWidth)} px)`, await pg.evaluate(() => document.documentElement.scrollWidth) <= 390);
   await card.screenshot({ path: OUT + 'sleepscore-last.png' });
+  // Today, this morning, before rating: the same number in the check-in, "so far", a link to the parts
+  await pg.goto(APP + '#today'); await pg.waitForSelector('#feel');
+  await pg.waitForSelector('.hn-fell .hn-score', { timeout: 15000 }).catch(() => {});
+  const t1 = await pg.locator('.hn-fell').innerText().catch(() => '');
+  check(`Today, unrated: "score ${score}/100 so far" in the check-in (${t1})`, new RegExp(`score ${score}/100 so far`).test(t1) && await pg.locator('.hn-fell .hn-score').getAttribute('href') === '#insights/sleep');
+  await pg.locator('#feel').screenshot({ path: OUT + 'sleepscore-today.png' });
+  await pg.goto(APP + '#insights/sleep'); await pg.waitForSelector('.sl[data-nights]'); await pg.waitForFunction(() => +document.querySelector('.sl')?.dataset.nights >= 20, null, { timeout: 15000 }).catch(() => {}); await pg.waitForTimeout(200);
   // a rated, ordinary night: the rating is in it, 8/10 → 16 of 20
   await pg.locator('.sl .sl-mini').nth(10).click(); await pg.waitForTimeout(200);
   const rated = await part('rating'), s2 = +(await card.getAttribute('data-score'));
@@ -72,6 +79,10 @@ function world() {
   await pg.reload(); await pg.waitForSelector('.sl[data-nights]'); await pg.waitForFunction(() => +document.querySelector('.sl')?.dataset.nights >= 20, null, { timeout: 15000 }).catch(() => {}); await pg.waitForTimeout(300);
   const r4 = await part('rating');
   check(`rated 4 this morning: 8 of 20, and the note's gone (${r4})`, r4 && r4[0] === 8 && await card.locator('.sl-note').count() === 0);
+  const s4 = +(await card.getAttribute('data-score'));
+  await pg.goto(APP + '#today'); await pg.waitForSelector('#feel'); await pg.waitForSelector('.hn-slept .hn-score', { timeout: 15000 }).catch(() => {});
+  const t2 = await pg.locator('.hn-slept').innerText().catch(() => '');
+  check(`Today, rated: "Last night 4 / 10 · ${s4}/100", the Sleep page's number (${t2})`, new RegExp(`Last night 4 / 10 · ${s4}/100(?! so far)`).test(t2));
   console.log('errors:', JSON.stringify(errs));
   check('no page errors', errs.length === 0);
   await b.close();

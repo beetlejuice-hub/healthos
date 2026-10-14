@@ -18,7 +18,8 @@ import { CAF_SLEEP } from "../lib/caffeine-sleep";
 import { localDay } from "../lib/time";
 import { FeelSlider } from "./FeelSlider";
 import { useBand } from "../lib/band-client";
-import { fellAsleep } from "../lib/sleep";
+import { sleepScore } from "../lib/sleepscore";
+import { fellAsleep, nights } from "../lib/sleep";
 import { nightLabel, nightTagOrder, PHONE_STEPS, phoneLabel } from "../lib/lastnight";
 
 const WORDS: Record<FeelKey, string[]> = {
@@ -95,8 +96,16 @@ export function HowNow({ now, always = false }: { now: number; always?: boolean 
 
   const order = useMemo(() => doingOrder(entries, now), [entries, now]);
   // Last night's minutes to fall asleep from the band, when it has the night (PLAN 77) — no need to ask then.
-  const bandSleep = useBand().data?.sleep;
+  const band = useBand().data, bandSleep = band?.sleep;
   const fell = useMemo(() => (bandSleep ? fellAsleep(bandSleep, now) : null), [bandSleep, now]);
+  // Last night out of 100 (PLAN 97), with your rating in it as you move it; the parts are on Insights → Sleep.
+  const rated = night?.rating;
+  const score = useMemo(() => {
+    if (!band) return null;
+    const ns = nights(band.sleep, band.hr, band.rhr, band.hrv), n = ns.find((x) => x.day === localDay(now));
+    return n ? sleepScore(n, rated, ns) : null;
+  }, [band, now, rated]);
+  const scoreLink = score && <a className="hn-score" href="#insights/sleep" data-score={score.score}>{score.score}/100{rated == null ? " so far" : ""}</a>;
   const ticked = open?.doing ?? [];
   const shown = [...new Set([...ticked, ...order.slice(0, DOING_SHOWN)])];
   const hidden = order.filter((t) => !shown.includes(t));
@@ -121,11 +130,11 @@ export function HowNow({ now, always = false }: { now: number; always?: boolean 
   return (
     <div className="card hownow" id="feel">
       <h3>How now? <span>{open ? "saved as you tap" : last ? `last ${clock(last.at)}` : "tap or slide any you want to log"}</span></h3>
-      {sleptLine && <div className="hn-slept"><span>Last night <b>{night!.rating} / 10</b>{night!.slow ? " · slow to fall asleep" : ""}{nightTags.length ? ` · ${nightTags.map(nightLabel).join(", ")}` : ""}{night?.phoneMin != null ? ` · ${phoneLabel(night.phoneMin)}` : ""}</span>
+      {sleptLine && <div className="hn-slept"><span>Last night <b>{night!.rating} / 10</b>{scoreLink && <> · {scoreLink}</>}{night!.slow ? " · slow to fall asleep" : ""}{nightTags.length ? ` · ${nightTags.map(nightLabel).join(", ")}` : ""}{night?.phoneMin != null ? ` · ${phoneLabel(night.phoneMin)}` : ""}</span>
         <button type="button" aria-label="Change last night's sleep" onClick={() => setSleepEdit(true)}>change</button></div>}
       {sleepOpen && <div className="hn-sleep">
         <FeelSlider label="Sleep" name="sleep" value={night?.rating} word={sleepWord} color="var(--ok)" empty="last night" onChange={(n) => rateSleep({ rating: n })} />
-        {fell ? <p className="hn-fell" data-fell={fell.min}>Fell asleep in <b>{fell.min} min</b> — from your band{fell.usual != null ? `, ${fell.min > fell.usual + 10 ? "longer than" : fell.min < fell.usual - 10 ? "quicker than" : "about"} your usual ${fell.usual}` : ""}</p>
+        {fell ? <p className="hn-fell" data-fell={fell.min}>Fell asleep in <b>{fell.min} min</b> — from your band{fell.usual != null ? `, ${fell.min > fell.usual + 10 ? "longer than" : fell.min < fell.usual - 10 ? "quicker than" : "about"} your usual ${fell.usual}` : ""}{scoreLink && <> · score {scoreLink}</>}</p>
           : <div className="hn-tags"><button type="button" aria-pressed={!!night?.slow} onClick={() => rateSleep({ slow: !night?.slow })}>took long to fall asleep</button></div>}
         {/* once it's rated, like "What were you up to?" — the card stays small until you're answering (owner, 2 Oct: "big and bad on phone") */}
         {(night?.rating != null || nightTags.length > 0 || night?.phoneMin != null) && <>
