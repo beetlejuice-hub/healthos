@@ -21,7 +21,7 @@ export function SleepScore({ s }: { s: Score }) {
           </div>
         ))}
       </div>
-      {s.left.length > 0 && <p className="sl-note">Not in it yet: {s.left.map((l) => l.id === "rating" ? "your rating (rate the night on Today)" : l.id === "deep" || l.id === "rem" ? `${l.name} (no stages from the band)` : `${l.name.toLowerCase()} (needs 5 other nights)`).filter((v, i, a) => a.indexOf(v) === i).join(", ")} — scored out of the rest.</p>}
+      {s.left.length > 0 && <p className="sl-note">Not in it yet: {s.left.map((l) => l.id === "rating" ? "your rating (rate the night on Today)" : l.id === "deep" || l.id === "rem" ? `${l.name} (no stages from the band)` : l.id === "timing" || l.id === "heart" ? `${l.name.toLowerCase()} (needs 5 other nights)` : `${l.name.toLowerCase()} (not from the band)`).filter((v, i, a) => a.indexOf(v) === i).join(", ")} — scored out of the rest.</p>}
     </div>
   );
 }

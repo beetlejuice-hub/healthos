@@ -1183,6 +1183,15 @@ below, in his words, grouped; A first (broken or wrong now), then the rest. Item
    ("Last night 4 / 10 · 59/100"), a link to the parts — the same number as the Sleep page (e2e checks both); the compact
    card stays 337 px. **Not done, offered:** your own sleep need (the Mind page's best window) instead of 7 h — it would
    have to change the page, Today and the AI's lines together, and the window is often only "likely".
+   **Checked against references 14 Oct** (owner: "double check if this is a good way to calculate sleep score … can check
+   net for reference"): Fitbit's is time asleep 50 / deep & REM 25 / restoration 25, bands 90 / 80 / 60; Oura's seven
+   contributors include efficiency (85 %), latency and timing, bands 85 / 70; the National Sleep Foundation's agreed signs
+   of good sleep (Ohayon 2017) are continuity — asleep within 30 min, at most one waking over 5 min, ≤ 20 min awake, ≥ 85 %
+   of bed asleep — with no agreement on stages; wrist stage-scoring is middling (Chinoy 2021); regularity predicted
+   mortality better than duration (Windred 2023). So: length stays biggest (35), continuity 10 → 15 with efficiency and long
+   wakings added, falling asleep full within 30 not 20, deep + REM 20 → 15, timing 5 → 10 and from both ends (falling
+   asleep and waking — "2 h late to bed, up as usual" is an hour off, where the middle of the night hid it as 40 min, found
+   by the e2e), rating 20 → 15, words on Fitbit's bands (90 / 80 / 60: a 5-hour night is "fair", 6 h "good").
 99. [x] **Raised just after waking said "you said: sleep"** (14 Oct, owner: "explain the raised 1 stretch so far, and that
    7:20 - 7:45, why its elevated, waht u mean i said sleep"). The band's night ended 07:20; the 25 minutes after were
    awake, so they counted, and against a usual for 07:20–07:45 made mostly of mornings you were still asleep then, waking

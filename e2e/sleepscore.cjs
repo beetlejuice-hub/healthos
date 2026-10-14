@@ -53,10 +53,11 @@ function world() {
   const card = pg.locator('.sl .sl-score');
   const part = (id) => card.locator(`.sl-sp[data-part="${id}"]`).evaluate((e) => [+e.dataset.got, e.querySelector('.why').textContent]).catch(() => null);
   const score = +(await card.getAttribute('data-score'));
-  check(`last night: 5 h, 2 h late, not rated — "okay" (${(await card.locator('.sl-score-n').innerText()).replace(/\n/g, ' ')})`, score >= 55 && score < 70 && /\/ 100 · okay/.test(await card.locator('.sl-score-n').innerText()));
+  check(`last night: 5 h, not rated — "fair", not good (${(await card.locator('.sl-score-n').innerText()).replace(/\n/g, ' ')})`, score >= 60 && score < 80 && /\/ 100 · fair/.test(await card.locator('.sl-score-n').innerText()));
   const len = await part('length'), tim = await part('timing');
   check(`length: 5 h asleep is 10 of 35 (${len})`, len && len[0] === 10 && /^5 h 00 asleep/.test(len[1]));
-  check(`timing: in bed 2 h late, little of its 5 (${tim})`, tim && tim[0] < 2 && /2 h 0\d later than usual/.test(tim[1]));
+  // in bed 2 h late, up a little early: both ends said, and some of timing's 10 off
+  check(`timing: falling asleep 2 h late and waking, both said, some of its 10 off (${tim})`, tim && tim[0] > 3 && tim[0] < 9 && /^asleep 2 h 0\d later than usual · up \d+ min earlier than usual$/.test(tim[1]));
   check(`not rated yet: said, and left out — not counted as 0 (${await card.locator('.sl-note').innerText().catch(() => '')})`, /your rating/.test(await card.locator('.sl-note').innerText().catch(() => '')) && await card.locator('.sl-sp[data-part="rating"]').count() === 0);
   const minis = await pg.locator('.sl .sl-mini').evaluateAll((els) => els.map((e) => +e.dataset.score));
   check(`the strip: every night's score, last night's the lowest (${minis.join(' ')})`, minis.length === 14 && minis.every((x) => x > 0 && x <= 100) && minis.at(-1) === score && minis.slice(0, -1).every((x) => x > score + 10));
@@ -72,13 +73,13 @@ function world() {
   // a rated, ordinary night: the rating is in it, 8/10 → 16 of 20
   await pg.locator('.sl .sl-mini').nth(10).click(); await pg.waitForTimeout(200);
   const rated = await part('rating'), s2 = +(await card.getAttribute('data-score'));
-  check(`an earlier night: rated 8 → 16 of 20, its score the strip's (${rated}; ${s2})`, rated && rated[0] === 16 && s2 === minis[10] && await card.locator('.sl-note').count() === 0);
+  check(`an earlier night: rated 8 → 12 of 15, its score the strip's (${rated}; ${s2})`, rated && rated[0] === 12 && s2 === minis[10] && await card.locator('.sl-note').count() === 0);
   await card.screenshot({ path: OUT + 'sleepscore-rated.png' });
   // rating last night (on Today) puts it in
   await pg.evaluate(() => { const k = 'healthos.v1:u-test', s = JSON.parse(localStorage.getItem(k) || '{}'); s.entries.push({ id: 'rlast', kind: 'sleep', at: Date.now() - 30 * 60_000, rating: 4 }); localStorage.setItem(k, JSON.stringify(s)); });
   await pg.reload(); await pg.waitForSelector('.sl[data-nights]'); await pg.waitForFunction(() => +document.querySelector('.sl')?.dataset.nights >= 20, null, { timeout: 15000 }).catch(() => {}); await pg.waitForTimeout(300);
   const r4 = await part('rating');
-  check(`rated 4 this morning: 8 of 20, and the note's gone (${r4})`, r4 && r4[0] === 8 && await card.locator('.sl-note').count() === 0);
+  check(`rated 4 this morning: 6 of 15, and the note's gone (${r4})`, r4 && r4[0] === 6 && await card.locator('.sl-note').count() === 0);
   const s4 = +(await card.getAttribute('data-score'));
   await pg.goto(APP + '#today'); await pg.waitForSelector('#feel'); await pg.waitForSelector('.hn-slept .hn-score', { timeout: 15000 }).catch(() => {});
   const t2 = await pg.locator('.hn-slept').innerText().catch(() => '');
