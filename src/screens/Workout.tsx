@@ -1,14 +1,18 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { act, newId, useStore } from "../lib/store";
-import { EXERCISES, e1rm, exerciseHistory, isBest, isDumbbell, warmKg, warmsUp, mainMuscle, nextTemplate, restLeft, sameMuscle, sessionPlan, sessionSummary, suggestNext, templateProblems, volume, type Suggestion } from "../lib/training";
+import { e1rm, exerciseHistory, isBest, isDumbbell, warmKg, warmsUp, mainMuscle, nextTemplate, restLeft, sameMuscle, sessionPlan, sessionSummary, suggestNext, templateProblems, volume, type Suggestion } from "../lib/training";
 import { PROGRAMS, asSplit, asTemplate } from "../lib/programs";
 import { MuscleMap } from "../components/MuscleMap";
 import { DayCard } from "../components/DayCard";
-import { SessionHeart } from "../components/SessionHeart";
-import { dayLabel } from "../lib/time";
+import { ExercisePicker } from "../components/ExercisePicker";
+import { useMyExercises } from "../components/useMyExercises";
+import { nameFor, pickFor } from "../lib/exsearch";
+import { clock, dayLabel } from "../lib/time";
 import type { EntryOf, Template, Workout } from "../lib/types";
 
 type SetE = EntryOf<"set">;
+/** One tap for cardio when none was planned. */
+const CARDIO = ["Incline walk", "Stairmaster", "Bike", "Rower", "Run", "Elliptical"];
 
 /** The last session's sets of an exercise, before a given workout. */
 function lastSets(sets: SetE[], exercise: string, notWorkout?: string): SetE[] {
@@ -22,13 +26,6 @@ export function WorkoutScreen() {
   const workouts = useStore((s) => s.workouts);
   const active = workouts.find((w) => w.endedAt === null);
   return active ? <Session w={active} /> : <Pick />;
-}
-
-/** Suggestions while typing an exercise name (your own names work too). */
-function ExerciseList() {
-  const sets = useStore((s) => s.entries);
-  const mine = useMemo(() => [...new Set(sets.filter((e): e is SetE => e.kind === "set").map((e) => e.exercise))], [sets]);
-  return <datalist id="exercises">{[...new Set([...mine, ...EXERCISES])].map((n) => <option key={n} value={n} />)}</datalist>;
 }
 
 function Pick() {
@@ -119,11 +116,12 @@ function TemplateEditor({ t, onClose }: { t: Template | null; onClose: () => voi
   const problems = templateProblems(draft, templates.filter((x) => x.id !== t?.id));
   const upd = (i: number, patch: Partial<Template["exercises"][number]>) => setEx(ex.map((e, k) => (k === i ? { ...e, ...patch } : e)));
   const move = (i: number, d: -1 | 1) => { const j = i + d; if (j < 0 || j >= ex.length) return; const c = [...ex]; [c[i], c[j]] = [c[j], c[i]]; setEx(c); };
-  const save = () => { setTried(true); if (problems.length) return; act.saveTemplate({ id: t?.id ?? newId(), ...draft }, t?.name); onClose(); };
+  const mine = useMyExercises();
+  // a typed name that's an exercise you already have is saved as that one (PLAN 94: no second "bench press")
+  const save = () => { setTried(true); if (problems.length) return; act.saveTemplate({ id: t?.id ?? newId(), ...draft, exercises: draft.exercises.map((e) => ({ ...e, name: nameFor(e.name, mine) })) }, t?.name); onClose(); };
   const num = (v: string) => Math.round(Number(v) || 0);
   return (
     <div className="cockpit">
-      <ExerciseList />
       <div className="top"><h1>{t ? "Edit day" : "New day"}</h1><button type="button" className="kbtn" onClick={onClose}>Cancel</button></div>
       <div className="tile">
         <label className="kfield">Name<input value={name} placeholder="Push, Upper A, Legs…" onChange={(e) => setName(e.target.value)} /></label>
@@ -131,7 +129,7 @@ function TemplateEditor({ t, onClose }: { t: Template | null; onClose: () => voi
       {ex.map((e, i) => (
         <div className="tile exed" key={i}>
           <div className="exed-top">
-            <input className="exname" list="exercises" value={e.name} placeholder="Exercise" aria-label={`Exercise ${i + 1}`} onChange={(v) => upd(i, { name: v.target.value })} />
+            <ExercisePicker className="exname" value={e.name} placeholder="Exercise" label={`Exercise ${i + 1}`} onChange={(v) => upd(i, { name: v })} onPick={(n) => upd(i, { name: n })} />
             <button type="button" aria-label="Move up" onClick={() => move(i, -1)} disabled={i === 0}>↑</button>
             <button type="button" aria-label="Move down" onClick={() => move(i, 1)} disabled={i === ex.length - 1}>↓</button>
             <button type="button" aria-label={`Remove ${e.name || "exercise"}`} onClick={() => setEx(ex.filter((_, k) => k !== i))}>×</button>
@@ -168,21 +166,23 @@ function Session({ w }: { w: Workout }) {
   const [newEx, setNewEx] = useState("");
   const [showHist, setShowHist] = useState(false);
   // One-tap choices for a swap or an add: the same muscle as the exercise you're on, not already in today's plan.
-  const alts = adding && plan[i] ? sameMuscle(plan[i].name, plan.map((e) => e.name)) : [];
-  // Add or swap an exercise for today only; the saved split doesn't change.
+  // All of them, not the first few (owner, 14 Oct: "Add more exercise options so i can change if … machine is used").
+  const alts = adding && plan[i] ? sameMuscle(plan[i].name, plan.map((e) => e.name), 12) : [];
+  const mineEx = useMyExercises();
+  // Add or swap an exercise for today only; the saved split doesn't change. A typed name you already have is that one.
   const applyEx = (picked?: string) => {
-    const name = (picked ?? newEx).trim(); if (!name) return;
+    const name = picked ?? pickFor(newEx, mineEx); if (!name) return;
     if (adding === "swap" && plan[i]) act.updateWorkout(w.id, { plan: plan.map((e, k) => (k === i ? { ...e, name } : e)) });
     else { act.updateWorkout(w.id, { plan: [...plan, { name, sets: 3, reps: 10, restSec: 90 }] }); setI(plan.length); }
     setAdding(null); setNewEx("");
   };
   const addBox = adding && (
     <div className="tile addex">
-      <ExerciseList />
       <span className="k">{adding === "swap" ? `Swap ${plan[i]?.name} for` : "Add an exercise"}</span>
-      {alts.length > 0 && <div className="picks" aria-label="Same muscle, another exercise"><span className="s">Same muscle{adding === "add" && plan[i] ? ` as ${plan[i].name}` : ""} ({mainMuscle(plan[i]?.name ?? "")?.toLowerCase()}):</span>{alts.map((n) => <button type="button" key={n} onClick={() => applyEx(n)}>{n}</button>)}</div>}
-      <input list="exercises" autoFocus={!alts.length} value={newEx} placeholder="Or type any exercise" aria-label="Exercise to add" onChange={(e) => setNewEx(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") applyEx(); }} />
-      <div className="grid2"><button type="button" className="kbtn" onClick={() => setAdding(null)}>Cancel</button><button type="button" className="kbtn pri" disabled={!newEx.trim()} onClick={() => applyEx()}>{adding === "swap" ? "Swap" : "Add"}</button></div>
+      {/* the box first, so the keyboard doesn't cover it; while you type, the matches take the chips' place */}
+      <ExercisePicker autoFocus={!alts.length} value={newEx} placeholder="Search: name, machine, muscle…" label="Exercise to add" onChange={setNewEx} onPick={(n) => applyEx(n)} />
+      {alts.length > 0 && !newEx.trim() && <div className="picks" aria-label="Same muscle, another exercise"><span className="s">Same muscle{adding === "add" && plan[i] ? ` as ${plan[i].name}` : ""} ({mainMuscle(plan[i]?.name ?? "")?.toLowerCase()}):</span>{alts.map((n) => <button type="button" key={n} onClick={() => applyEx(n)}>{n}</button>)}</div>}
+      <div className="grid2"><button type="button" className="kbtn" onClick={() => setAdding(null)}>Cancel</button><button type="button" className="kbtn pri" disabled={!newEx.trim()} onClick={() => applyEx()}>{adding === "swap" ? "Swap" : "Add"}{newEx.trim() ? ` → ${pickFor(newEx, mineEx)}` : ""}</button></div>
     </div>
   );
   const note = (
@@ -255,7 +255,14 @@ function Session({ w }: { w: Workout }) {
   const next = open.find((k) => k > i) ?? open[0];
   const allDone = exDone && next == null;
   const cardio = w.cardio;
-  const setCardio = (done?: boolean) => act.updateWorkout(w.id, { cardio: { what: cardio!.what, ...(done == null ? {} : { done, at: Date.now() }) } });
+  const setCardio = (done?: boolean) => act.updateWorkout(w.id, { cardio: { what: cardio!.what, ...(cardio?.startedAt ? { startedAt: cardio.startedAt } : {}), ...(done == null ? {} : { done, at: Date.now() }) } });
+  // Cardio whenever you like (owner, 14 Oct: "Should be able to start cardio even when not done w all exercises"):
+  // started early, its tile shows now and the sets left wait; with none planned, one can be added.
+  const startCardio = (what = cardio?.what) => { if (what) act.updateWorkout(w.id, { cardio: { what, startedAt: Date.now() } }); setAddingCardio(false); };
+  const [addingCardio, setAddingCardio] = useState(false);
+  const [cardioWhat, setCardioWhat] = useState("");
+  const cardioOn = !!cardio && (allDone || cardio.startedAt != null || cardio.done != null);
+  const setsLeft = plan.reduce((a, e) => a + Math.max(0, e.sets - done(e.name).length), 0);
   const fmt = (s: number) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
 
   if (!cur) return (
@@ -337,14 +344,14 @@ function Session({ w }: { w: Workout }) {
       </div>
 
       {addBox}
-      {cardio && allDone && (
+      {cardio && cardioOn && (
         <div className="tile cardio">
-          <span className="k">Then cardio</span>
+          <span className="k">{cardio.startedAt && !allDone ? `Cardio · started ${clock(cardio.startedAt)}` : "Then cardio"}</span>
           <b>{cardio.what}</b>
+          {!allDone && setsLeft > 0 && <span className="s">{setsLeft} set{setsLeft === 1 ? "" : "s"} still planned — they're there after, or finish without them.</span>}
           {cardio.done == null
             ? <div className="grid2"><button type="button" className="kbtn" onClick={() => setCardio(false)}>Skip</button><button type="button" className="go" onClick={() => setCardio(true)}>Done</button></div>
             : <p className="s">{cardio.done ? "✓ Done" : "Skipped"} · <button type="button" className="linkb" onClick={() => setCardio()}>undo</button></p>}
-          <span className="s">Your watch will add the time and heart rate once it's connected.</span>
         </div>
       )}
       <div className={`tile rest ${rest > 0 ? "" : "idle"}`}>
@@ -356,10 +363,8 @@ function Session({ w }: { w: Workout }) {
         </div>
       </div>
 
-      <div className="grid2">
-        <div className="tile" style={{ gap: 2 }}><span className="k">Volume</span><span className="big">{Math.round(vol).toLocaleString("en-GB")}<small>kg</small></span><span className="s">{lastSame ? `${Math.round((vol / lastSame) * 100)}% of last ${w.template}` : "first time on this split"}</span></div>
-        <SessionHeart start={w.startedAt} now={now} />
-      </div>
+      {/* the heart-rate tile is gone (owner, 14 Oct: "Can take out heartrate btw from workout screen") */}
+      <div className="tile" style={{ gap: 2 }}><span className="k">Volume</span><span className="big">{Math.round(vol).toLocaleString("en-GB")}<small>kg</small></span><span className="s">{lastSame ? `${Math.round((vol / lastSame) * 100)}% of last ${w.template}` : "first time on this split"}</span></div>
 
       <div className="tile plan">
         <span className="k">Session</span>
@@ -369,7 +374,17 @@ function Session({ w }: { w: Workout }) {
             <span>{done(e.name).length}/{e.sets} · {e.reps} reps</span>
           </div>
         ))}
-        {cardio && <div className="cardio-row"><span>Then: {cardio.what}</span><span>{cardio.done ? "✓ done" : cardio.done === false ? "skipped" : "after the sets"}</span></div>}
+        {cardio && <div className="cardio-row"><span>Then: {cardio.what}</span>{cardio.done == null && !cardioOn
+          ? <button type="button" className="kbtn sm" onClick={() => startCardio()}>Start now</button>
+          : <span>{cardio.done ? "✓ done" : cardio.done === false ? "skipped" : cardio.startedAt ? `started ${clock(cardio.startedAt)}` : "after the sets"}</span>}</div>}
+        {!cardio && (addingCardio
+          ? <div className="addcardio">
+              <div className="picks" aria-label="Cardio">{CARDIO.map((c) => <button type="button" key={c} onClick={() => startCardio(c)}>{c}</button>)}</div>
+              <div className="grid2"><input value={cardioWhat} placeholder="Or type: 15 min bike…" aria-label="Cardio" onChange={(e) => setCardioWhat(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter" && cardioWhat.trim()) startCardio(cardioWhat.trim()); }} />
+                <button type="button" className="kbtn pri" disabled={!cardioWhat.trim()} onClick={() => startCardio(cardioWhat.trim())}>Start</button></div>
+              <button type="button" className="linkb" onClick={() => setAddingCardio(false)}>Cancel</button>
+            </div>
+          : <button type="button" className="kbtn" onClick={() => setAddingCardio(true)}>+ Cardio</button>)}
         {!adding && <button type="button" className="kbtn" onClick={() => { setAdding("add"); setNewEx(""); }}>+ Add exercise</button>}
       </div>
       {note}

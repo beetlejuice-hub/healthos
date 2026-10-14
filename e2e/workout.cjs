@@ -41,7 +41,7 @@ const { chromium, APP, OUT, handle } = require('./harness.cjs');
 
   // Start Push: swap the first exercise, log a set, add one, see history and write a note.
   await pg.locator('.dcard').filter({ hasText: 'Push' }).getByRole('button', { name: 'Start' }).click(); await pg.waitForTimeout(200);
-  await pg.getByRole('button', { name: 'Swap' }).click(); await pg.getByLabel('Exercise to add').fill('Hack squat'); await pg.locator('.addex').getByRole('button', { name: 'Swap', exact: true }).click();
+  await pg.getByRole('button', { name: 'Swap' }).click(); await pg.getByLabel('Exercise to add').fill('Hack squat'); await pg.locator('.addex').getByRole('button', { name: 'Swap → Hack squat' }).click();
   check('swap renames today\'s exercise', /Hack squat/.test(await pg.locator('.tile.cur .ex').innerText()));
   await pg.getByRole('button', { name: 'Log set' }).click(); await pg.waitForTimeout(100);
   check('no swap once a set is logged', await pg.locator('.exacts').getByRole('button', { name: 'Swap' }).count() === 0);
@@ -58,7 +58,7 @@ const { chromium, APP, OUT, handle } = require('./harness.cjs');
 
   // History on the next time.
   await pg.locator('.dcard').filter({ hasText: 'Push' }).getByRole('button', { name: 'Start' }).click(); await pg.waitForTimeout(200);
-  await pg.getByRole('button', { name: 'Swap' }).click(); await pg.getByLabel('Exercise to add').fill('Hack squat'); await pg.locator('.addex').getByRole('button', { name: 'Swap', exact: true }).click();
+  await pg.getByRole('button', { name: 'Swap' }).click(); await pg.getByLabel('Exercise to add').fill('Hack squat'); await pg.locator('.addex').getByRole('button', { name: 'Swap → Hack squat' }).click();
   await pg.getByRole('button', { name: 'History' }).click();
   check('history shows last session', /\d+×\d+/.test(await pg.locator('.hist').innerText()));
   await pg.screenshot({ path: OUT + 'w-session.png', fullPage: true });

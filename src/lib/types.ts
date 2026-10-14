@@ -124,8 +124,9 @@ export type Workout = {
   /** How it felt, in your words. */
   note?: string;
   /** Cardio after the lifting (copied from the day at start). `done`: you ticked it (true) or skipped it
-   * (false); unset = not yet. A watch will fill in time and heart rate once one is connected. */
-  cardio?: { what: string; done?: boolean; at?: number };
+   * (false); unset = not yet. `startedAt`: started before the sets were all done (PLAN 94; owner, 14 Oct: "Should be
+   * able to start cardio even when not done w all exercises..like starting early"). */
+  cardio?: { what: string; done?: boolean; at?: number; startedAt?: number };
 };
 
 /** A saved split day: "Upper A" → bench, row, OHP, pulldown, with the reps you aim for. */

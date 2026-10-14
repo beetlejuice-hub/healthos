@@ -22,7 +22,7 @@ const { chromium, APP, OUT, handle } = require('./harness.cjs');
     await pg.goto(APP + '#insights/training'); await pg.waitForTimeout(800);
     const load = await pg.locator('.gl-load').innerText();
     check(name + ': training load names most and least trained muscles', /(average|averages) 10\+ hard sets|No muscle averages/.test(load) && /Least: /.test(load));
-    check(name + ': a cell per muscle per week (10 × 6)', await pg.locator('.gl-load rect[rx="3"]').count() === 60);
+    check(name + ': a cell per muscle per week (11 × 6, forearms too)', await pg.locator('.gl-load rect[rx="3"]').count() === 66);
     const supps = await pg.locator('.gl-supps').innerText();
     check(name + ': supplements with their %', /\w+ \d+%/.test(supps) && /Connections above/.test(supps));
     check(name + ': coverage counts check-in days', /\d+ of \d+ days have a check-in/.test(await pg.locator('.gl-cover').innerText()));
@@ -31,7 +31,7 @@ const { chromium, APP, OUT, handle } = require('./harness.cjs');
     const order = await pg.evaluate(() => { const a = document.querySelector('.gl-forest'), n = document.querySelector('#noticed'); return !!a && !!n && !!(a.compareDocumentPosition(n) & Node.DOCUMENT_POSITION_FOLLOWING); });
     check(name + ': Noticed follows Connections', order);
     await pg.getByRole('button', { name: '12 weeks', exact: true }).click(); await pg.waitForTimeout(200);
-    check(name + ': 12 weeks shows 12 weeks of load', await pg.locator('.gl-load rect[rx="3"]').count() === 120);
+    check(name + ': 12 weeks shows 12 weeks of load', await pg.locator('.gl-load rect[rx="3"]').count() === 132);
     check(name + ': page never scrolls sideways', await pg.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth));
     await pg.getByRole('button', { name: '30 days', exact: true }).click(); await pg.waitForTimeout(200);
     for (const c of ['load', 'supps', 'cover', 'methods']) { await pg.goto(APP + '#insights/' + (c === 'load' || c === 'supps' ? 'training' : 'data')); await pg.locator('.gl-' + c).screenshot({ path: OUT + `stack-${c}-${name}.png` }); }

@@ -1145,7 +1145,21 @@ below, in his words, grouped; A first (broken or wrong now), then the rest. Item
    "Add things like csuklya and forearm and muscles for that, and also a bit more complex muscle character"; "When i
    want to do a diff exercise that not in day i should be able to choose one from all the already made ones and when
    typing it should appear not make a completely new exercise thats the same"; "Should be able to start cardio even
-   when not done w all exercises..like starting early".
+   when not done w all exercises..like starting early". (claimed 14 Oct, owner: "do 1" — screens/Workout.tsx, lib/training
+   MUSCLES, new lib/exsearch + components/ExercisePicker, SessionHeart removed; phase 2 the more detailed muscle figure,
+   components/MuscleMap). Dumbbells answered in chat: logged per dumbbell, a set counts once, kg lifted doubles (PLAN 76).
+   **Phase 1 done 14 Oct:** the heart-rate tile is gone (SessionHeart, sessionHr and e2e/workoutheart with it). The
+   library went from 46 to 97 exercises — machine, cable and Smith versions so a taken machine has neighbours, and wrist /
+   forearm work (Forearms is a muscle now, on the figure and in the weekly sets). Swap shows every same-muscle exercise
+   (up to 12, not 6). Typing an exercise (Swap, Add, the day editor) lists matches from yours and the library as you type —
+   by name, equipment, muscle or nickname, English or Hungarian, accents optional ("leg push", "gépi", "csukló"); a name
+   that already exists however it's written ("pullups", "bench press") is that one; Enter and the button take the same
+   thing and the button says it ("Swap → Leg press"); a really new name has its own "new exercise" row. The leg press was
+   already there — "Leg press" — just not under his words. Cardio can start any time ("Start now"; the sets left wait), and
+   one can be added with a tap when the day has none. Found on the way: the suggestion list closing on blur moved "+ Add
+   exercise" from under the finger, so the tap missed — it now closes after the tap lands. Checked: exsearch.test (his
+   words, Hungarian, every library name finds itself first, joined spellings), e2e/workoutpick.cjs at 390 px.
+   **Phase 2 ← next:** the more detailed muscle figure.
 95. [ ] **Calories from what you burn** — "My calorie intake should be calculated based on how much i burn too".
 96. [ ] **Good / bad shades** — "think about using green and red shades for some numbers, to highlight if bad or good, and
    use shades to determine how bad or good..just subtly".

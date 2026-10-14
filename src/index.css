@@ -554,7 +554,7 @@ a { color: inherit; }
 .kbtn.danger { background: transparent; color: var(--hr); }
 .kbtn:disabled { opacity: .4; }
 .kfield { display: grid; gap: 4px; font-size: 12px; color: var(--k-ink-2); }
-.kfield input, .kfield textarea, .exname, .addex input { background: var(--k-tile-2); border: 1px solid transparent; border-radius: 12px; color: var(--k-ink); padding: 10px 12px; font: inherit; font-size: 16px; width: 100%; min-width: 0; }
+.kfield input, .kfield textarea, .exp input, .addcardio input { background: var(--k-tile-2); border: 1px solid transparent; border-radius: 12px; color: var(--k-ink); padding: 10px 12px; font: inherit; font-size: 16px; width: 100%; min-width: 0; }
 .exed { gap: 8px; }
 .exed-top { display: grid; grid-template-columns: 1fr auto auto auto; gap: 6px; align-items: center; }
 .exed-top button { background: var(--k-btn); border: 0; border-radius: 10px; color: var(--k-ink); width: 36px; height: 36px; font-size: 16px; }
@@ -1308,3 +1308,14 @@ a { color: inherit; }
 .tp-weeks .en-line { fill: none; stroke: var(--mood); stroke-width: 2; stroke-linejoin: round; }
 .tp-weeks .en-dot { fill: var(--mood); stroke: var(--i-panel); stroke-width: 1.5; } .tp-weeks .en-dot.so-far { fill: var(--i-panel); stroke: var(--mood); }
 .tp-back .back-dot { fill: var(--hr); fill-opacity: .85; stroke: var(--i-panel); stroke-width: 1; }
+/* typing an exercise (PLAN 94): matches under the box, yours marked; a new name says so */
+.exp { display: grid; gap: 6px; min-width: 0; }
+.exp-list { display: grid; border-radius: 12px; overflow: hidden; background: var(--k-tile-2); }
+.exp-list button { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; min-height: 44px; padding: 8px 12px; border: 0; border-top: 1px solid var(--k-bg); background: none; color: var(--k-ink); text-align: left; font: inherit; font-size: 15px; }
+.exp-list button:first-child { border-top: 0; }
+.exp-list b { font-weight: 500; min-width: 0; overflow-wrap: anywhere; }
+.exp-list small { color: var(--k-ink-2); font-size: 12px; white-space: nowrap; }
+.exp-list button[aria-selected="true"] b { color: var(--gym); }
+.exp-list .exp-new b { color: var(--k-ink-2); }
+.addcardio { display: grid; gap: 8px; padding-top: 6px; }
+.addcardio .grid2 { grid-template-columns: minmax(0, 1fr) auto; }

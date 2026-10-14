@@ -11,8 +11,8 @@ ALL=(
   features search noticed stackcheck simple workout morning scout round ai sync drinks scan reset fixes between
   bodyfat hownow push searchpass now cafsleep earlier night slider workoutplus muscles dose labelphoto graph glance
   mind connections body stack top phone plan session checkin today2 polish band heart compare sleep heartpage
-  mindpage sleeponce suppamount catchup suppafter steps workoutheart fixes13 editentry bandbehind camhold explain
-  workoutsets burned tellmore sipped supplog sleepfood tonight sleepneed training trainingb trainingc
+  mindpage sleeponce suppamount catchup suppafter steps fixes13 editentry bandbehind camhold explain
+  workoutsets burned tellmore sipped supplog sleepfood tonight sleepneed training trainingb trainingc workoutpick
 )
 if [ $# -gt 0 ]; then SUITES=("$@"); else SUITES=("${ALL[@]}"); fi
 JOBS=${E2E_JOBS:-$(nproc)}

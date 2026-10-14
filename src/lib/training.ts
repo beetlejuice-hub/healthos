@@ -76,7 +76,7 @@ export const MUSCLES: Record<string, Record<string, number>> = {
   "Chin-ups": { Back: 1, Biceps: 1 },
   "T-bar row": { Back: 1, Biceps: 0.5 },
   "Chest-supported row": { Back: 1, Biceps: 0.5 },
-  "Hammer curl": { Biceps: 1 },
+  "Hammer curl": { Biceps: 1, Forearms: 0.5 },
   "Preacher curl": { Biceps: 1 },
   "Incline DB curl": { Biceps: 1 },
   "Skull crusher": { Triceps: 1 },
@@ -91,6 +91,59 @@ export const MUSCLES: Record<string, Record<string, number>> = {
   "Plank": { Core: 1 },
   "Hanging leg raise": { Core: 1 },
   "Cable crunch": { Core: 1 },
+  // 14 Oct (owner: "Add more exercise options so i can change if i dont wanna do an exericse or machine is used"):
+  // the machine and cable versions, so a taken machine has a neighbour, and the forearms ("csuklya and forearm").
+  "Chest press machine": { Chest: 1, Triceps: 0.5, Shoulders: 0.5 },
+  "Incline chest press machine": { Chest: 1, Shoulders: 0.5, Triceps: 0.5 },
+  "Smith machine bench press": { Chest: 1, Triceps: 0.5, Shoulders: 0.5 },
+  "Decline bench press": { Chest: 1, Triceps: 0.5 },
+  "Cable fly": { Chest: 1 },
+  "Shoulder press machine": { Shoulders: 1, Triceps: 0.5 },
+  "Arnold press": { Shoulders: 1, Triceps: 0.5 },
+  "Cable lateral raise": { Shoulders: 1 },
+  "Machine lateral raise": { Shoulders: 1 },
+  "Front raise": { Shoulders: 1 },
+  "Reverse pec deck": { Shoulders: 1, Back: 0.5 },
+  "Upright row": { Shoulders: 1, Back: 0.5 },
+  "Machine row": { Back: 1, Biceps: 0.5 },
+  "Close-grip lat pulldown": { Back: 1, Biceps: 0.5 },
+  "Straight-arm pulldown": { Back: 1 },
+  "Assisted pull-up machine": { Back: 1, Biceps: 0.5 },
+  "Pendlay row": { Back: 1, Biceps: 0.5 },
+  "Shrugs": { Back: 1, Forearms: 0.5 },
+  "Back extension": { Back: 1, Glutes: 0.5, Hamstrings: 0.5 },
+  "Rack pull": { Back: 1, Glutes: 0.5, Forearms: 0.5 },
+  "Cable curl": { Biceps: 1 },
+  "EZ-bar curl": { Biceps: 1 },
+  "Concentration curl": { Biceps: 1 },
+  "Machine curl": { Biceps: 1 },
+  "Close-grip bench press": { Triceps: 1, Chest: 0.5 },
+  "Tricep dip machine": { Triceps: 1, Chest: 0.5 },
+  "Cable overhead extension": { Triceps: 1 },
+  "Tricep kickback": { Triceps: 1 },
+  "Wrist curl": { Forearms: 1 },
+  "Reverse wrist curl": { Forearms: 1 },
+  "Reverse curl": { Forearms: 1, Biceps: 0.5 },
+  "Wrist roller": { Forearms: 1 },
+  "Farmer's carry": { Forearms: 1, Back: 0.5, Core: 0.5 },
+  "Dead hang": { Forearms: 1, Back: 0.5 },
+  "Plate pinch": { Forearms: 1 },
+  "Single-leg leg press": { Quads: 1, Glutes: 0.5 },
+  "Smith machine squat": { Quads: 1, Glutes: 0.5 },
+  "Goblet squat": { Quads: 1, Glutes: 0.5 },
+  "Pendulum squat": { Quads: 1, Glutes: 0.5 },
+  "Belt squat": { Quads: 1, Glutes: 0.5 },
+  "Lying leg curl": { Hamstrings: 1 },
+  "Nordic curl": { Hamstrings: 1 },
+  "Good morning": { Hamstrings: 1, Back: 0.5 },
+  "Glute bridge": { Glutes: 1, Hamstrings: 0.5 },
+  "Hip abduction machine": { Glutes: 1 },
+  "Leg press calf raise": { Calves: 1 },
+  "Ab crunch machine": { Core: 1 },
+  "Ab wheel": { Core: 1 },
+  "Russian twist": { Core: 1 },
+  "Side plank": { Core: 1 },
+  "Pallof press": { Core: 1 },
 };
 
 /** Every exercise the app knows (for suggestions while typing); your own names work too. */
@@ -240,7 +293,7 @@ export function sessionSummary(w: { id: string; template: string; startedAt: num
 
 /* ------------------------------------------------------------------ the muscle map */
 
-export const MUSCLE_GROUPS = ["Chest", "Shoulders", "Biceps", "Triceps", "Back", "Core", "Quads", "Hamstrings", "Glutes", "Calves"] as const;
+export const MUSCLE_GROUPS = ["Chest", "Shoulders", "Biceps", "Triceps", "Forearms", "Back", "Core", "Quads", "Hamstrings", "Glutes", "Calves"] as const;
 export type MuscleGroup = (typeof MUSCLE_GROUPS)[number];
 /**
  * Hard sets per muscle per week where most of the growth is (Schoenfeld et al. 2017 dose–response:

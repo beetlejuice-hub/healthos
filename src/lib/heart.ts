@@ -216,16 +216,3 @@ export function whyRaised(r: Pick<Raised, "start" | "end">, entries: { kind: str
   for (const w of out) { const cur = best.get(w.kind); if (!cur || Math.abs(w.at - r.start) < Math.abs(cur.at - r.start)) best.set(w.kind, w); }
   return [...best.values()].sort((a, b) => a.at - b.at);
 }
-
-/**
- * The workout screen's heart-rate tile (PLAN 68; owner, 13 Oct: "wearable is connected but it says connect wearable"):
- * this session's minutes so far — the latest, the average and the peak — or null before any have arrived. The band's
- * minutes come through the Fitbit app, often 15–30 minutes late, so `at` says how old the latest is.
- */
-export type SessionHr = { last: number; at: number; avg: number; peak: number; n: number };
-export function sessionHr(hr: HrMinute[], start: number, end: number): SessionHr | null {
-  const ms = hr.filter((m) => m[0] >= start - MIN && m[0] <= end);
-  if (!ms.length) return null;
-  const l = ms[ms.length - 1];
-  return { last: l[1], at: l[0], avg: Math.round(ms.reduce((a, m) => a + m[1], 0) / ms.length), peak: Math.max(...ms.map((m) => m[3])), n: ms.length };
-}
