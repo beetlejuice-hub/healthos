@@ -20,6 +20,7 @@ import { HowNow } from "../components/HowNow";
 import { SuppAmount } from "../components/SuppAmount";
 import { SuppQuick } from "../components/SuppQuick";
 import { Tonight } from "../components/Tonight";
+import { Readiness } from "../components/Readiness";
 import { extrasOn } from "../lib/supplog";
 import { CatchUp } from "../components/CatchUp";
 import { DataCard, EveningRead, NowCard, Pad, Status, UsualPicker, useStackCount } from "../components/TodayParts";
@@ -129,6 +130,7 @@ export function Today() {
       </div>
 
       <Status kcal={totals.kcal} goalKcal={s.goals.kcal} protein={totals.p} goalP={s.goals.p} cafNow={cafNow} rising={cafComing >= 10} cafBed={cafBed} bed={bed} stack={stack} />
+      <Readiness now={now} />
 
       <NowCard moment={moment}>
         {moment === "evening" ? <>{itemsList}{feelNow}</> : <>{feelNow}<CatchUp now={now} />{itemsList}</>}

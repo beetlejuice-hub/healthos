@@ -1,0 +1,35 @@
+/**
+ * Today: how ready you are, out of 100 (owner, 14 Oct: "also readiness score??"), one line under the day's numbers that
+ * opens to its parts — this morning's HRV and resting heart rate against your normal, last night, the week's sleep and
+ * recent training (lib/readiness). Only when the band has last night.
+ */
+
+import { useMemo } from "react";
+import { useBand } from "../lib/band-client";
+import { nights } from "../lib/sleep";
+import { readiness } from "../lib/readiness";
+import { useStore } from "../lib/store";
+import { localDay } from "../lib/time";
+import { SleepScore } from "./SleepScore";
+
+const leftWhy = (l: { id: string; name: string }) => (l.id === "load" ? "training (no sets logged in the last 4 weeks)" : l.id === "balance" ? "the week's sleep (needs 4 nights)"
+  : `${l.name.toLowerCase()} (needs 10 mornings from the band)`);
+
+export function Readiness({ now }: { now: number }) {
+  const band = useBand().data, entries = useStore((s) => s.entries);
+  const day = localDay(now);
+  const rating = useMemo(() => entries.find((e) => e.kind === "sleep" && localDay(e.at) === day && e.rating != null) as { rating?: number } | undefined, [entries, day])?.rating;
+  const sets = useMemo(() => entries.filter((e): e is Extract<typeof e, { kind: "set" }> => e.kind === "set"), [entries]);
+  const r = useMemo(() => (band ? readiness(day, nights(band.sleep, band.hr, band.rhr, band.hrv), rating, sets, now, { hrv: band.hrv, rhr: band.rhr }) : null), [band, day, rating, sets, now]);
+  if (!r) return null;
+  // the line names the two parts furthest from full, so you see why without opening it
+  const low = [...r.parts].sort((a, b) => a.got / a.max - b.got / b.max).filter((p) => p.got < p.max * 0.8).slice(0, 2);
+  return (
+    <details className="card rd" data-score={r.score}>
+      <summary><span className="k">Readiness</span><b>{r.score}</b><span className="w">{r.word}</span>
+        <span className="why">{low.length ? low.map((p) => `${p.name}: ${p.why}`).join(" · ") : "everything at or near your usual"}</span></summary>
+      <SleepScore s={r} label="Readiness" leftWhy={leftWhy} />
+      <p className="sl-note">Against your own normal, as Oura and Fitbit do it: this morning's HRV and resting heart rate, last night, the week's sleep, your last 2 days of training. A guide to the day, not a diagnosis.</p>
+    </details>
+  );
+}

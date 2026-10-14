@@ -307,15 +307,19 @@ describe("BandHub", () => {
     expect((await status(h)).error).toBeNull();
   });
 
-  it("data returns the minutes in range across days, and the nights that touch it", async () => {
+  it("data returns the minutes in range across days, and the nights of the last 40 days whatever the range", async () => {
     const { h, st } = setup();
     const a = Date.UTC(2026, 9, 6, 23, 58), b = Date.UTC(2026, 9, 7, 0, 1);
     st.m.set("hr:2026-10-06", [[a, 60, 60, 60], [a - 3 * 3600_000, 70, 70, 70]].sort((x, y) => x[0] - y[0]));
     st.m.set("hr:2026-10-07", [[b, 61, 61, 61]]);
-    st.m.set("sleep", [{ id: "old", start: Date.UTC(2026, 8, 1), end: Date.UTC(2026, 8, 1, 7) }, { id: "n1", start: Date.UTC(2026, 9, 6, 21), end: Date.UTC(2026, 9, 7, 5) }]);
+    // 36 days before now (T0, 7 Oct): sent — the sleep score's usual and readiness need 4 weeks of nights on Today;
+    // 48 days before: not, unless asked for
+    st.m.set("sleep", [{ id: "aug", start: Date.UTC(2026, 7, 20), end: Date.UTC(2026, 7, 20, 7) }, { id: "sep1", start: Date.UTC(2026, 8, 1), end: Date.UTC(2026, 8, 1, 7) }, { id: "n1", start: Date.UTC(2026, 9, 6, 21), end: Date.UTC(2026, 9, 7, 5) }]);
     const d = (await (await h.fetch(new Request(`https://band/data?from=${a - 60_000}&to=${b + 60_000}`))).json()) as { hr: unknown[]; sleep: { id: string }[] };
     expect(d.hr).toEqual([[a, 60, 60, 60], [b, 61, 61, 61]]);
-    expect(d.sleep.map((s) => s.id)).toEqual(["n1"]);
+    expect(d.sleep.map((s) => s.id)).toEqual(["sep1", "n1"]);
+    const older = (await (await h.fetch(new Request(`https://band/data?from=${Date.UTC(2026, 7, 15)}&to=${Date.UTC(2026, 7, 25)}`))).json()) as { sleep: { id: string }[] };
+    expect(older.sleep.map((s) => s.id)).toEqual(["aug"]); // asked for: there, and nothing after the range
   });
 
   it("disconnect tells Google to forget it and deletes everything", async () => {

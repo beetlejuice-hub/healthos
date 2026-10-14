@@ -35,6 +35,8 @@ export const PULL_EVERY_MS = 15 * 60_000;
 export const PULL_GAP_MS = 20_000;
 const DAY = 86_400_000;
 const KEEP_DAYS = 120;
+/** Nights sent with any data request (readiness: 4 weeks of usual ending a week ago, plus slack). */
+export const SLEEP_DAYS_SENT = 40;
 /**
  * First pull: two days back. After that, the last 12 h again each time (the band can upload hours late) — or
  * from an hour before the newest reading kept, if that's older: a phone off for a day uploads a day at once.
@@ -243,7 +245,10 @@ export class BandHub {
         for (const m of (await this.storage.get<HrMinute[]>(`hr:${utcDay(d)}`)) ?? []) if (m[0] >= from && m[0] <= to) hr.push(m);
         for (const b of (await this.storage.get<StepBucket[]>(`steps:${utcDay(d)}`)) ?? []) if (b[0] >= from && b[0] <= to) steps.push(b);
       }
-      const sleep = ((await this.storage.get<SleepSession[]>("sleep")) ?? []).filter((s) => s.end >= from - DAY && s.start <= to);
+      // the nights of the last SLEEP_DAYS_SENT days always come, whatever range was asked for: they're small (one a day),
+      // and the sleep score's usual and readiness need 4 weeks of them on Today, which asks for a week of heart rate
+      const sleepFrom = Math.min(from, this.now() - SLEEP_DAYS_SENT * DAY);
+      const sleep = ((await this.storage.get<SleepSession[]>("sleep")) ?? []).filter((s) => s.end >= sleepFrom - DAY && s.start <= to);
       return json({ hr, sleep, rhr: (await this.storage.get("rhr")) ?? {}, hrv: (await this.storage.get("hrv")) ?? {}, steps, kcal: (await this.storage.get("kcal")) ?? {}, ...(await this.status()) });
     }
     if (path === "wake") {

@@ -1199,6 +1199,21 @@ below, in his words, grouped; A first (broken or wrong now), then the rest. Item
    as the reason. Now a stretch starting within an hour of the band's night ending says "just woke up 07:20" (not asked),
    and sleep words on a check-in aren't offered as a reason. Checked: heart.test (fails without the fix — gave "said"),
    e2e/heartpage.cjs plants it two days back (without the fix the row read "you said: sleep", with it "just woke up").
+100. [x] **Readiness, out of 100** (14 Oct, owner: "also readiness score?? can check net for reference") — lib/readiness,
+   components/Readiness on Today under the day's numbers, one line that opens to its parts. Built the way Oura's Readiness,
+   Fitbit's Daily Readiness and Whoop's Recovery are — against your own normal: HRV this morning 20 (log scale, 4 weeks
+   ending a week ago; full within half an SD — HRV-guided training's "smallest worthwhile change" — none 2 SD under), HRV
+   this week 10 (7-day average, the Plews / Kiviniemi way), resting HR 20 (full up to half an SD over, none 2 SD over; SD
+   floors ±5 % and 2 bpm), last night 25 (the sleep score), sleep this week 15 (7-night average, full from 7 h, none at
+   5), training 10 (working sets in 2 days against your usual 2 days; small and no injury talk — the acute:chronic ratio is
+   disputed, Impellizzeri 2020). Oura's bands: 85 ready, 70 good, 60 fair, under that "take it easier". The heart parts
+   need 10 mornings. Found on the way (the e2e): Today holds a week of nights, so readiness read its usual from those — it
+   reads the band's daily HRV and resting HR now (they come for every day) — and the sleep score's "usual" was whatever
+   nights were held, so Today and the Sleep page could differ: the server now sends 40 days of nights with any request,
+   and a night's usual is the 28 nights before it (same everywhere, and a night's score doesn't move later). Checked:
+   readiness.test (planted HRV −30 %, a low week, resting HR +4, 5-hour week, 3× training each found; ordinary months ≤2
+   of 20 under 70; noise costs nothing; monotonic), worker data test, e2e/readiness.cjs (the line names HRV, six parts,
+   Today's sleep score = the Sleep page's with Today opened first, ordinary reads "ready").
 98. [ ] **AI, soon** — "it should look at all the data, see whatsup, tell me clever tips, what to improve, and a whole bunch
    of stuff.. it should recommend me, or just understand protocols i give him, and help me set up in app, or just tell
    me to tell you to set up correctly in app". With #65, #67, #91 (waits on the AI key).

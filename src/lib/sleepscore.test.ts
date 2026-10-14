@@ -73,6 +73,14 @@ describe("a night out of 100 (PLAN 97, checked against Fitbit, Oura and the NSF 
     const noHrv = sleepScore(night(20, { hrv: null, low: 54 }), 10, usualNights).parts.find((p) => p.id === "heart")!;
     expect(noHrv.got).toBe(2.5); expect(noHrv.why).toBe("lowest 54 bpm · usual 50");
   });
+  it("the usual is the 28 nights before this one: later nights, and ones over 4 weeks back, don't move it", () => {
+    const n = night(20, { bedH: 24.5 }), base = sleepScore(n, 10, usualNights);
+    // 15 of each — more than the 10 usual nights, so a median would move if they counted
+    const later = Array.from({ length: 15 }, (_, i) => ({ ...night(1, { bedH: 26 }), id: `l${i}`, day: `2026-10-${String(1 + i).padStart(2, "0")}`, eve: `2026-09-${String(30 - i).padStart(2, "0")}` }));
+    expect(sleepScore(n, 10, [...usualNights, ...later]).score).toBe(base.score);
+    const longAgo = Array.from({ length: 15 }, (_, i) => ({ ...night(1, { bedH: 26 }), id: `o${i}`, day: `2026-07-${String(1 + i).padStart(2, "0")}`, eve: `2026-06-${String(30 - i).padStart(2, "0")}` }));
+    expect(sleepScore(n, 10, [...usualNights, ...longAgo]).score).toBe(base.score);
+  });
   it("too few other nights for a usual: timing and heart left out, not guessed", () => {
     const s = sleepScore(night(20), 10, usualNights.slice(0, 3));
     expect(s.left.map((l) => l.id)).toEqual(["timing", "heart"]); expect(s.score).toBe(100);

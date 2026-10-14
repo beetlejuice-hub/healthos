@@ -1,14 +1,17 @@
 /**
- * The night out of 100, with its parts (PLAN 97; owner, 14 Oct: "should do a 100/… pointing for my sleep based on all the
- * sleep data, length, etc i get and also add in my rating"). Each part shows its points of its most and why, so the number
- * can be checked; what isn't known yet is named under it. Numbers from lib/sleepscore.
+ * A score out of 100 with its parts (PLAN 97 sleep score; readiness, 14 Oct): each part shows its points of its most and
+ * why, so the number can be checked; what isn't known yet is named under it. Numbers from lib/sleepscore, lib/readiness.
  */
 
-import type { SleepScore as Score } from "../lib/sleepscore";
+type Shown = { score: number; word: string; parts: { id: string; name: string; got: number; max: number; why: string }[]; left: { id: string; name: string; max: number }[] };
 
-export function SleepScore({ s }: { s: Score }) {
+/** Why a part of the sleep score isn't in it yet. */
+const sleepLeft = (l: { id: string; name: string }) => (l.id === "rating" ? "your rating (rate the night on Today)" : l.id === "deep" || l.id === "rem" ? `${l.name} (no stages from the band)`
+  : l.id === "timing" || l.id === "heart" ? `${l.name.toLowerCase()} (needs 5 other nights)` : `${l.name.toLowerCase()} (not from the band)`);
+
+export function SleepScore({ s, label = "Sleep score", leftWhy = sleepLeft }: { s: Shown; label?: string; leftWhy?: (l: { id: string; name: string }) => string }) {
   return (
-    <div className="sl-score" data-score={s.score} aria-label={`Sleep score ${s.score} out of 100, ${s.word}`}>
+    <div className="sl-score" data-score={s.score} aria-label={`${label} ${s.score} out of 100, ${s.word}`}>
       <div className="sl-score-n"><b>{s.score}</b><span>/ 100 · {s.word}</span></div>
       <div className="sl-score-parts" role="list">
         {s.parts.map((p) => (
@@ -21,7 +24,7 @@ export function SleepScore({ s }: { s: Score }) {
           </div>
         ))}
       </div>
-      {s.left.length > 0 && <p className="sl-note">Not in it yet: {s.left.map((l) => l.id === "rating" ? "your rating (rate the night on Today)" : l.id === "deep" || l.id === "rem" ? `${l.name} (no stages from the band)` : l.id === "timing" || l.id === "heart" ? `${l.name.toLowerCase()} (needs 5 other nights)` : `${l.name.toLowerCase()} (not from the band)`).filter((v, i, a) => a.indexOf(v) === i).join(", ")} — scored out of the rest.</p>}
+      {s.left.length > 0 && <p className="sl-note">Not in it yet: {s.left.map(leftWhy).filter((v, i, a) => a.indexOf(v) === i).join(", ")} — scored out of the rest.</p>}
     </div>
   );
 }

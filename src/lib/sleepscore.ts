@@ -18,14 +18,17 @@
  *                  heart rate asleep against your usual (full at or under it, none 8 bpm over).
  *   Your rating 15 what you said the next morning, out of 10 — no wearable has this; you asked for it.
  *
- * A part that isn't known (no rating yet, no stages, too few nights for a usual) is left out and the rest scaled to 100 —
+ * "Your usual" is the 28 nights before this one. A part that isn't known (no rating yet, no stages, under 5 of those nights) is left out and the rest scaled to 100 —
  * and `left` says which, so the number never quietly means something else. Words as Fitbit's bands: 90+ great, 80+ good,
  * 60+ fair, under that rough.
  */
 
 import { clockH, usual, type Night } from "./sleep";
+import { addDays } from "./time";
 
 export const NEED_H = 7;
+/** Nights before this one that make your usual (bedtime, waking, HRV, lowest heart rate). */
+export const USUAL_NIGHTS = 28;
 export type Part = { id: "length" | "continuity" | "onset" | "deep" | "rem" | "timing" | "heart" | "rating"; name: string; got: number; max: number; why: string };
 export type SleepScore = { score: number; parts: Part[]; left: { id: Part["id"]; name: string; max: number }[]; word: string };
 
@@ -44,7 +47,8 @@ export function longWakings(n: Pick<Night, "stages" | "onset" | "wake">): number
 
 /** This night's score, against your other nights (for the usual bedtime, HRV and lowest heart rate). */
 export function sleepScore(n: Night, rating: number | null | undefined, others: Night[], opts: { needH?: number } = {}): SleepScore {
-  const need = opts.needH ?? NEED_H, rest = others.filter((x) => x.id !== n.id);
+  // your usual: the 28 nights before this one — the same nights on every screen, and a night's score doesn't move later
+  const need = opts.needH ?? NEED_H, rest = others.filter((x) => x.id !== n.id && x.day < n.day && x.day >= addDays(n.day, -USUAL_NIGHTS));
   const parts: Part[] = [], left: SleepScore["left"] = [];
   // unknown, or not a number at all (a measure the band didn't send): left out and named, never a NaN score
   const part = (id: Part["id"], name: string, max: number, frac: number | null, why: string) => {
