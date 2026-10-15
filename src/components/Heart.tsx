@@ -18,6 +18,7 @@ import { clockH, FACTORS, lowestHr, suppFactors, usual as middleHalf, type Eveni
 import { tagFactors } from "../lib/lastnight";
 import { stepsIn } from "../lib/steps";
 import { addDays, atMinute, clock, dayLabel, localDay, DAY, MIN } from "../lib/time";
+import { shade, shadeAttrs, NO_SHADE } from "../lib/shade";
 import type { Entry } from "../lib/types";
 import { AfterCards } from "./HeartEffects";
 import { GoesWith, type GridCopy } from "./Sleep";
@@ -169,8 +170,8 @@ function OneDay({ band, data, day, today, now, onDay, w }: { band: BandData; dat
         <span className="hp-hint">against your usual for each time of day · last 2 weeks</span>
       </div>
       <div className="kpis hp-kpis">
-        <div className="kpi"><span className="k">Resting</span><span className="v">{rhr != null ? Math.round(rhr) : "—"}<small>bpm</small></span><span className="d">{rU ? `usual ${Math.round(rU.lo)}–${Math.round(rU.hi)}` : "your usual after 5 mornings"}</span></div>
-        <div className="kpi"><span className="k">HRV</span><span className="v">{hrv != null ? Math.round(hrv) : "—"}<small>ms</small></span><span className="d">{hU ? `usual ${Math.round(hU.lo)}–${Math.round(hU.hi)}` : "your usual after 5 mornings"}</span></div>
+        <div className="kpi"><span className="k">Resting</span><span className="v sh" {...shadeAttrs(rU ? shade(rhr, rU.lo, rU.hi, "down") : NO_SHADE)}>{rhr != null ? Math.round(rhr) : "—"}<small>bpm</small></span><span className="d">{rU ? `usual ${Math.round(rU.lo)}–${Math.round(rU.hi)}` : "your usual after 5 mornings"}</span></div>
+        <div className="kpi"><span className="k">HRV</span><span className="v sh" {...shadeAttrs(hU ? shade(hrv, hU.lo, hU.hi, "up") : NO_SHADE)}>{hrv != null ? Math.round(hrv) : "—"}<small>ms</small></span><span className="d">{hU ? `usual ${Math.round(hU.lo)}–${Math.round(hU.hi)}` : "your usual after 5 mornings"}</span></div>
         <div className="kpi"><span className="k">Awake average</span><span className="v">{nums.avg != null ? Math.round(nums.avg) : "—"}<small>bpm</small></span>
           <span className="d">{nums.avg != null && nums.usualAvg != null ? `${sgn(nums.avg - nums.usualAvg)} vs usual${isToday ? " so far" : ""}` : "no usual yet"}{workouts.length ? " · workout left out" : ""}</span></div>
         <div className="kpi"><span className="k">Above your usual</span><span className="v">{above ? dur(nums.above) : "—"}</span>
@@ -309,7 +310,12 @@ function Mornings({ band, awake, ns, evs, today, span, sel, onSel, w }: { band: 
             {tks.filter((t) => Math.abs(Y(t) - Y(lastV)) >= 12).map((t) => <g key={t}><line x1={x0} x2={x1} y1={Y(t)} y2={Y(t)} className="he-grid" /><text x={x1 + 6} y={Y(t) + 3} className="hp-t">{t}</text></g>)}
             <path d={line} stroke={s.color} strokeWidth="2" fill="none" strokeLinejoin="round" />
             {s.vals.map((v, i) => (v == null ? null : <circle key={i} cx={cx(i)} cy={Y(v)} r={i === k ? r + 1.5 : r} fill={s.color} stroke="var(--i-panel)" strokeWidth="1.2" />))}
-            <text x={x1 + 6} y={Y(lastV) + 4} className="hp-last" style={{ fill: s.color }}>{Math.round(lastV)} {s.unit}</text>
+            {(() => {
+              // the latest morning against your middle half: green the better way, red the worse, with its arrow (PLAN 105 B)
+              const sh = mh && s.id !== "awake" ? shade(lastV, mh.lo, mh.hi, s.id === "hrv" ? "up" : "down") : NO_SHADE;
+              const fill = sh.tone === "better" ? "var(--sh-g)" : sh.tone === "worse" ? "var(--sh-r)" : s.color;
+              return <text x={x1 + 6} y={Y(lastV) + 4} className="hp-last" data-tone={sh.lvl ? sh.tone! : undefined} style={{ fill }}>{Math.round(lastV)} {s.unit}{sh.lvl ? (lastV > mh!.hi ? " ↑" : " ↓") : ""}</text>;
+            })()}
           </g>;
         })}
         <text x={x0} y={markTop - 4} className="cmp-k">The evening before</text>

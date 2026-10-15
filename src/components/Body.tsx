@@ -173,7 +173,7 @@ function KcalPanel({ list }: { list: GlanceDay[] }) {
     <Panel cls="gl-kcal" kick="Fuel" title="Calories and macros per day"
       ans={logged.length ? <>Averaging <b>{f0(avgK)} kcal</b> (goal {f0(goals.kcal)}; within ±200 on {onGoal} of {logged.length} days), protein <b>{f0(avgP)} g</b> a day ({f1(avgP / bodyKg)} g/kg) — at the {goals.p} g goal on {pHit} of {logged.length} days.</> : "No food logged in this period."}
       meta={<>{logged.length} of {rows.length} days logged<br />unlogged days left out</>}
-      foot={<>{MAC.map(([, n, c]) => <span key={n} className="lgd"><i style={{ background: c }} />{n}</span>)}<span className="lgd"><i className="ln now" />calorie goal</span><span className="gl-dim">goals: Settings</span></>}>
+      foot={<>{MAC.map(([, n, c]) => <span key={n} className="lgd"><i style={{ background: c }} />{n}</span>)}<span className="lgd"><i className="ln now" />calorie goal</span><span className="lgd"><i className="kc-on" />within ±200 of it</span><span className="lgd"><i className="kc-off" />further off</span><span className="gl-dim">goals: Settings</span></>}>
       <div ref={ref} className="gl-chart">
         <svg viewBox={`0 0 ${w} ${H}`} width={w} height={H} role="img" aria-label="Calories per day, split into protein, carbs and fat">
           {ticks.map((v) => <g key={v}><line x1={L} x2={w - R} y1={Y(v)} y2={Y(v)} className={v ? "grid" : "axis"} /><text x={L - 6} y={Y(v) + 3.5} textAnchor="end">{v ? `${v / 1000}k` : "0"}</text></g>)}
@@ -182,6 +182,8 @@ function KcalPanel({ list }: { list: GlanceDay[] }) {
             let acc = 0; const segs = MAC.map(([k, , c, kc], m) => { const v = r.m![k] * kc, ya = Y(acc + v), yb = Y(acc); acc += v; return m === 2 ? <path key={k} d={col(x(j), bw, ya + 1.5, yb)} fill={c} /> : <rect key={k} x={x(j)} y={ya + 1.5} width={bw} height={Math.max(.5, yb - ya - 1.5)} fill={c} />; });
             return (
               <g key={r.day}>{segs}{labs.has(j) && <text x={x(j)} y={H - 2}>{labs.get(j)}</text>}
+                {/* against the goal (PLAN 105 B): green within ±200; off it grey, darker the further — never red, it's food */}
+                <rect x={x(j)} y={top + ph + 3} width={bw} height={4} rx={1} className="kc-goal" data-on={Math.abs(r.m.kcal - goals.kcal) <= 200 || undefined} data-off={Math.abs(r.m.kcal - goals.kcal) > 200 ? Math.min(3, Math.ceil(Math.abs(r.m.kcal - goals.kcal) / 400)) : undefined} />
                 <rect x={L + j * cw} y={top} width={cw} height={ph} fill="transparent" data-tip={`${dayLabel(noon(r.day))}\n${f0(r.m.kcal)} kcal\nProtein ${f0(r.m.p)} g · Carbs ${f0(r.m.c)} g · Fat ${f0(r.m.f)} g`} /></g>
             );
           })}

@@ -113,6 +113,15 @@ function world(seed = 5) {
   check('a row and a button per night, 8 numbers each', await pg.locator('.sl .sl-rowbtn').count() === nN && await pg.locator('.sl .sl-colh').count() === 8);
   await pg.locator('.sl .sl-rowbtn').nth(3).click(); await pg.waitForTimeout(200);
   check('tapping a row opens that night at the top', (await pg.locator('.sl .sl-rowbtn').nth(3).getAttribute('aria-pressed')) === 'true');
+  // PLAN 105 B, phase 2: a number off your usual is shaded — green the better way, red the worse — and always has its arrow
+  const shaded = await pg.locator('.sl .sl-log svg').evaluate((svg) => {
+    const heads = [...svg.querySelectorAll('.sl-colh')].map((t) => [t.textContent, +t.getAttribute('x')]);
+    return [...svg.querySelectorAll('rect.shc')].map((r) => { const x = +r.getAttribute('x') + +r.getAttribute('width') - 12, arrow = r.parentNode.querySelector('.sl-arrow')?.textContent ?? '';
+      return [heads.reduce((b, h) => (Math.abs(h[1] - x) < Math.abs(b[1] - x) ? h : b))[0], r.dataset.tone, arrow]; });
+  });
+  const UP = ['Asleep', 'Deep', 'REM', 'HRV'], arrows = await pg.locator('.sl .sl-log .sl-arrow').count();
+  check(`the log's numbers: ${shaded.length} shaded, each with its arrow, green the better way (${[...new Set(shaded.map((c) => c.join(' ')))].slice(0, 6).join(' · ')})`,
+    shaded.length > 5 && shaded.length === arrows && shaded.every(([c, tone, a]) => a && ((UP.includes(c) === (a === '↑')) === (tone === 'better'))) && shaded.some((c) => c[1] === 'worse') && shaded.some((c) => c[1] === 'better'));
   await pg.locator('.sl .sl-a').screenshot({ path: OUT + 'sleep-a-laptop.png' });
   // C: what goes with
   const cell = (f, o) => pg.locator(`.sl .sl-cell[aria-label^="${f} and ${o}:"]`);

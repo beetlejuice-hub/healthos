@@ -101,6 +101,10 @@ function world({ seed = 7, everyMin = 1 } = {}) {
   check(`one day: today, resting ${w.rhr[today]} and HRV ${w.hrv[today]} from the band (${kp.replace(/\n/g, ' ')})`, /Today/.test(await pg.locator('.hp-day .sl-title').innerText()) && new RegExp(`Resting\\s*${w.rhr[today]}\\s*bpm`, 'i').test(kp) && new RegExp(`HRV\\s*${w.hrv[today]}\\s*ms`, 'i').test(kp));
   check(`one day: awake average against your usual so far, the workout left out (${(kp.match(/Awake average[\s\S]*?out/i) || [''])[0].replace(/\n/g, ' ')})`, /Awake average\s*\d+\s*bpm\s*[+−±]\d\.\d vs usual so far · workout left out/i.test(kp));
   check(`one day: time above / below your usual (${(kp.match(/Above your usual[\s\S]*$/i) || [''])[0].replace(/\n/g, ' ')})`, /Above your usual\s*\d+ h \d\d\s*of \d+ h \d\d awake · below \d+ h \d\d/i.test(kp));
+  // PLAN 105 B, phase 2: today's resting and HRV shaded against your usual, the better way green
+  const kv = await pg.locator('.hp-kpis .kpi').evaluateAll((els) => els.slice(0, 2).map((e) => { const v = +e.querySelector('.v').firstChild.textContent, m = e.querySelector('.d').textContent.match(/usual (\d+)–(\d+)/); return [v, m ? +m[1] : null, m ? +m[2] : null, e.querySelector('.v').dataset.tone ?? 'none']; }));
+  const want2 = kv.map(([v, lo, hi], i) => (lo == null || (v >= lo && v <= hi) ? 'none' : (v < lo) === (i === 0) ? 'better' : 'worse'));
+  check(`today's resting and HRV: shaded only off the usual, the right way (${kv.map((k) => `${k[0]} in ${k[1]}–${k[2]} → ${k[3]}`).join(' · ')})`, kv.every((k, i) => k[3] === want2[i]));
   const day = pg.locator('.hp-chart svg');
   const lens = await day.evaluate((s) => [...s.querySelectorAll('path')].map((p) => [p.getAttribute('stroke'), p.getAttribute('fill'), (p.getAttribute('d') || '').length]));
   const drawn = (col, kind) => lens.filter(([st, fi]) => (kind === 'line' ? st : fi) === col).reduce((a, x) => a + x[2], 0);
@@ -149,6 +153,9 @@ function world({ seed = 7, everyMin = 1 } = {}) {
   check(`mornings: a dot per morning for resting and HRV, awake for every finished day (${dots}/${hdots}/${adots})`, dots === 30 && hdots === 30 && adots >= 27 && adots <= 29);
   const dia = await morn.locator('svg path[fill="var(--alc)"]').count(), want = w.drinkEves.filter((d) => d >= '2026-09-08').length;
   check(`mornings: a drinks mark on each morning after a drink evening (${dia} marks, ${want} evenings in the 30 days)`, Math.abs(dia - want) <= 1 && dia >= 5);
+  const lastL = await morn.locator('.hp-last').evaluateAll((els) => els.map((e) => [e.textContent, e.dataset.tone ?? 'none']));
+  check(`mornings: the latest value coloured only with its arrow (${lastL.map((l) => l.join(' ')).join(' · ')})`, lastL.length === 3 && lastL.every(([t, tone]) => (tone === 'none') === !/[↑↓]/.test(t)) && /awake|bpm/.test(lastL[2][0]) && lastL[2][1] === 'none');
+  await morn.screenshot({ path: OUT + 'heartpage-mornings-colour.png' });
   const mt = await morn.textContent();
   check(`mornings: last values labelled (${(mt.match(/\d+ bpm|\d+ ms/g) || []).join(', ')})`, mt.includes(`${w.rhr[today]} bpm`) && mt.includes(`${w.hrv[today]} ms`));
   await morn.screenshot({ path: OUT + 'heartpage-mornings-laptop.png' });

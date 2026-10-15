@@ -1400,7 +1400,7 @@ below, in his words, grouped; A first (broken or wrong now), then the rest. Item
    Checked: sections.test (the three blocks' lines, known answers), e2e/ai.cjs (folded under 200 px with "3 things to
    read", opens to rows with kinds, the protocol still starts an experiment, a reply in your own words saved as said),
    e2e/sleep.cjs (drink nights on the strip say "2 drinks", last night among them).
-105. [ ] **Colour and graphs across Insights** (claimed: this session, 15 Oct — Glance, Mind, the grids, index.css; then
+105. [x] **Colour and graphs across Insights** (claimed: this session, 15 Oct — Glance, Mind, the grids, index.css; then
    #95 calories). Owner, 15 Oct: "The insight page has a lot of info on all pages. Thats good but everything is one color
    and it looks just too monotone. I feel like we should use red green as noted before and maybe more graphs, things that
    makes the data more visual, easier to understand when looking at it" → "Do this now". Canvas (15 Oct):
@@ -1416,9 +1416,16 @@ below, in his words, grouped; A first (broken or wrong now), then the rest. Item
      lower mood, green with a better one, strong only when clear; the "clear" tag neutral there. Every "what goes with
      what" grid (Sleep, Heart, Mind, Training) and Training's strength bars: green / red instead of blue / orange.
      Checked: shade.test (5), e2e/glance.cjs (every row's shade and line agree with its word, phone and laptop; the
-     keys), e2e/mind.cjs (each pair's colour follows its numbers, strong only when clear). Next, phase 2: the Sleep
-     log's numbers, the Heart mornings' today, Food & body. Not reproduced: mindpage timed out twice in loaded runs
-     waiting for the page; three tries to provoke it (heavier load) all rendered in under a second.
+     keys), e2e/mind.cjs (each pair's colour follows its numbers, strong only when clear). Not reproduced: mindpage
+     timed out twice in loaded runs waiting for the page; three tries to provoke it (heavier load) all rendered in under
+     a second.
+   - **Phase 2 done 15 Oct** (owner: "yeaaa"): the Sleep log's numbers (asleep, deep, REM, awake, lowest HR, HRV) each
+     shaded against your usual beside their ↑ ↓ — green the better way; the Heart page's resting and HRV for the day
+     shaded against their usual, and the mornings chart's latest value green / red with its arrow (awake average stays
+     neutral: more activity isn't worse); Food & body: a strip under each day, green within ±200 of the calorie goal,
+     grey further off, darker the further — never red for food. Checked: e2e/sleep.cjs (78 shaded numbers, each with
+     its arrow and the right colour for its column), e2e/heartpage.cjs (shaded only off the usual, the right way; the
+     latest values), e2e/body.cjs (as many green days as the words count, phone and laptop), screenshots.
 98. [ ] **AI, soon**
 98. [ ] **AI, soon** — "it should look at all the data, see whatsup, tell me clever tips, what to improve, and a whole bunch
    of stuff.. it should recommend me, or just understand protocols i give him, and help me set up in app, or just tell

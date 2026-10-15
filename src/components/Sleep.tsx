@@ -10,6 +10,7 @@ import { loadBandBefore } from "../lib/band-client";
 import type { Lanes } from "../lib/insights";
 import { clockH, facts, firstAt, FACTORS, goesWith, OUTCOMES, suppFactors, regularity, usual, usualNightHr, weekendShift, type Cell, type Evening, type Factor, type Night, type Outcome, type Range } from "../lib/sleep";
 import { addDays, atMinute, clock, dayLabel, DAY, HOUR, MIN } from "../lib/time";
+import { shade, NO_SHADE } from "../lib/shade";
 import type { Entry } from "../lib/types";
 import { useNights } from "./useNights";
 import { useWidth } from "./useWidth";
@@ -228,11 +229,12 @@ function NightLog({ ns, evs, sel, onSel, wide, w, workouts, meals }: { ns: Night
     ? `You’re usually in bed by ${hm(U.bed.mid)}, asleep ${Math.round(U.lat.mid)} minutes later, and up at ${hm(U.up.mid)} — about ${dur(U.asleep.mid)} of sleep.${shift != null && Math.abs(shift) >= 20 ? ` Friday and Saturday nights run about ${shift < 60 ? `${Math.round(Math.abs(shift))} min` : dur(Math.abs(shift))} ${shift > 0 ? "later" : "earlier"}.` : ""}`
     : `A typical night needs at least 5 nights — ${ns.length} so far.`;
   // the log: each night a strip on one clock (18:00 → 11:00), its numbers beside it
-  const cols: [string, string, (n: Night, e: Evening) => number | null, Range | null, (v: number) => string][] = wide ? [
-    ["Asleep", "h:mm", (n) => n.asleep, U.asleep, hmm], ["Deep", "min", (n) => n.deep, U.deep, (v) => String(Math.round(v))], ["REM", "min", (n) => n.rem, U.rem, (v) => String(Math.round(v))],
-    ["Awake", "min", (n) => n.awake, U.awake, (v) => String(Math.round(v))], ["Lowest HR", "bpm", (n) => n.low, U.low, (v) => String(Math.round(v))], ["HRV", "ms", (n) => n.hrv, U.hrv, (v) => String(Math.round(v))],
-    ["Nap", "that day", (n) => n.nap?.min ?? null, null, (v) => `${Math.round(v)}m`], ["Rating", "you gave", (_, e) => e.rating, null, (v) => String(v)],
-  ] : [["Asleep", "", (n) => n.asleep, U.asleep, hmm]];
+  // each number shaded by how far it sits from your usual (PLAN 105 B): green the better way, red the worse
+  const cols: [string, string, (n: Night, e: Evening) => number | null, Range | null, (v: number) => string, "up" | "down" | null][] = wide ? [
+    ["Asleep", "h:mm", (n) => n.asleep, U.asleep, hmm, "up"], ["Deep", "min", (n) => n.deep, U.deep, (v) => String(Math.round(v)), "up"], ["REM", "min", (n) => n.rem, U.rem, (v) => String(Math.round(v)), "up"],
+    ["Awake", "min", (n) => n.awake, U.awake, (v) => String(Math.round(v)), "down"], ["Lowest HR", "bpm", (n) => n.low, U.low, (v) => String(Math.round(v)), "down"], ["HRV", "ms", (n) => n.hrv, U.hrv, (v) => String(Math.round(v)), "up"],
+    ["Nap", "that day", (n) => n.nap?.min ?? null, null, (v) => `${Math.round(v)}m`, null], ["Rating", "you gave", (_, e) => e.rating, null, (v) => String(v), null],
+  ] : [["Asleep", "", (n) => n.asleep, U.asleep, hmm, "up"]];
   const CW = wide ? 62 : 54, tx = w - 6 - cols.length * CW, sx0 = wide ? 104 : 50, sx1 = tx - 14, c0 = 18, c1 = 35;
   const X = (h: number) => sx0 + ((h - c0) / (c1 - c0)) * (sx1 - sx0), top = 50, RH = wide ? 22 : 25, list = [...ns].reverse(), H = top + list.length * RH + 8;
   const D = { awake: 3, rem: 7, light: 11, deep: 15 } as const;
@@ -282,11 +284,12 @@ function NightLog({ ns, evs, sel, onSel, wide, w, workouts, meals }: { ns: Night
                   {workouts.filter((g) => g.end > atMinute(n.eve, c0 * 60) && g.start < n.bed).map((g) => <rect key={g.start} x={X(Math.max(c0, clockH(g.start, n.eve)))} y={base - 3} width={Math.max(2, X(clockH(g.end, n.eve)) - X(Math.max(c0, clockH(g.start, n.eve))))} height={3} fill="var(--gym)" fillOpacity=".8" />)}
                   {meals.filter((m) => m.at >= atMinute(n.eve, 21 * 60) && m.at < n.bed).map((m) => <rect key={m.at} x={X(clockH(m.at, n.eve)) - 3} y={base - 9} width={6} height={6} fill="var(--kcal)" />)}
                   {e.drinks.filter((t) => clockH(t, n.eve) >= c0).map((t) => <path key={t} d={diam(X(clockH(t, n.eve)), base - 6, 4.2)} fill="var(--alc)" stroke="var(--i-panel)" strokeWidth="1.2" />)}
-                  {cols.map(([name, , get, u, fmt], ci) => {
+                  {cols.map(([name, , get, u, fmt, good], ci) => {
                     const v = get(n, e), x = tx + ci * CW + CW - 10;
                     if (v == null) return <text key={name} x={x} y={y + RH / 2 + 4} textAnchor="end" className="sl-num" data-none>–</text>;
                     const arrow = u ? (v > u.hi ? "↑" : v < u.lo ? "↓" : "") : "";
-                    return <g key={name}><text x={x} y={y + RH / 2 + 4} textAnchor="end" className="sl-num" data-out={arrow ? true : undefined}>{fmt(v)}</text>{arrow && <text x={x + 2} y={y + RH / 2 + 4} className="sl-arrow">{arrow}</text>}</g>;
+                    const sh = u ? shade(v, u.lo, u.hi, good) : NO_SHADE;
+                    return <g key={name}>{sh.lvl > 0 && <rect x={tx + ci * CW + 6} y={y + 3} width={CW - 4} height={RH - 6} rx={4} className="shc" data-tone={sh.tone!} data-lvl={sh.lvl} />}<text x={x} y={y + RH / 2 + 4} textAnchor="end" className="sl-num" data-out={arrow ? true : undefined}>{fmt(v)}</text>{arrow && <text x={x + 2} y={y + RH / 2 + 4} className="sl-arrow">{arrow}</text>}</g>;
                   })}
                   {!wide && n.nap && <text x={sx1 + 4} y={y + RH / 2 + 4} className="sl-nap">nap</text>}
                   {n.id === sel.id && <rect x={2.5} y={y + 0.5} width={w - 7} height={RH - 1} fill="none" stroke="var(--i-line-2)" />}

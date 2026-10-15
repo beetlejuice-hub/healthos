@@ -1476,3 +1476,11 @@ a { color: inherit; }
 .tp-srow[data-state="stronger"] .bar { background: var(--sh-g); opacity: 1; }
 .tp-srow[data-state="dropping"] .bar { background: var(--sh-r); opacity: 1; }
 .tp-srow > span:first-child small { white-space: normal; }
+
+/* Colour pass B, phase 2 (PLAN 105): the Sleep log's numbers, Heart's today, Food & body against the goal */
+.shc[data-tone="better"][data-lvl="1"] { fill: rgba(46, 158, 85, .18); } .shc[data-tone="better"][data-lvl="2"] { fill: rgba(46, 158, 85, .34); } .shc[data-tone="better"][data-lvl="3"] { fill: rgba(46, 158, 85, .55); }
+.shc[data-tone="worse"][data-lvl="1"] { fill: rgba(229, 96, 79, .16); } .shc[data-tone="worse"][data-lvl="2"] { fill: rgba(229, 96, 79, .32); } .shc[data-tone="worse"][data-lvl="3"] { fill: rgba(229, 96, 79, .55); }
+.kpi .v.sh[data-lvl] { border-radius: 8px; padding: 0 6px; margin-left: -6px; justify-self: start; }
+.kc-goal { fill: transparent; } .kc-goal[data-on] { fill: var(--sh-g); }
+.kc-goal[data-off="1"] { fill: var(--i-ink-2); opacity: .3; } .kc-goal[data-off="2"] { fill: var(--i-ink-2); opacity: .55; } .kc-goal[data-off="3"] { fill: var(--i-ink-2); opacity: .8; }
+.lgd i.kc-on { background: var(--sh-g); height: 4px; } .lgd i.kc-off { background: var(--i-ink-2); opacity: .55; height: 4px; }

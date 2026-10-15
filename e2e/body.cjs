@@ -34,6 +34,9 @@ const { chromium, APP, OUT, handle } = require('./harness.cjs');
     await pg.goto(APP + '#insights/intake'); await pg.waitForTimeout(300);
     const kcal = await pg.locator('.gl-kcal').innerText();
     check(name + ': calories against the goal, protein per kg', /Averaging [\d,]+ kcal \(goal [\d,]+/.test(kcal) && /g\/kg/.test(kcal));
+    // PLAN 105 B, phase 2: a green strip under each day within ±200 of the goal — as many as the words say; never red
+    const on = await pg.locator('.gl-kcal .kc-goal[data-on]').count(), said = +(kcal.match(/within ±200 on (\d+) of/) || [])[1];
+    check(`${name}: green under the ${said} days within ±200 of the goal (${on} green), the rest grey`, on === said && await pg.locator('.gl-kcal .kc-goal').count() === +(kcal.match(/of (\d+) days/) || [])[1]);
     const wt = await pg.locator('.gl-weight').innerText();
     check(name + ': weight trend in kg a week, with its range', /kg a week \(95% range/.test(wt));
     check(name + ': old panels gone', !(await pg.locator('text=Today so far').count()) && !(await pg.locator('h2:has-text("Caffeine and alcohol")').count()));
