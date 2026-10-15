@@ -927,6 +927,26 @@ email get Dev tools (`#dev`): raw entry editor, generate/remove sample, wipe acc
    findings". A chat exists (components/Ai.tsx) but sees only a written summary. Idea: tools the AI calls and the app
    answers from your data with the same tested engines (find, day, series, compare, after, findings, show-a-chart);
    every number from a tool, never the AI's own maths; new clear findings arrive as chat messages.
+   Owner, 15 Oct: "yea lets do 1". (claimed: main, 15 Oct — lib/ai/chattools, ai/tasks chat contract, worker chat,
+   Ai.tsx send, components/ChatChart.) **Plan:**
+   - Why: the chat answers from an ~11k-token written summary, so "how did I sleep after drinks this month?" or "what did
+     I eat on Tuesday?" get approximate answers. Asked for: "pull data based on what i ask and answer it nicely".
+   - What: the AI calls the app for exact data while it answers — `day` (everything on one date), `series` (a measure
+     day by day over a span, with its average), `find` (where a word shows up: foods, drinks, notes, answers),
+     `show_chart` (attaches a chart the app draws from its own data), `remember` (a lasting fact to memory, replacing
+     the JSON field) — plus web search (≤ 3) for "look it up". Replies stay Markdown.
+   - How: the tools run in the app (where the data and the band's data are, through the same engines the pages use);
+     the Worker relays. A tool round = the Worker returns the AI's calls and its raw turn; the app runs them and sends the
+     results back; at most 6 rounds a message; only the first call of a message counts toward the 50-a-day stop (all
+     are priced and logged). Opus 5.5 ties thinking to the conversation: within a message the AI's turn is sent back
+     exactly as it came; across messages only the text is kept (dropping earlier thinking from the front is allowed).
+     The data summary stays the system block (cached), byte-identical across a message's rounds.
+   - Tested: chattools.test (known answers for each tool from a fixture; bad input says why), worker ai.test (tools sent,
+     no enforced shape, a tool round returned, continuation not counted), e2e (a question → the app's day sent back to
+     the AI → the reply with a chart drawn from the app's numbers).
+   - Phases: 1 the loop and day / series / find / show_chart / remember + web search; 2 `compare` (days with vs without
+     something, with its 95% range — the grids' engine) and the band's nights, heart and training sessions; 3 the
+     summary slimmed once tools carry the detail (cheaper chats).
 
 ---
 
