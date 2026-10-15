@@ -38,6 +38,8 @@ const ANSWERS = { night: () => NIGHT, digest: () => ({ greeting: 'Hi', items: []
 
   // 21:30 — the day is read back.
   await pg.clock.setFixedTime(new Date(2026, 9, 1, 21, 30)); await pg.goto(APP + '#today'); await pg.reload(); await pg.waitForSelector('text=Settings'); await pg.waitForTimeout(500);
+  // the read-back is asked on the app's first tick; a loaded machine can take longer than half a second to get there
+  for (let i = 0; i < 40 && !calls.some((c) => c.task === 'night'); i++) await pg.waitForTimeout(100);
   const sent = calls.filter((c) => c.task === 'night');
   check('one read-back asked for, for today', sent.length === 1 && sent[0].day === '2026-10-01');
   check('the AI gets the day in order, the note quoted exactly', /## Today, as it happened \(2026-10-01\)[\s\S]*08:10 drank Coffee[\s\S]*14:00 check-in: mood 4, stress 8 · my note: "deadline at work"/.test(sent[0].context));

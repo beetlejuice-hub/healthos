@@ -112,15 +112,16 @@ const band = (xs: number[], min: number): Band | null =>
 
 /**
  * Every measure for the 7 days ending `today`. `days` must run oldest → newest and end on `today`;
- * `trendDays` sets how much of it the sparkline gets.
+ * `trendDays` sets how much of it the sparkline gets. `complete`: the last day is over (a week read on Monday about the
+ * week to Sunday) — its calories and caffeine count.
  */
-export function glance(days: GlanceDay[], today: string, trendDays = 30): MeasureStat[] {
+export function glance(days: GlanceDay[], today: string, trendDays = 30, complete = false): MeasureStat[] {
   const idx = new Map(days.map((d, i) => [d.day, i]));
   const end = idx.get(today) ?? days.length - 1, start = end - 6;
   return MEASURES.map((m) => {
     const v = (i: number): number | null => {
       if (i < 0 || i >= days.length) return null;
-      if (m.partialToday && i === end && days[i].day === today) return null;
+      if (m.partialToday && !complete && i === end && days[i].day === today) return null;
       return days[i][m.k];
     };
     const windowValue = (a: number, z: number): { value: number | null; n: number } => {
@@ -141,7 +142,7 @@ export function glance(days: GlanceDay[], today: string, trendDays = 30): Measur
     const state: MeasureStat["state"] = week == null ? "none" : !usualWeek ? "building" : week < usualWeek.p10 ? "lo" : week > usualWeek.p90 ? "hi" : "ok";
     const delta = week != null && usualWeek ? week - usualWeek.p50 : null;
     const better = (state === "lo" || state === "hi") && m.good ? (m.good === "up") === (state === "hi") : null;
-    const trend: (number | null)[] = []; for (let i = end - trendDays + 1; i <= end; i++) trend.push(i >= 0 ? (i === end && m.partialToday ? null : days[i]?.[m.k] ?? null) : null);
+    const trend: (number | null)[] = []; for (let i = end - trendDays + 1; i <= end; i++) trend.push(i >= 0 ? (i === end && m.partialToday && !complete ? null : days[i]?.[m.k] ?? null) : null);
     return { ...m, week, weekDays: wk.n, day, usualWeek, state, delta, better, trend };
   });
 }

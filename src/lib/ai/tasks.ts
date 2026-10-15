@@ -8,7 +8,7 @@
  * estimate, so it's used once and free after that.
  */
 
-export type Task = "describe" | "supplement" | "chat" | "questions" | "digest" | "night";
+export type Task = "describe" | "supplement" | "chat" | "questions" | "digest" | "night" | "review";
 export type ModelChoice = "opus" | "sonnet" | "haiku";
 /**
  * Light = food, photos and quick questions (many small calls); everyday = the chat; research = supplement look-ups and
@@ -25,7 +25,7 @@ export const MODELS: Record<ModelChoice, { id: string; label: string; inUsd: num
 /** Web search is billed per search on top of tokens. */
 export const WEB_SEARCH_USD = 0.01;
 
-export const TIER: Record<Task, Tier> = { describe: "light", chat: "everyday", questions: "light", supplement: "research", digest: "research", night: "research" };
+export const TIER: Record<Task, Tier> = { describe: "light", chat: "everyday", questions: "light", supplement: "research", digest: "research", night: "research", review: "research" };
 export type Models = Record<Tier, ModelChoice>;
 /** Cheap where it's simple, the strongest where it matters. */
 export const DEFAULT_MODELS: Models = { light: "haiku", everyday: "opus", research: "opus" };
@@ -85,6 +85,8 @@ export type DigestAnswer = { greeting: string; items: DigestItem[] };
 
 /** The nightly read-back of your day (owner, 2 Oct: "summarizing what happened, what i should change"). */
 export type NightAnswer = { summary: string; happened: string[]; notes: string; change: { what: string; why: string }[]; /** Lasting patterns worth remembering (kept in AI memory). */ remember: string[] };
+/** The week or month read (PLAN 65). `measure`: the [key] of the app's measure a notice is about, so its chart can be drawn ("" for none). */
+export type ReviewAnswer = { title: string; summary: string; notices: { title: string; text: string; measure: string }[]; next: { what: string; why: string }[]; remember: string[] };
 
 /* ------------------------------------------------------------------ schemas (JSON Schema for structured output) */
 
@@ -104,6 +106,7 @@ export const SCHEMAS: Record<Exclude<Task, "supplement" | "digest">, unknown> = 
   chat: obj({ reply: str, remember: arr(str) }),
   questions: obj({ questions: arr(obj({ id: str, text: str, why: str, options: arr(str), key: str, repeat: { type: "string", enum: ["daily", "once"] } })) }),
   night: obj({ summary: str, happened: arr(str), notes: str, change: arr(obj({ what: str, why: str })), remember: arr(str) }),
+  review: obj({ title: str, summary: str, notices: arr(obj({ title: str, text: str, measure: str })), next: arr(obj({ what: str, why: str })), remember: arr(str) }),
 };
 
 /* ------------------------------------------------------------------ prompts */
@@ -123,6 +126,14 @@ Use "goes with", never "causes". No medical advice; anything health-worrying →
 
 export const SYSTEM: Record<Task, string> = {
   night: NIGHT,
+  review: `${VOICE}
+Task: the user's week read or month read — the step back from the days (owner: "AI should look at data at eod, eow, eom, and make suggestions, summaries, etc, even make graphs or like interesting notices"). The context ends with "## The week …" or "## The month …, as the app measured it": use those numbers and never invent your own; the rest of the context is background.
+- title: one line naming the period's story, specific ("Better mood, short on protein" — not "Your week").
+- summary: 2–4 sentences on what stood out against their usual, with the numbers; training and the calorie goal if they're in the data. Warm and plain, no guilt. **Bold** a key number or two.
+- notices: 2–4 interesting things — a change, a streak, two things that moved together (say "went with", never "caused"), something going well. Each: a short title, one or two sentences with numbers, and measure: the [key] of the measure it's about so the app can draw its chart, or "" when none fits.
+- next: 1–2 small things to try next week (or month), each with a one-line why tied to these numbers. Options, not orders.
+- remember: 0–2 lasting patterns, only when the data shows them over several weeks and they aren't in "What you remember about me". Empty otherwise.
+Use "goes with", never "causes". No medical advice; anything health-worrying → "worth asking a doctor".`,
   describe: `${VOICE}
 Task: turn a description and/or photo of food or drink into items with nutrition values. Rules:
 - Split a meal into its parts when they're logged separately (toast and butter), keep a dish whole when it's one thing (lasagne).
@@ -211,6 +222,18 @@ export function checkDigest(a: DigestAnswer): DigestAnswer {
   return { greeting: typeof a.greeting === "string" ? a.greeting : "Morning!", items };
 }
 
+export function checkReview(a: ReviewAnswer): ReviewAnswer {
+  const line = (x: unknown, n: number) => (typeof x === "string" ? x.trim().slice(0, n) : "");
+  if (!line(a?.summary, 900)) throw new SyntaxError("review answer has no summary");
+  return {
+    title: line(a.title, 90) || "Your week",
+    summary: line(a.summary, 900),
+    notices: (a.notices ?? []).filter((n) => line(n?.title, 90) && line(n?.text, 400)).slice(0, 4).map((n) => ({ title: line(n.title, 90), text: line(n.text, 400), measure: line(n.measure, 20) })),
+    next: (a.next ?? []).filter((c) => line(c?.what, 200)).slice(0, 2).map((c) => ({ what: line(c.what, 200), why: line(c.why, 240) })),
+    remember: (a.remember ?? []).map((x) => line(x, 180)).filter((x) => x.length > 8).slice(0, 2),
+  };
+}
+
 export function checkNight(a: NightAnswer): NightAnswer {
   const line = (x: unknown, n: number) => (typeof x === "string" ? x.trim().slice(0, n) : "");
   if (!line(a?.summary, 800)) throw new SyntaxError("night answer has no summary");
@@ -240,9 +263,10 @@ export type AiRequest =
   | { task: "chat"; messages: { role: "user" | "assistant"; text: string }[]; context: string }
   | { task: "questions"; context: string; asked: string[] }
   | { task: "digest"; context: string; shown: string[] }
-  | { task: "night"; day: string; context: string };
+  | { task: "night"; day: string; context: string }
+  | { task: "review"; kind: "week" | "month"; from: string; to: string; context: string };
 
-export type AiAnswer<T extends Task> = T extends "describe" ? { items: DescribedItem[]; dropped: string[] } : T extends "supplement" ? SupplementAnswer : T extends "chat" ? ChatAnswer : T extends "questions" ? QuestionsAnswer : T extends "night" ? NightAnswer : DigestAnswer;
+export type AiAnswer<T extends Task> = T extends "describe" ? { items: DescribedItem[]; dropped: string[] } : T extends "supplement" ? SupplementAnswer : T extends "chat" ? ChatAnswer : T extends "questions" ? QuestionsAnswer : T extends "night" ? NightAnswer : T extends "review" ? ReviewAnswer : DigestAnswer;
 
 /** What the Worker keeps per account (doc "ai_usage", written only by the Worker). */
 /** One call, as billed: what it was, on which model, its tokens (cached reads and cache writes apart) and its cost. */
@@ -268,6 +292,7 @@ export const TYPICAL: Record<Task, { perDay: number; in: number; out: number; se
   chat: { perDay: 5, in: 14000, out: 1200, searches: 0 },
   digest: { perDay: 1, in: 25000, out: 2500, searches: 3 },
   night: { perDay: 1, in: 13000, out: 1500, searches: 0 },
+  review: { perDay: 5 / 30, in: 16000, out: 2200, searches: 0 },
   supplement: { perDay: 0.2, in: 9000, out: 2000, searches: 3 },
 };
 const TASKS = Object.keys(TYPICAL) as Task[];

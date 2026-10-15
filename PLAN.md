@@ -883,6 +883,17 @@ email get Dev tools (`#dev`): raw entry editor, generate/remove sample, wipe acc
    - Phases: 1 the week read; 2 the month read (weeks as columns, weight and strength over the month); 3 if wanted, a
      "this week so far" on Sunday evening.
    - Open (defaults taken): Monday morning rather than Sunday night (Sunday's sleep and weigh-in count).
+   - **Phase 1 done 15 Oct — the week read.** lib/review (dueReviews, weekFacts, weekLines; glance's `complete` so the
+     finished Sunday's calories count), the "review" task (Opus, the enforced shape, its check), components/Review (the
+     card in the AI tab: title, summary, the week as a heat table — each day shaded against a usual day, the week's
+     arrow — each notice with its measure's week as dots against the usual band, "Next week, maybe"), the badge counts
+     it, lasting patterns to memory. A week with nothing logged gets no read. Checked: review.test (when it's due —
+     05:59 / 06:00, catch-up, once, the 1st, a Monday the 1st both; a planted mood week found; Sunday's calories in),
+     worker ai.test (validated, the research model, the shape, an empty notice dropped), e2e/review.cjs (Monday 19 Oct:
+     asked once with the app's numbers, the badge, the card's table and charts from the app's numbers, a notice with no
+     measure gets no chart, 390 px, reload asks nothing, an empty account asks nothing), screenshot. On the way:
+     e2e/night.cjs waited a fixed ½ s for the read-back call and missed it once under load — it now waits for the call.
+     Not checked: a real AI's week read (first one Monday 19 Oct, ≈ $0.15). Next: phase 2, the month read.
 66. [x] **Steps from the band** (9 Oct, owner: "go" — worker/band.ts, lib/band.ts `readSteps`, lib/steps.ts, lib/heart.ts
    `whyRaised`, lib/sleep.ts + lib/mind.ts rows, components/Heart.tsx, useNights.ts, MindPage.tsx). Owner: "I dont see it
    tracking daily steps … wondering if the data is valuable for us like more walking equals better sleep at night or better

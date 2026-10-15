@@ -13,12 +13,14 @@ import { dailyFacts } from "../lib/insights";
 import { addDays, localDay } from "../lib/time";
 import type { Supplement } from "../lib/types";
 import { InboxCard } from "./Inbox";
+import { ReviewCard } from "./Review";
+import { dueReviews, weekFacts, weekLines, type Due } from "../lib/review";
 import { Md } from "./Md";
 
 const usd = (x: number) => (x < 0.1 ? `$${x.toFixed(3)}` : `$${x.toFixed(2)}`);
 const k = (n: number) => (n >= 1000 ? `${(n / 1000).toFixed(1)}k` : String(Math.round(n)));
 const clockOf = (t: number) => new Date(t).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
-const TASK_WORDS: Record<string, string> = { describe: "food", questions: "questions", chat: "chat", digest: "morning read", night: "night read", supplement: "supplement" };
+const TASK_WORDS: Record<string, string> = { describe: "food", questions: "questions", chat: "chat", digest: "morning read", night: "night read", supplement: "supplement", review: "week / month read" };
 
 /* ------------------------------------------------------------------ background: morning read + questions */
 
@@ -51,6 +53,26 @@ async function makeNight(day: string, force = false) {
     // What it learned that lasts: into memory (shown in Settings → AI, deletable), no duplicates.
     memory: [...a.memory, ...r.answer.remember.filter((x) => !a.memory.some((m) => m.text.toLowerCase() === x.toLowerCase())).map((x) => ({ id: newId(), text: x, at }))].slice(-60),
     chat: [...a.chat, { role: "assistant" as const, text: `🌙 ${r.answer.summary}${r.answer.change.length ? `\n\nTomorrow, maybe: ${r.answer.change.map((c) => c.what).join("; ")}.` : ""}`, at, unprompted: true }].slice(-80),
+  }));
+}
+
+/**
+ * The week read (PLAN 65): the app measures the week, the AI writes it up; both are kept so the card draws the app's
+ * numbers. Lasting patterns go to memory like the night read's. The month read is phase 2.
+ */
+async function makeReview(d: Due) {
+  const key = `review:${d.kind}:${d.key}`;
+  if (d.kind !== "week" || tried.has(key)) return;
+  tried.add(key);
+  const s = getState(), f = weekFacts(s.entries, s.workouts, s.settings, s.goals, d.from, d.to);
+  // a week with nothing in it gets no read (a new account, a week away)
+  if (!f.rows.some((x) => x.value != null) && !f.training.sessions) return;
+  const r = await askAi({ task: "review", kind: d.kind, from: d.from, to: d.to, context: `${contextNow()}\n${weekLines(f).join("\n")}` });
+  if (!r.ok) return;
+  const at = Date.now();
+  act.setAi((a) => ({
+    reviews: [...(a.reviews ?? []).filter((x) => !(x.kind === d.kind && x.key === d.key)), { ...d, ...r.answer, at, rows: f.rows }].slice(-12),
+    memory: [...a.memory, ...r.answer.remember.filter((x) => !a.memory.some((m) => m.text.toLowerCase() === x.toLowerCase())).map((x) => ({ id: newId(), text: x, at }))].slice(-60),
   }));
 }
 
@@ -94,6 +116,8 @@ export function useAiAuto(userId: string | undefined) {
       const target = h >= 20 ? addDays(today, 1) : h >= 5 ? today : null;
       if (target && ai.digest?.day !== target && !(target === today && ai.digest?.day === addDays(today, 1))) void makeDigest(target);
       if (h >= 10 && h < 22 && ai.questions?.day !== today) void makeQuestions(today);
+      // The week just gone, from Monday 06:00 (PLAN 65).
+      for (const d of dueReviews(now.getTime(), (ai.reviews ?? []).map((r) => `${r.kind}:${r.key}`))) void makeReview(d);
       // Your day, read back: tonight from 21:00; or next morning if the app wasn't opened that evening.
       const yesterday = addDays(today, -1);
       if (h >= NIGHT_FROM_H && ai.night?.day !== today && loggedOn(today)) void makeNight(today);
@@ -111,7 +135,7 @@ export function useAiAuto(userId: string | undefined) {
 /** Unread unprompted messages, for the tab dot: the AI's, and the app's still waiting for you (PLAN 102). */
 export function useAiUnread() {
   const ai = useStore((s) => s.ai);
-  return ai.chat.filter((m) => m.unprompted && m.at > ai.seenAt).length + (ai.inbox ?? []).filter((n) => n.at > ai.seenAt && !n.reply && !n.closed).length;
+  return ai.chat.filter((m) => m.unprompted && m.at > ai.seenAt).length + (ai.inbox ?? []).filter((n) => n.at > ai.seenAt && !n.reply && !n.closed).length + (ai.reviews ?? []).filter((r) => r.at > ai.seenAt).length;
 }
 
 /* ------------------------------------------------------------------ Today: the morning read */
@@ -228,17 +252,17 @@ export function AiScreen() {
   const [text, setText] = useState("");
   const [err, setErr] = useState<string | null>(null);
   const end = useRef<HTMLDivElement | null>(null);
-  const inbox = ai.inbox ?? [], now = Date.now();
-  useEffect(() => { act.setAi({ seenAt: Date.now() }); }, [ai.chat.length, inbox.length]);
+  const inbox = ai.inbox ?? [], reviews = ai.reviews ?? [], now = Date.now();
+  useEffect(() => { act.setAi({ seenAt: Date.now() }); }, [ai.chat.length, inbox.length, reviews.length]);
   // opened from the badge: start at the first new message, not the bottom (later ones scroll to the end as they come)
   const [since] = useState(() => getState().ai.seenAt), landed = useRef(false);
   useEffect(() => {
     const first = landed.current ? null : document.querySelector(".chat [data-new]");
     landed.current = true;
     if (first) first.scrollIntoView({ block: "start" }); else end.current?.scrollIntoView({ block: "end" });
-  }, [ai.chat.length, inbox.length, busy]);
-  // one thread: the AI's messages and yours, and the app's (PLAN 102), by time
-  const thread = [...ai.chat.map((m, i) => ({ at: m.at, key: `c${i}`, m })), ...inbox.map((n) => ({ at: n.at, key: n.id, n }))].sort((a, b) => a.at - b.at);
+  }, [ai.chat.length, inbox.length, reviews.length, busy]);
+  // one thread: the AI's messages and yours, the app's (PLAN 102) and the week reads (PLAN 65), by time
+  const thread = [...ai.chat.map((m, i) => ({ at: m.at, key: `c${i}`, m })), ...inbox.map((n) => ({ at: n.at, key: n.id, n })), ...reviews.map((r) => ({ at: r.at, key: `r${r.kind}${r.key}`, r }))].sort((a, b) => a.at - b.at);
 
   const send = async (t: string) => {
     const msg = t.trim();
@@ -262,7 +286,9 @@ export function AiScreen() {
       <div className="chat" aria-live="polite">
         {thread.length === 0 && <p className="note">Ask me anything about your data — I see your numbers, patterns, stack and About me. I'll also write to you: a morning read, quick questions, and anything interesting I find. The app writes here too: a heart-rate stretch it can't explain, a new finding to comment on.</p>}
         {thread.map((x, i) => {
-          const isNew = x.at > since && ("n" in x || x.m!.unprompted) && !thread.slice(0, i).some((y) => y.at > since && ("n" in y || y.m!.unprompted));
+          const byApp = (y: (typeof thread)[number]) => "n" in y || "r" in y || !!y.m?.unprompted;
+          const isNew = x.at > since && byApp(x) && !thread.slice(0, i).some((y) => y.at > since && byApp(y));
+          if ("r" in x) return <ReviewCard key={x.key} r={x.r!} first={isNew} />;
           return "n" in x ? <InboxCard key={x.key} n={x.n!} now={now} first={isNew} /> : <div key={x.key} className={`msg ${x.m!.role}${x.m!.unprompted ? " first" : ""}`} data-new={isNew || undefined}>{x.m!.role === "assistant" ? <Md text={x.m!.text} /> : x.m!.text}</div>;
         })}
         {busy > 0 && <div className="msg assistant typing">…</div>}

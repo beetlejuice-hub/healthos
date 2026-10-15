@@ -31,6 +31,22 @@ const post = (body: unknown, token = "good") => new Request("https://app/api/ai"
 const coffee = { items: [{ kind: "drink", name: "Long coffee, large", amount: "1 large cup", drink: { ml: 300, caffeineMg: 150, alcoholG: 0, kcal: 3 }, confidence: "medium", note: "assumed a double shot" }] };
 
 describe("/api/ai", () => {
+  it("review: the week read on the research model, the enforced shape, a bad request refused (PLAN 65)", async () => {
+    const ans = { title: "Better mood, short on protein", summary: "Mood **7.5** against a usual 6.", notices: [{ title: "Mood up", text: "7.5 all week.", measure: "mood" }, { title: "", text: "dropped", measure: "" }], next: [{ what: "Protein at lunch", why: "0 of 7 days at goal" }], remember: [] };
+    const w = world([{ text: JSON.stringify(ans) }]);
+    const res = await handleAi(post({ task: "review", kind: "week", from: "2026-10-12", to: "2026-10-18", context: "## The week 12 Oct–18 Oct" }), env, w.deps);
+    const body = (await res.json()) as { answer: { title: string; notices: { measure: string }[]; next: unknown[] } };
+    expect(res.status).toBe(200);
+    expect(body.answer.title).toBe("Better mood, short on protein");
+    expect(body.answer.notices).toEqual([{ title: "Mood up", text: "7.5 all week.", measure: "mood" }]); // an empty notice left out
+    const sent = w.sent[0].body;
+    expect(sent.model).toBe("claude-opus-5-5");
+    expect((sent.output_config as { format: { type: string } }).format.type).toBe("json_schema");
+    expect(sent.tools).toBeUndefined();
+    expect(JSON.stringify(sent.messages)).toContain("Write my week read: 2026-10-12 to 2026-10-18");
+    expect((await handleAi(post({ task: "review", kind: "year", from: "2026-10-12", to: "2026-10-18", context: "x" }), env, world([]).deps)).status).toBe(400);
+  });
+
   it("describe with lookup (owner, 15 Oct: a dish the lists don't have → ask the AI, on the net or from knowledge)", async () => {
     const soup = { items: [{ kind: "food", name: "Pityókaleves", amount: "1 bowl", per100: { kcal: 62, p: 1.6, c: 7.5, f: 2.8 }, unit: { name: "bowl", g: 350 }, count: 1, confidence: "medium", note: "typical home recipe · ciorbă de cartofi" }] };
     const json = JSON.stringify(soup), cut = json.indexOf("home recipe");

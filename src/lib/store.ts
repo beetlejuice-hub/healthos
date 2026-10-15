@@ -13,7 +13,8 @@ import { DEFAULT_GOALS, slotOf, slotsOf, slotTime } from "./types";
 import { tidyWorkouts } from "./training";
 import type { ScoutMemo } from "./scout";
 import type { Energy } from "./energy";
-import type { DigestItem, ModelChoice, NightAnswer, Question, SupplementAnswer } from "./ai/tasks";
+import type { DigestItem, ModelChoice, NightAnswer, Question, ReviewAnswer, SupplementAnswer } from "./ai/tasks";
+import type { Due, ReviewRow } from "./review";
 import type { Notice } from "./inbox";
 
 /** Everything the in-app AI keeps for you, synced like the rest (doc "ai"). */
@@ -27,6 +28,8 @@ export type AiState = {
   digest: { day: string; greeting: string; items: DigestItem[]; read?: boolean } | null;
   /** The nightly read-back of a day (optional: older synced docs don't have it). */
   night?: (NightAnswer & { day: string; at: number }) | null;
+  /** The week and month reads (PLAN 65), newest last: what the AI wrote, and the app's numbers it was written from (for the card's table and charts). */
+  reviews?: (Due & ReviewAnswer & { at: number; rows: ReviewRow[] })[];
   /** Titles already shown, so the morning read doesn't repeat itself. */
   shown: string[];
   /** Today's questions; daily ones are asked again every day without a new AI call. */
