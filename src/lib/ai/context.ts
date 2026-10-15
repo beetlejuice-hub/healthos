@@ -148,6 +148,7 @@ export function buildContext(input: ContextInput): string {
 
 function baseContext({ state, now, days, findings, patterns, weight, today = [], training = [], grids = [] }: ContextInput): string {
   const { profile, supplements, ai, goals } = state;
+  const en = state.settings?.energy;
   const names = new Map(supplements.map((s) => [s.id, s.name]));
   const answers = state.entries.filter((e) => e.kind === "answer" && e.at > now - 14 * 86_400_000).slice(-20);
   const lines = [
@@ -155,7 +156,7 @@ function baseContext({ state, now, days, findings, patterns, weight, today = [],
     "Sections: About me · This morning · My stack · Last 14 days · Training · How I feel by time of day · What the app found · Notes and answers · Mood engines · My nights · Mood journal.",
     "## About me",
     `Conditions: ${profile.conditions.join(", ") || "none listed"}. Medications: ${profile.meds.join(", ") || "none listed"}. Allergies: ${profile.allergies.join(", ") || "none listed"}.${profile.notes ? ` Notes: ${profile.notes}` : ""}`,
-    `Goals: ${goals.kcal} kcal/day, ${goals.p} g protein.${weight ? ` Weight trend: ${weight.kg.toFixed(1)} kg, ${weight.perWeek >= 0 ? "+" : ""}${weight.perWeek.toFixed(2)} kg/week.` : ""}`,
+    `Goals: ${goals.kcal} kcal/day, ${goals.p} g protein.${en?.mode === "burn" ? ` The calorie goal follows my burn: burn − the deficit for ${en.pace} kg/week, to lose fat while keeping and building muscle${en.offset ? `; two-week check-ins moved it ${en.offset > 0 ? "+" : ""}${en.offset}` : ""}.` : ""}${weight ? ` Weight trend: ${weight.kg.toFixed(1)} kg, ${weight.perWeek >= 0 ? "+" : ""}${weight.perWeek.toFixed(2)} kg/week.` : ""}`,
     ...(today.length ? ["## This morning (readiness, as the app shows it)", ...today.map((l) => `- ${l}`)] : []),
     "## My stack",
     ...supplements.map((s) => `- ${s.name}${s.dose ? ` ${s.dose}` : ""} (${s.slot})${s.status ? ` — ${s.status === "low" ? "running low" : s.status === "out" ? "ran out" : "stopped"}` : s.active ? "" : " — paused"}`),

@@ -14,6 +14,7 @@ import { act } from "./lib/store";
 import { useScoutUnseen } from "./components/Scout";
 import { AiScreen, useAiAuto, useAiUnread } from "./components/Ai";
 import { useInbox } from "./components/useInbox";
+import { useEnergyGoal } from "./components/useEnergy";
 import { startBand } from "./lib/band-client";
 
 /**
@@ -27,6 +28,7 @@ export function App() {
   const aiUnread = useAiUnread();
   useAiAuto(auth.session?.user.id);
   useInbox();
+  useEnergyGoal();
   const [route, setRoute] = useState<Route>(() => readRoute()[0]);
   useEffect(() => {
     const on = () => { setRoute(readRoute()[0]); window.scrollTo(0, 0); };

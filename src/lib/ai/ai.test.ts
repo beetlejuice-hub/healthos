@@ -85,6 +85,12 @@ describe("what the AI sees", () => {
     expect(c).toContain("Usual coffee is a long coffee");
     expect(c).not.toContain("f1");
   });
+  it("says when the calorie goal follows the burn, at what pace (PLAN 95)", () => {
+    const now = new Date(2026, 9, 1).getTime();
+    expect(buildContext({ state, now, days: [], findings: [], patterns: [] })).not.toContain("follows my burn");
+    const burn = { ...state, settings: { energy: { mode: "burn", pace: 0.5, offset: -150 } } } as unknown as State;
+    expect(buildContext({ state: burn, now, days: [], findings: [], patterns: [] })).toContain("Goals: 2600 kcal/day, 160 g protein. The calorie goal follows my burn: burn − the deficit for 0.5 kg/week, to lose fat while keeping and building muscle; two-week check-ins moved it -150.");
+  });
 });
 
 describe("the day, read back (owner, 2 Oct)", () => {

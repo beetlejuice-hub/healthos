@@ -1165,7 +1165,20 @@ below, in his words, grouped; A first (broken or wrong now), then the rest. Item
    Counting, swaps, the weekly sets heatmap and the Training page keep the 11 groups. Checked: training.test (every library
    exercise lands on the figure, every figure muscle has one; 9 OHP + 3 laterals → front 9, side 7.5), e2e/muscles.cjs
    (each muscle's sets, tapping the side delts, all 16 on the figure, 390 px), screenshot looked at.
-95. [ ] **Calories from what you burn** — "My calorie intake should be calculated based on how much i burn too".
+95. [x] **Calories from what you burn** — "My calorie intake should be calculated based on how much i burn too".
+   Owner, 15 Oct, the goal: "i want to lose fat and gain some muscles why being lean, in like 2-3 months? or faster even".
+   **Done 15 Oct:** Settings → Daily goals: "Set by hand" or "From your burn" (off until he taps it — his goal doesn't
+   move on its own). Goal = burn − pace × 7,700 / 7: Slow 0.35, Steady 0.5 (default, the middle of his 0.3–0.7 rule),
+   Fast 0.65 kg/wk; the cut never past a quarter of the burn, the goal never under 1,500. The burn is his measured one
+   (lib/tdee realBurn, 4 weeks, same window as Noticed), else the band's average full day (14 days, from 5; a day under
+   half the usual left out). Written into the goals once a day (components/useEnergy, never mid-day), carbs moving with
+   it. The two-week check-in stays the guard rail: its ±150 is kept as an offset on top of the burn (shown, resettable),
+   so the next day's goal doesn't undo it. Shows the burn and where it's from, the goal, kg a week, ~kg in 10 weeks, and
+   protein per kg. The AI's "Goals" line says the goal follows the burn and at what pace. Checked: energy.test (known
+   answers, planted burns of 2,625 and 2,300 found), ai.test, e2e/energy.cjs (band 2,700 → 2,150; Fast capped → 2,030;
+   Today uses it; reload and a second tap change nothing; by hand leaves it alone; measured beats the band; check-in
+   −150 survives the next day — fails without the fix; nothing to work from says what's missing), screenshot looked at.
+   Not checked: his real account, a real phone.
 96. [ ] **Good / bad shades** — "think about using green and red shades for some numbers, to highlight if bad or good, and
    use shades to determine how bad or good..just subtly".
 97. [x] **Sleep score out of 100** — "should do a 100/… pointing for my sleep based on all the sleep data, length, etc i

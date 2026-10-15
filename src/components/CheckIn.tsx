@@ -6,10 +6,9 @@
 import { useMemo } from "react";
 import { act, useStore } from "../lib/store";
 import { checkIn } from "../lib/checkin";
+import { carbsG } from "../lib/energy";
 
 const n = (v: number) => Math.round(v).toLocaleString("en-GB");
-/** Calories move with carbs (150 kcal ≈ 38 g); the label and the saved goal use this one number. */
-const carbsG = (delta: number) => Math.sign(delta) * Math.round(Math.abs(delta) / 4);
 
 export function CheckInCard({ now }: { now: number }) {
   const entries = useStore((s) => s.entries), goals = useStore((s) => s.goals), settings = useStore((s) => s.settings);
@@ -24,7 +23,9 @@ export function CheckInCard({ now }: { now: number }) {
     const kcalAfter = apply ? c.newKcal : c.kcal;
     // Calories move with carbs; protein and fat stay where you set them.
     if (apply && c.delta) act.setGoals({ ...goals, kcal: kcalAfter, c: Math.max(0, goals.c + carbsG(c.delta)) });
-    act.setSettings({ checkins: [...(settings.checkins ?? []), { at: Date.now(), lossPerWeek: Math.round(c.lossPerWeek * 100) / 100, kcalBefore: c.kcal, kcalAfter }] });
+    // With the goal from your burn, the step is kept on top of it (PLAN 95), so tomorrow's goal doesn't undo it.
+    const energy = settings.energy?.mode === "burn" && apply && c.delta ? { energy: { ...settings.energy, offset: settings.energy.offset + c.delta } } : {};
+    act.setSettings({ ...energy, checkins: [...(settings.checkins ?? []), { at: Date.now(), lossPerWeek: Math.round(c.lossPerWeek * 100) / 100, kcalBefore: c.kcal, kcalAfter }] });
   };
   return (
     <div className="noticed-line checkin" role="region" aria-label="Two-week check-in">

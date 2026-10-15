@@ -12,6 +12,7 @@ import type { Drink, Entry, Food, Goals, Supplement, Template, Workout } from ".
 import { DEFAULT_GOALS, slotOf, slotsOf, slotTime } from "./types";
 import { tidyWorkouts } from "./training";
 import type { ScoutMemo } from "./scout";
+import type { Energy } from "./energy";
 import type { DigestItem, ModelChoice, NightAnswer, Question, SupplementAnswer } from "./ai/tasks";
 import type { Notice } from "./inbox";
 
@@ -65,6 +66,8 @@ export type Settings = {
   notify?: { checkins: boolean; supps: boolean; weigh: boolean };
   /** Two-week check-ins answered (lib/checkin): when, the rate then, and the calorie goal before/after. */
   checkins?: { at: number; lossPerWeek: number; kcalBefore: number; kcalAfter: number }[];
+  /** The calorie goal set by hand, or from what you burn at a pace (lib/energy). Unset: by hand. */
+  energy?: Energy;
 };
 
 export type State = {
