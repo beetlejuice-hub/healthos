@@ -361,7 +361,7 @@ const amountOf = (l: Line) => (l.unit ? amountText(l.count, l.unit) : `${Math.ro
 /** The meal being built: − / + per line, ≈ totals, one tap to log, or save it as a meal. */
 function Basket({ lines, when, crafting, onChange, onDetail, onAsk, onLogged }: { lines: Item[]; when: When; crafting: boolean; onChange: (l: Item[]) => void; onDetail: (i: number) => void; onAsk?: (l: Item) => void; onLogged: (m: string) => void }) {
   const [saving, setSaving] = useState(false);
-  const [mealName, setMealName] = useState(""), [pieces, setPieces] = useState("1");
+  const [mealName, setMealName] = useState(""), [pieces, setPieces] = useState("1"), [inPlates, setInPlates] = useState(true);
   const tot = lines.reduce((a, l) => { if (isDrink(l)) return { kcal: a.kcal + l.drink.kcal * l.count, p: a.p }; const m = macrosOfLine(l); return { kcal: a.kcal + m.kcal, p: a.p + m.p }; }, { kcal: 0, p: 0 });
   const foods = lines.filter((l): l is Line & { alts?: Food[] } => !isDrink(l));
   const set = (i: number, l: Item) => onChange(lines.map((x, j) => (j === i ? l : x)));
@@ -383,9 +383,10 @@ function Basket({ lines, when, crafting, onChange, onDetail, onAsk, onLogged }: 
   };
   const saveMeal = () => {
     const n = Math.max(1, Number(pieces) || 1);
-    const f = mealFood(`custom:${newId()}`, mealName.trim(), foods, n);
+    const f = mealFood(`custom:${newId()}`, mealName.trim(), foods, n, inPlates ? "plate" : "piece");
     act.rememberFood(f);
-    onChange([{ food: f, count: n, unit: "piece" }, ...lines.filter(isDrink)]);
+    // A plate: the one you're eating now (a pot that makes 4 is still one plate on yours). Pieces: the lot, as before.
+    onChange([inPlates ? { food: f, count: 1, unit: "plate" } : { food: f, count: n, unit: "piece" }, ...lines.filter(isDrink)]);
     setSaving(false); setMealName("");
   };
   return (
@@ -436,14 +437,20 @@ function Basket({ lines, when, crafting, onChange, onDetail, onAsk, onLogged }: 
       })}
       {saving ? <div className="save-meal">
         <label className="field">Meal name<input value={mealName} placeholder="Arnold's special" onChange={(e) => setMealName(e.target.value)} /></label>
-        <label className="field">Makes how many pieces?<input inputMode="numeric" value={pieces} onChange={(e) => setPieces(e.target.value)} /></label>
+        <div className="seg" role="group" aria-label="Counted in">
+          <button type="button" aria-pressed={inPlates} onClick={() => setInPlates(true)}>Plates</button>
+          <button type="button" aria-pressed={!inPlates} onClick={() => setInPlates(false)}>Pieces</button>
+        </div>
+        <label className="field">{inPlates ? "This makes how many plates?" : "Makes how many pieces?"}<input inputMode="numeric" value={pieces} onChange={(e) => setPieces(e.target.value)} /></label>
         <div className="row2"><button type="button" className="pill-btn" onClick={() => setSaving(false)}>Cancel</button><button type="button" className="pill-btn pri" disabled={!mealName.trim()} onClick={saveMeal}>Save meal</button></div>
-        <p className="note">Next time type “2 {mealName.trim() || "Arnold's special"}” or pick it from Recent.</p>
+        <p className="note">{inPlates
+          ? <>Goes in as 1 plate: − makes it ½, tap “plate” for a small or large one. Next time type “½ plate {mealName.trim() || "Arnold's special"}”, “small plate …” or “2 plates …”, or pick it from Recent.</>
+          : <>Next time type “2 {mealName.trim() || "Arnold's special"}” or pick it from Recent.</>}</p>
       </div> : <div className="row-log">
         <WhenChips w={when} />
         <button type="button" className="pill-btn pri" onClick={log}>Log {lines.length === 1 ? "it" : `${lines.length} ${lines.some(isDrink) ? "items" : "foods"}`}{when.day ? (when.day === addDays(localDay(Date.now()), -1) ? " for yesterday" : onDay(when)) : ""}</button>
       </div>}
-      {!saving && (foods.length > 1 || (crafting && foods.length > 0)) && <button type="button" className="linkish" onClick={() => setSaving(true)}>Save as a meal…</button>}
+      {!saving && (foods.length > 1 || (crafting && foods.length > 0)) && <button type="button" className="pill-btn save-plate" onClick={() => setSaving(true)}>Save as one plate…</button>}
     </div>
   );
 }

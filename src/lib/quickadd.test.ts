@@ -69,6 +69,20 @@ describe("units", () => {
     expect(macrosOfLine({ food: special, count: 4, unit: "piece" }).kcal).toBeCloseTo(total, 5);
     expect(macrosOfLine({ food: special, count: 1, unit: "piece" }).kcal).toBeCloseTo(total / 4, 5);
   });
+  it("a plate saved as one food: ½, small, large, 2 plates — typed or stepped (PLAN 84)", () => {
+    const eggs = BASIC_FOODS.find((f) => f.name === "Scrambled eggs")!, toast = BASIC_FOODS.find((f) => f.name.startsWith("Toast"))!;
+    const lines = [{ food: eggs, count: 3, unit: "egg" }, { food: toast, count: 2, unit: "slice" }];
+    const total = lines.reduce((a, l) => a + macrosOfLine(l).kcal, 0);
+    const plate = mealFood("custom:p", "Brunch plate", lines, 1, "plate");
+    expect(unitsOf(plate).map((u) => u.name)).toEqual(["plate", "small plate", "large plate"]); // no "whole batch" for one plate
+    expect(macrosOfLine({ food: plate, count: 1, unit: "plate" }).kcal).toBeCloseTo(total, 0);
+    expect(macrosOfLine({ food: plate, count: 1, unit: "small plate" }).kcal).toBeCloseTo(total * 0.75, 0);
+    expect(macrosOfLine({ food: plate, count: 0.5, unit: "plate" }).kcal).toBeCloseTo(total / 2, 0);
+    const mine = [plate] as never;
+    expect([short("half plate brunch plate", mine), short("2 plates of brunch plate", mine), short("small plate brunch plate", mine), short("big plate of brunch plate", mine)])
+      .toEqual(["Brunch plate · ½ plate", "Brunch plate · 2 plates", "Brunch plate · 1 small plate", "Brunch plate · 1 large plate"]);
+    expect(unitsOf(mealFood("custom:q", "Stew", lines, 4, "plate")).at(-1)!.name).toBe("whole batch");
+  });
 });
 
 describe("drinks in the same sentence", () => {

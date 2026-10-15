@@ -39,9 +39,9 @@ const { chromium, APP, OUT, handle } = require('./harness.cjs');
   await pg.getByLabel('Search food').fill('');
   await pg.getByRole('button', { name: '+ Your own food' }).click();
   await pg.getByLabel('Type what you ate').fill('200g chicken breast cooked, 1 bowl rice, 1 tbsp olive oil'); await pg.getByRole('button', { name: 'Add', exact: true }).click();
-  await pg.getByRole('button', { name: 'Save as a meal…' }).click();
-  await pg.getByLabel('Meal name').fill('Chicken rice bowl'); await pg.getByLabel('Makes how many pieces?').fill('2'); await pg.getByRole('button', { name: 'Save meal' }).click();
-  check('your own food saved, counted in portions', /Chicken rice bowl[\s\S]*2 pieces/.test(await pg.locator('.basket').innerText()));
+  await pg.getByRole('button', { name: 'Save as one plate…' }).click();
+  await pg.getByLabel('Meal name').fill('Chicken rice bowl'); await pg.getByRole('button', { name: 'Pieces' }).click(); await pg.getByLabel('Makes how many pieces?').fill('2'); await pg.getByRole('button', { name: 'Save meal' }).click();
+  check('your own food saved in pieces when you pick pieces', /Chicken rice bowl[\s\S]*2 pieces/.test(await pg.locator('.basket').innerText()));
 
   // Supplements: running low → reminder → ran out → restocked.
   await pg.goto(APP + '#log/stack'); await pg.locator('.supp-row').filter({ hasText: 'Saffron' }).getByRole('button', { name: 'Edit' }).click();

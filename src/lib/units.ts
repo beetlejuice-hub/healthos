@@ -54,15 +54,25 @@ export const step = (n: number, dir: 1 | -1) => {
   return n <= 1 ? Math.max(0.5, n - 0.5) : Math.ceil(n) - 1;
 };
 
-/** A basket saved as a meal: "Arnold's special", makes 6 pieces → a food counted in pieces. */
-export function mealFood(id: string, name: string, lines: Line[], pieces: number, unit = "piece"): Food {
+const r1 = (x: number) => Math.round(x * 10) / 10;
+
+/**
+ * A basket saved as one food. Counted in plates (owner, 14 Oct: "put these as one food … half plate, small plate, 2
+ * plates"): a small plate ¾ of one and a large 1⅓, as "small" and "big" read when typed — or in pieces (a batch of
+ * pancakes, "makes 6"). The whole batch is a unit too when it makes more than one.
+ */
+export function mealFood(id: string, name: string, lines: Line[], pieces: number, unit: "piece" | "plate" = "piece"): Food {
   const grams = lines.reduce((a, l) => a + gramsOf(l), 0);
   const m = lines.reduce((a, l) => { const x = macrosOfLine(l); return { kcal: a.kcal + x.kcal, p: a.p + x.p, c: a.c + x.c, f: a.f + x.f }; }, { kcal: 0, p: 0, c: 0, f: 0 });
   const k = 100 / grams;
   return {
     id, name, source: "custom",
     per100: { kcal: m.kcal * k, p: m.p * k, c: m.c * k, f: m.f * k },
-    units: [{ name: unit, g: Math.round((grams / pieces) * 10) / 10 }, { name: "whole batch", g: Math.round(grams) }],
+    units: [
+      { name: unit, g: r1(grams / pieces) },
+      ...(unit === "plate" ? [{ name: "small plate", g: r1((grams / pieces) * 0.75) }, { name: "large plate", g: r1((grams / pieces) * 1.33) }] : []),
+      ...(pieces > 1 ? [{ name: "whole batch", g: Math.round(grams) }] : []),
+    ],
     servingG: Math.round(grams / pieces),
   };
 }

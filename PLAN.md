@@ -994,9 +994,16 @@ below, in his words, grouped; A first (broken or wrong now), then the rest. Item
    - Training page and food ↔ strength: #64 (canvas up).
 
 ### C · Food
-84. [ ] **A plate as one food, with plate sizes** — "if i input like chicken bread pasta ketchup, it tends to find these but
+84. [x] **A plate as one food, with plate sizes** — "if i input like chicken bread pasta ketchup, it tends to find these but
    can we put these as one food, and not log as separate? also to calculate the size (gram) of these for 1 plate, and i
    can put half plate, small plate, 2 plates etc".
+   **Done 15 Oct** (owner: "what? do we nat have this already? … why the canvas first, is ot a big thing?" — half of it
+   was there as a small "Save as a meal…" link counted in pieces; small change, no canvas): the basket's "Save as one
+   plate…" button; plates by default ("This makes how many plates?", 1), pieces for a batch of pancakes. Goes in as 1
+   plate with the same calories; − makes ½, the unit cycles plate → small plate (¾) → large plate (1⅓), the same sizes
+   "small" / "big" mean when typed; "½ plate …", "2 plates …", "big plate of …" find it. A pot making 4 plates logs the
+   one on yours. Checked: quickadd.test (calories per size, typed forms), e2e/simple.cjs (save → 1 plate 530 kcal → ½ =
+   260 → small plate; "2 plates" = 1,060; "big plate of" → large), e2e/round.cjs (pieces still work), screenshot.
 85. [x] **Romanian food in the database** — "Most of the database foods are us foods and i live in romania and eat normal
    food so pls make some changes"; "things like pityoka leves and also other soups not there?? criminal"; "i cant find the
    lidl doughnuts … can u search and add to database? Lidl bakery and kaufland bakery can make it the same if similar".

@@ -1446,7 +1446,7 @@ a { color: inherit; }
 .heatkey i { width: 16px; height: 10px; border-radius: 2px; } .heatkey i.mid { background: #1c2327; } .heatkey span:first-child { margin-right: 2px; } .heatkey span:last-child { margin-left: 2px; }
 
 /* Settings → Daily goals: the calorie goal by hand or from what you burn (PLAN 95) */
-.card .en-seg { background: var(--c-bg); }
+.card .en-seg, .save-meal .seg { background: var(--c-bg); }
 .en-pace button { display: grid; gap: 1px; line-height: 1.2; }
 .en-pace button small { font-size: 11px; font-weight: 500; color: var(--c-dim); }
 .en-auto small { font-size: 11px; color: var(--c-dim); }
