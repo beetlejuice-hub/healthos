@@ -58,7 +58,9 @@ const { chromium, APP, OUT, handle, rate } = require('./harness.cjs');
   check(`the tab bar is solid, not see-through (${tabBg})`, /^rgb\(/.test(tabBg));
   await pg.goto(APP + '#today'); await pg.waitForTimeout(150);
   // Untick works; own word comes back first next time (most used).
-  await tags.getByRole('button', { name: 'gym', exact: true }).click(); await pg.waitForTimeout(150);
+  await tags.getByRole('button', { name: 'gym', exact: true }).click();
+  // the save is debounced 150 ms: wait for it, not a fixed 150 ms (lost that race under a full run's load)
+  await pg.waitForFunction(() => { const fs = (JSON.parse(localStorage.getItem('healthos.v1:u-test') || '{}').entries || []).filter((e) => e.kind === 'feel').sort((a, z) => z.at - a.at); return fs[0] && !(fs[0].doing || []).includes('gym'); }, null, { timeout: 3000 }).catch(() => {});
   f = await feels();
   check('untick removes it', !(f.sort((a, z) => z.at - a.at)[0].doing || []).includes('gym'));
 

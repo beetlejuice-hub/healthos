@@ -18,10 +18,10 @@ export function useNights(band: BandData | null, data: Lanes, entries: Entry[], 
 }
 
 /** The same, without React (the inbox's daily look at the grids, PLAN 102). */
-export function nightsAndEvenings(band: BandData, data: Lanes, entries: Entry[], halfLifeMin: number, now: number, span: number): { ns: Night[]; evs: Evening[] } {
+export function nightsAndEvenings(band: BandData, data: Lanes, entries: Entry[], halfLifeMin: number, now: number, span: number): { ns: Night[]; evs: Evening[]; steps: Map<string, number> } {
   const steps = stepsByDay(band.steps ?? [], band.hr, localDay(now));
   const ns = nights(band.sleep, band.hr, band.rhr, band.hrv).filter((n) => n.up >= now - span * DAY && n.up <= now);
-  return { ns, evs: eveningsOf(ns, data, entries, halfLifeMin, steps) };
+  return { ns, evs: eveningsOf(ns, data, entries, halfLifeMin, steps), steps };
 }
 
 function eveningsOf(ns: Night[], data: Lanes, entries: Entry[], halfLifeMin: number, steps: Map<string, number>): Evening[] {

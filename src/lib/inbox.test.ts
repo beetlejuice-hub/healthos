@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { askable, DAILY_CAP, diffWords, findings, pickNew, raisedNotice, type Notice } from "./inbox";
+import { askable, DAILY_CAP, diffWords, findingNotice, findings, pickNew, raisedNotice, readinessNotice, type Notice } from "./inbox";
+import type { Readiness } from "./readiness";
+import type { Cell } from "./sleep";
 import { raisedStretches, whyRaised } from "./heart";
 import { usualByHour } from "./hrusual";
 import { rng } from "./bench";
@@ -88,6 +90,41 @@ describe("new findings (owner: \"new findings that i can comment on, like not x 
   });
 });
 
+describe("a low morning (owner, 15 Oct: \"can do\")", () => {
+  const R = (score: number, cap: Readiness["cap"]): Readiness => ({ score, word: "", day: TODAY, added: 58, sleep: 80, left: [], cap, parts: [
+    { id: "hrv", name: "HRV this morning", got: 0, max: 20, why: "33 ms · usual 47", zone: "poor" }, { id: "rhr", name: "Resting HR", got: 0, max: 20, why: "62 bpm · usual 54", zone: "poor" },
+    { id: "sleep", name: "Last night", got: 20, max: 25, why: "sleep score 80", zone: "ideal" }] });
+  it("held low: says why, what stood out last night, and asks", () => {
+    const n = readinessNotice(R(20, { to: 20, why: "HRV and resting heart rate both well off your usual" }), { label: "4 drinks" }, at(TODAY, 9))!;
+    expect([n.id, n.kind, n.day, n.title]).toEqual([`readiness:${TODAY}`, "readiness", TODAY, "Readiness 20 this morning"]);
+    expect(n.text).toBe("HRV and resting heart rate both well off your usual. Last night: 4 drinks. What happened yesterday?");
+  });
+  it("low without a cap names the weakest part (the bigger one on a tie); nothing stood out → not said", () => {
+    expect(readinessNotice(R(55, null), null, 0)!.text).toBe("HRV this morning: 33 ms · usual 47. What happened yesterday?");
+  });
+  it("60 and up (fair or better): not asked", () => {
+    expect(readinessNotice(R(60, null), null, 0)).toBeNull();
+    expect(readinessNotice(R(59, null), null, 0)).not.toBeNull();
+  });
+});
+
+describe("findings from the Mind and Training pages too (owner, 15 Oct: \"can do\")", () => {
+  const cell = (factor: string, outcome: string, diff: number, nWith = 8, nWithout = 20): Cell => ({ factor, outcome, diff, nWith, nWithout, p: 0.001, sure: "clear", toward: diff < 0 ? "worse" : "better" });
+  it("each page's words: days, sessions; a training finding says Training", () => {
+    expect(findingNotice("mind", cell("drinks", "mood", -2), { id: "drinks", name: "Drinks the evening before" }, { id: "mood", name: "Mood", unit: "/10" }, 0).text)
+      .toBe("Drinks the evening before → mood that day −2.0 points, on 8 days with it against 20 without. Goes with, not proof of why — anything else going on those days?");
+    const st = findingNotice("strength", cell("carbs", "pct", 3.14, 6, 14), { id: "carbs", name: "Carbs in the 4 h before" }, { id: "pct", name: "Strength", unit: "%" }, 0);
+    expect([st.title, st.text.split(",")[0]]).toEqual(["New finding · training", "Carbs in the 4 h before → strength against your trend +3.1 %"]);
+    expect(st.text).toMatch(/on 6 sessions with it against 14 without/);
+    expect(findingNotice("after", cell("heavy", "energy", -1.1), { id: "heavy", name: "Heavy session" }, { id: "energy", name: "Energy next day", unit: "/10" }, 0).text).toMatch(/^Heavy session → energy the next day −1\.1 points, on 8 days/);
+  });
+  it("what the Sleep and Heart grids already say isn't said again from Training's: trained → asleep, deep, HRV, resting HR", () => {
+    const fs = [{ id: "trained", name: "Trained that day" }, { id: "heavy", name: "Heavy session" }], os = [{ id: "hrv", name: "HRV", unit: "ms" as const }, { id: "mood", name: "Mood next day", unit: "/10" as const }];
+    expect(findings("after", [cell("trained", "hrv", 4), cell("trained", "mood", 0.8), cell("heavy", "hrv", -5)], fs, os, 0).map((n) => n.id).sort())
+      .toEqual(["finding:after:heavy|hrv|worse", "finding:after:trained|mood|better"]);
+  });
+});
+
 describe("a few a day, never repeated", () => {
   const now = at(TODAY, 18);
   const r = (k: number): Notice => ({ id: `raised:${k}`, kind: "raised", at: now, title: "", text: "" });
@@ -97,6 +134,10 @@ describe("a few a day, never repeated", () => {
     expect(pickNew([f(1), f(2)], [{ ...r(9), at: now - H }, { ...f(9), at: now - 2 * H }], [], now).map((n) => n.id)).toEqual(["finding:sleep:1"]);
     expect(pickNew([f(1)], [r(7), r(8), r(9)], [], now)).toEqual([]);
     expect(pickNew([f(1)], [{ ...r(7), at: now - 24 * H }, { ...r(8), at: now - 24 * H }, { ...r(9), at: now - 24 * H }], [], now).map((n) => n.id)).toEqual(["finding:sleep:1"]); // yesterday's don't count
+  });
+  it("order: heart asks, then a low morning, then findings", () => {
+    const low: Notice = { id: "readiness:x", kind: "readiness", at: now, title: "", text: "" };
+    expect(pickNew([f(1), low, r(1), f(2)], [], [], now).map((n) => n.id)).toEqual(["raised:1", "readiness:x", "finding:sleep:1"]);
   });
   it("never the same one twice: not if it's in the inbox, not if it was sent and since removed, not twice in one batch", () => {
     expect(pickNew([f(1), r(1), f(1)], [f(2)], ["raised:1"], now).map((n) => n.id)).toEqual(["finding:sleep:1"]);

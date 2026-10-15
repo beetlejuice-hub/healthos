@@ -61,7 +61,7 @@ const SALAMI = [['Salami', 380, 22, 1, 32], ['Salami', 400, 24, 1, 33], ['salami
     check('a quick question with tappable answers', /big lunch today\?[\s\S]*Why: to see if lunch size explains the dip · asked daily/.test(await pg.locator('.question').innerText()));
     await pg.locator('.question').getByRole('button', { name: 'Big' }).click(); await pg.waitForTimeout(100);
     check('answered → gone for today', await pg.locator('.question').count() === 0);
-    check('the AI tab has a dot: it wrote first', await pg.locator('nav.tabs a[href="#ai"] .tabdot').count() === 1);
+    check('the AI tab has its red number: it wrote first', (await pg.locator('nav.tabs a[href="#ai"] .tabbadge').textContent().catch(() => '')) === '1');
     await pg.screenshot({ path: OUT + 'ai-today.png', fullPage: true });
 
     // Food: built-in, database median, then the AI for the rest.
@@ -105,7 +105,7 @@ const SALAMI = [['Salami', 380, 22, 1, 32], ['Salami', 400, 24, 1, 33], ['salami
     // Chat: the unprompted morning message is there; ask; it remembers.
     await pg.goto(APP + '#ai'); await pg.waitForTimeout(150);
     check('the AI\'s first message is in the chat', /☀️ Morning! Quiet night/.test(await pg.locator('.chat').innerText()));
-    check('opening the chat clears the dot', await pg.locator('nav.tabs a[href="#ai"] .tabdot').count() === 0);
+    check('opening the chat clears the number', await pg.locator('nav.tabs a[href="#ai"] .tabbadge').count() === 0);
     await pg.getByLabel('Message the AI').fill('what should I try?'); await pg.getByRole('button', { name: 'Send' }).click();
     await pg.waitForSelector('text=cut-off experiment will tell us');
     const chat = calls.find((c) => c.task === 'chat');

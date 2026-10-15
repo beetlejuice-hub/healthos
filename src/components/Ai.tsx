@@ -206,7 +206,13 @@ export function AiScreen() {
   const end = useRef<HTMLDivElement | null>(null);
   const inbox = ai.inbox ?? [], now = Date.now();
   useEffect(() => { act.setAi({ seenAt: Date.now() }); }, [ai.chat.length, inbox.length]);
-  useEffect(() => { end.current?.scrollIntoView({ block: "end" }); }, [ai.chat.length, inbox.length, busy]);
+  // opened from the badge: start at the first new message, not the bottom (later ones scroll to the end as they come)
+  const [since] = useState(() => getState().ai.seenAt), landed = useRef(false);
+  useEffect(() => {
+    const first = landed.current ? null : document.querySelector(".chat [data-new]");
+    landed.current = true;
+    if (first) first.scrollIntoView({ block: "start" }); else end.current?.scrollIntoView({ block: "end" });
+  }, [ai.chat.length, inbox.length, busy]);
   // one thread: the AI's messages and yours, and the app's (PLAN 102), by time
   const thread = [...ai.chat.map((m, i) => ({ at: m.at, key: `c${i}`, m })), ...inbox.map((n) => ({ at: n.at, key: n.id, n }))].sort((a, b) => a.at - b.at);
 
@@ -231,7 +237,10 @@ export function AiScreen() {
       <div className="head"><span>Your AI</span><a href="#settings">Settings</a></div>
       <div className="chat" aria-live="polite">
         {thread.length === 0 && <p className="note">Ask me anything about your data — I see your numbers, patterns, stack and About me. I'll also write to you: a morning read, quick questions, and anything interesting I find. The app writes here too: a heart-rate stretch it can't explain, a new finding to comment on.</p>}
-        {thread.map((x) => ("n" in x ? <InboxCard key={x.key} n={x.n!} now={now} /> : <div key={x.key} className={`msg ${x.m!.role}${x.m!.unprompted ? " first" : ""}`}>{x.m!.text}</div>))}
+        {thread.map((x, i) => {
+          const isNew = x.at > since && ("n" in x || x.m!.unprompted) && !thread.slice(0, i).some((y) => y.at > since && ("n" in y || y.m!.unprompted));
+          return "n" in x ? <InboxCard key={x.key} n={x.n!} now={now} first={isNew} /> : <div key={x.key} className={`msg ${x.m!.role}${x.m!.unprompted ? " first" : ""}`} data-new={isNew || undefined}>{x.m!.text}</div>;
+        })}
         {busy > 0 && <div className="msg assistant typing">…</div>}
         {err && <p className="err">{err}</p>}
         <div ref={end} />

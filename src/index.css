@@ -592,6 +592,8 @@ a { color: inherit; }
 .tabs a { position: relative; }
 .tabdot { position: absolute; top: 6px; right: calc(50% - 26px); width: 7px; height: 7px; border-radius: 50%; background: var(--mood); }
 .tabs a[href="#ai"] .tabdot { right: 0; }
+.tabbadge { position: absolute; top: 0; right: calc(50% - 31px); min-width: 18px; height: 18px; padding: 0 5px; border-radius: 9px; background: #e5484d; color: #fff; font: 700 11px/18px var(--f-sans); text-align: center; box-shadow: 0 0 0 2px var(--tab-bg); }
+.ib-log { flex-basis: 100%; font-size: 12.5px; }
 .noticed-line .r { color: var(--c-dim); }
 .when { display: grid; gap: 6px; }
 .when .chips .pill-btn { padding: 6px 10px; font-size: 12px; }

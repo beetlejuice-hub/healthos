@@ -73,7 +73,9 @@ const { chromium, APP, OUT, handle } = require('./harness.cjs');
   if (await pg.locator('.dcard').count()) {
     await pg.locator('.dcard', { hasText: 'Pull + Hamstrings' }).getByRole('button', { name: /^Edit/ }).click();
     await pg.getByLabel('Cardio after (optional)').fill('25 min incline walk');
-    await pg.getByRole('button', { name: 'Save day' }).click(); await pg.waitForTimeout(200);
+    await pg.getByRole('button', { name: 'Save day' }).click();
+    // the save is debounced 150 ms: wait for it, not a fixed 200 ms (lost that race under a full run's load)
+    await pg.waitForFunction(() => (JSON.parse(localStorage.getItem('healthos.v1:u-test') || '{}').templates || []).find((t) => t.name === 'Pull + Hamstrings')?.cardio === '25 min incline walk', null, { timeout: 3000 }).catch(() => {});
     check('cardio after a day is yours to change', (await st()).templates.find((t) => t.name === 'Pull + Hamstrings').cardio === '25 min incline walk' && /25 min incline walk/.test(await pg.locator('.dcard', { hasText: 'Pull + Hamstrings' }).innerText()));
   } else check('back on the split after finishing', false);
   console.log('errors: ' + JSON.stringify(errs)); await b.close();

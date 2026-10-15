@@ -1258,7 +1258,7 @@ below, in his words, grouped; A first (broken or wrong now), then the rest. Item
      e2e/sleep.cjs (the planted two beers, with that night's HRV). Next, offered: the same mark on the 14-night strip.
    - [ ] **App messages** — owner, 15 Oct: "1, as per your recommendations" → #102. **Colour and graphs across
      Insights** — owner: "then when done on next session do 2" (canvas first, the zone colours from #101 everywhere).
-102. [ ] **Inbox: the app writes to you, in the AI tab** (claimed: this session, 15 Oct — lib/inbox, components/Inbox,
+102. [x] **Inbox: the app writes to you, in the AI tab** (claimed: this session, 15 Oct — lib/inbox, components/Inbox,
    components/useInbox, Ai.tsx, store's ai doc). **Phase 1 done 15 Oct** (below). Owner, 15 Oct: "Make sure app can see all my stats and send me messages like hey your heart
    rate was pretty elevated in this time range, what were you doing, or new findings that i can comment on, like not x
    caused y, but i was doing z. This could be same chatroom w ai..or a diff one" → "1, as per your recommendations": one
@@ -1293,6 +1293,30 @@ below, in his words, grouped; A first (broken or wrong now), then the rest. Item
      "Not now" closes; reload adds nothing; no dot once read; 390 px). Not checked: two devices at once (ids are
      deterministic and synced, so a duplicate can't be added twice, but a write from each in the same second could drop
      one), a real phone.
+   - **Phase 2 done 15 Oct** (owner: "1, dont need notifs, app should just have like a red circle w a number on it like
+     how many new messages and i can click on it, it brings me to the chat page. 2. can do 3. can do"):
+     no phone notifications (phase 2 as planned is dropped). The AI tab carries a red circle with the number of new
+     messages (9+ past nine); a tap opens the chat at the first new one, not the bottom. Findings now come from the Mind
+     page's grid (that day's mood, energy, focus, stress) and the Training page's two (strength against your trend, how
+     you felt after; and the night, next morning and next day after training) — the training "afterwards" cells for
+     trained → asleep, deep, HRV, resting HR are left out, as the Sleep and Heart grids already say them. The daily read
+     loads a month of the band's minutes (the Sleep / Heart / Mind grids' 30 nights need them) — first 90 days, the
+     Training page's window, but held all session that tripled the minutes and slowed every chart that reads them (the
+     full e2e run timed out under load; found there) — and reads the grids one at a time with a breath between (≈ 300
+     ms in all on a laptop, so a phone doesn't freeze); its timer is set once, as a page loading older weeks kept
+     resetting it. Training's grids read the nights the server always sends (40 days), so a training finding can count
+     fewer days than its page. Found re-reading it: the month's load was judged by the first minute held, so a band worn less than a month
+     (nothing older to give) waited for it forever and the grids were never read — now judged by what's been asked for
+     (e2e: the wine morning's band is 20 days old; fails without the fix). The hownow e2e read storage 150 ms after a tap
+     against the 150 ms save debounce (lost under a full run's load) — it waits for the save now. A low morning (readiness
+     under 60, until 14:00) asks "What happened yesterday?" with why it's low and what stood out about last night; the
+     answer (with gf, worked late, out with friends, ill, stressed, your own word) joins that morning's last-night tags,
+     so it counts in the grids like one ticked on Today, and there's a link to log drinks or food that weren't. Order
+     within the 3 a day: heart asks, the low morning, findings. Checked: inbox.test (17), e2e/inbox.cjs (the badge red
+     with "3", a tap lands on the first new message, gone once read; next morning the planted Mind finding — drinks the
+     evening before → mood that day — arrives and the badge says how many; a wine morning (HRV 33, resting 62) at 09:30
+     gives one message, "Readiness 20 this morning", and "out with friends" lands in that morning's tags and shows ticked
+     on Today; workouts in the fake month so the Training grids are read — nothing planted there, nothing sent).
 98. [ ] **AI, soon**
 98. [ ] **AI, soon** — "it should look at all the data, see whatsup, tell me clever tips, what to improve, and a whole bunch
    of stuff.. it should recommend me, or just understand protocols i give him, and help me set up in app, or just tell

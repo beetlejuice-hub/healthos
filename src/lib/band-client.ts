@@ -89,6 +89,8 @@ export async function disconnectBand(): Promise<void> {
 /** The newest reading the server has (ms), or null. For "Pull now" to say whether anything new came. */
 /** What the band has sent so far, outside React (the AI's context reads it). */
 export const bandNow = (): BandData | null => state.data;
+/** From when the band's data is held (older weeks are loaded on demand): a band worn a week has nothing before it. */
+export const bandFrom = (): number => state.from;
 export const bandLatest = (): number | null => (state.status && state.status !== "off" ? state.status.latest : null);
 
 export function useBand(): State {

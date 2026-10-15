@@ -71,7 +71,8 @@ export function App() {
             <i />
             {r === "ai" ? "AI" : r[0].toUpperCase() + r.slice(1)}
             {r === "insights" && unseen > 0 && route !== "insights" && <b className="tabdot" aria-label={`${unseen} new pattern${unseen > 1 ? "s" : ""}`} />}
-            {r === "ai" && aiUnread > 0 && route !== "ai" && <b className="tabdot" aria-label={`${aiUnread} new message${aiUnread > 1 ? "s" : ""}`} />}
+            {/* owner, 15 Oct: "a red circle w a number on it like how many new messages and i can click on it, it brings me to the chat page" */}
+            {r === "ai" && aiUnread > 0 && route !== "ai" && <b className="tabbadge" aria-label={`${aiUnread} new message${aiUnread > 1 ? "s" : ""}`}>{aiUnread > 9 ? "9+" : aiUnread}</b>}
           </a>
         ))}
       </nav>
