@@ -17,6 +17,7 @@
 import type { HrMinute, SleepSession, StepBucket } from "./band";
 import type { Check } from "./feelgraph";
 import { usualAt, type Usual } from "./hrusual";
+import type { Lanes } from "./insights";
 import type { Outcome, Sure } from "./sleep";
 import { addDays, atMinute, localDay, minuteOfDay, MIN } from "./time";
 import { walked } from "./steps";
@@ -180,6 +181,16 @@ export function raisedStretches(hr: HrMinute[], sleep: Pick<SleepSession, "start
   });
   close();
   return out;
+}
+
+/** What's logged, in the shape whyRaised reads: caffeine doses (drinks and pills), drinks, meals, check-ins (the Heart page and the inbox share it). */
+export function loggedAround(data: Pick<Lanes, "doses" | "drinks" | "meals" | "checks">): { kind: string; at: number; [k: string]: unknown }[] {
+  return [
+    ...data.doses.map((d) => ({ kind: "drink", at: d.at, caffeineMg: d.mg, alcoholG: 0 })),
+    ...data.drinks.map((d) => ({ kind: "drink", at: d.at, caffeineMg: 0, alcoholG: d.g })),
+    ...data.meals.map((m) => ({ kind: "food", at: m.at, macros: { kcal: m.kcal } })),
+    ...data.checks.map((c) => ({ kind: "feel", at: c.at, doing: c.doing, stress: c.stress })),
+  ];
 }
 
 export type Why = { kind: "woke" | "moving" | "coffee" | "drinks" | "meal" | "said" | "stress"; at: number; tags?: string[]; level?: number; steps?: number };

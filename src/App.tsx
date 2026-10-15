@@ -13,6 +13,7 @@ import { UndoToast } from "./components/UndoToast";
 import { act } from "./lib/store";
 import { useScoutUnseen } from "./components/Scout";
 import { AiScreen, useAiAuto, useAiUnread } from "./components/Ai";
+import { useInbox } from "./components/useInbox";
 import { startBand } from "./lib/band-client";
 
 /**
@@ -25,6 +26,7 @@ export function App() {
   const unseen = useScoutUnseen();
   const aiUnread = useAiUnread();
   useAiAuto(auth.session?.user.id);
+  useInbox();
   const [route, setRoute] = useState<Route>(() => readRoute()[0]);
   useEffect(() => {
     const on = () => { setRoute(readRoute()[0]); window.scrollTo(0, 0); };
@@ -69,7 +71,7 @@ export function App() {
             <i />
             {r === "ai" ? "AI" : r[0].toUpperCase() + r.slice(1)}
             {r === "insights" && unseen > 0 && route !== "insights" && <b className="tabdot" aria-label={`${unseen} new pattern${unseen > 1 ? "s" : ""}`} />}
-            {r === "ai" && aiUnread > 0 && route !== "ai" && <b className="tabdot" aria-label={`${aiUnread} new message${aiUnread > 1 ? "s" : ""} from the AI`} />}
+            {r === "ai" && aiUnread > 0 && route !== "ai" && <b className="tabdot" aria-label={`${aiUnread} new message${aiUnread > 1 ? "s" : ""}`} />}
           </a>
         ))}
       </nav>

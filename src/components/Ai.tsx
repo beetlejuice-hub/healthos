@@ -12,6 +12,7 @@ import { judge } from "../lib/ai/apply";
 import { dailyFacts } from "../lib/insights";
 import { addDays, localDay } from "../lib/time";
 import type { Supplement } from "../lib/types";
+import { InboxCard } from "./Inbox";
 
 const usd = (x: number) => (x < 0.1 ? `$${x.toFixed(3)}` : `$${x.toFixed(2)}`);
 
@@ -103,10 +104,10 @@ export function useAiAuto(userId: string | undefined) {
   }, [on]);
 }
 
-/** Unread unprompted messages, for the tab dot. */
+/** Unread unprompted messages, for the tab dot: the AI's, and the app's still waiting for you (PLAN 102). */
 export function useAiUnread() {
   const ai = useStore((s) => s.ai);
-  return ai.chat.filter((m) => m.unprompted && m.at > ai.seenAt).length;
+  return ai.chat.filter((m) => m.unprompted && m.at > ai.seenAt).length + (ai.inbox ?? []).filter((n) => n.at > ai.seenAt && !n.reply && !n.closed).length;
 }
 
 /* ------------------------------------------------------------------ Today: the morning read */
@@ -203,8 +204,11 @@ export function AiScreen() {
   const [text, setText] = useState("");
   const [err, setErr] = useState<string | null>(null);
   const end = useRef<HTMLDivElement | null>(null);
-  useEffect(() => { act.setAi({ seenAt: Date.now() }); }, [ai.chat.length]);
-  useEffect(() => { end.current?.scrollIntoView({ block: "end" }); }, [ai.chat.length, busy]);
+  const inbox = ai.inbox ?? [], now = Date.now();
+  useEffect(() => { act.setAi({ seenAt: Date.now() }); }, [ai.chat.length, inbox.length]);
+  useEffect(() => { end.current?.scrollIntoView({ block: "end" }); }, [ai.chat.length, inbox.length, busy]);
+  // one thread: the AI's messages and yours, and the app's (PLAN 102), by time
+  const thread = [...ai.chat.map((m, i) => ({ at: m.at, key: `c${i}`, m })), ...inbox.map((n) => ({ at: n.at, key: n.id, n }))].sort((a, b) => a.at - b.at);
 
   const send = async (t: string) => {
     const msg = t.trim();
@@ -225,14 +229,14 @@ export function AiScreen() {
   return (
     <div className="calm ai-screen">
       <div className="head"><span>Your AI</span><a href="#settings">Settings</a></div>
-      {on === false && <AiOff />}
       <div className="chat" aria-live="polite">
-        {ai.chat.length === 0 && <p className="note">Ask me anything about your data — I see your numbers, patterns, stack and About me. I'll also write to you: a morning read, quick questions, and anything interesting I find.</p>}
-        {ai.chat.map((m, i) => <div key={i} className={`msg ${m.role}${m.unprompted ? " first" : ""}`}>{m.text}</div>)}
+        {thread.length === 0 && <p className="note">Ask me anything about your data — I see your numbers, patterns, stack and About me. I'll also write to you: a morning read, quick questions, and anything interesting I find. The app writes here too: a heart-rate stretch it can't explain, a new finding to comment on.</p>}
+        {thread.map((x) => ("n" in x ? <InboxCard key={x.key} n={x.n!} now={now} /> : <div key={x.key} className={`msg ${x.m!.role}${x.m!.unprompted ? " first" : ""}`}>{x.m!.text}</div>))}
         {busy > 0 && <div className="msg assistant typing">…</div>}
         {err && <p className="err">{err}</p>}
         <div ref={end} />
       </div>
+      {on === false && <AiOff />}
       <div className="chips starters">{STARTERS.map((s) => <button key={s} type="button" className="pill-btn" disabled={!on || busy > 0} onClick={() => void send(s)}>{s}</button>)}</div>
       <div className="row-add chatbox">
         <input value={text} placeholder="Ask…" aria-label="Message the AI" onChange={(e) => setText(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") void send(text); }} />

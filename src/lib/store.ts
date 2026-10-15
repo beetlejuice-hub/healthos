@@ -13,6 +13,7 @@ import { DEFAULT_GOALS, slotOf, slotsOf, slotTime } from "./types";
 import { tidyWorkouts } from "./training";
 import type { ScoutMemo } from "./scout";
 import type { DigestItem, ModelChoice, NightAnswer, Question, SupplementAnswer } from "./ai/tasks";
+import type { Notice } from "./inbox";
 
 /** Everything the in-app AI keeps for you, synced like the rest (doc "ai"). */
 export type AiState = {
@@ -37,6 +38,11 @@ export type AiState = {
   experiments: Experiment[];
   /** When you last opened the AI tab: newer unprompted messages show a dot. */
   seenAt: number;
+  /** What the app wrote to you (PLAN 102), and every id it ever wrote, so none comes twice (optional: older synced docs). */
+  inbox?: Notice[];
+  sent?: string[];
+  /** The day the grids were last read for new findings. */
+  findingsDay?: string;
 };
 export type Experiment = { id: string; name: string; how: string; days: number; measure: string; start: string; ended?: string };
 export const EMPTY_AI: AiState = { models: { everyday: "opus", research: "opus" }, memory: [], chat: [], digest: null, night: null, shown: [], questions: null, daily: [], asked: [], research: {}, experiments: [], seenAt: 0 };

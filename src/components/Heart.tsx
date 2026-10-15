@@ -9,7 +9,7 @@ import { useEffect, useMemo, useState, type MouseEvent, type PointerEvent } from
 import type { BandData, HrMinute, SleepSession, StepBucket } from "../lib/band";
 import { loadBandBefore } from "../lib/band-client";
 import type { Check } from "../lib/feelgraph";
-import { aroundChecks, awakeByDay, dayNumbers, heartOutcomes, raisedStretches, roll, whyRaised, CHECK_MIN_N, type AroundChecks, type AwakeDay, type Raised, type Why } from "../lib/heart";
+import { aroundChecks, awakeByDay, dayNumbers, heartOutcomes, loggedAround, raisedStretches, roll, whyRaised, CHECK_MIN_N, type AroundChecks, type AwakeDay, type Raised, type Why } from "../lib/heart";
 import { doingOrder, labelOf, tagOf } from "../lib/feel";
 import { act, useStore } from "../lib/store";
 import { afterCoffee, afterWorkouts, usualAt, usualByHour, usualReady, workoutWindows } from "../lib/hrusual";
@@ -241,12 +241,7 @@ function RaisedList({ raised, data, steps, sleep, isToday, now }: { raised: Rais
   const tags = useMemo(() => doingOrder(entries, now).slice(0, 6), [entries, now]);
   const [own, setOwn] = useState<Record<number, string>>({});
   // What's logged, in the shape whyRaised reads.
-  const logged = useMemo(() => [
-    ...data.doses.map((d) => ({ kind: "drink", at: d.at, caffeineMg: d.mg, alcoholG: 0 })),
-    ...data.drinks.map((d) => ({ kind: "drink", at: d.at, caffeineMg: 0, alcoholG: d.g })),
-    ...data.meals.map((m) => ({ kind: "food", at: m.at, macros: { kcal: m.kcal } })),
-    ...data.checks.map((c) => ({ kind: "feel", at: c.at, doing: c.doing, stress: c.stress })),
-  ], [data]);
+  const logged = useMemo(() => loggedAround(data), [data]);
   const say = (r: Raised, tag: string | null) => { if (tag) act.addEntry({ kind: "feel", at: Math.round((r.start + r.end) / 2), doing: [tag] }); };
   if (!raised.length) return <p className="sl-note hp-raised-none">{isToday ? "No stretch above your usual so far today" : "No stretch above your usual this day"} — raised means 20+ minutes at 5+ bpm over it, training aside.</p>;
   return (

@@ -1256,7 +1256,44 @@ below, in his words, grouped; A first (broken or wrong now), then the rest. Item
      over gf and phone; a 2-hour-late night over one drink; an owl isn't late; a slow-to-sleep night tips gf → phone;
      caffeine over late training, under 30 mg not a thing; own tags, stress, meal, nap; unasked isn't counted),
      e2e/sleep.cjs (the planted two beers, with that night's HRV). Next, offered: the same mark on the 14-night strip.
-   - [ ] **App messages, colour and graphs across Insights** — proposal first (one question to the owner).
+   - [ ] **App messages** — owner, 15 Oct: "1, as per your recommendations" → #102. **Colour and graphs across
+     Insights** — owner: "then when done on next session do 2" (canvas first, the zone colours from #101 everywhere).
+102. [ ] **Inbox: the app writes to you, in the AI tab** (claimed: this session, 15 Oct — lib/inbox, components/Inbox,
+   components/useInbox, Ai.tsx, store's ai doc). **Phase 1 done 15 Oct** (below). Owner, 15 Oct: "Make sure app can see all my stats and send me messages like hey your heart
+   rate was pretty elevated in this time range, what were you doing, or new findings that i can comment on, like not x
+   caused y, but i was doing z. This could be same chatroom w ai..or a diff one" → "1, as per your recommendations": one
+   place, the AI tab, app messages marked "from the app", a few a day at most, never repeated, answers saved so they
+   count, and the AI reads the same thread once it's on.
+   - **What:** cards in the AI tab's thread, newest last, above the chat box: (a) *heart rate up and nothing logged* — a
+     stretch from the last 24 h that's "very" (+15) or 40+ min, finished, with nothing around it: "Heart rate up 14:10–
+     14:50 · +18 bpm over your usual for then, nothing logged around it. What were you doing?" with your usual doings and
+     your own word; the answer is saved the way the Heart page saves it (a check-in's "what I was doing" mid-stretch), so
+     it explains the stretch everywhere. (b) *New finding* — a cell of the Sleep or Heart grid that turned "clear": "Drinks
+     that evening → HRV −8.9 ms · 9 nights with, 21 without". Replies: makes sense / surprising / something else was going
+     on (+ your words: "not x — I was doing z"); saved as an answer, which the AI's context already reads.
+   - **Rules:** at most 3 new a day (heart asks first, they're about today), none repeated (a key per stretch / per
+     cell and direction), an ask the Heart page answered meanwhile closes itself; the tab dot counts unanswered ones.
+   - **How:** lib/inbox (pure: which stretches to ask about, which cells are new findings, the words, the daily cap),
+     components/Inbox (the cards), a shell hook that scans after the band syncs (asks) and once a day with the last 30
+     nights loaded (findings). Kept in the AI doc, so phone and laptop share it.
+   - **Tests:** inbox.test — planted: an unexplained +18 stretch asked, an explained one / a short slight one / one still
+     going not; a clear cell found once and never again; likely cells not; the cap; words for every unit. e2e/inbox.cjs —
+     a day with a planted stretch and 30 nights with drinks planted: both arrive, the dot shows, answering the stretch
+     saves a check-in at its middle (the Heart page then says "you said"), the finding's reply is saved, reload keeps it.
+   - **Phases:** 1 these two kinds (now). 2 a phone notification for the heart ask (the push plan, quiet hours). 3 Mind and
+     Training grids, readiness held low "what happened?", the AI answering in the thread when it's on.
+   - **Phase 1 done 15 Oct.** As above. The Heart grid's HRV is the Sleep grid's (the same morning value), so it's left out
+     of findings — one message, not two. Found by eye in the e2e's screenshot: the card's class "app" took the app shell's
+     full-screen height (each card 900 px); renamed, and the e2e now checks each card's height. Checked: inbox.test (11:
+     the planted stretches through the Heart page's own path — the very one and the long slight one asked, the short one
+     not, not when a check-in / coffee explains it, not while maybe still going, not a day later, "yesterday" after
+     midnight; planted drinks → HRV and lowest heart rate found and nothing else, 10 effect-free months ≤ 1; every unit in
+     words; the cap, today only, never twice), e2e/inbox.cjs (3 arrive with the dot, the planted ones; answering "work"
+     saves a check-in mid-stretch and the Heart page then says "you said: work"; a finding's reply saved as an answer;
+     "Not now" closes; reload adds nothing; no dot once read; 390 px). Not checked: two devices at once (ids are
+     deterministic and synced, so a duplicate can't be added twice, but a write from each in the same second could drop
+     one), a real phone.
+98. [ ] **AI, soon**
 98. [ ] **AI, soon** — "it should look at all the data, see whatsup, tell me clever tips, what to improve, and a whole bunch
    of stuff.. it should recommend me, or just understand protocols i give him, and help me set up in app, or just tell
    me to tell you to set up correctly in app". With #65, #67, #91 (waits on the AI key).
