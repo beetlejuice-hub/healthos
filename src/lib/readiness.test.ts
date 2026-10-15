@@ -44,6 +44,27 @@ describe("readiness out of 100 (owner, 14 Oct)", () => {
     expect(part(r, "hrv")!.got).toBe(0); expect(part(r, "hrv")!.why).toMatch(/^35 ms · usual (4\d|5\d)$/);
     expect(base.score - r.score).toBeGreaterThanOrEqual(15);
   });
+  it("a bottle of wine (owner, 15 Oct: the Charge 6 said 16, this said 68): HRV 30 % under and resting HR +7 → held at ~25, said why", () => {
+    const w = world(3, (k) => (k === 34 ? { hrv: 35, rhr: 61, low: 58 } : {})), r = R(w, 34, 6);
+    expect(r.added).toBeGreaterThan(50); // the parts alone: a week of good sleep and easy training made up for it
+    expect(r.score).toBeLessThanOrEqual(30); expect(r.word).toBe("take it easier");
+    expect(r.cap).toEqual({ to: r.score, why: "HRV and resting heart rate both well off your usual" });
+    expect([part(r, "hrv")!.zone, part(r, "rhr")!.zone]).toEqual(["poor", "poor"]);
+  });
+  it("one of the two well off: held near 65 (\"fair\"), naming it", () => {
+    const r = R(world(3, (k) => (k === 34 ? { hrv: 35 } : {})));
+    expect(r.score).toBeGreaterThanOrEqual(60); expect(r.score).toBeLessThanOrEqual(66); expect(r.cap!.why).toBe("HRV well under your usual");
+    expect(R(world(3, (k) => (k === 34 ? { rhr: 60 } : {}))).cap!.why).toBe("resting heart rate well over your usual");
+  });
+  it("a poor night with the heart fine (4 h 30, asleep 01:40, rated 3) can't read \"ready\": held under 70, saying so", () => {
+    const r = R(world(3, (k, n) => (k === 34 ? { asleep: 270, bed: n.bed + 2 * H, onset: n.onset + 2 * H, deep: 30, rem: 40 } : {})), 34, 3);
+    expect(r.added).toBeGreaterThanOrEqual(80);
+    expect(r.score).toBeLessThan(70); expect(r.cap!.why).toMatch(/^a poor night — sleep score \d+$/); expect(part(r, "sleep")!.zone).toBe("poor");
+  });
+  it("an ordinary morning isn't capped, and its parts read ideal", () => {
+    const r = R(world(3));
+    expect(r.cap).toBeNull(); expect(r.score).toBe(r.added); expect(r.parts.filter((p) => p.zone !== "ideal").length).toBeLessThanOrEqual(1);
+  });
   it("planted: HRV down all week (the trend, as HRV-guided training reads it) → the week's 10 gone", () => {
     const r = R(world(3, (k) => (k >= 29 ? { hrv: 38 } : {})));
     expect(part(r, "hrv7")!.got).toBe(0); expect(part(R(world(3)), "hrv7")!.got).toBeGreaterThanOrEqual(8);

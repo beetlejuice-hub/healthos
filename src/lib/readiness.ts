@@ -18,14 +18,25 @@
  *
  * The heart parts need 10 mornings in the 4 weeks (Oura takes about 2 weeks to learn you); a part that isn't known is left
  * out, named, and the rest scaled to 100. Words as Oura's bands: 85+ ready, 70+ good, 60+ fair, under that "take it easier".
+ *
+ * Weakest link (owner, 15 Oct: "Charge6 app says 16 readiness … after drinking a bottle of wine … it days readiness 68 and
+ * doesn't highlight eniugh that i slept poorly"): added up, a week of good sleep and easy training made up for a heart
+ * still working off the night. The way Whoop's Recovery is mostly HRV, the heart sets how high it can go — at most
+ * 20 + 90 × the heart parts' share (both gone: 20; one gone: 65; nothing off past 90 % of each: no cap) — and so does last
+ * night, at most 20 + 0.9 × its score (a 50 night: 65; 89 and up: no cap). The parts still show what they add to; the
+ * cap is said with its reason.
  */
 
 import type { Night } from "./sleep";
 import { sleepScore, NEED_H } from "./sleepscore";
 import { addDays, DAY } from "./time";
 
-export type RPart = { id: "hrv" | "hrv7" | "rhr" | "sleep" | "balance" | "load"; name: string; got: number; max: number; why: string };
-export type Readiness = { score: number; parts: RPart[]; left: { id: RPart["id"]; name: string; max: number }[]; word: string; day: string };
+export type RPart = { id: "hrv" | "hrv7" | "rhr" | "sleep" | "balance" | "load"; name: string; got: number; max: number; why: string; zone: "ideal" | "fair" | "poor" };
+export type Readiness = {
+  score: number; parts: RPart[]; left: { id: RPart["id"]; name: string; max: number }[]; word: string; day: string;
+  /** What the parts add to, and the cap that held it lower, with why (null when nothing did). */
+  added: number; cap: { to: number; why: string } | null; sleep: number;
+};
 
 export const BASE_DAYS = 28, BASE_MIN = 10;
 const clamp = (v: number) => Math.max(0, Math.min(1, v));
@@ -47,7 +58,7 @@ export function readiness(day: string, ns: Night[], rating: number | null | unde
   const parts: RPart[] = [], left: Readiness["left"] = [];
   const part = (id: RPart["id"], name: string, max: number, frac: number | null, why: string) => {
     if (frac == null || !Number.isFinite(frac)) left.push({ id, name, max });
-    else parts.push({ id, name, max, got: Math.round(max * clamp(frac) * 10) / 10, why });
+    else parts.push({ id, name, max, got: Math.round(max * clamp(frac) * 10) / 10, why, zone: frac >= 0.8 ? "ideal" : frac >= 0.6 ? "fair" : "poor" });
   };
   // your normal: 4 weeks of mornings ending a week ago — a dip lasting days shouldn't become its own usual (the way Oura
   // sets a recent 2 weeks against a longer stretch). From the band's daily values, which come for every day, not from the
@@ -78,7 +89,16 @@ export function readiness(day: string, ns: Night[], rating: number | null | unde
   part("load", "Training", 10, before === 0 ? null : cur === 0 ? 1 : 1 - Math.max(0, cur / Math.max(usual2, 3) - 1.25) / 1.25,
     before === 0 ? "" : `${cur} working sets in 2 days · usual ${Math.round(usual2)}`);
   const got = parts.reduce((a, p) => a + p.got, 0), max = parts.reduce((a, p) => a + p.max, 0);
-  const score = max ? Math.round((got / max) * 100) : 0;
-  return { score, parts, left, word: readyWord(score), day };
+  const added = max ? (got / max) * 100 : 0;
+  // the weakest link: the heart and last night each set how high it can go
+  const share = (id: RPart["id"]) => { const p = parts.find((x) => x.id === id); return p ? p.got / p.max : null; };
+  const h = share("hrv"), r = share("rhr"), heart = [h, r].filter(ok);
+  const caps: { to: number; why: string }[] = [{ to: 20 + 0.9 * sc.score, why: `${sc.score < 60 ? "a poor night" : "last night"} — sleep score ${sc.score}` }];
+  const well = (f: number | null) => (f != null && f < 0.5 ? "well " : "");
+  if (heart.length) caps.push({ to: 20 + 90 * mean(heart), why: h != null && r != null && h < 0.5 && r < 0.5 ? "HRV and resting heart rate both well off your usual"
+    : (h ?? 1) <= (r ?? 1) ? `HRV ${well(h)}under your usual` : `resting heart rate ${well(r)}over your usual` });
+  const cap = caps.reduce((a, c) => (c.to < a.to ? c : a));
+  const score = Math.round(Math.min(added, cap.to));
+  return { score, parts, left, word: readyWord(score), day, added: Math.round(added), cap: cap.to < added && Math.round(cap.to) < Math.round(added) ? { to: Math.round(cap.to), why: cap.why } : null, sleep: sc.score };
 }
 

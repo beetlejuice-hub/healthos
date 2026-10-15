@@ -50,9 +50,9 @@ export function SleepScore({ s, label = "Sleep score", leftWhy = sleepLeft }: { 
             <small className="ref">ideal {p.ideal}{p.usualText ? ` · your usual ${p.usualText}` : ""}</small>
           </div>
         ) : (
-          <div key={p.id} className="sl-sp" role="listitem" data-part={p.id} data-got={p.got}>
+          <div key={p.id} className="sl-sp" role="listitem" data-part={p.id} data-got={p.got} data-zone={p.zone}>
             <span className="nm">{p.name}</span>
-            <span className="tr" aria-hidden="true"><i style={{ width: `${(p.got / p.max) * 100}%` }} /></span>
+            <span className="tr" aria-hidden="true"><i className={p.zone} style={{ width: `${(p.got / p.max) * 100}%` }} /></span>
             {/* one decimal when it isn't whole: 4.5 of 5 shouldn't read as full marks */}
             <b>{pts(p.got)}<small>/{p.max}</small></b>
             <small className="why">{p.why}</small>

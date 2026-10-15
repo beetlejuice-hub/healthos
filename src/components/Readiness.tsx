@@ -22,12 +22,17 @@ export function Readiness({ now }: { now: number }) {
   const sets = useMemo(() => entries.filter((e): e is Extract<typeof e, { kind: "set" }> => e.kind === "set"), [entries]);
   const r = useMemo(() => (band ? readiness(day, nights(band.sleep, band.hr, band.rhr, band.hrv), rating, sets, now, { hrv: band.hrv, rhr: band.rhr }) : null), [band, day, rating, sets, now]);
   if (!r) return null;
-  // the line names the two parts furthest from full, so you see why without opening it
-  const low = [...r.parts].sort((a, b) => a.got / a.max - b.got / b.max).filter((p) => p.got < p.max * 0.8).slice(0, 2);
+  // the line names the two parts furthest from full, so you see why without opening it; a poor night always leads
+  // (owner, 15 Oct: "doesn't highlight eniugh that i slept poorly")
+  const low = [...r.parts].sort((a, b) => a.got / a.max - b.got / b.max || b.max - a.max).filter((p) => p.got < p.max * 0.8); // ties: the bigger part first
+  const poorNight = r.sleep < 60, shown = [...(poorNight ? low.filter((p) => p.id === "sleep") : []), ...low.filter((p) => !poorNight || p.id !== "sleep")].slice(0, 2);
+  const zone = r.score >= 70 ? "ideal" : r.score >= 60 ? "fair" : "poor";
   return (
-    <details className="card rd" data-score={r.score}>
-      <summary><span className="k">Readiness</span><b>{r.score}</b><span className="w">{r.word}</span>
-        <span className="why">{low.length ? low.map((p) => `${p.name}: ${p.why}`).join(" · ") : "everything at or near your usual"}</span></summary>
+    <details className="card rd" data-score={r.score} data-zone={zone}>
+      <summary><span className="k">Readiness</span><b>{r.score}</b><span className={`w zw ${zone}`}>{r.word}</span>
+        {poorNight && <span className="rd-flag">slept poorly</span>}
+        <span className="why">{shown.length ? shown.map((p) => `${p.name}: ${p.why}`).join(" · ") : "everything at or near your usual"}</span></summary>
+      {r.cap && <p className="rd-cap" data-cap={r.cap.to}>Held at {r.cap.to}: {r.cap.why}. The parts add to {r.added}, but a good week can't make up for that this morning.</p>}
       <SleepScore s={r} label="Readiness" leftWhy={leftWhy} />
       <p className="sl-note">Against your own normal, as Oura and Fitbit do it: this morning's HRV and resting heart rate, last night, the week's sleep, your last 2 days of training. A guide to the day, not a diagnosis.</p>
     </details>

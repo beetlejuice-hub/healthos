@@ -1232,8 +1232,18 @@ below, in his words, grouped; A first (broken or wrong now), then the rest. Item
      sleepscore.test (15: a poor usual doesn't make a poor night good, an earlier bedtime than usual gets full marks, a
      wine-like night's heart parts both red, …), e2e/sleepscore.cjs at 390 px (5 h → 6.3 of 25 poor, dot at 5 h and tick
      at 7 h 40 where they belong, every part one dot, the key), e2e/sleep.cjs.
-   - [ ] **Readiness after a bad night** — "Charge6 app says 16 readiness … after drinking a bottle of wine but i feel like
-     app didnt punish ut enough, it days readiness 68 and doesn’t highlight eniugh that i slept poorly".
+   - [x] **Readiness after a bad night** — "Charge6 app says 16 readiness … after drinking a bottle of wine but i feel like
+     app didnt punish ut enough, it days readiness 68 and doesn’t highlight eniugh that i slept poorly". Added up, a good
+     week of sleep and easy training made up for a heart still working off the night. Now a weakest link, the way Whoop's
+     Recovery is mostly HRV: the heart caps it at 20 + 90 × the HRV and resting-HR parts' share (both gone: 20; one gone:
+     65), last night at 20 + 0.9 × its sleep score (a 50 night: 65; 89+ no cap). When a cap holds it, a note says so and why
+     ("Held at 20: HRV and resting heart rate both well off your usual. The parts add to 47 …"); a night under 60 puts
+     "slept poorly" on the line and leads it; parts are green / amber / red, a part at 0 shows a red track. Checked:
+     readiness.test (wine morning HRV −30 % and resting +7 → ≤ 30 with its reason; one of them → ~65; a 4 h 30 night at
+     01:40 rated 3 with the heart fine → under 70, "a poor night"; ordinary → no cap; all four fail without the change;
+     the month-of-ordinary and monotonic tests still pass), e2e/readiness.cjs (the wine morning: 20, "take it easier", the
+     note, HRV and resting HR red; ordinary: 87, no note). Not checked in the browser: the "slept poorly" tag (unit-tested
+     logic, one line of markup).
    - [ ] **What happened that night** — "at sleep, it should subtly show the thing that happened that night. like if i
      slept w gf, if i was drunk, if i was scrolling too much before bed, if worked out late, if too much cafffeine, if went
      to bed too late, etc - the most significant thing".

@@ -1,8 +1,10 @@
 // Readiness on Today (owner, 14 Oct: "also readiness score?? can check net for reference"). 35 fake nights from the band:
-// HRV around 50 ms, resting HR 54, ~7 h 40 asleep, training Mon / Wed / Fri. Planted in one run: this morning's HRV 35 ms
-// (30 % under). The strip must give a number, say why in its one line, open to six parts, and use the same sleep score
-// the check-in shows — and the Sleep page shows, Today opened first; the run without the plant must read as ordinary.
-// The mock sends the last 40 days of nights with any request, as the server does since 14 Oct.
+// HRV around 50 ms, resting HR 54, ~7 h 40 asleep, training Mon / Wed / Fri. Planted in one run: a bottle of wine's
+// morning — HRV 35 ms (30 % under), resting HR 61 (owner, 15 Oct: "Charge6 app says 16 readiness … it days readiness 68").
+// The strip must drop to "take it easier", say why in its one line and in a held-at note, mark those parts poor, open to
+// six parts, and use the same sleep score the check-in shows — and the Sleep page shows, Today opened first; the run
+// without the plant must read as ordinary, with no note. The mock sends the last 40 days of nights with any request, as
+// the server does since 14 Oct.
 const { chromium, APP, OUT, handle } = require('./harness.cjs');
 
 const MIN = 60_000, HOUR = 3_600_000, D = 86_400_000, NOW = new Date('2026-10-14T08:30:00').getTime();
@@ -24,7 +26,7 @@ function world(plant) {
     for (let t = bed - HOUR; t < up; t += 5 * MIN) { const v = Math.round((t > onset && t < wake ? 52 : 63) + g()); hr.push([t, v, v - 2, v + 2]); }
     const morning = ymd(up), today = k === 1;
     hrv[morning] = today && plant ? 35 : Math.round(Math.exp(Math.log(50) + 0.08 * g()));
-    rhr[morning] = Math.round(54 + g());
+    rhr[morning] = today && plant ? 61 : Math.round(54 + g());
     if (!today) entries.push({ id: 'r' + k, kind: 'sleep', at: up + 20 * MIN, rating: 8 });
     const dow = new Date(day0).getDay();
     if (dow === 1 || dow === 3 || dow === 5) for (let i = 0; i < 18; i++) entries.push({ id: `x${k}-${i}`, kind: 'set', at: T(18) + i * 3 * MIN, workoutId: 'w' + k, exercise: 'Squat', kg: 100, reps: 5 });
@@ -60,9 +62,13 @@ function world(plant) {
     const rd = pg.locator('.rd'), score = +(await rd.getAttribute('data-score').catch(() => 0));
     const line = (await rd.locator('summary').innerText().catch(() => '')).replace(/\n/g, ' ');
     const parts = await rd.locator('.sl-sp').evaluateAll((els) => els.map((e) => [e.dataset.part, +e.dataset.got, e.querySelector('.why').textContent]));
-    const tag = plant ? 'HRV 35 this morning' : 'ordinary';
+    const tag = plant ? 'wine: HRV 35, resting 61' : 'ordinary';
     if (plant) {
-      check(`${tag}: a number, a word, and the line says why — HRV (${score}; ${line})`, score > 0 && score < 85 && /HRV this morning: 35 ms · usual (4\d|5\d)/.test(line));
+      check(`${tag}: down to "take it easier", and the line says why — HRV, resting HR (${score}; ${line})`, score > 0 && score <= 30 && /take it easier/.test(line) && /HRV this morning: 35 ms · usual (4\d|5\d)/.test(line) && /Resting HR: 61 bpm · usual 5\d/.test(line));
+      const cap = await rd.locator('.rd-cap').textContent().catch(() => '');
+      check(`${tag}: the note says it's held, and why (${cap})`, new RegExp(`^Held at ${score}: HRV and resting heart rate both well off your usual\\. The parts add to \\d+`).test(cap));
+      const red = await rd.locator('.sl-sp[data-part="hrv"], .sl-sp[data-part="rhr"]').evaluateAll((els) => els.map((e) => [e.dataset.zone, getComputedStyle(e.querySelector('.tr i')).backgroundColor]));
+      check(`${tag}: HRV and resting HR marked poor, in red (${red})`, red.length === 2 && red.every((z) => z[0] === 'poor' && z[1] === 'rgb(229, 96, 79)'));
       const h = parts.find((p) => p[0] === 'hrv');
       check(`${tag}: HRV this morning gets none of its 20 (${h})`, h && h[1] === 0);
       await rd.locator('summary').click(); await pg.waitForTimeout(150);
@@ -76,7 +82,7 @@ function world(plant) {
       const page = await pg.locator('.sl .sl-score').getAttribute('data-score');
       check(`the Sleep page gives last night the same score as Today (${page} · ${hn})`, page === hn);
     } else {
-      check(`${tag}: reads as fine — 75+, "ready" or "good" (${score}; ${line})`, score >= 75 && /(ready|good)/.test(line));
+      check(`${tag}: reads as fine — 75+, "ready" or "good", nothing held (${score}; ${line})`, score >= 75 && /(ready|good)/.test(line) && await rd.locator('.rd-cap').count() === 0);
       await rd.screenshot({ path: OUT + 'readiness-closed.png' });
     }
     await ctx.close();
