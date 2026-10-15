@@ -481,6 +481,12 @@ email get Dev tools (`#dev`): raw entry editor, generate/remove sample, wipe acc
    most lifts done in both of the last two 2-week blocks have their best e1RM down 2%+ (2+ lifts). Slow and
    dropping together cancel → keep, and it says so. One tap sets the goal (carbs move with it, ±38 g) or keeps
    it; the answer is stored (`settings.checkins`) and the card stays away for 14 days. e2e/checkin.cjs.
+   **15 Oct, "lifts dropping" per muscle** (owner: "ok to 2"): now the Training page's strength per muscle (8-week trend,
+   90% range) — dropping when 2+ muscles are clearly dropping and they're over half of those that read clearly; the
+   card names them ("chest and back are getting weaker"). "Lifts are holding" is said only when 2+ muscles clearly hold.
+   The old best-set rule read one great session early on as every lift dropping. Checked: checkin.test (a planted 7 %
+   drop found on quads, chest and back; flat ±1.5 % lifts, a 1 % dip and one great early day not — the great day fails
+   with the old rule; one muscle down isn't enough; 4 weeks can't claim holding, 8 can), e2e checkin / energy / training.
 42. [x] **Workout home: his plan instead of the starter split; day cards redone** (6 Oct — `lib/store.ts`
    upgradeStarter, `components/DayCard.tsx`). Owner, 6 Oct, on Upper A/Lower A…: *"This part should be replaced w
    the saved workouts...also make ui look better"*. New accounts start on Push · Pull · Mixed; a split still exactly

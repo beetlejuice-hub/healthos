@@ -6,9 +6,10 @@
  */
 
 import { addDays, localDay, DAY } from "./time";
-import { e1rm } from "./training";
+import { muscleStrength } from "./liftstrength";
+import type { LoggedSet } from "./training";
 
-export const CHECKIN = { everyDays: 14, minWeighDays: 3, slowKg: 0.3, fastKg: 0.7, stepKcal: 150, liftDrop: 0.02, minLifts: 2 };
+export const CHECKIN = { everyDays: 14, minWeighDays: 3, slowKg: 0.3, fastKg: 0.7, stepKcal: 150, minLifts: 2 };
 
 export type Lifts = { compared: number; dropped: string[]; dropping: boolean };
 export type CheckIn =
@@ -26,20 +27,19 @@ function weekAvg(weights: { at: number; kg: number }[], end: string): { avg: num
   return days.size ? { avg: mean([...days.values()].map(mean)), days: days.size } : null;
 }
 
-/** Each lift done in both of the last two 2-week blocks: is its best estimated 1RM down by 2% or more? Dropping when most are (2+ lifts). */
-export function liftsDropping(sets: { at: number; exercise: string; kg: number; reps: number }[], now: number): Lifts {
-  const best = (from: number, to: number) => {
-    const m = new Map<string, number>();
-    for (const s of sets) if (s.at >= from && s.at < to && s.reps > 0 && s.reps <= 12) m.set(s.exercise, Math.max(m.get(s.exercise) ?? 0, e1rm(s.kg, s.reps)));
-    return m;
-  };
-  const recent = best(now - 14 * DAY, now + 1), before = best(now - 28 * DAY, now - 14 * DAY);
-  const both = [...recent.keys()].filter((n) => before.has(n));
-  const dropped = both.filter((n) => recent.get(n)! < before.get(n)! * (1 - CHECKIN.liftDrop));
-  return { compared: both.length, dropped, dropping: both.length >= CHECKIN.minLifts && dropped.length > both.length / 2 };
+/**
+ * Lifts dropping, judged per muscle (owner, 15 Oct: "ok to 2"): each muscle's 8-week strength trend with its 90% range,
+ * as the Training page shows it (lib/liftstrength). Dropping when 2+ muscles are clearly dropping and they're over half of
+ * the muscles that read clearly either way. It used to be each lift's best set in the last 2 weeks against the 2 before —
+ * one great day early on read as a drop on every lift trained that day.
+ */
+export function liftsDropping(sets: LoggedSet[], now: number): Lifts {
+  const ms = muscleStrength(sets, now), clear = ms.filter((m) => m.state !== "unclear");
+  const dropped = ms.filter((m) => m.state === "dropping").map((m) => m.muscle as string);
+  return { compared: clear.length, dropped, dropping: dropped.length >= CHECKIN.minLifts && dropped.length > clear.length / 2 };
 }
 
-export function checkIn(weights: { at: number; kg: number }[], sets: { at: number; exercise: string; kg: number; reps: number }[], now: number, kcal: number, lastAt?: number): CheckIn {
+export function checkIn(weights: { at: number; kg: number }[], sets: LoggedSet[], now: number, kcal: number, lastAt?: number): CheckIn {
   if (lastAt != null && now - lastAt < CHECKIN.everyDays * DAY) return { due: false, nextAt: lastAt + CHECKIN.everyDays * DAY };
   const today = localDay(now);
   const cur = weekAvg(weights, today), prev = weekAvg(weights, addDays(today, -14));
@@ -50,9 +50,10 @@ export function checkIn(weights: { at: number; kg: number }[], sets: { at: numbe
   const slow = lossPerWeek < CHECKIN.slowKg, fast = lossPerWeek > CHECKIN.fastKg;
   const rate = lossPerWeek >= 0 ? `losing about ${lossPerWeek.toFixed(2)} kg a week` : `gaining about ${(-lossPerWeek).toFixed(2)} kg a week`;
   let delta: -150 | 0 | 150 = 0, why: string;
-  if (slow && lifts.dropping) why = `${rate}, under 0.3, but lifts are dropping too — the two rules cancel out, so keep it`;
+  const weaker = lifts.dropped.join(" and ").toLowerCase();
+  if (slow && lifts.dropping) why = `${rate}, under 0.3, but ${weaker} are getting weaker too — the two rules cancel out, so keep it`;
   else if (slow) { delta = -150; why = `${rate}, under 0.3 kg`; }
-  else if (fast || lifts.dropping) { delta = 150; why = fast ? `${rate}, over 0.7 kg${lifts.dropping ? ", and lifts are dropping" : ""}` : `${rate}, but lifts are dropping`; }
+  else if (fast || lifts.dropping) { delta = 150; why = fast ? `${rate}, over 0.7 kg${lifts.dropping ? `, and ${weaker} are getting weaker` : ""}` : `${rate}, but ${weaker} are getting weaker (8-week trend)`; }
   else why = `${rate}, inside 0.3–0.7 kg${lifts.compared >= CHECKIN.minLifts ? ", and lifts are holding" : ""}`;
   return { due: true, from: prev.avg, to: cur.avg, lossPerWeek, lifts, delta, why, kcal, newKcal: kcal + delta };
 }
