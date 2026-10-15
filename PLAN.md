@@ -1359,6 +1359,13 @@ below, in his words, grouped; A first (broken or wrong now), then the rest. Item
    Checked: sections.test (the three blocks' lines, known answers), e2e/ai.cjs (folded under 200 px with "3 things to
    read", opens to rows with kinds, the protocol still starts an experiment, a reply in your own words saved as said),
    e2e/sleep.cjs (drink nights on the strip say "2 drinks", last night among them).
+105. [ ] **Colour and graphs across Insights** (claimed: this session, 15 Oct — Glance, Mind, the grids, index.css; then
+   #95 calories). Owner, 15 Oct: "The insight page has a lot of info on all pages. Thats good but everything is one color
+   and it looks just too monotone. I feel like we should use red green as noted before and maybe more graphs, things that
+   makes the data more visual, easier to understand when looking at it" → "Do this now". Canvas (15 Oct):
+   https://claude.ai/artifact/RR8EThbFTXvECGmPdD4s3Z — A quiet signal (colour only where off your usual), B heat (tables
+   and bars shaded by how far from usual, green better / red worse, recommended), C tiles and small charts. Waiting on
+   the owner's pick; the green / amber / red are #101's zone colours, always with a word or arrow beside them.
 98. [ ] **AI, soon**
 98. [ ] **AI, soon** — "it should look at all the data, see whatsup, tell me clever tips, what to improve, and a whole bunch
    of stuff.. it should recommend me, or just understand protocols i give him, and help me set up in app, or just tell
