@@ -10,7 +10,7 @@
 
 import Anthropic from "@anthropic-ai/sdk";
 import {
-  DAILY_CAP, MODELS, MONTHLY_USD, RECENT_CALLS, SCHEMAS, logOf, SYSTEM, TIER, checkChat, modelFor, checkDescribe, checkDigest, checkNight, checkQuestions, checkSupplement, costUsd, jsonFrom,
+  DAILY_CAP, MODELS, MONTHLY_USD, RECENT_CALLS, SCHEMAS, logOf, SYSTEM, TIER, checkChat, modelFor, checkDescribe, checkDigest, checkNight, checkQuestions, checkSupplement, costUsd, jsonFrom, DESCRIBE_SHAPE,
   type AiRequest, type ModelChoice, type Task, type UsageDoc,
 } from "../src/lib/ai/tasks";
 
@@ -69,7 +69,9 @@ function messagesFor(b: AiRequest, today: string): Anthropic.Beta.BetaMessagePar
   switch (b.task) {
     case "describe": return [{ role: "user", content: [
       ...(b.image ? [{ type: "image" as const, source: { type: "base64" as const, media_type: b.image.mediaType, data: b.image.data } }] : []),
-      { type: "text" as const, text: b.text ? `What I had: ${b.text}` : "What's in this photo? Log it." },
+      { type: "text" as const, text: b.lookup && b.text && !b.image
+        ? `Look up: ${b.text}\nThe food lists didn't have it. If it's a shop product (Lidl, Kaufland bakery, a brand), search for its label values; if it's a dish and you aren't sure, search a Romanian or Hungarian recipe or nutrition table. Give it its usual portion.\nAnswer with ONLY a JSON object, no prose, in this shape: ${DESCRIBE_SHAPE}`
+        : b.text ? `What I had: ${b.text}` : "What's in this photo? Log it." },
     ] }];
     case "supplement": return [{ role: "user", content: `I just added: ${b.name}${b.dose ? ` (${b.dose})` : ""}.\n\nAbout me and my stack:\n${b.context}` }];
     case "chat": return b.messages.map((m) => ({ role: m.role, content: m.text }));
@@ -79,12 +81,16 @@ function messagesFor(b: AiRequest, today: string): Anthropic.Beta.BetaMessagePar
   }
 }
 
-const textOf = (content: Anthropic.Beta.BetaContentBlock[]) => content.filter((c): c is Anthropic.Beta.BetaTextBlock => c.type === "text").map((c) => c.text).join("\n");
+// Joined as they are: a cited search answer arrives as several text blocks, split anywhere — even inside a JSON string.
+const textOf = (content: Anthropic.Beta.BetaContentBlock[]) => content.filter((c): c is Anthropic.Beta.BetaTextBlock => c.type === "text").map((c) => c.text).join("");
 
 export async function callModel(b: AiRequest, choice: ModelChoice, apiKey: string, deps: Deps, today: string) {
   const task: Task = b.task, m = MODELS[choice];
-  const web = task === "supplement" || task === "digest";
-  const schema = (SCHEMAS as Record<string, unknown>)[task];
+  // A typed name the food lists didn't know may be looked up on the web (two searches at most); search and
+  // structured output don't mix, so that answer is parsed from text like the research tasks'.
+  const lookup = b.task === "describe" && !!b.lookup && !!b.text && !b.image;
+  const web = task === "supplement" || task === "digest" || lookup;
+  const schema = web ? undefined : (SCHEMAS as Record<string, unknown>)[task];
   const client = new Anthropic({ apiKey, fetch: deps.fetch, maxRetries: 1 });
   const effort = TIER[task] === "research" ? "medium" : "low";
   const system: Anthropic.Beta.BetaTextBlockParam[] = [{ type: "text", text: SYSTEM[task], cache_control: { type: "ephemeral" } }];
@@ -102,7 +108,7 @@ export async function callModel(b: AiRequest, choice: ModelChoice, apiKey: strin
       messages,
       ...(m.thinking ? { thinking: { type: "adaptive" as const } } : {}),
       output_config: { ...(m.thinking ? { effort } : {}), ...(schema ? { format: { type: "json_schema" as const, schema: schema as Record<string, unknown> } } : {}) },
-      ...(web ? { tools: [{ type: m.web, name: "web_search" as const, max_uses: 4 }] } : {}),
+      ...(web ? { tools: [{ type: m.web, name: "web_search" as const, max_uses: lookup ? 2 : 4 }] } : {}),
       ...(choice !== "haiku" ? { betas: ["server-side-fallback-2026-07-01"], fallbacks: "default" as const } : {}),
     } as Anthropic.Beta.MessageCreateParamsNonStreaming);
     usage.input_tokens += res.usage.input_tokens; usage.output_tokens += res.usage.output_tokens;

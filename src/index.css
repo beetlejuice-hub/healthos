@@ -1455,3 +1455,9 @@ a { color: inherit; }
 .en-why b { color: var(--c-ink); font-weight: 600; }
 .en-why small { font-size: 12px; color: var(--c-dim); }
 .en-why .linkish { display: inline; padding: 0 0 0 4px; font-size: 12.5px; }
+
+/* Log → Food: ask the AI about what you're searching for (owner, 15 Oct) */
+.ask-ai { display: grid; gap: 2px; text-align: left; width: 100%; border: 1px dashed #ffffff26; background: transparent; color: var(--c-ink-2); border-radius: 12px; padding: 9px 12px; font-size: 14px; }
+.ask-ai b { color: var(--c-ink); font-weight: 600; }
+.ask-ai small { font-size: 12px; color: var(--c-dim); }
+.ask-ai:disabled { opacity: .6; }

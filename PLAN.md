@@ -997,7 +997,7 @@ below, in his words, grouped; A first (broken or wrong now), then the rest. Item
 84. [ ] **A plate as one food, with plate sizes** — "if i input like chicken bread pasta ketchup, it tends to find these but
    can we put these as one food, and not log as separate? also to calculate the size (gram) of these for 1 plate, and i
    can put half plate, small plate, 2 plates etc".
-85. [ ] **Romanian food in the database** — "Most of the database foods are us foods and i live in romania and eat normal
+85. [x] **Romanian food in the database** — "Most of the database foods are us foods and i live in romania and eat normal
    food so pls make some changes"; "things like pityoka leves and also other soups not there?? criminal"; "i cant find the
    lidl doughnuts … can u search and add to database? Lidl bakery and kaufland bakery can make it the same if similar".
    Research 13 Oct (not built yet): the built-in list (lib/foods-basic.ts) has Hungarian names but almost no cooked
@@ -1007,6 +1007,19 @@ below, in his words, grouped; A first (broken or wrong now), then the rest. Item
    already states), cross-checked with a Romanian and a Hungarian table, a portion in the everyday unit (a bowl = 350 g),
    and both names (pityókaleves / krumplileves / ciorbă de cartofi). Lidl / Kaufland bakery doughnuts: no label online —
    take the values off the shelf label (photo) or the exact product name.
+   Owner, 15 Oct, instead of a built-in list: "when i type a dish, and it does not have in the database, app should give
+   me the option to choose ai lookup and it asks the ai, which either looks up on net or just from knoweledge, getst the
+   macros and a plate/serving size for that". **Done 15 Oct:** Log → Food: searching shows "✨ Ask the AI: “…”" under the
+   search box; a line the food database guessed for a typed name has "Ask the AI instead" (same words, replaces the
+   guess); typed names neither list knows still go to the AI on their own. Each is a lookup: the cheap model with up to 2
+   web searches (a shop product → its label; a dish → a Romanian / Hungarian recipe or table) or its own knowledge, told
+   he eats Romanian and Hungarian home cooking (names in either language or misspelled), the dish in its usual portion
+   (a bowl of soup ≈ 350 g, a plate ≈ 350 g, a piece). Saved as his own food, so it's free next time. Found on the way: a
+   cited search answer comes back in pieces and was glued with line breaks — inside a JSON string that breaks it; it
+   could fail supplement research and the morning read the same way. Now joined as sent. Checked: worker ai.test (lookup
+   → search on, no enforced shape; an answer split inside a string parses — fails with the old join), e2e/ai.cjs (search
+   → Ask the AI → one bowl ≈ 220 kcal, saved, found next time with no call; a database guess swapped for the AI's).
+   Not checked: the real AI's answers for his dishes (costs a call — try "pityókaleves" once).
 86. [x] **Caffeine sipped, not chugged** — "for caffeine: whether coffee or energy drink, lets add a more realistic curve,
    like after logging, it takes like 10-20 minutes while i sip on it, not chug it. and also lets confirm if the curve is
    good". The curve wasn't good: it jumped to the whole drink the moment it was logged. Now (lib/caffeine): a drink goes

@@ -129,6 +129,7 @@ Task: turn a description and/or photo of food or drink into items with nutrition
 - Food: give values per 100 g from typical reference data (USDA-style), the everyday unit the user would count it in (slice, piece, cup, plate…) with its weight in grams, and how many units were described. kcal must be close to 4·protein + 4·carbs + 9·fat.
 - Drink: one serving as described: ml, caffeine mg, alcohol grams (ml × ABV × 0.789), kcal. Café drinks vary a lot — assume the typical café size in Hungary/Europe unless told otherwise, and say what you assumed in the note.
 - Photo: estimate portions from plate/cup size; say what you assumed. Use "low" confidence when portions are guesses.
+- The user lives in Romania and eats Romanian and Hungarian (Transylvanian) home cooking and shops at Lidl, Kaufland, Profi, Mega Image. Names may be Hungarian, Romanian or misspelled ("pityoka leves" = pityókaleves, potato soup; "ciorba de perisoare"). A dish: values per 100 g for a typical home recipe, counted in its everyday portion — a bowl of soup ≈ 350 g, a plate of a main ≈ 350 g, a piece for pastries and doughnuts — and put the other language's name in the note.
 - Omit per100/unit/count for drinks and drink for foods.`,
   supplement: `${VOICE}
 Task: research a supplement the user just added. Search the web for current evidence (prefer systematic reviews, NIH ODS, Examine-style summaries, drug-interaction references). Check it against the user's conditions, medications, the rest of their stack, caffeine and alcohol.
@@ -153,6 +154,9 @@ Answer with ONLY a JSON object, no prose:
 /* ------------------------------------------------------------------ checks */
 
 /** Pull the JSON object out of a text answer (for the web-search tasks, which answer in text). */
+/** The shape a describe answer takes when it can't be enforced (a web lookup: structured output and search don't mix). */
+export const DESCRIBE_SHAPE = `{"items":[{"kind":"food","name":"","amount":"1 bowl","per100":{"kcal":0,"p":0,"c":0,"f":0},"unit":{"name":"bowl","g":350},"count":1,"confidence":"high|medium|low","note":"where the numbers come from, in a few words"}]}`;
+
 export function jsonFrom(text: string): unknown {
   const start = text.indexOf("{"), end = text.lastIndexOf("}");
   if (start < 0 || end <= start) throw new Error("no JSON in the answer");
@@ -230,7 +234,8 @@ export function checkChat(a: ChatAnswer): ChatAnswer {
 /* ------------------------------------------------------------------ requests */
 
 export type AiRequest =
-  | { task: "describe"; text?: string; image?: { mediaType: "image/jpeg" | "image/png" | "image/webp"; data: string } }
+  /** lookup: a name the food lists didn't have (or had wrong) — the AI may search the web for it (owner, 15 Oct). */
+  | { task: "describe"; text?: string; image?: { mediaType: "image/jpeg" | "image/png" | "image/webp"; data: string }; lookup?: boolean }
   | { task: "supplement"; name: string; dose?: string; context: string }
   | { task: "chat"; messages: { role: "user" | "assistant"; text: string }[]; context: string }
   | { task: "questions"; context: string; asked: string[] }

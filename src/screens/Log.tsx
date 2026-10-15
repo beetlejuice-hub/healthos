@@ -125,9 +125,9 @@ export function Log() {
  * (marked "AI estimate"), so typing the same words next time is free. One item → it also
  * remembers exactly what you typed.
  */
-async function aiDescribe(text: string | undefined, image?: File): Promise<{ items: Item[]; drinks: Drink[]; message?: string }> {
+async function aiDescribe(text: string | undefined, image?: File, lookup = false): Promise<{ items: Item[]; drinks: Drink[]; message?: string }> {
   const img = image ? await shrinkImage(image) : undefined;
-  const r = await askAi({ task: "describe", ...(text ? { text } : {}), ...(img ? { image: img } : {}) });
+  const r = await askAi({ task: "describe", ...(text ? { text } : {}), ...(img ? { image: img } : {}), ...(lookup ? { lookup } : {}) });
   if (!r.ok) return { items: [], drinks: [], message: r.message };
   const items: Item[] = [], drinks: Drink[] = [];
   for (const it of r.answer.items) {
@@ -152,10 +152,15 @@ function PhotoButton({ onPick, label = "📷 Photo", disabled }: { onPick: (f: F
 
 /** The basket survives a reload or a tab switch until it's logged (this device only). */
 const BASKET_KEY = "healthos.basket";
-/** `est`: how a line was estimated, shown under it ("median of 12 products", "AI estimate"). */
-type Item = (Line & { alts?: Food[]; est?: string }) | DrinkLine;
+/**
+ * `est`: how a line was estimated, shown under it ("median of 12 products", "AI estimate"). `asked`: what you typed, on a
+ * line the food database guessed — so "Ask the AI instead" can ask about the same words.
+ */
+type Item = (Line & { alts?: Food[]; est?: string; asked?: string }) | DrinkLine;
 const isDrink = (x: Item): x is DrinkLine => "drink" in x;
 const loadBasket = (): Item[] => { try { return JSON.parse(localStorage.getItem(BASKET_KEY) ?? "[]") as Item[]; } catch { return []; } };
+/** Kept on this device (without the "did you mean" lists), and handed back. */
+const keepBasket = (b: Item[]): Item[] => { try { localStorage.setItem(BASKET_KEY, JSON.stringify(b.map((x) => (isDrink(x) ? x : (({ alts, ...l }) => { void alts; return l; })(x))))); } catch { /* private mode */ } return b; };
 
 /**
  * Food, the simple way (owner: "type scrambled eggs, choose it, add 2 eggs, add toast, an apple,
@@ -173,7 +178,7 @@ function FoodTab({ done }: { done: (m: string) => void }) {
   const [error, setError] = useState<string | null>(null);
   const drinksMine = useStore((s) => s.drinks);
   const [basket, setBasketRaw] = useState<Item[]>(loadBasket);
-  const setBasket = (b: Item[]) => { setBasketRaw(b); try { localStorage.setItem(BASKET_KEY, JSON.stringify(b.map((x) => (isDrink(x) ? x : (({ alts, ...l }) => { void alts; return l; })(x))))); } catch { /* private mode */ } };
+  const setBasket = (b: Item[]) => setBasketRaw(keepBasket(b));
   const [detail, setDetail] = useState<number | null>(null);
   const [custom, setCustom] = useState(false);
   /** A barcode no database knew: the label form saves it with this code, so the next scan finds it. */
@@ -249,16 +254,16 @@ function FoodTab({ done }: { done: (m: string) => void }) {
       try { return fromDatabase(m, (await searchFood(readAmount(tokens(m)).words.join(" "))).foods); } catch { return null; }
     }));
     setLooking(false);
-    const extra: Item[] = fromDb.flatMap((e) => (e ? [{ ...e.line, est: `${e.basis > 1 ? `median of ${e.basis} products` : "1 product"} · ${e.how}` }] : []));
-    setBasketRaw((b) => { const next = [...b, ...extra]; try { localStorage.setItem(BASKET_KEY, JSON.stringify(next.map((x) => (isDrink(x) ? x : (({ alts, ...l }) => { void alts; return l; })(x))))); } catch { /* private mode */ } return next; });
+    const extra: Item[] = fromDb.flatMap((e, i) => (e ? [{ ...e.line, est: `${e.basis > 1 ? `median of ${e.basis} products` : "1 product"} · ${e.how}`, asked: missing[i] }] : []));
+    setBasketRaw((b) => keepBasket([...b, ...extra]));
     const still = missing.filter((_, i) => !fromDb[i]);
     setMissed(still);
     if (!still.length || !aiOn) return;
     // Neither yours, the everyday foods, nor the database: the AI, once — saved, so it's free next time.
     setAsking(still);
-    const got = await Promise.all(still.map((m) => aiDescribe(m)));
+    const got = await Promise.all(still.map((m) => aiDescribe(m, undefined, true)));
     setAsking([]);
-    setBasketRaw((b) => { const next = [...b, ...got.flatMap((g) => g.items)]; try { localStorage.setItem(BASKET_KEY, JSON.stringify(next.map((x) => (isDrink(x) ? x : (({ alts, ...l }) => { void alts; return l; })(x))))); } catch { /* private mode */ } return next; });
+    setBasketRaw((b) => keepBasket([...b, ...got.flatMap((g) => g.items)]));
     setMissed(still.filter((_, i) => !got[i].items.length));
     setAiNote(got.map((g) => g.message).filter(Boolean).join(" ") || null);
   };
@@ -269,6 +274,18 @@ function FoodTab({ done }: { done: (m: string) => void }) {
     setBasket([...basket, ...g.items]);
     setTyped("");
     setAiNote(g.message ?? (g.items.length ? null : "The AI couldn't make out food in that photo."));
+  };
+  /**
+   * Ask the AI about a name (owner, 15 Oct: "when i type a dish, and it does not have in the database, app should give me
+   * the option to choose ai lookup … gets the macros and a plate/serving size"): it may search the web; what comes back
+   * is saved as your own food, so next time it's in Your foods. `instead`: the database's guess it replaces.
+   */
+  const lookUp = async (text: string, instead?: Item) => {
+    setAsking([text]); setAiNote(null);
+    const g = await aiDescribe(text, undefined, true);
+    setAsking([]);
+    if (g.items.length) setBasketRaw((b) => keepBasket(instead && b.includes(instead) ? b.flatMap((x) => (x === instead ? g.items : [x])) : [...b, ...g.items]));
+    setAiNote(g.message ?? (g.items.length ? null : `The AI couldn't place “${text}”.`));
   };
   const upd = (i: number, l: Item) => setBasket(basket.map((x, j) => (j === i ? l : x)));
   const opened = detail != null ? basket[detail] : undefined;
@@ -293,7 +310,7 @@ function FoodTab({ done }: { done: (m: string) => void }) {
       {looking && <p className="note">Looking up {missed.map((m) => `“${m}”`).join(", ")} in the food database…</p>}
       {!looking && !asking.length && missed.length > 0 && <p className="err">Couldn't find {missed.map((m) => `“${m}”`).join(", ")} — search it below or add it yourself.</p>}
       {crafting && <p className="note">Making your own food: type what's in it, roughly — “200 g chicken, 1 bowl rice, 1 tbsp oil, salad” — then <b>Save as a meal</b> and say how many portions it makes.</p>}
-      {basket.length > 0 && <Basket lines={basket} when={when} crafting={crafting} onChange={setBasket} onDetail={setDetail} onLogged={(m) => { setBasket([]); setMissed([]); setCrafting(false); done(m); }} />}
+      {basket.length > 0 && <Basket lines={basket} when={when} crafting={crafting} onChange={setBasket} onDetail={setDetail} onAsk={aiOn && !asking.length ? (l) => { if (!isDrink(l) && l.asked) void lookUp(l.asked, l); } : undefined} onLogged={(m) => { setBasket([]); setMissed([]); setCrafting(false); done(m); }} />}
     </div>
     <div className="card">
       <div className="searchrow">
@@ -301,6 +318,12 @@ function FoodTab({ done }: { done: (m: string) => void }) {
         <ScanButton onClick={scan.start} />
       </div>
       {scan.ui}
+      {aiOn && q.trim().length >= 2 && (
+        <button type="button" className="ask-ai" disabled={asking.length > 0} onClick={() => { const t = q.trim(); setQ(""); void lookUp(t); window.scrollTo({ top: 0, behavior: "smooth" }); }}>
+          <span>✨ Ask the AI: <b>“{q.trim()}”</b></span>
+          <small>{asking.length ? "asking…" : "Not in the list, or not right? It looks it up — macros and a usual portion, saved for next time"}</small>
+        </button>
+      )}
       {mine.length > 0 && <>
         <h3>{q ? "Your foods" : "Recent"} <span>tap to add</span></h3>
         <div className="list">{mine.map((f) => <FoodRow key={f.id} f={f} amount={amountOf(usual(f))} onPick={() => add(f)} />)}</div>
@@ -336,7 +359,7 @@ function FoodTab({ done }: { done: (m: string) => void }) {
 const amountOf = (l: Line) => (l.unit ? amountText(l.count, l.unit) : `${Math.round(l.grams ?? 100)} g`);
 
 /** The meal being built: − / + per line, ≈ totals, one tap to log, or save it as a meal. */
-function Basket({ lines, when, crafting, onChange, onDetail, onLogged }: { lines: Item[]; when: When; crafting: boolean; onChange: (l: Item[]) => void; onDetail: (i: number) => void; onLogged: (m: string) => void }) {
+function Basket({ lines, when, crafting, onChange, onDetail, onAsk, onLogged }: { lines: Item[]; when: When; crafting: boolean; onChange: (l: Item[]) => void; onDetail: (i: number) => void; onAsk?: (l: Item) => void; onLogged: (m: string) => void }) {
   const [saving, setSaving] = useState(false);
   const [mealName, setMealName] = useState(""), [pieces, setPieces] = useState("1");
   const tot = lines.reduce((a, l) => { if (isDrink(l)) return { kcal: a.kcal + l.drink.kcal * l.count, p: a.p }; const m = macrosOfLine(l); return { kcal: a.kcal + m.kcal, p: a.p + m.p }; }, { kcal: 0, p: 0 });
@@ -406,6 +429,8 @@ function Basket({ lines, when, crafting, onChange, onDetail, onLogged }: { lines
             })()}
             {l.alts && l.alts.length > 0 && <div className="alts"><small>Did you mean</small>{l.alts.map((f) => <button type="button" key={f.id} className="pill-btn" onClick={() => { const u = unitsOf(f); set(i, u.length ? { food: f, count: l.count, unit: u[0].name } : { food: f, count: 1, unit: null, grams: 100 }); }}>{f.name}</button>)}
               <button type="button" className="pill-btn" onClick={() => set(i, { ...l, alts: undefined })}>✓ it's right</button></div>}
+            {l.asked && onAsk && <div className="alts"><small>A guess from the food database</small>
+              <button type="button" className="pill-btn" onClick={() => onAsk(l)}>✨ Ask the AI instead</button></div>}
           </div>
         );
       })}

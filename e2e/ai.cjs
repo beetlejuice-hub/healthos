@@ -5,7 +5,9 @@ const { chromium, APP, OUT, handle } = require('./harness.cjs');
 // memory; the AI-off state.
 const calls = [];
 const ANSWERS = {
-  describe: (b) => /mystery/i.test(b.text || '') ? { items: [{ kind: 'food', name: 'Mystery stew', amount: '1 bowl', per100: { kcal: 120, p: 8, c: 10, f: 5 }, unit: { name: 'bowl', g: 350 }, count: 1, confidence: 'medium', note: 'assumed a beef and potato stew' }], dropped: [] }
+  describe: (b) => /pityoka/i.test(b.text || '') ? { items: [{ kind: 'food', name: 'Pityókaleves', amount: '1 bowl', per100: { kcal: 62, p: 1.6, c: 7.5, f: 2.8 }, unit: { name: 'bowl', g: 350 }, count: 1, confidence: 'medium', note: 'typical home recipe · ciorbă de cartofi' }], dropped: [] }
+    : /gogos/i.test(b.text || '') ? { items: [{ kind: 'food', name: 'Gogoașă cu cremă, Lidl', amount: '1 piece', per100: { kcal: 380, p: 6, c: 45, f: 19 }, unit: { name: 'piece', g: 80 }, count: 1, confidence: 'medium', note: 'Lidl bakery label' }], dropped: [] }
+    : /mystery/i.test(b.text || '') ? { items: [{ kind: 'food', name: 'Mystery stew', amount: '1 bowl', per100: { kcal: 120, p: 8, c: 10, f: 5 }, unit: { name: 'bowl', g: 350 }, count: 1, confidence: 'medium', note: 'assumed a beef and potato stew' }], dropped: [] }
     : { items: [{ kind: 'drink', name: 'Long coffee, large', amount: '1 big cup', drink: { ml: 300, caffeineMg: 150, alcoholG: 0, kcal: 3 }, confidence: 'medium', note: 'assumed a double shot' }], dropped: [] },
   supplement: () => ({ name: 'Ashwagandha', what: 'an adaptogen herb', usualDose: '300–600 mg extract', timing: 'any regular time', evidence: 'moderate', uses: ['stress', 'sleep'], cautions: ['may raise thyroid hormone'], interactions: [{ with: 'psoriasis', verdict: 'caution', say: 'immune-stimulating; may worsen autoimmune conditions' }], sources: [{ title: 'NIH ODS', url: 'https://ods.od.nih.gov/factsheets/Ashwagandha-HealthProfessional/' }] }),
   digest: () => ({ greeting: 'Morning! Quiet night, two things worth a look.', items: [
@@ -21,6 +23,7 @@ const logged = (i) => ({ at: Date.parse('2026-10-01T10:00:00') + i * 600_000, ta
 const usage = (n) => ({ day: '2026-10-01', calls: n, dayUsd: n * 0.0414, month: '2026-10', monthUsd: n * 0.0414, byModel: { sonnet: n * 0.0414 }, recent: Array.from({ length: n }, (_, i) => logged(i)) });
 const SALAMI = [['Salami', 380, 22, 1, 32], ['Salami', 400, 24, 1, 33], ['salami', 420, 25, 2, 35], ['Salami', 3900, 22, 1, 32]]
   .map(([name, kcal, p, c, f], i) => ({ id: `off:s${i}`, name, brand: `Brand ${i}`, per100: { kcal, p, c, f }, source: 'off' }));
+const GOGOSI = [['Gogosi', 330, 6, 48, 13], ['Gogosi', 350, 7, 50, 14]].map(([name, kcal, p, c, f], i) => ({ id: `off:g${i}`, name, brand: `Shop ${i}`, per100: { kcal, p, c, f }, source: 'off' }));
 
 (async () => {
   const b = await chromium.launch(); const errs = [];
@@ -29,7 +32,7 @@ const SALAMI = [['Salami', 380, 22, 1, 32], ['Salami', 400, 24, 1, 33], ['salami
     const ctx = await b.newContext({ viewport: { width: 390, height: 844 } });
     await ctx.route('https://ubfvaewfdbmecowoeuni.supabase.co/**', handle);
     await ctx.route(/openfoodfacts\.org/, r => r.fulfill({ status: 200, contentType: 'application/json', headers: { 'access-control-allow-origin': '*' }, body: JSON.stringify({ hits: [] }) }));
-    await ctx.route('**/api/food?**', (r) => { const q = new URL(r.request().url()).searchParams.get('q'); r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ foods: /salami/i.test(q) ? SALAMI : [], sources: { off: 'ok', usda: 'ok' } }) }); });
+    await ctx.route('**/api/food?**', (r) => { const q = new URL(r.request().url()).searchParams.get('q'); r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ foods: /salami/i.test(q) ? SALAMI : /gogos/i.test(q) ? GOGOSI : [], sources: { off: 'ok', usda: 'ok' } }) }); });
     await ctx.route('**/api/ai/usage**', (r) => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ usage: usage(calls.length), cap: 50, on: aiOn }) }));
     await ctx.route('**/api/ai?**', (r) => {
       const body = r.request().postDataJSON();
@@ -87,6 +90,34 @@ const SALAMI = [['Salami', 380, 22, 1, 32], ['Salami', 400, 24, 1, 33], ['salami
     await pg.locator('.basket').getByRole('button', { name: /^Log / }).click(); await pg.waitForTimeout(150);
     await pg.getByLabel('Type what you ate').fill('zzz mystery stew'); await pg.getByRole('button', { name: 'Add', exact: true }).click(); await pg.waitForTimeout(300);
     check('typed again → found as your food, no second AI call', calls.filter((c) => c.task === 'describe').length === 1 && /Mystery stew/.test(await pg.locator('.basket').innerText()));
+    await pg.locator('.basket .x').first().click();
+
+    // owner, 15 Oct: "when i type a dish, and it does not have in the database, app should give me the option to choose
+    // ai lookup and it asks the ai, which either looks up on net or just from knoweledge, getst the macros and a plate/serving size"
+    check('a typed dish the lists didn\'t know was looked up (the AI may search the web)', calls.find((c) => c.task === 'describe').lookup === true);
+    await pg.getByLabel('Search food').fill('pityoka leves'); await pg.waitForTimeout(500);
+    const ask = pg.locator('.ask-ai');
+    check(`searching offers "Ask the AI" (${(await ask.innerText().catch(() => '')).replace(/\s+/g, ' ')})`, /Ask the AI: “pityoka leves”/.test(await ask.innerText().catch(() => '')));
+    await pg.locator('.card', { has: pg.getByLabel('Search food') }).screenshot({ path: OUT + 'ai-lookup-search.png' });
+    let before = calls.length;
+    await ask.click();
+    await pg.waitForSelector('.bline:has-text("Pityókaleves")', { timeout: 4000 });
+    const soup = (await pg.locator('.bline', { hasText: 'Pityókaleves' }).innerText()).replace(/\s+/g, ' ');
+    check(`asked once, as a lookup; back as one bowl ≈ 220 kcal, an AI estimate (${soup})`, calls.length === before + 1 && calls.at(-1).lookup === true && calls.at(-1).text === 'pityoka leves' && /≈ 220 kcal · AI estimate · typical home recipe/.test(soup) && /1 bowl/.test(soup));
+    await pg.locator('.basket .x').first().click();
+    await pg.getByLabel('Search food').fill('pityó'); await pg.waitForTimeout(400);
+    check('next time it\'s in Your foods, no AI call', /Pityókaleves/.test(await pg.locator('.list').first().innerText()) && calls.length === before + 1);
+    await pg.getByLabel('Search food').fill('');
+    // the database's guess for a typed name can be swapped for the AI's
+    await pg.getByLabel('Type what you ate').fill('2 gogosi'); await pg.getByRole('button', { name: 'Add', exact: true }).click();
+    await pg.waitForSelector('.bline:has-text("median of 2 products")', { timeout: 4000 });
+    const guess = pg.locator('.bline', { hasText: 'median of 2 products' });
+    check('a database guess offers "Ask the AI instead"', await guess.getByRole('button', { name: /Ask the AI instead/ }).count() === 1);
+    before = calls.length;
+    await guess.getByRole('button', { name: /Ask the AI instead/ }).click();
+    await pg.waitForSelector('.bline:has-text("Gogoașă")', { timeout: 4000 });
+    const bl = await pg.locator('.basket .bline .bname').allTextContents();
+    check(`…and it replaces the guess, same words asked (${bl.join(' | ')})`, bl.length === 1 && /Gogoașă cu cremă, Lidl.*AI estimate · Lidl bakery label/.test(bl[0]) && calls.length === before + 1 && calls.at(-1).text === '2 gogosi' && calls.at(-1).lookup === true);
     await pg.locator('.basket .x').first().click();
 
     // Drink by description → saved → my usual.

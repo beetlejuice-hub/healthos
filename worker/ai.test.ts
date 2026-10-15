@@ -17,8 +17,8 @@ function world(answers: unknown[], opts: { usage?: object } = {}) {
     if (url.hostname === "api.anthropic.com") {
       const body = (await req.json()) as Record<string, unknown>;
       sent.push({ url: req.url, body, headers: Object.fromEntries(req.headers) });
-      const a = answers.shift() as { text: string; stop?: string; searches?: number };
-      return Response.json({ id: "msg_1", type: "message", role: "assistant", model: body.model, content: [{ type: "text", text: a.text }], stop_reason: a.stop ?? "end_turn", stop_sequence: null,
+      const a = answers.shift() as { text: string; stop?: string; searches?: number; blocks?: string[] };
+      return Response.json({ id: "msg_1", type: "message", role: "assistant", model: body.model, content: (a.blocks ?? [a.text]).map((text) => ({ type: "text", text })), stop_reason: a.stop ?? "end_turn", stop_sequence: null,
         usage: { input_tokens: 1000, output_tokens: 500, cache_read_input_tokens: 0, cache_creation_input_tokens: 0, server_tool_use: { web_search_requests: a.searches ?? 0 } } });
     }
     throw new Error(`unexpected ${req.url}`);
@@ -31,6 +31,28 @@ const post = (body: unknown, token = "good") => new Request("https://app/api/ai"
 const coffee = { items: [{ kind: "drink", name: "Long coffee, large", amount: "1 large cup", drink: { ml: 300, caffeineMg: 150, alcoholG: 0, kcal: 3 }, confidence: "medium", note: "assumed a double shot" }] };
 
 describe("/api/ai", () => {
+  it("describe with lookup (owner, 15 Oct: a dish the lists don't have → ask the AI, on the net or from knowledge)", async () => {
+    const soup = { items: [{ kind: "food", name: "Pityókaleves", amount: "1 bowl", per100: { kcal: 62, p: 1.6, c: 7.5, f: 2.8 }, unit: { name: "bowl", g: 350 }, count: 1, confidence: "medium", note: "typical home recipe · ciorbă de cartofi" }] };
+    const json = JSON.stringify(soup), cut = json.indexOf("home recipe");
+    // a cited search answer comes back in pieces, split anywhere — here inside the note
+    const w = world([{ text: "", blocks: ["Searching a recipe table. ", json.slice(0, cut), json.slice(cut)], searches: 1 }]);
+    const res = await handleAi(post({ task: "describe", text: "pityoka leves", lookup: true }), env, w.deps);
+    const body = (await res.json()) as { answer: { items: { name: string; unit: { g: number } }[] } };
+    expect(res.status).toBe(200);
+    expect(body.answer.items[0]).toMatchObject({ name: "Pityókaleves", unit: { name: "bowl", g: 350 } });
+    const sent = w.sent[0].body;
+    expect(sent.model).toBe("claude-haiku-5-5");
+    expect(sent.tools).toEqual([{ type: "web_search_20250305", name: "web_search", max_uses: 2 }]);
+    expect((sent.output_config as { format?: unknown }).format).toBeUndefined();
+    expect(JSON.stringify(sent.messages)).toContain("Look up: pityoka leves");
+    expect((w.docs.get("ai_usage") as { recent: { searches: number }[] }).recent[0].searches).toBe(1);
+    // without lookup, or with a photo: no search, the enforced shape as before
+    const w2 = world([{ text: JSON.stringify(soup) }]);
+    await handleAi(post({ task: "describe", text: "pityoka leves" }), env, w2.deps);
+    expect(w2.sent[0].body.tools).toBeUndefined();
+    expect((w2.sent[0].body.output_config as { format: { type: string } }).format.type).toBe("json_schema");
+  });
+
   it("needs a signed-in user and the key", async () => {
     const w = world([]);
     expect((await handleAi(post({ task: "describe", text: "x" }, "bad"), env, w.deps)).status).toBe(401);
