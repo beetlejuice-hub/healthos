@@ -10,11 +10,11 @@
 
 import Anthropic from "@anthropic-ai/sdk";
 import {
-  DAILY_CAP, MODELS, SCHEMAS, SYSTEM, TIER, checkChat, checkDescribe, checkDigest, checkNight, checkQuestions, checkSupplement, costUsd, jsonFrom,
+  DAILY_CAP, MODELS, MONTHLY_USD, SCHEMAS, SYSTEM, TIER, checkChat, modelFor, checkDescribe, checkDigest, checkNight, checkQuestions, checkSupplement, costUsd, jsonFrom,
   type AiRequest, type ModelChoice, type Task, type UsageDoc,
 } from "../src/lib/ai/tasks";
 
-export type AiEnv = { ANTHROPIC_API_KEY?: string; SUPABASE_URL?: string; SUPABASE_KEY?: string; AI_DAILY_CAP?: string };
+export type AiEnv = { ANTHROPIC_API_KEY?: string; SUPABASE_URL?: string; SUPABASE_KEY?: string; AI_DAILY_CAP?: string; AI_MONTHLY_USD?: string };
 type Deps = { fetch: typeof fetch; now: () => number };
 
 const SB_URL = "https://ubfvaewfdbmecowoeuni.supabase.co";
@@ -127,7 +127,8 @@ export async function handleAi(req: Request, env: AiEnv, deps: Deps = { fetch: (
   const tz = url.searchParams.get("tz") || "Europe/Budapest";
   const today = dayIn(deps.now(), tz);
 
-  if (req.method === "GET" && url.pathname === "/api/ai/usage") return json({ usage: await readUsage(user, env, deps, today), cap, on: !!env.ANTHROPIC_API_KEY });
+  const budget = Number(env.AI_MONTHLY_USD) || MONTHLY_USD;
+  if (req.method === "GET" && url.pathname === "/api/ai/usage") return json({ usage: await readUsage(user, env, deps, today), cap, budget, on: !!env.ANTHROPIC_API_KEY });
   if (req.method !== "POST" || url.pathname !== "/api/ai") return json({ error: "not found" }, 404);
   if (!env.ANTHROPIC_API_KEY) return json({ error: "no-key", message: "The AI is off: add ANTHROPIC_API_KEY in Cloudflare." }, 503);
 
@@ -139,8 +140,8 @@ export async function handleAi(req: Request, env: AiEnv, deps: Deps = { fetch: (
   const usage = await readUsage(user, env, deps, today);
   if (usage.calls >= cap) return json({ error: "cap", message: `Daily AI limit reached (${cap}). It resets at midnight.`, usage }, 429);
 
-  const pick = body.models?.[TIER[body.task]];
-  const choice: ModelChoice = pick && pick in MODELS ? pick : "opus";
+  // yours for the task's tier; past the month's budget, the cheapest until the 1st
+  const choice: ModelChoice = modelFor(body.task, body.models, usage.monthUsd, budget);
   try {
     const out = await callModel(body, choice, env.ANTHROPIC_API_KEY, deps, today);
     const cost = costUsd(choice, out.usage);

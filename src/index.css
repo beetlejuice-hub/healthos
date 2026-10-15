@@ -640,6 +640,9 @@ a { color: inherit; }
 .msg.assistant { justify-self: start; background: var(--c-card); border-bottom-left-radius: 5px; }
 .msg.first { border: 1px solid #ffd16644; }
 .msg.typing { color: var(--c-dim); letter-spacing: .3em; }
+/* the AI's bits of Markdown (owner, 15 Oct): paragraphs, lists, bold — drawn, not shown as stars */
+.msg .md { white-space: normal; display: grid; gap: 8px; } .msg .md p { margin: 0; } .msg .md ul, .msg .md ol { margin: 0; padding-left: 20px; display: grid; gap: 3px; }
+.msg .md b { font-weight: 700; color: #fff; }
 /* the app's own messages in the thread (PLAN 102): not a person — a card, marked, with quick answers */
 .msg.byapp { justify-self: stretch; max-width: none; display: grid; gap: 6px; background: var(--c-card); border: 1px solid var(--c-track); border-left: 3px solid var(--c-ink-2); white-space: normal; }
 .msg.byapp.waiting { border-left-color: var(--g-now); }

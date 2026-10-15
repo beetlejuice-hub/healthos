@@ -2,6 +2,7 @@
  * The app's side of the AI: send a request to the Worker with your session, keep the latest usage
  * (calls today, cost) for Settings, and build the context the AI is told — on demand, at call time.
  */
+import { MONTHLY_USD } from "./tasks";
 
 import { useSyncExternalStore } from "react";
 import { supabase } from "../supabase";
@@ -17,8 +18,8 @@ import { buildContext, dayTimeline } from "./context";
 import type { AiAnswer, AiRequest, Task, UsageDoc } from "./tasks";
 import { currentKg } from "../body";
 
-export type AiStatus = { on: boolean | null; usage: UsageDoc | null; cap: number; busy: number };
-let status: AiStatus = { on: null, usage: null, cap: 50, busy: 0 };
+export type AiStatus = { on: boolean | null; usage: UsageDoc | null; cap: number; budget: number; busy: number };
+let status: AiStatus = { on: null, usage: null, cap: 50, budget: MONTHLY_USD, busy: 0 };
 const subs = new Set<() => void>();
 const set = (p: Partial<AiStatus>) => { status = { ...status, ...p }; subs.forEach((f) => f()); };
 export const useAiStatus = () => useSyncExternalStore((f) => { subs.add(f); return () => subs.delete(f); }, () => status);
@@ -33,8 +34,8 @@ export async function refreshAiStatus() {
   try {
     const r = await fetch(`/api/ai/usage?tz=${encodeURIComponent(tz())}`, { headers: await auth() });
     if (!r.ok) return set({ on: false });
-    const b = (await r.json()) as { usage: UsageDoc; cap: number; on: boolean };
-    set({ on: b.on, usage: b.usage, cap: b.cap });
+    const b = (await r.json()) as { usage: UsageDoc; cap: number; budget?: number; on: boolean };
+    set({ on: b.on, usage: b.usage, cap: b.cap, budget: b.budget ?? MONTHLY_USD });
   } catch { set({ on: false }); }
 }
 

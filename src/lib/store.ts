@@ -18,7 +18,7 @@ import type { Notice } from "./inbox";
 /** Everything the in-app AI keeps for you, synced like the rest (doc "ai"). */
 export type AiState = {
   /** Which model answers: everyday (food, chat, questions) and research (supplements, morning read). */
-  models: { everyday: ModelChoice; research: ModelChoice };
+  models: { light: ModelChoice; everyday: ModelChoice; research: ModelChoice };
   /** "What the AI knows about me": lines it added (you can delete any). */
   memory: { id: string; text: string; at: number }[];
   chat: { role: "user" | "assistant"; text: string; at: number; unprompted?: boolean }[];
@@ -45,7 +45,7 @@ export type AiState = {
   findingsDay?: string;
 };
 export type Experiment = { id: string; name: string; how: string; days: number; measure: string; start: string; ended?: string };
-export const EMPTY_AI: AiState = { models: { everyday: "opus", research: "opus" }, memory: [], chat: [], digest: null, night: null, shown: [], questions: null, daily: [], asked: [], research: {}, experiments: [], seenAt: 0 };
+export const EMPTY_AI: AiState = { models: { light: "haiku", everyday: "opus", research: "opus" }, memory: [], chat: [], digest: null, night: null, shown: [], questions: null, daily: [], asked: [], research: {}, experiments: [], seenAt: 0 };
 
 /**
  * What the calculations need. Only `bedMinute` (planned bedtime) and `usualDrink` are asked of you;
@@ -145,7 +145,7 @@ function load(): State {
     lastSeen = raw;
     if (!raw) return EMPTY;
     const s = JSON.parse(raw) as Partial<State>;
-    return { ...EMPTY, ...s, templates: upgradeStarter(s.templates ?? EMPTY.templates), supplements: normalizeStack(s.supplements ?? EMPTY.supplements), settings: { ...DEFAULT_SETTINGS, ...s.settings }, goals: { ...DEFAULT_GOALS, ...s.goals }, profile: { ...EMPTY_PROFILE, ...s.profile }, scout: s.scout ?? {}, ai: { ...EMPTY_AI, ...s.ai } };
+    return { ...EMPTY, ...s, templates: upgradeStarter(s.templates ?? EMPTY.templates), supplements: normalizeStack(s.supplements ?? EMPTY.supplements), settings: { ...DEFAULT_SETTINGS, ...s.settings }, goals: { ...DEFAULT_GOALS, ...s.goals }, profile: { ...EMPTY_PROFILE, ...s.profile }, scout: s.scout ?? {}, ai: { ...EMPTY_AI, ...s.ai, models: { ...EMPTY_AI.models, ...s.ai?.models } } };
   } catch {
     return EMPTY;
   }

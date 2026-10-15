@@ -1317,6 +1317,24 @@ below, in his words, grouped; A first (broken or wrong now), then the rest. Item
      evening before → mood that day — arrives and the badge says how many; a wine morning (HRV 33, resting 62) at 09:30
      gives one message, "Readiness 20 this morning", and "out with friends" lands in that morning's tags and shows ticked
      on Today; workouts in the fake month so the Training grids are read — nothing planted there, nothing sent).
+103. [x] **The AI on, within $20 a month, and readable** (15 Oct; the owner added the key). Owner: "for harder or more
+   important request can leave a better model but for food or simple everyday things can add a cheaper one - $20 should
+   be enough for around a month - mostly just chats, and ai doing research, looking at my stats and findings"; "pls make
+   sure it can make text bold, etc if it wants to and also just a bit of personality too".
+   - Three model settings instead of two: food, photos and quick questions on **Claude Haiku 5.5** ($0.10 / $0.50 per
+     million tokens — the old cheap option was Haiku 4.5 at ten times that); chat and research (morning and nightly reads,
+     supplement look-ups, with web search) on **Claude Opus 5.5**. Typical month with these ≈ $15 (food ≈ $0.15, chat ≈
+     $5, research ≈ $9.60; prices checked against the API reference, 15 Oct). An older synced setting without the new tier
+     gets its default (found writing the test: it would have sent food to Opus).
+   - Past $20 in a month (`AI_MONTHLY_USD`, default 20) every task runs on Haiku 5.5 until the 1st — never a dead AI,
+     never a surprise bill; the 50-calls-a-day stop still holds. Settings shows "this month $x of $20".
+   - The chat draws the AI's Markdown — **bold**, *italic*, lists, paragraphs (lib/mdlite: parsed to text pieces, never
+     HTML, so nothing in a reply can run or style the page); the chat's instructions ask for bold on the one thing that
+     matters and a sharp, warm friend's voice with a dry sense of humour, substance first.
+   Checked: worker ai.test (12: Haiku 5.5 sent with adaptive thinking, basic web search, no fallback; food → Haiku and chat
+   → Opus, also for an older doc; $20.40 this month → Haiku, $19.90 → Opus, a new month resets; usage says the budget),
+   mdlite.test (bold, italic, not snake_case or "5 * 3", lists, the morning read's • bullets, HTML stays text), e2e/ai.cjs
+   (a reply with bold, a list and italic drawn, no stars left). Not checked: a real reply from the live AI.
 98. [ ] **AI, soon**
 98. [ ] **AI, soon** — "it should look at all the data, see whatsup, tell me clever tips, what to improve, and a whole bunch
    of stuff.. it should recommend me, or just understand protocols i give him, and help me set up in app, or just tell

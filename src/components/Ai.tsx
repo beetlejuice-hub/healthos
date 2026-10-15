@@ -7,12 +7,13 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { act, getState, newId, useStore, type Experiment } from "../lib/store";
 import { askAi, contextNow, nightContext, refreshAiStatus, useAiStatus } from "../lib/ai/client";
-import { MODELS, estimateMonthUsd, type DigestItem, type ModelChoice, type Question } from "../lib/ai/tasks";
+import { MODELS, estimateMonthUsd, type DigestItem, type ModelChoice, type Question, type Tier } from "../lib/ai/tasks";
 import { judge } from "../lib/ai/apply";
 import { dailyFacts } from "../lib/insights";
 import { addDays, localDay } from "../lib/time";
 import type { Supplement } from "../lib/types";
 import { InboxCard } from "./Inbox";
+import { Md } from "./Md";
 
 const usd = (x: number) => (x < 0.1 ? `$${x.toFixed(3)}` : `$${x.toFixed(2)}`);
 
@@ -239,7 +240,7 @@ export function AiScreen() {
         {thread.length === 0 && <p className="note">Ask me anything about your data — I see your numbers, patterns, stack and About me. I'll also write to you: a morning read, quick questions, and anything interesting I find. The app writes here too: a heart-rate stretch it can't explain, a new finding to comment on.</p>}
         {thread.map((x, i) => {
           const isNew = x.at > since && ("n" in x || x.m!.unprompted) && !thread.slice(0, i).some((y) => y.at > since && ("n" in y || y.m!.unprompted));
-          return "n" in x ? <InboxCard key={x.key} n={x.n!} now={now} first={isNew} /> : <div key={x.key} className={`msg ${x.m!.role}${x.m!.unprompted ? " first" : ""}`} data-new={isNew || undefined}>{x.m!.text}</div>;
+          return "n" in x ? <InboxCard key={x.key} n={x.n!} now={now} first={isNew} /> : <div key={x.key} className={`msg ${x.m!.role}${x.m!.unprompted ? " first" : ""}`} data-new={isNew || undefined}>{x.m!.role === "assistant" ? <Md text={x.m!.text} /> : x.m!.text}</div>;
         })}
         {busy > 0 && <div className="msg assistant typing">…</div>}
         {err && <p className="err">{err}</p>}
@@ -334,14 +335,14 @@ export function Experiments() {
 
 export function AiSettings() {
   const ai = useStore((s) => s.ai);
-  const { on, usage, cap } = useAiStatus();
+  const { on, usage, cap, budget } = useAiStatus();
   const [seeing, setSeeing] = useState(false);
   useEffect(() => { void refreshAiStatus(); }, []);
   const est = estimateMonthUsd(ai.models);
   const now = new Date(), dim = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
   const projected = usage ? (usage.monthUsd / now.getDate()) * dim : null;
-  const pick = (tier: "everyday" | "research", m: ModelChoice) => act.setAi((a) => ({ models: { ...a.models, [tier]: m } }));
-  const option = (tier: "everyday" | "research") => (Object.keys(MODELS) as ModelChoice[]).map((m) => {
+  const pick = (tier: Tier, m: ModelChoice) => act.setAi((a) => ({ models: { ...a.models, [tier]: m } }));
+  const option = (tier: Tier) => (Object.keys(MODELS) as ModelChoice[]).map((m) => {
     const e = estimateMonthUsd({ ...ai.models, [tier]: m })[tier];
     return <option key={m} value={m}>{MODELS[m].label} · ≈ {usd(e)}/month</option>;
   });
@@ -349,10 +350,13 @@ export function AiSettings() {
     <div className="card" id="ai">
       <h3>AI <span>{on == null ? "checking…" : on ? "on" : "off — add the key"}</span></h3>
       {on === false && <AiOff />}
-      {usage && <p className="usage">Today <b>{usage.calls} of {cap}</b> calls · {usd(usage.dayUsd)} · this month {usd(usage.monthUsd)}{projected != null && now.getDate() > 2 ? ` · on track for ≈ ${usd(projected)}` : ""}</p>}
-      <label className="field">Everyday (food, photos, chat, questions)<select value={ai.models.everyday} onChange={(e) => pick("everyday", e.target.value as ModelChoice)}>{option("everyday")}</select></label>
-      <label className="field">Research (supplement look-ups, morning read with web search)<select value={ai.models.research} onChange={(e) => pick("research", e.target.value as ModelChoice)}>{option("research")}</select></label>
-      <p className="note">Estimate for a typical month with these: ≈ {usd(est.total)}. Hard stop at {cap} calls a day.</p>
+      {usage && <p className="usage">Today <b>{usage.calls} of {cap}</b> calls · {usd(usage.dayUsd)} · this month <b>{usd(usage.monthUsd)} of {usd(budget)}</b>{projected != null && now.getDate() > 2 ? ` · on track for ≈ ${usd(projected)}` : ""}</p>}
+      {usage && usage.monthUsd >= budget && <p className="note">This month's {usd(budget)} is used: everything runs on {MODELS.haiku.label} until the 1st.</p>}
+      {/* owner, 15 Oct: "for harder or more important request can leave a better model but for food or simple everyday things can add a cheaper one" */}
+      <label className="field">Food, photos and quick questions<select value={ai.models.light} onChange={(e) => pick("light", e.target.value as ModelChoice)}>{option("light")}</select></label>
+      <label className="field">Chat (your questions about your data)<select value={ai.models.everyday} onChange={(e) => pick("everyday", e.target.value as ModelChoice)}>{option("everyday")}</select></label>
+      <label className="field">Research (morning and nightly reads, supplement look-ups — with web search)<select value={ai.models.research} onChange={(e) => pick("research", e.target.value as ModelChoice)}>{option("research")}</select></label>
+      <p className="note">Estimate for a typical month with these: ≈ {usd(est.total)}. Past {usd(budget)} in a month everything drops to {MODELS.haiku.label} until the 1st; hard stop at {cap} calls a day.</p>
       <h3>What the AI knows about me <span>it adds lines as you chat · delete any</span></h3>
       {ai.memory.length === 0 ? <p className="note">Nothing yet.</p> : <div className="chips mem">{ai.memory.map((m) => <span className="chip" key={m.id}>{m.text}<button type="button" aria-label={`Forget ${m.text}`} onClick={() => act.setAi((a) => ({ memory: a.memory.filter((x) => x.id !== m.id) }))}>✕</button></span>)}</div>}
       <button type="button" className="linkish" onClick={() => setSeeing(!seeing)}>{seeing ? "Hide" : "What the AI sees about me"}</button>

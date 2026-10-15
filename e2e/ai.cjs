@@ -14,7 +14,7 @@ const ANSWERS = {
     { type: 'protocol', title: 'Try a 14:00 caffeine cut-off', text: 'Two weeks, then we compare.', protocol: { name: 'Caffeine cut-off 14:00', how: 'No caffeine after 14:00', days: 14, measure: 'energy' } },
   ] }),
   questions: () => ({ questions: [{ id: 'q', text: 'Your energy dips around 4pm — big lunch today?', why: 'to see if lunch size explains the dip', options: ['Big', 'Normal', 'Skipped'], key: 'lunch_size', repeat: 'daily' }] }),
-  chat: () => ({ reply: 'Hey! Your afternoon energy is the thing to watch — the cut-off experiment will tell us.', remember: ['Usual coffee is a long coffee, big cup'] }),
+  chat: () => ({ reply: 'Hey! Your **afternoon energy** is the thing to watch:\n- the cut-off experiment will tell us\n- *one* coffee before noon', remember: ['Usual coffee is a long coffee, big cup'] }),
 };
 const usage = (n) => ({ day: '2026-10-01', calls: n, dayUsd: n * 0.02, month: '2026-10', monthUsd: n * 0.02, byModel: { opus: n * 0.02 } });
 const SALAMI = [['Salami', 380, 22, 1, 32], ['Salami', 400, 24, 1, 33], ['salami', 420, 25, 2, 35], ['Salami', 3900, 22, 1, 32]]
@@ -110,6 +110,9 @@ const SALAMI = [['Salami', 380, 22, 1, 32], ['Salami', 400, 24, 1, 33], ['salami
     await pg.waitForSelector('text=cut-off experiment will tell us');
     const chat = calls.find((c) => c.task === 'chat');
     check('chat starts with your message, with the context', chat.messages[0].role === 'user' && chat.messages[0].text === 'what should I try?' && /## My stack/.test(chat.context));
+    // owner, 15 Oct: "make sure it can make text bold, etc" — drawn, not shown as stars
+    const md = await pg.locator('.msg.assistant .md').last().evaluate((e) => [e.querySelector('b')?.textContent, e.querySelectorAll('li').length, e.querySelector('i')?.textContent, e.textContent.includes('*')]).catch(() => null);
+    check(`the reply's Markdown is drawn: bold, a 2-item list, italic, no stars left (${md})`, md && md[0] === 'afternoon energy' && md[1] === 2 && md[2] === 'one' && md[3] === false);
     await pg.screenshot({ path: OUT + 'ai-chat.png', fullPage: true });
     await pg.goto(APP + '#settings'); await pg.waitForTimeout(200);
     const card = await pg.locator('#ai').innerText();

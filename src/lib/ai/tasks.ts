@@ -10,18 +10,33 @@
 
 export type Task = "describe" | "supplement" | "chat" | "questions" | "digest" | "night";
 export type ModelChoice = "opus" | "sonnet" | "haiku";
-/** Everyday = food, chat, questions (many small calls). Research = supplement look-ups and the morning digest (few, with web search). */
-export type Tier = "everyday" | "research";
+/**
+ * Light = food, photos and quick questions (many small calls); everyday = the chat; research = supplement look-ups and
+ * the morning and nightly reads (few, with web search). Owner, 15 Oct: "for harder or more important request can leave a
+ * better model but for food or simple everyday things can add a cheaper one - $20 should be enough for around a month".
+ */
+export type Tier = "light" | "everyday" | "research";
 
 export const MODELS: Record<ModelChoice, { id: string; label: string; inUsd: number; outUsd: number; web: "web_search_20260209" | "web_search_20250305"; thinking: boolean }> = {
   opus: { id: "claude-opus-5-5", label: "Claude Opus 5.5", inUsd: 4, outUsd: 20, web: "web_search_20260209", thinking: true },
   sonnet: { id: "claude-sonnet-5-5", label: "Claude Sonnet 5.5", inUsd: 2, outUsd: 10, web: "web_search_20260209", thinking: true },
-  haiku: { id: "claude-haiku-4-5", label: "Claude Haiku 4.5", inUsd: 1, outUsd: 5, web: "web_search_20250305", thinking: false },
+  haiku: { id: "claude-haiku-5-5", label: "Claude Haiku 5.5", inUsd: 0.1, outUsd: 0.5, web: "web_search_20250305", thinking: true },
 };
 /** Web search is billed per search on top of tokens. */
 export const WEB_SEARCH_USD = 0.01;
 
-export const TIER: Record<Task, Tier> = { describe: "everyday", chat: "everyday", questions: "everyday", supplement: "research", digest: "research", night: "research" };
+export const TIER: Record<Task, Tier> = { describe: "light", chat: "everyday", questions: "light", supplement: "research", digest: "research", night: "research" };
+export type Models = Record<Tier, ModelChoice>;
+/** Cheap where it's simple, the strongest where it matters. */
+export const DEFAULT_MODELS: Models = { light: "haiku", everyday: "opus", research: "opus" };
+/** A month's spend after which every task runs on the cheapest model until the 1st (the 50-a-day stop still holds). */
+export const MONTHLY_USD = 20;
+/** The model a task runs on: yours for its tier (older synced docs have no light tier — its default then), Haiku past the month's budget. */
+export function modelFor(task: Task, models: Partial<Models> | undefined, monthUsd: number, budget = MONTHLY_USD): ModelChoice {
+  if (monthUsd >= budget) return "haiku";
+  const pick = models?.[TIER[task]];
+  return pick && pick in MODELS ? pick : DEFAULT_MODELS[TIER[task]];
+}
 
 export type Usage = { input_tokens: number; output_tokens: number; cache_read_input_tokens?: number | null; cache_creation_input_tokens?: number | null; server_tool_use?: { web_search_requests?: number } | null };
 
@@ -121,7 +136,9 @@ Answer with ONLY a JSON object, no prose, in this shape:
 {"name":"","what":"one line","usualDose":"","timing":"only if timing actually matters, else 'any regular time'","evidence":"strong|moderate|weak|very weak","uses":[""],"cautions":[""],"interactions":[{"with":"","verdict":"avoid|caution|timing|may-help|none","say":"one line"}],"sources":[{"title":"","url":""}]}
 Every interaction and caution must be backed by one of the sources. Keep each line short.`,
   chat: `${VOICE}
-Task: chat with the user about their health data. Use the context (their numbers, patterns, stack, about-me) — refer to specifics. Keep replies under 120 words unless they ask for detail. If you learn a lasting fact about them (habits, preferences, "usual coffee is a long coffee"), add it to "remember" as one short line; otherwise leave it empty. Never put guesses in "remember".`,
+Task: chat with the user about their health data. Use the context (their numbers, patterns, stack, about-me) — refer to specifics. Keep replies under 120 words unless they ask for detail.
+Personality (owner, 15 Oct: "just a bit of personality too"): a sharp, warm friend with a dry sense of humour — match their tone (they write casually), a light quip or a reaction is welcome when it fits, but the substance comes first and it never turns into a bit. No cheerleading, no emoji spam (one now and then is fine), never at the cost of being specific.
+Formatting: the chat shows Markdown — use **bold** for the one thing that matters most (a number, the answer, the next step), *italic* sparingly, short "- " lists when listing 3+ things, blank lines between paragraphs. No headings, tables or code blocks. If you learn a lasting fact about them (habits, preferences, "usual coffee is a long coffee"), add it to "remember" as one short line; otherwise leave it empty. Never put guesses in "remember".`,
   questions: `${VOICE}
 Task: ask 1–3 genuinely useful questions that help the app find patterns faster. Base each on something specific in the context: a dip at a time of day, a pattern that might be explained by something not logged, a gap in what's tracked. Good: "Your energy is often low around 4pm — did you have a big lunch today?" with options. Bad: generic wellness questions.
 Each question: tappable options (2–5, short), a one-line "why" that says what it would help find, a short snake_case key, and repeat="daily" if asking it every day would build a useful signal, else "once". Don't repeat questions listed as already asked.`,
@@ -235,12 +252,14 @@ export const DAILY_CAP = 50;
  * measured and shown next to it.
  */
 export const TYPICAL_DAY = {
-  everyday: { calls: 10, input_tokens: 4000, output_tokens: 700 },
+  light: { calls: 6, input_tokens: 4000, output_tokens: 700 },
+  everyday: { calls: 4, input_tokens: 6000, output_tokens: 900 },
   research: { calls: 2.2, input_tokens: 20000, output_tokens: 2500, searches: 1.6 },
 };
-export function estimateMonthUsd(models: { everyday: ModelChoice; research: ModelChoice }): { everyday: number; research: number; total: number } {
-  const e = TYPICAL_DAY.everyday, r = TYPICAL_DAY.research;
+export function estimateMonthUsd(models: Models): Record<Tier, number> & { total: number } {
+  const l = TYPICAL_DAY.light, e = TYPICAL_DAY.everyday, r = TYPICAL_DAY.research;
+  const light = 30 * l.calls * costUsd(models.light, { input_tokens: l.input_tokens, output_tokens: l.output_tokens });
   const everyday = 30 * e.calls * costUsd(models.everyday, { input_tokens: e.input_tokens, output_tokens: e.output_tokens });
   const research = 30 * r.calls * costUsd(models.research, { input_tokens: r.input_tokens, output_tokens: r.output_tokens, server_tool_use: { web_search_requests: r.searches } });
-  return { everyday, research, total: everyday + research };
+  return { light, everyday, research, total: light + everyday + research };
 }
