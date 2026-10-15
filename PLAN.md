@@ -959,7 +959,10 @@ email get Dev tools (`#dev`): raw entry editor, generate/remove sample, wipe acc
      tools, the system byte-identical, one call counted — fails if every round counts), e2e/ai.cjs (two rounds: the
      AI's turn sent back untouched, the app's three answers in one message, the chart under the reply, memory saved).
      Found on the way: Insights / At a glance / the week read count food calories only, Today counts drinks too — a
-     beer night reads lower in Insights. Not checked: a real AI's tool use (first chat after the deploy).
+     beer night reads lower in Insights. **Fixed 15 Oct** (lib/insights dailyFacts: a day's calories and protein are
+     Today's — food and drinks; a drinks-only day still isn't a logged day): insights.test (Today's number, the old
+     800-for-a-beer-day expectation now 1,019, fails without). Not checked: a real AI's tool use (first chat after the
+     deploy).
 
 ---
 

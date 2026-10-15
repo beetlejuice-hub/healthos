@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { adherence, dailyFacts, lanes, pairs, suppEffects } from "./insights";
+import { byDay } from "./nutrition";
 import { makeSample } from "./sample";
 import { DEFAULT_SETTINGS } from "./store";
 import type { Entry, Supplement } from "./types";
@@ -34,7 +35,14 @@ describe("dailyFacts", () => {
     // 19.7 g at 21:00, cleared at ~7.8 g/h after absorbing → ~3.5 g left at 23:00.
     expect(d.alcoholAtBed).toBeGreaterThan(2.5);
     expect(d.alcoholAtBed).toBeLessThan(4.5);
-    expect(d.kcal).toBe(800);
+    expect(d.kcal).toBe(1019); // lunch 800, the beer 215, two coffees 2 each — drinks count, as on Today
+  });
+
+  it("a day's calories and protein are the same number Today shows (food and drinks), and a drinks-only day isn't a logged day", () => {
+    const today = byDay(entries).get("2026-09-27")!;
+    expect([facts[0].kcal, facts[0].proteinG]).toEqual([today.totals.kcal, today.totals.p]);
+    const beerOnly = dailyFacts([entries[2]], [], DEFAULT_SETTINGS, "2026-09-27", "2026-09-27")[0];
+    expect(beerOnly.kcal).toBeNull();
   });
 
   it("alcohol clears by your latest weigh-in, not Settings' number (PLAN 73)", () => {

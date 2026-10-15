@@ -27,7 +27,7 @@ describe("the chat's tools answer from the app's data (PLAN 67)", () => {
   it("day: the day's averages, supplements, the band, everything in order", () => {
     const t = run("day", { date: "2026-10-14" }).text;
     expect(t).toContain("Mood 7.0/10");
-    expect(t).toContain("Calories eaten 800 kcal"); // food, as the pages count it
+    expect(t).toContain("Calories eaten 802 kcal"); // the pizza and the coffee, as Today counts them
     expect(t).toContain("Supplements taken: Creatine");
     expect(t).toContain("Band: resting heart rate 52 bpm, HRV 48 ms, 3,000 steps, 2,450 kcal burned");
     expect(t).toMatch(/- 08:10 drank Coffee \(95 mg caffeine\)[\s\S]*- 13:00 ate Pizza diavola \(800 kcal[\s\S]*- 14:00 check-in: mood 7 · my note: "deadline at work"/);
@@ -43,7 +43,7 @@ describe("the chat's tools answer from the app's data (PLAN 67)", () => {
   });
   it("series: today's calories are shown as so far and left out of the average; the band's measures too", () => {
     const t = run("series", { measure: "kcal", from: "2026-10-14", to: "2026-10-15" }).text;
-    expect(t).toContain("1 of 1 day with a value (today so far: 300 kcal); average 800 kcal");
+    expect(t).toContain("1 of 1 day with a value (today so far: 300 kcal); average 802 kcal");
     expect(t).toContain("2026-10-15 Thu 300 kcal (today, so far)");
     expect(run("series", { measure: "steps", from: "2026-10-14", to: "2026-10-14" }).text).toContain("average 3,000");
     expect(run("series", { measure: "rhr", from: "2026-10-01", to: "2026-10-31" }).text).toContain("2026-10-01 to 2026-10-15"); // not past today

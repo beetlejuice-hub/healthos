@@ -14,6 +14,7 @@ import { currentKg } from "./body";
 import { atMinute, localDay, minuteOfDay, addDays, startOfDay, DAY, MIN } from "./time";
 import { correlation, difference, mean, median, sd, type Range } from "./stats";
 import { volume } from "./training";
+import { macrosOf } from "./nutrition";
 
 const of = <K extends Entry["kind"]>(entries: Entry[], k: K) => entries.filter((e): e is EntryOf<K> => e.kind === k);
 
@@ -161,8 +162,9 @@ export function dailyFacts(entries: Entry[], workouts: Workout[], settings: Sett
       alcoholG: of(es, "drink").reduce((a, d) => a + d.alcoholG, 0),
       alcoholAtBed: alcBed,
       trained: trainedDays.has(day),
-      kcal: foods.length ? foods.reduce((a, f) => a + f.macros.kcal, 0) : null,
-      proteinG: foods.length ? foods.reduce((a, f) => a + f.macros.p, 0) : null,
+      // food and drinks, as Today's Fuel card counts them (a beer is 215 kcal); a day counts once food is logged
+      kcal: foods.length ? es.reduce((a, e) => a + (macrosOf(e)?.kcal ?? 0), 0) : null,
+      proteinG: foods.length ? es.reduce((a, e) => a + (macrosOf(e)?.p ?? 0), 0) : null,
       energy: avg("energy"), mood: avg("mood"), focus: avg("focus"), stress: avg("stress"),
       taken: new Set(of(es, "supp").filter((s) => s.status === "taken").map((s) => s.suppId)),
       skipped: new Set(of(es, "supp").filter((s) => s.status === "skipped" && !of(es, "supp").some((t) => t.suppId === s.suppId && t.status === "taken")).map((s) => s.suppId)),
