@@ -69,3 +69,10 @@ export function standouts(n: Night, e: Evening | undefined, ns: Night[], score?:
 
 /** The most significant thing about the night's evening, or null. */
 export const standout = (n: Night, e: Evening | undefined, ns: Night[], score?: SleepScore): Standout | null => standouts(n, e, ns, score)[0] ?? null;
+
+/** A word or two for the small nights on the strip (a phone fits ~8 letters under each). */
+export function shortOf(so: Pick<Standout, "id" | "label">): string {
+  const id = so.id.startsWith("tag:") ? "tag" : so.id;
+  const W: Record<string, string> = { late: "late night", caf: "caffeine", latetrain: "late gym", stress: "stressed", phone: "phone", meal: "late meal", nap: "nap" };
+  return id === "drinks" ? so.label : id === "tag" ? so.label : W[id] ?? so.label;
+}

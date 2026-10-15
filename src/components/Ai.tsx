@@ -123,30 +123,44 @@ export function startExperiment(p: NonNullable<DigestItem["protocol"]>) {
   act.setAi((a) => ({ experiments: [...a.experiments, x] }));
 }
 
+/**
+ * Today's morning read (owner, 15 Oct: "the morning read looks a bit too big on front page, its at least should be
+ * collapsable, and also lets make it a tiny bit nicer"): folded to its greeting and what's inside — a line per item with
+ * its kind — and each item opens on its own. Folded or open is kept for the day on this phone.
+ */
 export function MorningRead() {
   const d = useStore((s) => s.ai.digest);
   const experiments = useStore((s) => s.ai.experiments);
   const running = experiments.filter((x) => !x.ended).map((x) => x.name);
   const today = localDay(Date.now());
-  const [open, setOpen] = useState(false);
+  const key = `healthos.mr-open:${d?.day ?? ""}`;
+  const [open, setOpenState] = useState(() => { try { return localStorage.getItem(key) === "1"; } catch { return false; } });
+  const [row, setRow] = useState<number | null>(null);
   if (!d || d.day > today || d.day < addDays(today, -1)) return null;
-  const items = open ? d.items : d.items.slice(0, 2);
+  const setOpen = (v: boolean) => { setOpenState(v); try { localStorage.setItem(key, v ? "1" : "0"); } catch { /* private mode: just this time */ } };
   return (
-    <section className="card morning" aria-label="Morning read">
-      <h3>Morning read <span>{d.day === today ? "written for today" : "from yesterday"}</span></h3>
+    <section className={`card morning${open ? " open" : ""}`} aria-label="Morning read">
+      <button type="button" className="mr-head" aria-expanded={open} onClick={() => setOpen(!open)}>
+        <span className="k">Morning read</span><span className="when">{d.day === today ? "today" : "from yesterday"}</span>
+        {!open && <span className="mr-dots" aria-hidden="true">{d.items.map((i, k) => <i key={k} className={`mr-${i.type}`} />)}</span>}
+        <span className="chev" aria-hidden="true">{open ? "▴" : "▾"}</span>
+      </button>
       <p className="greet">{d.greeting}</p>
-      {items.map((i, k) => (
-        <article key={k} className={`mr mr-${i.type}`}>
-          <small>{KIND[i.type]}</small>
-          <b>{i.title}</b>
-          <p>{i.text}</p>
-          {i.source && <a href={i.source.url} target="_blank" rel="noreferrer">{i.source.title} ↗</a>}
-          {i.protocol && (running.includes(i.protocol.name)
-            ? <p className="note">Running — see Insights → Experiments.</p>
-            : <button type="button" className="pill-btn pri" onClick={() => startExperiment(i.protocol!)}>Try it for {i.protocol.days} days</button>)}
-        </article>
-      ))}
-      {d.items.length > 2 && <button type="button" className="linkish" onClick={() => setOpen(!open)}>{open ? "Less" : `${d.items.length - 2} more`}</button>}
+      {!open && <button type="button" className="linkish mr-more" onClick={() => setOpen(true)}>{d.items.length} thing{d.items.length === 1 ? "" : "s"} to read — {d.items.map((i) => i.title).slice(0, 2).join(" · ")}{d.items.length > 2 ? " …" : ""}</button>}
+      {open && <ul className="mr-list">{d.items.map((i, k) => (
+        <li key={k} className={`mr mr-${i.type}`} data-open={row === k || undefined}>
+          <button type="button" className="mr-row" aria-expanded={row === k} onClick={() => setRow(row === k ? null : k)}>
+            <span className="mr-kind">{KIND[i.type]}</span><b>{i.title}</b><span className="chev" aria-hidden="true">{row === k ? "▴" : "▾"}</span>
+          </button>
+          {row === k && <div className="mr-body">
+            <p>{i.text}</p>
+            {i.source && <a href={i.source.url} target="_blank" rel="noreferrer">{i.source.title} ↗</a>}
+            {i.protocol && (running.includes(i.protocol.name)
+              ? <p className="note">Running — see Insights → Experiments.</p>
+              : <button type="button" className="pill-btn pri" onClick={() => startExperiment(i.protocol!)}>Try it for {i.protocol.days} days</button>)}
+          </div>}
+        </li>
+      ))}</ul>}
     </section>
   );
 }
@@ -185,13 +199,19 @@ export function AiQuestions() {
   const fresh = ai.questions?.day === today ? ai.questions.list : [];
   const list: Question[] = [...fresh, ...ai.daily.filter((d) => !fresh.some((q) => q.key === d.key))].filter((q) => !answeredToday.has(q.key));
   const [q] = list;
+  // owner, 15 Oct: "for questions make sure i can write custom reply"
+  const [own, setOwn] = useState("");
   if (!q) return null;
-  const answer = (a: string) => act.addEntry({ kind: "answer", at: Date.now(), key: q.key, question: q.text, answer: a });
+  const answer = (a: string) => { if (a.trim()) act.addEntry({ kind: "answer", at: Date.now(), key: q.key, question: q.text, answer: a.trim() }); setOwn(""); };
   return (
     <section className="card question" aria-label="Quick question">
       <h3>Quick question <span>{list.length > 1 ? `1 of ${list.length}` : "one tap"}</span></h3>
       <p className="q">{q.text}</p>
       <div className="chips">{q.options.map((o) => <button key={o} type="button" className="pill-btn" onClick={() => answer(o)}>{o}</button>)}</div>
+      <div className="row-add q-own">
+        <input value={own} placeholder="or in your own words…" aria-label="Your answer, in your own words" onChange={(e) => setOwn(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") answer(own); }} />
+        <button type="button" className="pill-btn" disabled={!own.trim()} onClick={() => answer(own)}>Send</button>
+      </div>
       <small className="why">Why: {q.why}{q.repeat === "daily" ? " · asked daily" : ""}</small>
       {q.repeat === "daily" && <button type="button" className="linkish" onClick={() => act.setAi((a) => ({ daily: a.daily.filter((d) => d.key !== q.key) }))}>Stop asking this</button>}
     </section>

@@ -1344,6 +1344,21 @@ below, in his words, grouped; A first (broken or wrong now), then the rest. Item
      comes once the log spans 3 days; before any call, per-task first guesses at the real sizes (a chat ≈ 14k in, 1.2k
      out). Checked: ai.test (four calls like the owner's ≈ $0.24 → a month past $15, not ≈ $4; 10 chats a day counts
      10), worker test (the call logged as billed), e2e/ai.cjs (the list, "from your last N calls").
+104. [x] **15 Oct, later: the morning read, questions, all data** — owner: "Rn the morning read looks a bit too big on front
+   page, its at least should be collapsable, and also lets make it a tiny bit nicer. also i like the research, the
+   questoins, etc..for questions make sure i can write custom reply, etc. make sure app sees all data, organized".
+   - The morning read folds to its greeting and one line of what's inside (≈ 105 px, was the whole card); opened, a row
+     per item with its kind as a coloured label (your data, new study, fun fact, try this), each opening on its own;
+     folded / open kept for the day on the phone.
+   - Quick questions take your own words too ("or in your own words…" + Send), saved as the answer the AI reads.
+   - What the AI is told, organized: a one-line list of its sections at the top, and three it didn't have — this morning's
+     readiness with what held it and every part's points and zone, training (this week against your usual, each main
+     lift's best set and trend, the last sessions), and what the Sleep / Heart / Mind / Training grids found with what you
+     said about each (lib/ai/sections). The mood journal still fills what's left, so the size stays under its cap.
+   - The 14-night strip shows each night's one thing ("2 drinks", "late night", "nap") under it, as offered with the chip.
+   Checked: sections.test (the three blocks' lines, known answers), e2e/ai.cjs (folded under 200 px with "3 things to
+   read", opens to rows with kinds, the protocol still starts an experiment, a reply in your own words saved as said),
+   e2e/sleep.cjs (drink nights on the strip say "2 drinks", last night among them).
 98. [ ] **AI, soon**
 98. [ ] **AI, soon** — "it should look at all the data, see whatsup, tell me clever tips, what to improve, and a whole bunch
    of stuff.. it should recommend me, or just understand protocols i give him, and help me set up in app, or just tell

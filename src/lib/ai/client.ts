@@ -3,6 +3,12 @@
  * (calls today, cost) for Settings, and build the context the AI is told — on demand, at call time.
  */
 import { MONTHLY_USD } from "./tasks";
+import { gridLines, todayLines, trainingLines } from "./sections";
+import { readiness } from "../readiness";
+import { nights } from "../sleep";
+import { mainLifts, sessions, thisWeek } from "../liftstrength";
+import type { LoggedSet } from "../training";
+import type { EntryOf } from "../types";
 
 import { useSyncExternalStore } from "react";
 import { supabase } from "../supabase";
@@ -71,7 +77,13 @@ export function contextNow(state: State = getState(), now = Date.now()): string 
   const t = weightTrend(bodyDays(state.entries, addDays(today, -27), today));
   // the band's nights, when the band has sent some (PLAN 88): the AI used to see the ratings but not one night
   const band = bandNow(), nightsSeen = band ? nightsForAi({ ...state, halfLifeMin: state.settings.halfLifeMin }, band, now) : [];
-  return buildContext({ state, now, days, findings: report.found, patterns, weight: t ? { kg: t.nowKg, perWeek: t.perDay * 7 } : null, nights: nightsSeen });
+  // this morning's readiness, training, and what the grids found (owner, 15 Oct: "make sure app sees all data, organized")
+  const sets = state.entries.filter((e): e is EntryOf<"set"> => e.kind === "set") as LoggedSet[];
+  const rating = (state.entries.find((e) => e.kind === "sleep" && localDay(e.at) === today && e.rating != null) as { rating?: number } | undefined)?.rating;
+  const ready = band ? readiness(today, nights(band.sleep, band.hr, band.rhr, band.hrv), rating, sets, now, { hrv: band.hrv, rhr: band.rhr }) : null;
+  const ss = sessions(state.workouts, sets);
+  return buildContext({ state, now, days, findings: report.found, patterns, weight: t ? { kg: t.nowKg, perWeek: t.perDay * 7 } : null, nights: nightsSeen,
+    today: todayLines(ready), training: trainingLines(ss, mainLifts(sets), thisWeek(ss, now)), grids: gridLines(state.ai.inbox ?? []) });
 }
 
 /** The nightly read-back's context: everything above, plus that day in order with your notes. */

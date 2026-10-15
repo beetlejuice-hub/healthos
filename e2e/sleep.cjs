@@ -97,6 +97,9 @@ function world(seed = 5) {
   await pg.locator('.sl .sl-b').screenshot({ path: OUT + 'sleep-b-laptop.png' });
   // pick another night: from the small ones, then back with ›
   check('the last 14 nights, small', await pg.locator('.sl .sl-mini').count() === 14);
+  // each small night says its one thing (15 Oct): the drink nights stand out at a glance — last night's two beers among them
+  const wh = await pg.locator('.sl .sl-mini').evaluateAll((els) => els.map((e) => [e.dataset.what ?? '', e.querySelector('.what')?.textContent ?? '']));
+  check(`the strip: drink nights marked "2 drinks", last night among them (${wh.filter((x) => x[0]).map((x) => x[1]).join(' | ')})`, wh.length === 14 && wh.at(-1)[0] === 'drinks' && wh.filter((x) => x[0] === 'drinks').length >= 2 && wh.filter((x) => x[0] === 'drinks').every((x) => x[1] === '2 drinks'));
   await pg.locator('.sl .sl-mini').nth(10).click();
   const t2 = await pg.locator('.sl .sl-title').innerText();
   check(`tapping a small night opens it above (${t2})`, /^Night · /.test(t2) && await pg.locator('.sl .sl-mini').nth(10).getAttribute('aria-pressed') === 'true');

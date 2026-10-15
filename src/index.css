@@ -625,11 +625,29 @@ a { color: inherit; }
 .night small { display: block; font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--c-dim); margin-bottom: 2px; }
 .night-notes, .night-change p { margin: 0; font-size: 14px; line-height: 1.45; }
 .night-change { display: grid; gap: 4px; }
-.mr { display: grid; gap: 4px; padding-top: 10px; border-top: 1px solid #ffffff10; }
-.mr small { font-size: 10.5px; letter-spacing: .12em; text-transform: uppercase; color: var(--c-dim); }
-.mr-protocol small { color: var(--gym); } .mr-pattern small { color: var(--mood); } .mr-study small { color: var(--supp); }
-.mr b { font-size: 15px; } .mr p { margin: 0; color: var(--c-ink-2); font-size: 14px; line-height: 1.45; }
-.mr a { font-size: 12.5px; color: var(--c-ink-2); } .mr .pill-btn { justify-self: start; margin-top: 4px; }
+/* the morning read, folded (owner, 15 Oct: "too big on front page … collapsable … a tiny bit nicer") */
+.morning { gap: 8px; }
+.mr-head { all: unset; cursor: pointer; display: flex; align-items: center; gap: 8px; min-height: 28px; }
+.mr-head .k { font: 600 11px var(--f-sans); letter-spacing: .1em; text-transform: uppercase; color: var(--c-ink-2); }
+.mr-head .when { font-size: 12px; color: var(--c-dim); }
+.mr-head .chev, .mr-row .chev { margin-left: auto; color: var(--c-dim); font-size: 12px; }
+.mr-dots { display: inline-flex; gap: 4px; margin-left: 4px; } .mr-dots i { width: 6px; height: 6px; border-radius: 50%; background: var(--c-ink-2); }
+.mr-dots i.mr-pattern { background: var(--mood); } .mr-dots i.mr-study { background: var(--supp); } .mr-dots i.mr-fact { background: var(--caf); } .mr-dots i.mr-protocol { background: var(--gym); }
+.morning .greet { font-size: 17px; }
+.mr-more { justify-self: start; text-align: left; font-size: 13px; color: var(--c-ink-2); text-decoration: none; }
+.mr-list { list-style: none; margin: 2px 0 0; padding: 0; display: grid; }
+.mr { border-top: 1px solid #ffffff10; }
+.mr-row { all: unset; cursor: pointer; box-sizing: border-box; width: 100%; display: flex; align-items: center; gap: 10px; padding: 10px 0; }
+.mr-row b { font-size: 14.5px; font-weight: 600; line-height: 1.3; }
+.mr-kind { flex: none; font: 600 9.5px var(--f-sans); letter-spacing: .1em; text-transform: uppercase; padding: 3px 7px; border-radius: 999px; color: var(--c-ink-2); background: #ffffff0d; }
+.mr-pattern .mr-kind { color: var(--mood); background: color-mix(in srgb, var(--mood) 14%, transparent); }
+.mr-study .mr-kind { color: var(--supp); background: color-mix(in srgb, var(--supp) 14%, transparent); }
+.mr-fact .mr-kind { color: var(--caf); background: color-mix(in srgb, var(--caf) 14%, transparent); }
+.mr-protocol .mr-kind { color: var(--gym); background: color-mix(in srgb, var(--gym) 14%, transparent); }
+.mr-body { display: grid; gap: 6px; padding: 0 0 12px; }
+.mr-body p { margin: 0; color: var(--c-ink-2); font-size: 14px; line-height: 1.45; }
+.mr-body a { font-size: 12.5px; color: var(--c-ink-2); } .mr-body .pill-btn { justify-self: start; margin-top: 2px; }
+.q-own input { min-width: 0; }
 .question .q { margin: 0; font-size: 16px; line-height: 1.35; }
 .question .chips { display: flex; flex-wrap: wrap; gap: 8px; }
 .question .why { color: var(--c-dim); font-size: 12px; }
@@ -1403,3 +1421,5 @@ a { color: inherit; }
 .ai-calls li { display: grid; grid-template-columns: minmax(0, 1fr) auto; column-gap: 10px; font-size: 12.5px; color: var(--c-ink-2); }
 .ai-calls li span:first-child { color: var(--c-ink); } .ai-calls li span:nth-child(2) { grid-column: 1; font: 400 11.5px var(--f-mono); color: var(--c-dim); }
 .ai-calls li b { grid-row: 1 / span 2; grid-column: 2; align-self: center; font: 500 13px var(--f-mono); color: var(--c-ink); }
+/* the night's one thing on each small night (15 Oct) — quiet, cut short to fit */
+.sl-mini .what { display: block; min-height: 14px; font-size: 10.5px; line-height: 14px; color: var(--i-ink-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }

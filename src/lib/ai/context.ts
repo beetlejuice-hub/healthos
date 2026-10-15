@@ -128,6 +128,8 @@ export type ContextInput = {
   weight?: { kg: number; perWeek: number } | null;
   /** The band's nights with the evening before each, one line a night (lib/ai/nights, PLAN 88). */
   nights?: string[];
+  /** This morning's readiness, training, and the grids' findings with your replies (lib/ai/sections; 15 Oct). */
+  today?: string[]; training?: string[]; grids?: string[];
 };
 
 export function buildContext(input: ContextInput): string {
@@ -144,23 +146,28 @@ export function buildContext(input: ContextInput): string {
   return base + extra + j;
 }
 
-function baseContext({ state, now, days, findings, patterns, weight }: ContextInput): string {
+function baseContext({ state, now, days, findings, patterns, weight, today = [], training = [], grids = [] }: ContextInput): string {
   const { profile, supplements, ai, goals } = state;
   const names = new Map(supplements.map((s) => [s.id, s.name]));
   const answers = state.entries.filter((e) => e.kind === "answer" && e.at > now - 14 * 86_400_000).slice(-20);
   const lines = [
+    // owner, 15 Oct: "make sure app sees all data, organized" — what's here, in order
+    "Sections: About me · This morning · My stack · Last 14 days · Training · How I feel by time of day · What the app found · Notes and answers · Mood engines · My nights · Mood journal.",
     "## About me",
     `Conditions: ${profile.conditions.join(", ") || "none listed"}. Medications: ${profile.meds.join(", ") || "none listed"}. Allergies: ${profile.allergies.join(", ") || "none listed"}.${profile.notes ? ` Notes: ${profile.notes}` : ""}`,
     `Goals: ${goals.kcal} kcal/day, ${goals.p} g protein.${weight ? ` Weight trend: ${weight.kg.toFixed(1)} kg, ${weight.perWeek >= 0 ? "+" : ""}${weight.perWeek.toFixed(2)} kg/week.` : ""}`,
+    ...(today.length ? ["## This morning (readiness, as the app shows it)", ...today.map((l) => `- ${l}`)] : []),
     "## My stack",
     ...supplements.map((s) => `- ${s.name}${s.dose ? ` ${s.dose}` : ""} (${s.slot})${s.status ? ` — ${s.status === "low" ? "running low" : s.status === "out" ? "ran out" : "stopped"}` : s.active ? "" : " — paused"}`),
     ...(ai.memory.length ? ["## What you remember about me", ...ai.memory.map((m) => `- ${m.text}`)] : []),
     ...(ai.experiments.filter((x) => !x.ended).length ? ["## Experiments running", ...ai.experiments.filter((x) => !x.ended).map((x) => `- ${x.name} since ${x.start} (${x.days} days, measuring ${x.measure})`)] : []),
     "## Last 14 days",
     ...days.slice(-14).map((d) => `- ${dayLine(d, names)}`),
+    ...(training.length ? ["## Training", ...training.map((l) => `- ${l}`)] : []),
     "## How I feel by time of day (last 30 days)",
     ...(feelByTime(state, now).map((l) => `- ${l}`) || []),
     ...(findings.length ? ["## What the app's statistics found (tested, trust these numbers)", ...findings.slice(0, 8).map((f) => `- ${f.title} (${f.value}${f.unit ? ` ${f.unit}` : ""}; ${f.sure})`)] : []),
+    ...(grids.length ? ["## What the Sleep / Heart / Mind / Training grids found (clear, tested), and what I said", ...grids.map((l) => `- ${l}`)] : []),
     ...(patterns.length ? ["## Early patterns (could be chance, still being checked)", ...patterns.slice(0, 5).map((p) => `- ${p.text} — held ${p.held} of ${p.of}`)] : []),
     ...(feelNotes(state, now).length ? ["## Why I felt that way (my own notes on check-ins — take these seriously)", ...feelNotes(state, now).map((l) => `- ${l}`)] : []),
     ...(answers.length ? ["## My recent answers to your questions", ...answers.map((a) => (a.kind === "answer" ? `- ${new Date(a.at).toISOString().slice(0, 10)} ${a.question} → ${a.answer}` : ""))] : []),

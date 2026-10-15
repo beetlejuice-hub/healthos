@@ -56,12 +56,20 @@ const SALAMI = [['Salami', 380, 22, 1, 32], ['Salami', 400, 24, 1, 33], ['salami
     check('morning read and questions were asked for', calls.some((c) => c.task === 'digest') && calls.some((c) => c.task === 'questions'));
     check('the context is a summary, not the raw log', /## About me[\s\S]*## Last 14 days/.test(calls.find((c) => c.task === 'digest').context) && !/"kind"/.test(calls.find((c) => c.task === 'digest').context));
     await pg.goto(APP + '#today'); await pg.waitForTimeout(200);
-    check('Today shows the morning read', /Quiet night, two things worth a look[\s\S]*Saffron and mood/.test(await pg.locator('.morning').innerText()));
-    await pg.locator('.morning').getByRole('button', { name: '1 more' }).click();
+    // owner, 15 Oct: "the morning read looks a bit too big on front page, its at least should be collapsable"
+    const mrH = await pg.locator('.morning').evaluate((e) => Math.round(e.getBoundingClientRect().height));
+    check(`Today: the morning read folded — its greeting and what's inside in a line (${mrH} px)`, /Quiet night, two things worth a look[\s\S]*3 things to read — Saffron and mood/.test(await pg.locator('.morning').innerText()) && mrH < 200 && await pg.locator('.morning .mr-list').count() === 0);
+    await pg.locator('.morning .mr-head').click();
+    check('opened: a line per item with its kind, each folded', await pg.locator('.morning .mr-row').count() === 3 && await pg.locator('.morning .mr-body').count() === 0 && /TRY THIS/i.test(await pg.locator('.morning .mr-protocol .mr-kind').innerText()));
+    await pg.locator('.morning .mr-row', { hasText: 'caffeine cut-off' }).click();
+    await pg.locator('.morning').screenshot({ path: OUT + 'ai-morning-open.png' });
     await pg.locator('.morning').getByRole('button', { name: 'Try it for 14 days' }).click();
     check('a protocol becomes a running experiment', /Running — see Insights/.test(await pg.locator('.morning').innerText()));
     check('a quick question with tappable answers', /big lunch today\?[\s\S]*Why: to see if lunch size explains the dip · asked daily/.test(await pg.locator('.question').innerText()));
-    await pg.locator('.question').getByRole('button', { name: 'Big' }).click(); await pg.waitForTimeout(100);
+    // owner, 15 Oct: "for questions make sure i can write custom reply"
+    await pg.locator('.question .q-own input').fill('a huge kebab, then sleepy'); await pg.locator('.question .q-own').getByRole('button', { name: 'Send' }).click(); await pg.waitForTimeout(200);
+    const own = await pg.evaluate(() => (JSON.parse(localStorage.getItem('healthos.v1:u-test') || '{}').entries || []).find((e) => e.kind === 'answer'));
+    check(`answered in your own words: saved as said (${own && own.answer})`, own && own.answer === 'a huge kebab, then sleepy' && /big lunch/.test(own.question));
     check('answered → gone for today', await pg.locator('.question').count() === 0);
     check('the AI tab has its red number: it wrote first', (await pg.locator('nav.tabs a[href="#ai"] .tabbadge').textContent().catch(() => '')) === '1');
     await pg.screenshot({ path: OUT + 'ai-today.png', fullPage: true });
