@@ -75,7 +75,32 @@ export type SupplementAnswer = {
   sources: { title: string; url: string }[];
 };
 
-export type ChatAnswer = { reply: string; remember: string[] };
+/**
+ * A chat answer: the reply, or — mid-message — the tools the AI wants run (PLAN 67) with the AI's turns from this call,
+ * which the app sends back exactly as they came, one message each (Opus 5.5 ties its thinking to the conversation as sent).
+ */
+export type ChatTurn = { role: "user" | "assistant"; content: unknown[] };
+export type ChatAnswer = { reply: string; remember: string[]; calls?: ToolCall[]; turn?: ChatTurn[] };
+export type ToolCall = { id: string; name: ChatToolName; input: Record<string, unknown> };
+
+/** What `series` and `show_chart` can draw: the At a glance measures and the band's. */
+export const SERIES_KEYS = ["mood", "energy", "focus", "stress", "sleep", "kcal", "protein", "cafBed", "drinks", "weight", "rhr", "hrv", "burned", "steps"] as const;
+export type SeriesKey = (typeof SERIES_KEYS)[number];
+const date = { type: "string", format: "date" } as const;
+/**
+ * The chat's tools (PLAN 67; owner, 9 Oct: "pull data based on what i ask and answer it nicely"). The app runs them on its
+ * own data with the engines the pages use (lib/ai/chattools) — every number the AI quotes comes from here or the summary.
+ */
+export const CHAT_TOOLS = [
+  { name: "day", description: "Everything logged on one date, in order — food, drinks, supplements, check-ins with notes, training, sleep rating — plus that day's averages and, when the band was worn, its resting heart rate, HRV, steps and calories burned. Use for any question about a specific day.", input_schema: { type: "object", properties: { date }, required: ["date"], additionalProperties: false } },
+  { name: "series", description: "One measure day by day over a span (at most 120 days), with its average, lowest and highest. Measures: mood, energy, focus, stress (1–10 check-in averages), sleep (morning rating /10), kcal and protein (eaten), cafBed (caffeine at bedtime, mg), drinks, weight, rhr and hrv (band, mornings), burned (band kcal), steps.", input_schema: { type: "object", properties: { measure: { type: "string", enum: SERIES_KEYS }, from: date, to: date }, required: ["measure", "from", "to"], additionalProperties: false } },
+  { name: "find", description: "Where a word shows up in the last 180 days: food and drink names, supplements, check-in notes and tags, answers to questions, workout names. Returns the dates and times, newest first. Use for \"when did I last…\", \"how often do I…\".", input_schema: { type: "object", properties: { text: { type: "string" } }, required: ["text"], additionalProperties: false } },
+  { name: "show_chart", description: "Attach a chart of one measure over a span to your reply; the app draws it from its own data. Use when a trend over days or weeks says it better than words — at most two per reply.", input_schema: { type: "object", properties: { measure: { type: "string", enum: SERIES_KEYS }, from: date, to: date, title: { type: "string" } }, required: ["measure", "from", "to", "title"], additionalProperties: false } },
+  { name: "remember", description: "Keep one lasting fact about the user in memory (a habit, a preference, \"usual coffee is a long coffee\"). Never guesses, never one-off events.", input_schema: { type: "object", properties: { text: { type: "string" } }, required: ["text"], additionalProperties: false } },
+] as const;
+export type ChatToolName = (typeof CHAT_TOOLS)[number]["name"];
+/** Tool rounds in one message, at most. */
+export const CHAT_ROUNDS = 6;
 
 export type Question = { id: string; text: string; why: string; options: string[]; /** Short key for a repeated question whose answers become a daily signal ("lunch_size"). */ key: string; repeat: "daily" | "once" };
 export type QuestionsAnswer = { questions: Question[] };
@@ -94,7 +119,7 @@ const str = { type: "string" } as const, num = { type: "number" } as const;
 const obj = (properties: Record<string, unknown>, required = Object.keys(properties)) => ({ type: "object", properties, required, additionalProperties: false });
 const arr = (items: unknown) => ({ type: "array", items });
 
-export const SCHEMAS: Record<Exclude<Task, "supplement" | "digest">, unknown> = {
+export const SCHEMAS: Record<Exclude<Task, "supplement" | "digest" | "chat">, unknown> = {
   describe: obj({
     items: arr(obj({
       kind: { type: "string", enum: ["food", "drink"] }, name: str, amount: str,
@@ -103,7 +128,6 @@ export const SCHEMAS: Record<Exclude<Task, "supplement" | "digest">, unknown> = 
       confidence: { type: "string", enum: ["high", "medium", "low"] }, note: str,
     }, ["kind", "name", "amount", "confidence", "note"])),
   }),
-  chat: obj({ reply: str, remember: arr(str) }),
   questions: obj({ questions: arr(obj({ id: str, text: str, why: str, options: arr(str), key: str, repeat: { type: "string", enum: ["daily", "once"] } })) }),
   night: obj({ summary: str, happened: arr(str), notes: str, change: arr(obj({ what: str, why: str })), remember: arr(str) }),
   review: obj({ title: str, summary: str, notices: arr(obj({ title: str, text: str, measure: str })), next: arr(obj({ what: str, why: str })), remember: arr(str) }),
@@ -150,7 +174,8 @@ Every interaction and caution must be backed by one of the sources. Keep each li
   chat: `${VOICE}
 Task: chat with the user about their health data. Use the context (their numbers, patterns, stack, about-me) — refer to specifics. Keep replies under 120 words unless they ask for detail.
 Personality (owner, 15 Oct: "just a bit of personality too"): a sharp, warm friend with a dry sense of humour — match their tone (they write casually), a light quip or a reaction is welcome when it fits, but the substance comes first and it never turns into a bit. No cheerleading, no emoji spam (one now and then is fine), never at the cost of being specific.
-Formatting: the chat shows Markdown — use **bold** for the one thing that matters most (a number, the answer, the next step), *italic* sparingly, short "- " lists when listing 3+ things, blank lines between paragraphs. No headings, tables or code blocks. If you learn a lasting fact about them (habits, preferences, "usual coffee is a long coffee"), add it to "remember" as one short line; otherwise leave it empty. Never put guesses in "remember".`,
+Tools (owner: "pull data based on what i ask and answer it nicely"): for anything specific — a date, a stretch of days, "when did I last…", how one thing went — call day, series or find and answer from what they return, not from memory of the summary. Every number you state comes from the context or a tool result; never work one out yourself beyond simple arithmetic on them. Call several at once when you need several. show_chart when a trend over days or weeks says it better than words (it's drawn under your reply — mention it). remember for a lasting fact the user tells you or a pattern that keeps showing; never guesses. Web search only for outside facts (a study, a food, a supplement), never for their data. Today's date is the last day in the context.
+Formatting: reply in plain Markdown (never JSON) — **bold** for the one thing that matters most (a number, the answer, the next step), *italic* sparingly, short "- " lists when listing 3+ things, blank lines between paragraphs. No headings, tables or code blocks.`,
   questions: `${VOICE}
 Task: ask 1–3 genuinely useful questions that help the app find patterns faster. Base each on something specific in the context: a dip at a time of day, a pattern that might be explained by something not logged, a gap in what's tracked. Good: "Your energy is often low around 4pm — did you have a big lunch today?" with options. Bad: generic wellness questions.
 Each question: tappable options (2–5, short), a one-line "why" that says what it would help find, a short snake_case key, and repeat="daily" if asking it every day would build a useful signal, else "once". Don't repeat questions listed as already asked.`,
@@ -251,7 +276,13 @@ export function checkQuestions(a: QuestionsAnswer): QuestionsAnswer {
 }
 
 export function checkChat(a: ChatAnswer): ChatAnswer {
-  return { reply: typeof a.reply === "string" ? a.reply : "", remember: (a.remember ?? []).filter((x) => typeof x === "string" && x.length > 3 && x.length < 200).slice(0, 3) };
+  const names = new Set<string>(CHAT_TOOLS.map((t) => t.name));
+  const calls = (a.calls ?? []).filter((c) => c && typeof c.id === "string" && names.has(c.name) && c.input && typeof c.input === "object");
+  return {
+    reply: typeof a.reply === "string" ? a.reply : "",
+    remember: (a.remember ?? []).filter((x) => typeof x === "string" && x.length > 3 && x.length < 200).slice(0, 3),
+    ...(calls.length ? { calls, turn: Array.isArray(a.turn) ? a.turn : [] } : {}),
+  };
 }
 
 /* ------------------------------------------------------------------ requests */
@@ -260,7 +291,9 @@ export type AiRequest =
   /** lookup: a name the food lists didn't have (or had wrong) — the AI may search the web for it (owner, 15 Oct). */
   | { task: "describe"; text?: string; image?: { mediaType: "image/jpeg" | "image/png" | "image/webp"; data: string }; lookup?: boolean }
   | { task: "supplement"; name: string; dose?: string; context: string }
-  | { task: "chat"; messages: { role: "user" | "assistant"; text: string }[]; context: string }
+  /** turn: this message's tool rounds so far — the AI's raw turns and the app's tool results, in order (PLAN 67). */
+  /** final: the last round — answer with what you have, no more tools. */
+  | { task: "chat"; messages: { role: "user" | "assistant"; text: string }[]; context: string; turn?: ChatTurn[]; final?: boolean }
   | { task: "questions"; context: string; asked: string[] }
   | { task: "digest"; context: string; shown: string[] }
   | { task: "night"; day: string; context: string }

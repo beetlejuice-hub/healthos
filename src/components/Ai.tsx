@@ -7,7 +7,10 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { act, getState, newId, useStore, type Experiment } from "../lib/store";
 import { askAi, contextNow, nightContext, refreshAiStatus, useAiStatus } from "../lib/ai/client";
-import { MODELS, estimateMonthUsd, type DigestItem, type ModelChoice, type Question, type Tier } from "../lib/ai/tasks";
+import { runChatTool, type ChartSpec } from "../lib/ai/chattools";
+import { bandNow } from "../lib/band-client";
+import { ChatChart } from "./ChatChart";
+import { CHAT_ROUNDS, MODELS, estimateMonthUsd, type ChatTurn, type DigestItem, type ModelChoice, type Question, type Tier } from "../lib/ai/tasks";
 import { judge } from "../lib/ai/apply";
 import { dailyFacts } from "../lib/insights";
 import { addDays, localDay } from "../lib/time";
@@ -246,6 +249,8 @@ export function AiQuestions() {
 
 /* ------------------------------------------------------------------ the chat (#ai) */
 
+/** What each tool looked at, for the line under a reply. */
+const LOOKED: Record<string, string> = { day: "day", series: "numbers over time", find: "log", show_chart: "numbers over time" };
 const STARTERS = ["Why am I flat in the afternoon?", "Recommend a supplement or protocol to try", "What's worth logging more of?", "Explain my latest pattern"];
 
 export function AiScreen() {
@@ -274,12 +279,34 @@ export function AiScreen() {
     // The API wants the conversation to start with you: earlier AI-first messages ride along as context.
     const hist = getState().ai.chat.slice(-20);
     const first = hist.findIndex((m) => m.role === "user");
-    const r = await askAi({ task: "chat", messages: hist.slice(first).map((m) => ({ role: m.role, text: m.text })), context: `${contextNow()}${first > 0 ? `\n\n## Your earlier messages to me\n${hist.slice(0, first).map((m) => m.text).join("\n")}` : ""}` });
-    if (!r.ok) { setErr(r.message); return; }
-    act.setAi((a) => ({
-      chat: [...a.chat, { role: "assistant" as const, text: r.answer.reply, at: Date.now() }].slice(-80),
-      memory: [...a.memory, ...r.answer.remember.filter((x) => !a.memory.some((m) => m.text.toLowerCase() === x.toLowerCase())).map((x) => ({ id: newId(), text: x, at: Date.now() }))].slice(-40),
-    }));
+    const messages = hist.slice(first).map((m) => ({ role: m.role, text: m.text }));
+    // built once: every tool round of this message sends it byte for byte (it's cached, and the AI's thinking is tied to it)
+    const context = `${contextNow()}${first > 0 ? `\n\n## Your earlier messages to me\n${hist.slice(0, first).map((m) => m.text).join("\n")}` : ""}`;
+    // The AI may ask the app for exact data (PLAN 67): run its calls here, send the results back, until it answers.
+    let turn: ChatTurn[] = [];
+    const charts: ChartSpec[] = [], looked: string[] = [], learned: string[] = [];
+    for (let round = 0; ; round++) {
+      const r = await askAi({ task: "chat", messages, context, ...(turn.length ? { turn } : {}), ...(round >= CHAT_ROUNDS ? { final: true } : {}) });
+      if (!r.ok) { setErr(r.message); return; }
+      if (!r.answer.calls?.length || round >= CHAT_ROUNDS) {
+        const at = Date.now();
+        act.setAi((a) => ({
+          chat: [...a.chat, { role: "assistant" as const, text: r.answer.reply, at, ...(charts.length ? { charts: charts.slice(0, 2) } : {}), ...(looked.length ? { looked } : {}) }].slice(-80),
+          memory: [...a.memory, ...learned.filter((x) => !a.memory.some((m) => m.text.toLowerCase() === x.toLowerCase())).map((x) => ({ id: newId(), text: x, at }))].slice(-40),
+        }));
+        return;
+      }
+      const data = { state: getState(), band: bandNow(), now: Date.now() };
+      const results = r.answer.calls.map((c) => {
+        const out = runChatTool(c, data);
+        if (out.chart) charts.push(out.chart);
+        if (out.remember) learned.push(out.remember);
+        looked.push(c.name);
+        return { type: "tool_result", tool_use_id: c.id, content: out.text, ...(out.error ? { is_error: true } : {}) };
+      });
+      // every result in one message, after the AI's turns exactly as they came
+      turn = [...turn, ...(r.answer.turn ?? []), { role: "user", content: results }];
+    }
   };
 
   return (
@@ -291,7 +318,13 @@ export function AiScreen() {
           const byApp = (y: (typeof thread)[number]) => "n" in y || "r" in y || !!y.m?.unprompted;
           const isNew = x.at > since && byApp(x) && !thread.slice(0, i).some((y) => y.at > since && byApp(y));
           if ("r" in x) return <ReviewCard key={x.key} r={x.r!} first={isNew} />;
-          return "n" in x ? <InboxCard key={x.key} n={x.n!} now={now} first={isNew} /> : <div key={x.key} className={`msg ${x.m!.role}${x.m!.unprompted ? " first" : ""}`} data-new={isNew || undefined}>{x.m!.role === "assistant" ? <Md text={x.m!.text} /> : x.m!.text}</div>;
+          return "n" in x ? <InboxCard key={x.key} n={x.n!} now={now} first={isNew} /> : (
+            <div key={x.key} className={`msg ${x.m!.role}${x.m!.unprompted ? " first" : ""}`} data-new={isNew || undefined}>
+              {x.m!.role === "assistant" ? <Md text={x.m!.text} /> : x.m!.text}
+              {x.m!.charts?.map((c, k) => <ChatChart key={k} c={c} />)}
+              {x.m!.looked?.length ? <small className="looked">looked at your {[...new Set(x.m!.looked.filter((t) => t !== "remember").map((t) => LOOKED[t] ?? t))].join(", ")}</small> : null}
+            </div>
+          );
         })}
         {busy > 0 && <div className="msg assistant typing">…</div>}
         {err && <p className="err">{err}</p>}

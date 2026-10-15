@@ -1507,3 +1507,15 @@ a { color: inherit; }
 .rv-dot[data-tone="better"] { fill: var(--sh-g); } .rv-dot[data-tone="worse"] { fill: var(--sh-r); }
 .rv-next { display: grid; gap: 4px; padding-top: 6px; border-top: 1px solid var(--c-track); }
 .rv-next small { font: 500 10.5px var(--f-mono); letter-spacing: .06em; text-transform: uppercase; color: var(--c-dim); }
+
+/* AI chat → a chart under a reply (PLAN 67), drawn from the app's own data */
+.chat-chart { margin: 8px 0 0; display: grid; gap: 4px; }
+.chat-chart figcaption { display: flex; justify-content: space-between; gap: 8px; flex-wrap: wrap; font-size: 12.5px; color: var(--c-ink-2); }
+.chat-chart figcaption b { color: var(--c-ink); font-weight: 600; }
+.chat-chart svg { width: 100%; max-width: 320px; height: auto; overflow: visible; }
+.chat-chart text { font: 400 10px var(--f-mono); fill: var(--c-dim); }
+.cc-line { fill: none; stroke: var(--c-ink-2); stroke-width: 1.5; opacity: .6; }
+.cc-dot { fill: var(--c-ink); stroke: var(--c-card); stroke-width: 1.2; }
+.cc-dot[data-partial] { fill: var(--c-card); stroke: var(--c-ink); }
+.cc-avg { stroke: var(--c-ink-2); stroke-width: 1; stroke-dasharray: 3 3; opacity: .7; }
+.msg .looked { display: block; margin-top: 6px; font: 400 10.5px var(--f-mono); color: var(--c-dim); }

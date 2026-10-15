@@ -4,6 +4,11 @@ const { chromium, APP, OUT, handle } = require('./harness.cjs');
 // "my usual"; supplement look-up; morning read → experiment; quick question; chat that writes first,
 // memory; the AI-off state.
 const calls = [];
+const CHAT_CALLS = [
+  { id: 'tu1', name: 'find', input: { text: 'salami' } },
+  { id: 'tu2', name: 'show_chart', input: { measure: 'kcal', from: '2026-09-25', to: '2026-10-01', title: 'Calories this week' } },
+  { id: 'tu3', name: 'remember', input: { text: 'Usual coffee is a long coffee, big cup' } },
+];
 const ANSWERS = {
   describe: (b) => /pityoka/i.test(b.text || '') ? { items: [{ kind: 'food', name: 'Pityókaleves', amount: '1 bowl', per100: { kcal: 62, p: 1.6, c: 7.5, f: 2.8 }, unit: { name: 'bowl', g: 350 }, count: 1, confidence: 'medium', note: 'typical home recipe · ciorbă de cartofi' }], dropped: [] }
     : /gogos/i.test(b.text || '') ? { items: [{ kind: 'food', name: 'Gogoașă cu cremă, Lidl', amount: '1 piece', per100: { kcal: 380, p: 6, c: 45, f: 19 }, unit: { name: 'piece', g: 80 }, count: 1, confidence: 'medium', note: 'Lidl bakery label' }], dropped: [] }
@@ -16,7 +21,9 @@ const ANSWERS = {
     { type: 'protocol', title: 'Try a 14:00 caffeine cut-off', text: 'Two weeks, then we compare.', protocol: { name: 'Caffeine cut-off 14:00', how: 'No caffeine after 14:00', days: 14, measure: 'energy' } },
   ] }),
   questions: () => ({ questions: [{ id: 'q', text: 'Your energy dips around 4pm — big lunch today?', why: 'to see if lunch size explains the dip', options: ['Big', 'Normal', 'Skipped'], key: 'lunch_size', repeat: 'daily' }] }),
-  chat: () => ({ reply: 'Hey! Your **afternoon energy** is the thing to watch:\n- the cut-off experiment will tell us\n- *one* coffee before noon', remember: ['Usual coffee is a long coffee, big cup'] }),
+  // PLAN 67: the first round asks the app for data (as the worker relays it: the calls and the AI's raw turn); then it answers
+  chat: (b) => (b.turn ? { reply: 'Hey! Your **afternoon energy** is the thing to watch:\n- the cut-off experiment will tell us\n- *one* coffee before noon', remember: [] }
+    : { reply: '', remember: [], calls: CHAT_CALLS, turn: [{ role: 'assistant', content: [{ type: 'thinking', thinking: '', signature: 'sig-1' }, ...CHAT_CALLS.map((c) => ({ type: 'tool_use', ...c }))] }] }),
 };
 // each call as the worker logs it (owner, 15 Oct: "i feel like u are waay underestimating cost") — a chat carrying the data summary
 const logged = (i) => ({ at: Date.parse('2026-10-01T10:00:00') + i * 600_000, task: i % 2 ? 'chat' : 'questions', model: 'sonnet', in: 300, cached: 0, written: 11800, out: 1100, searches: 0, usd: 0.0414 });
@@ -151,6 +158,16 @@ const GOGOSI = [['Gogosi', 330, 6, 48, 13], ['Gogosi', 350, 7, 50, 14]].map(([na
     await pg.waitForSelector('text=cut-off experiment will tell us');
     const chat = calls.find((c) => c.task === 'chat');
     check('chat starts with your message, with the context', chat.messages[0].role === 'user' && chat.messages[0].text === 'what should I try?' && /## My stack/.test(chat.context));
+    // PLAN 67: the app ran the AI's calls on its own data and sent back its turn untouched, then every result in one message
+    const rounds = calls.filter((c) => c.task === 'chat'), back = rounds[1]?.turn ?? [];
+    const results = back[1]?.content ?? [];
+    check(`one message, two rounds; the second carries the AI's turn as it came (${rounds.length} calls)`, rounds.length === 2 && JSON.stringify(back[0]) === JSON.stringify({ role: 'assistant', content: [{ type: 'thinking', thinking: '', signature: 'sig-1' }, ...CHAT_CALLS.map((c) => ({ type: 'tool_use', ...c }))] }) && rounds[1].context === rounds[0].context);
+    check(`…and the app's answers, all in one message (${results.map((r) => r.content.split('\n')[0].slice(0, 60)).join(' | ')})`, back[1]?.role === 'user' && results.length === 3 && results.map((r) => r.tool_use_id).join() === 'tu1,tu2,tu3'
+      && /"salami": 1 time on 1 day[\s\S]*food: Salami/.test(results[0].content) && /^Chart attached under your reply: Calories eaten, 2026-09-25 to 2026-10-01/.test(results[1].content) && results[2].content === 'Saved to memory.');
+    const cc = pg.locator('.msg.assistant .chat-chart').last();
+    check(`the chart is under the reply, drawn from the app's numbers (${await cc.locator('circle').count()} dot, ${(await cc.locator('figcaption').innerText().catch(() => '')).replace(/\s+/g, ' ')})`, await cc.count() === 1 && await cc.getAttribute('data-measure') === 'kcal' && /Calories this week/.test(await cc.locator('figcaption').innerText()) && await cc.locator('circle[data-partial]').count() === 1);
+    check('and says what it looked at', /looked at your log, numbers over time/.test(await pg.locator('.msg.assistant').last().innerText()));
+    await pg.locator('.msg.assistant').last().screenshot({ path: OUT + 'ai-chat-tools.png' });
     // owner, 15 Oct: "make sure it can make text bold, etc" — drawn, not shown as stars
     const md = await pg.locator('.msg.assistant .md').last().evaluate((e) => [e.querySelector('b')?.textContent, e.querySelectorAll('li').length, e.querySelector('i')?.textContent, e.textContent.includes('*')]).catch(() => null);
     check(`the reply's Markdown is drawn: bold, a 2-item list, italic, no stars left (${md})`, md && md[0] === 'afternoon energy' && md[1] === 2 && md[2] === 'one' && md[3] === false);

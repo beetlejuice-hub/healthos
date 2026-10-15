@@ -10,7 +10,7 @@
 
 import Anthropic from "@anthropic-ai/sdk";
 import {
-  DAILY_CAP, MODELS, MONTHLY_USD, RECENT_CALLS, SCHEMAS, logOf, SYSTEM, TIER, checkChat, modelFor, checkDescribe, checkDigest, checkNight, checkQuestions, checkReview, checkSupplement, costUsd, jsonFrom, DESCRIBE_SHAPE,
+  DAILY_CAP, MODELS, MONTHLY_USD, RECENT_CALLS, SCHEMAS, logOf, SYSTEM, TIER, checkChat, modelFor, checkDescribe, checkDigest, checkNight, checkQuestions, checkReview, checkSupplement, costUsd, jsonFrom, DESCRIBE_SHAPE, CHAT_TOOLS, CHAT_ROUNDS, type ChatTurn,
   type AiRequest, type ModelChoice, type Task, type UsageDoc,
 } from "../src/lib/ai/tasks";
 
@@ -58,7 +58,8 @@ function validate(b: AiRequest): string | null {
   switch (b.task) {
     case "describe": return !b.text && !b.image ? "say or show what it is" : long(b.text, 2000) ? "text too long" : b.image && (long(b.image.data, 2_000_000) || !/^image\/(jpeg|png|webp)$/.test(b.image.mediaType)) ? "image too big or wrong type" : null;
     case "supplement": return !b.name || long(b.name, 100) || long(b.context, 48000) ? "bad supplement request" : null;
-    case "chat": return !Array.isArray(b.messages) || !b.messages.length || b.messages.length > 40 || b.messages.some((m) => long(m.text, 4000)) || long(b.context, 48000) ? "bad chat request" : null;
+    case "chat": return !Array.isArray(b.messages) || !b.messages.length || b.messages.length > 40 || b.messages.some((m) => long(m.text, 4000)) || long(b.context, 48000)
+      || (b.turn != null && (!Array.isArray(b.turn) || b.turn.length > CHAT_ROUNDS * 3 || JSON.stringify(b.turn).length > 400_000)) ? "bad chat request" : null;
     case "questions": case "digest": return long(b.context, 48000) ? "context too long" : null;
     case "night": return !/^\d{4}-\d{2}-\d{2}$/.test(String(b.day)) ? "bad day" : long(b.context, 52000) ? "context too long" : null;
     case "review": return !["week", "month"].includes(b.kind) || ![b.from, b.to].every((d) => /^\d{4}-\d{2}-\d{2}$/.test(String(d))) ? "bad review" : long(b.context, 60000) ? "context too long" : null;
@@ -75,7 +76,8 @@ function messagesFor(b: AiRequest, today: string): Anthropic.Beta.BetaMessagePar
         : b.text ? `What I had: ${b.text}` : "What's in this photo? Log it." },
     ] }];
     case "supplement": return [{ role: "user", content: `I just added: ${b.name}${b.dose ? ` (${b.dose})` : ""}.\n\nAbout me and my stack:\n${b.context}` }];
-    case "chat": return b.messages.map((m) => ({ role: m.role, content: m.text }));
+    // this message's tool rounds go after it exactly as they came (PLAN 67)
+    case "chat": return [...b.messages.map((m) => ({ role: m.role, content: m.text })), ...((b.turn ?? []) as Anthropic.Beta.BetaMessageParam[])];
     case "questions": return [{ role: "user", content: `Today is ${today}.\n\nMy data:\n${b.context}\n\nAlready asked: ${b.asked.join(" | ") || "nothing yet"}` }];
     case "digest": return [{ role: "user", content: `Today is ${today}. Write my morning read.\n\nMy data:\n${b.context}\n\nAlready shown: ${b.shown.join(" | ") || "nothing yet"}` }];
     case "night": return [{ role: "user", content: `Read back my day, ${b.day}.\n\nMy data:\n${b.context}` }];
@@ -90,8 +92,8 @@ export async function callModel(b: AiRequest, choice: ModelChoice, apiKey: strin
   const task: Task = b.task, m = MODELS[choice];
   // A typed name the food lists didn't know may be looked up on the web (two searches at most); search and
   // structured output don't mix, so that answer is parsed from text like the research tasks'.
-  const lookup = b.task === "describe" && !!b.lookup && !!b.text && !b.image;
-  const web = task === "supplement" || task === "digest" || lookup;
+  const lookup = b.task === "describe" && !!b.lookup && !!b.text && !b.image, chat = b.task === "chat";
+  const web = task === "supplement" || task === "digest" || lookup || chat;
   const schema = web ? undefined : (SCHEMAS as Record<string, unknown>)[task];
   const client = new Anthropic({ apiKey, fetch: deps.fetch, maxRetries: 1 });
   const effort = TIER[task] === "research" ? "medium" : "low";
@@ -101,6 +103,9 @@ export async function callModel(b: AiRequest, choice: ModelChoice, apiKey: strin
   let messages = messagesFor(b, today);
   const usage = { input_tokens: 0, output_tokens: 0, cache_read_input_tokens: 0, cache_creation_input_tokens: 0, server_tool_use: { web_search_requests: 0 } };
   let res: Anthropic.Beta.BetaMessage | null = null;
+  // The chat's own tools (the app runs them) and web search for outside facts; the last round may not call any.
+  const tools = chat ? [...CHAT_TOOLS.map((t) => ({ ...t, strict: true })), { type: m.web, name: "web_search" as const, max_uses: 3 }] : web ? [{ type: m.web, name: "web_search" as const, max_uses: lookup ? 2 : 4 }] : null;
+  const paused: ChatTurn[] = [];
   // A web-search turn can pause; continue it (at most 3 times) by sending the partial answer back.
   for (let turn = 0; turn < 4; turn++) {
     res = await client.beta.messages.create({
@@ -110,7 +115,8 @@ export async function callModel(b: AiRequest, choice: ModelChoice, apiKey: strin
       messages,
       ...(m.thinking ? { thinking: { type: "adaptive" as const } } : {}),
       output_config: { ...(m.thinking ? { effort } : {}), ...(schema ? { format: { type: "json_schema" as const, schema: schema as Record<string, unknown> } } : {}) },
-      ...(web ? { tools: [{ type: m.web, name: "web_search" as const, max_uses: lookup ? 2 : 4 }] } : {}),
+      ...(tools ? { tools } : {}),
+      ...(chat && b.final ? { tool_choice: { type: "none" as const } } : {}),
       ...(choice !== "haiku" ? { betas: ["server-side-fallback-2026-07-01"], fallbacks: "default" as const } : {}),
     } as Anthropic.Beta.MessageCreateParamsNonStreaming);
     usage.input_tokens += res.usage.input_tokens; usage.output_tokens += res.usage.output_tokens;
@@ -118,9 +124,16 @@ export async function callModel(b: AiRequest, choice: ModelChoice, apiKey: strin
     usage.server_tool_use.web_search_requests += res.usage.server_tool_use?.web_search_requests ?? 0;
     if (res.stop_reason !== "pause_turn") break;
     messages = [...messages, { role: "assistant", content: res.content }];
+    paused.push({ role: "assistant", content: res.content });
   }
   if (!res) throw new Error("no answer");
   if (res.stop_reason === "refusal") return { refused: true as const, usage };
+  if (chat) {
+    // tools to run: the calls, and every assistant message this call added, to be sent back as they were
+    const calls = res.stop_reason === "tool_use" ? res.content.flatMap((c) => (c.type === "tool_use" ? [{ id: c.id, name: c.name, input: c.input as Record<string, unknown> }] : [])) : [];
+    const answer = calls.length ? checkChat({ reply: "", remember: [], calls: calls as never, turn: [...paused, { role: "assistant", content: res.content }] }) : checkChat({ reply: textOf(res.content), remember: [] });
+    return { refused: false as const, answer, usage };
+  }
   const text = textOf(res.content);
   const raw = schema ? JSON.parse(text) : jsonFrom(text);
   const answer = task === "describe" ? checkDescribe(raw) : task === "supplement" ? checkSupplement(raw) : task === "chat" ? checkChat(raw) : task === "questions" ? checkQuestions(raw) : task === "night" ? checkNight(raw) : task === "review" ? checkReview(raw) : checkDigest(raw);
@@ -146,14 +159,16 @@ export async function handleAi(req: Request, env: AiEnv, deps: Deps = { fetch: (
   if (problem) return json({ error: problem }, 400);
 
   const usage = await readUsage(user, env, deps, today);
-  if (usage.calls >= cap) return json({ error: "cap", message: `Daily AI limit reached (${cap}). It resets at midnight.`, usage }, 429);
+  // a chat message's tool rounds count as the one call it is (priced and logged each)
+  const more = body.task === "chat" && !!body.turn?.length;
+  if (usage.calls >= cap && !more) return json({ error: "cap", message: `Daily AI limit reached (${cap}). It resets at midnight.`, usage }, 429);
 
   // yours for the task's tier; past the month's budget, the cheapest until the 1st
   const choice: ModelChoice = modelFor(body.task, body.models, usage.monthUsd, budget);
   try {
     const out = await callModel(body, choice, env.ANTHROPIC_API_KEY, deps, today);
     const cost = costUsd(choice, out.usage);
-    const next: UsageDoc = { ...usage, calls: usage.calls + 1, dayUsd: usage.dayUsd + cost, monthUsd: usage.monthUsd + cost, byModel: { ...usage.byModel, [choice]: (usage.byModel[choice] ?? 0) + cost },
+    const next: UsageDoc = { ...usage, calls: usage.calls + (more ? 0 : 1), dayUsd: usage.dayUsd + cost, monthUsd: usage.monthUsd + cost, byModel: { ...usage.byModel, [choice]: (usage.byModel[choice] ?? 0) + cost },
       recent: [...(usage.recent ?? []), logOf(deps.now(), body.task, choice, out.usage, cost)].slice(-RECENT_CALLS) };
     await writeUsage(user, env, deps, next);
     if (out.refused) return json({ error: "refused", message: "The AI declined this one.", usage: next, costUsd: cost }, 422);

@@ -17,8 +17,8 @@ function world(answers: unknown[], opts: { usage?: object } = {}) {
     if (url.hostname === "api.anthropic.com") {
       const body = (await req.json()) as Record<string, unknown>;
       sent.push({ url: req.url, body, headers: Object.fromEntries(req.headers) });
-      const a = answers.shift() as { text: string; stop?: string; searches?: number; blocks?: string[] };
-      return Response.json({ id: "msg_1", type: "message", role: "assistant", model: body.model, content: (a.blocks ?? [a.text]).map((text) => ({ type: "text", text })), stop_reason: a.stop ?? "end_turn", stop_sequence: null,
+      const a = answers.shift() as { text: string; stop?: string; searches?: number; blocks?: string[]; content?: unknown[] };
+      return Response.json({ id: "msg_1", type: "message", role: "assistant", model: body.model, content: a.content ?? (a.blocks ?? [a.text]).map((text) => ({ type: "text", text })), stop_reason: a.stop ?? "end_turn", stop_sequence: null,
         usage: { input_tokens: 1000, output_tokens: 500, cache_read_input_tokens: 0, cache_creation_input_tokens: 0, server_tool_use: { web_search_requests: a.searches ?? 0 } } });
     }
     throw new Error(`unexpected ${req.url}`);
@@ -31,6 +31,37 @@ const post = (body: unknown, token = "good") => new Request("https://app/api/ai"
 const coffee = { items: [{ kind: "drink", name: "Long coffee, large", amount: "1 large cup", drink: { ml: 300, caffeineMg: 150, alcoholG: 0, kcal: 3 }, confidence: "medium", note: "assumed a double shot" }] };
 
 describe("/api/ai", () => {
+  it("chat looks things up (PLAN 67): the app's tools offered, a tool round handed back, the results continued, one call counted", async () => {
+    const think = { type: "thinking", thinking: "", signature: "sig-1" };
+    const use = { type: "tool_use", id: "tu_1", name: "day", input: { date: "2026-10-14" } };
+    const w = world([{ text: "", stop: "tool_use", content: [think, { type: "text", text: "Let me look." }, use] }, { text: "You slept **7 h** that night." }], { usage: { day: "2026-10-01", calls: 49, dayUsd: 1, month: "2026-10", monthUsd: 3, byModel: {} } });
+    const msgs = [{ role: "user", text: "how did I sleep on Wednesday?" }];
+    const r1 = (await (await handleAi(post({ task: "chat", messages: msgs, context: "ctx" }), env, w.deps)).json()) as { answer: { reply: string; calls: { id: string; name: string; input: unknown }[]; turn: { role: string; content: unknown[] }[] }; usage: { calls: number } };
+    expect(r1.answer.calls).toEqual([{ id: "tu_1", name: "day", input: { date: "2026-10-14" } }]);
+    expect(r1.answer.turn).toEqual([{ role: "assistant", content: [think, { type: "text", text: "Let me look." }, use] }]); // exactly as it came, thinking included
+    expect(r1.usage.calls).toBe(50);
+    const sent = w.sent[0].body as { tools: { name: string; type?: string; strict?: boolean; max_uses?: number }[]; output_config: { format?: unknown }; tool_choice?: unknown };
+    expect(sent.tools.map((t) => t.name)).toEqual(["day", "series", "find", "show_chart", "remember", "web_search"]);
+    expect(sent.tools.slice(0, 5).every((t) => t.strict === true)).toBe(true);
+    expect(sent.tools[5]).toMatchObject({ type: "web_search_20260209", max_uses: 3 });
+    expect(sent.output_config.format).toBeUndefined(); // replies are Markdown now, not JSON
+    expect(sent.tool_choice).toBeUndefined();
+    // the app ran the tool; the same message continues — past the daily 50 it still goes through, and isn't counted again
+    const turn = [...r1.answer.turn, { role: "user", content: [{ type: "tool_result", tool_use_id: "tu_1", content: "Wed 14 Oct: asleep 7 h 02" }] }];
+    const res2 = await handleAi(post({ task: "chat", messages: msgs, context: "ctx", turn, final: true }), env, w.deps);
+    const r2 = (await res2.json()) as { answer: { reply: string; calls?: unknown }; usage: { calls: number; recent: unknown[] } };
+    expect(res2.status).toBe(200);
+    expect(r2.answer).toEqual({ reply: "You slept **7 h** that night.", remember: [] });
+    expect(r2.usage.calls).toBe(50);
+    expect(r2.usage.recent).toHaveLength(2); // both priced and logged
+    const sent2 = w.sent[1].body as { messages: unknown[]; tool_choice?: unknown; system: { text: string }[] };
+    expect(sent2.messages).toEqual([{ role: "user", content: "how did I sleep on Wednesday?" }, ...turn]);
+    expect(sent2.tool_choice).toEqual({ type: "none" }); // the last round answers with what it has
+    expect(sent2.system).toEqual((w.sent[0].body as { system: unknown }).system); // byte for byte: cached, and the thinking stays valid
+    // a new message at the limit is refused
+    expect((await handleAi(post({ task: "chat", messages: msgs, context: "ctx" }), env, w.deps)).status).toBe(429);
+  });
+
   it("review: the week read on the research model, the enforced shape, a bad request refused (PLAN 65)", async () => {
     const ans = { title: "Better mood, short on protein", summary: "Mood **7.5** against a usual 6.", notices: [{ title: "Mood up", text: "7.5 all week.", measure: "mood" }, { title: "", text: "dropped", measure: "" }], next: [{ what: "Protein at lunch", why: "0 of 7 days at goal" }], remember: [] };
     const w = world([{ text: JSON.stringify(ans) }]);

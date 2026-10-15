@@ -947,6 +947,19 @@ email get Dev tools (`#dev`): raw entry editor, generate/remove sample, wipe acc
    - Phases: 1 the loop and day / series / find / show_chart / remember + web search; 2 `compare` (days with vs without
      something, with its 95% range — the grids' engine) and the band's nights, heart and training sessions; 3 the
      summary slimmed once tools carry the detail (cheaper chats).
+   - **Phase 1 done 15 Oct.** lib/ai/chattools (day, series, find, show_chart, remember — glanceDays, the day's timeline,
+     the band's mornings, steps and burn), the chat contract (CHAT_TOOLS strict, replies in Markdown, `remember` a tool
+     now), the Worker relays a round (calls + the AI's turns as sent, paused web-search turns included; `final` → no more
+     tools; a round past the first isn't counted toward the 50 a day), Ai.tsx runs the calls and loops (≤ 6 rounds, the
+     context built once per message), components/ChatChart draws a chart from the app's data under the reply (today's
+     partway value hollow, out of the average), "looked at your …" under a reply. Checked: chattools.test (known answers:
+     a day's averages, band and order; a 4-day mood average 6.5; today's calories shown "so far" and left out; spans
+     over 120 days, reversed, unknown measure refused; find newest first, accents ignored; a today-only chart), worker
+     ai.test (tools offered, no enforced shape, the round handed back exactly, the continuation with `final` → no
+     tools, the system byte-identical, one call counted — fails if every round counts), e2e/ai.cjs (two rounds: the
+     AI's turn sent back untouched, the app's three answers in one message, the chart under the reply, memory saved).
+     Found on the way: Insights / At a glance / the week read count food calories only, Today counts drinks too — a
+     beer night reads lower in Insights. Not checked: a real AI's tool use (first chat after the deploy).
 
 ---
 
