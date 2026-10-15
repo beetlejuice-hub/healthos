@@ -5,7 +5,7 @@
  */
 
 import type { Notice } from "../inbox";
-import type { LiftTrend, Session, ThisWeek } from "../liftstrength";
+import type { LiftTrend, MuscleStrength, Session, ThisWeek } from "../liftstrength";
 import type { Readiness } from "../readiness";
 
 const r1 = (v: number) => Math.round(v * 10) / 10;
@@ -22,12 +22,13 @@ export function todayLines(r: Readiness | null): string[] {
 }
 
 /** This week against the 4 before it, each main lift's estimated 1-rep max and its trend, and the last sessions. */
-export function trainingLines(ss: Session[], lifts: LiftTrend[], week: ThisWeek, last = 6): string[] {
+export function trainingLines(ss: Session[], lifts: LiftTrend[], week: ThisWeek, last = 6, muscles: MuscleStrength[] = []): string[] {
   if (!ss.length) return [];
   const w = `This week: ${week.sessions} session${week.sessions === 1 ? "" : "s"}${week.usualSessions != null ? ` (usual ${r1(week.usualSessions)})` : ""}, ${week.workingSets} working sets${week.usualSets != null ? ` (usual ${Math.round(week.usualSets)})` : ""}${week.pct != null ? `, strength ${week.pct >= 0 ? "+" : ""}${r1(week.pct)} % against your trend` : ""}.`;
   const L = lifts.map((t) => { const p = t.pts[t.pts.length - 1]; return `${t.exercise}: best set ${p.kg} kg × ${p.reps} (≈ ${Math.round(p.e1rm)} kg 1-rep max), ${t.gain >= 0 ? "+" : ""}${r1(t.gain)} kg over ${Math.round(t.days)} days`; });
   const S = ss.slice(-last).map((s) => `${ymd(s.startedAt)} ${s.template}: ${s.workingSets} working sets, ${Math.round(s.volume).toLocaleString("en-GB")} kg${s.pct != null ? `, ${s.pct >= 0 ? "+" : ""}${r1(s.pct)} % vs trend` : ""}`);
-  return [w, ...L, ...(S.length ? ["Last sessions:", ...S] : [])];
+  const M = muscles.map((m) => `${m.muscle} ${m.perWeek >= 0 ? "+" : ""}${r1(m.perWeek)} % a week (90% ${r1(m.lo)} to ${r1(m.hi)}: ${m.state === "unclear" ? "not clear yet" : m.state}; ${m.lifts.map((l) => l.exercise).join(", ")})`);
+  return [w, ...L, ...(M.length ? [`Strength per muscle, last 8 weeks: ${M.join("; ")}.`] : []), ...(S.length ? ["Last sessions:", ...S] : [])];
 }
 
 /** The grids' clear findings the app sent you, newest last, with your reply when there is one. */

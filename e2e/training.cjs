@@ -48,6 +48,13 @@ function world() {
     await pg.evaluate((w) => { const k = 'healthos.v1:u-test', s = JSON.parse(localStorage.getItem(k) || '{}'); s.entries = w.entries; s.workouts = w.workouts; s.templates = w.templates; localStorage.setItem(k, JSON.stringify(s)); }, w);
     await pg.goto(APP + '#insights/training'); await pg.reload(); await pg.waitForSelector('.tp', { timeout: 15000 });
     const tag = vw < 500 ? 'phone' : 'laptop';
+    // PLAN 82 (owner, 13 Oct: "a muscle group strength average taking in data from diff exercises that target same muscle")
+    const mstr = await pg.locator('.tp-srow').evaluateAll((els) => els.map((e) => [e.dataset.muscle, e.dataset.state, e.querySelector('b').textContent.replace(/\s+/g, ' ').trim(), e.querySelector('small').textContent, e.querySelector('.tp-strack').title]));
+    // every lift gains 0.6 % a week: each muscle is either "stronger" or honestly "not clear yet" — never holding or dropping
+    check(`${tag}: strength per muscle — the planted gain read as stronger or not clear yet, never holding or dropping (${mstr.map((m) => `${m[0]} ${m[2]}`).join(' · ')})`, mstr.length === 5 && mstr.every(([, st]) => st === 'stronger' || st === 'unclear') && mstr.filter(([, st]) => st === 'stronger').length >= 3);
+    check(`${tag}: each range holds the planted +0.6 (${mstr.map((m) => m[4].replace('90% range ', '')).join(' · ')})`, mstr.every((m) => { const [lo, hi] = m[4].match(/([+−±][\d.]+) to ([+−±][\d.]+)/).slice(1).map((x) => +x.replace('−', '-').replace('±', '')); return lo <= 0.6 && hi >= 0.55; }));
+    check(`${tag}: back from both its lifts, chest from bench only (triceps and shoulders' half credit left out)`, mstr.some(([m, , , l]) => m === 'Back' && /Barbell row/.test(l) && /Lat pulldown/.test(l)) && mstr.some(([m, , , l]) => m === 'Chest' && l === 'Bench press') && !mstr.some(([m]) => m === 'Triceps' || m === 'Biceps' || m === 'Glutes'));
+    await pg.locator('.tp-mstr').screenshot({ path: OUT + `training-muscle-strength-${tag}.png` });
     if (vw < 500) {
       const tile = async (k) => (await pg.locator(`.tp-tile[data-k="${k}"]`).innerText()).replace(/\s+/g, ' ');
       check(`this week (Mon–Wed, 2 sessions): "${await tile('Sessions')}", "${await tile('Working sets')}"`, /^SESSIONS 2 usual 3 a week$/i.test(await tile('Sessions')) && /^WORKING SETS 12 usual 18 a week$/i.test(await tile('Working sets')));

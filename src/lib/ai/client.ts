@@ -6,7 +6,7 @@ import { MONTHLY_USD } from "./tasks";
 import { gridLines, todayLines, trainingLines } from "./sections";
 import { readiness } from "../readiness";
 import { nights } from "../sleep";
-import { mainLifts, sessions, thisWeek } from "../liftstrength";
+import { mainLifts, muscleStrength, sessions, thisWeek } from "../liftstrength";
 import type { LoggedSet } from "../training";
 import type { EntryOf } from "../types";
 
@@ -83,7 +83,7 @@ export function contextNow(state: State = getState(), now = Date.now()): string 
   const ready = band ? readiness(today, nights(band.sleep, band.hr, band.rhr, band.hrv), rating, sets, now, { hrv: band.hrv, rhr: band.rhr }) : null;
   const ss = sessions(state.workouts, sets);
   return buildContext({ state, now, days, findings: report.found, patterns, weight: t ? { kg: t.nowKg, perWeek: t.perDay * 7 } : null, nights: nightsSeen,
-    today: todayLines(ready), training: trainingLines(ss, mainLifts(sets), thisWeek(ss, now)), grids: gridLines(state.ai.inbox ?? []) });
+    today: todayLines(ready), training: trainingLines(ss, mainLifts(sets), thisWeek(ss, now), 6, muscleStrength(sets, now)), grids: gridLines(state.ai.inbox ?? []) });
 }
 
 /** The nightly read-back's context: everything above, plus that day in order with your notes. */

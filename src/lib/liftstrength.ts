@@ -88,3 +88,45 @@ export function setsPerMuscleWeek(sets: LoggedSet[], now: number): { muscle: Mus
   const usual = count(from - 28 * DAY, from), cur = count(from, now + 1);
   return MUSCLE_GROUPS.map((m) => ({ muscle: m, usual: usual[m] / 4, now: cur[m] })).filter((x) => x.usual > 0 || x.now > 0);
 }
+
+/**
+ * Strength per muscle (PLAN 82; owner, 13 Oct: "a muscle group strength average taking in data from diff exercises that
+ * target same muscle"). Each lift's trend over the last 8 weeks as % a week of its own level (so a 30 kg dumbbell press and
+ * a 100 kg bench count alike), averaged over the lifts that mainly work the muscle, each weighted by its sessions. What
+ * only helps (triceps on bench) is left out: a muscle is judged by its own lifts. With a 90% range from the lines' scatter:
+ * once-a-week lifts in 2.5 kg steps give a handful of noisy points, and the page says "not clear yet" rather than
+ * "holding" or a trend the data can't back (found on the first fake 12 weeks: a squat gaining 0.6 % a week read as
+ * holding). Pure.
+ */
+export const MUSCLE_DAYS = 56;
+/** Inside ±this % a week, the whole range, is "holding". */
+export const HOLDING = 0.25;
+export type MuscleState = "stronger" | "dropping" | "holding" | "unclear";
+export type MuscleStrength = {
+  muscle: MuscleGroup; perWeek: number; lo: number; hi: number; state: MuscleState;
+  lifts: { exercise: string; perWeek: number; sessions: number }[]; sessions: number;
+};
+
+export function muscleStrength(sets: LoggedSet[], now: number, days = MUSCLE_DAYS): MuscleStrength[] {
+  const recent = sets.filter((s) => s.at <= now && s.at > now - days * DAY);
+  const rates = new Map<string, { perWeek: number; se: number; sessions: number }>();
+  for (const ex of new Set(working(recent).map((s) => s.exercise))) {
+    const t = liftTrend(recent, ex);
+    if (!t) continue;
+    const n = t.pts.length, level = t.pts.reduce((a, p) => a + p.e1rm, 0) / n;
+    const xs = t.pts.map((p) => (p.at - t.at0) / DAY), mx = xs.reduce((a, b) => a + b, 0) / n;
+    const sxx = xs.reduce((a, x) => a + (x - mx) ** 2, 0), rss = t.pts.reduce((a, p) => a + (p.e1rm - t.line(p.at)) ** 2, 0);
+    const pct = (perDay: number) => ((perDay * 7) / level) * 100;
+    rates.set(ex, { perWeek: pct(t.slopePerDay), se: sxx > 0 ? pct(Math.sqrt(rss / (n - 2) / sxx)) : Infinity, sessions: n });
+  }
+  return MUSCLE_GROUPS.flatMap((m) => {
+    const mine = [...rates].filter(([ex]) => (MUSCLES[ex]?.[m] ?? 0) >= 1).sort((a, b) => b[1].sessions - a[1].sessions);
+    if (!mine.length) return [];
+    const n = mine.reduce((a, [, r]) => a + r.sessions, 0);
+    const perWeek = mine.reduce((a, [, r]) => a + r.perWeek * r.sessions, 0) / n;
+    const se = Math.sqrt(mine.reduce((a, [, r]) => a + (r.se * r.sessions) ** 2, 0)) / n;
+    const lo = perWeek - 1.645 * se, hi = perWeek + 1.645 * se;
+    const state: MuscleState = lo > 0 ? "stronger" : hi < 0 ? "dropping" : lo >= -HOLDING && hi <= HOLDING ? "holding" : "unclear";
+    return [{ muscle: m, perWeek, lo, hi, state, lifts: mine.map(([exercise, r]) => ({ exercise, perWeek: r.perWeek, sessions: r.sessions })), sessions: n }];
+  });
+}

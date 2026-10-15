@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { liftTrend, mainLifts, sessions, setsPerMuscleWeek, thisWeek, weekStart } from "./liftstrength";
+import { HOLDING, liftTrend, mainLifts, muscleStrength, sessions, setsPerMuscleWeek, thisWeek, weekStart } from "./liftstrength";
 import { rng } from "./bench";
 import type { LoggedSet } from "./training";
 
@@ -60,5 +60,57 @@ describe("Training A · your lifts (PLAN 64)", () => {
     const of = (m: string) => per.find((x) => x.muscle === m)!;
     expect(of("Chest").usual).toBe(9); expect(of("Triceps").usual).toBe(4.5); // bench 3 sets × 3 days; half for triceps
     expect(of("Chest").now).toBe(6);
+  });
+});
+
+describe("strength per muscle (PLAN 82)", () => {
+  /** 8 weeks, Mon/Thu: each lift's 5-rep best moving `rate` % a week from `base`, ±0.5 % noise. */
+  function lifts(spec: Record<string, [number, number]>, seed = 3, weeks = 8) {
+    const { g } = rng(seed), sets: LoggedSet[] = [], t0 = new Date(2026, 7, 17, 18).getTime();
+    for (let w = 0; w < weeks; w++) for (const dow of [0, 3]) {
+      const at = t0 + (w * 7 + dow) * D, id = `m${w}-${dow}`;
+      for (const [ex, [base, rate]] of Object.entries(spec)) {
+        const e1 = base * (1 + (rate / 100) * (w + dow / 7)) * (1 + (g() * 0.5) / 100);
+        sets.push({ at, workoutId: id, exercise: ex, kg: e1 / (1 + 5 / 30), reps: 5 });
+      }
+    }
+    return { sets, now: t0 + (weeks * 7 - 1) * D };
+  }
+  const by = (r: ReturnType<typeof muscleStrength>) => Object.fromEntries(r.map((x) => [x.muscle, x]));
+
+  it("planted: bench +1 % a week and incline press +3 % → chest about +2 %, whatever their kilos", () => {
+    const w = lifts({ "Bench press": [100, 1], "Incline DB press": [30, 3], Squat: [140, 0], "Romanian deadlift": [120, -1.5] });
+    const m = by(muscleStrength(w.sets, w.now));
+    expect(m.Chest.perWeek).toBeGreaterThan(1.7); expect(m.Chest.perWeek).toBeLessThan(2.3);
+    expect(m.Chest.lifts.map((l) => l.exercise).sort()).toEqual(["Bench press", "Incline DB press"]);
+    expect(m.Chest.state).toBe("stronger");
+    expect(Math.abs(m.Quads.perWeek)).toBeLessThan(0.25); // flat squat, steady data: holding, not a trend
+    expect(m.Quads.state).toBe("holding");
+    expect(m.Hamstrings.perWeek).toBeLessThan(-1.2); expect(m.Hamstrings.perWeek).toBeGreaterThan(-1.8); // planted drop found
+    expect(m.Hamstrings.state).toBe("dropping");
+  });
+  it("only a muscle's own lifts: bench's half credit to triceps and shoulders doesn't make them a trend", () => {
+    const m = by(muscleStrength(lifts({ "Bench press": [100, 2] }).sets, lifts({ "Bench press": [100, 2] }).now));
+    expect(Object.keys(m)).toEqual(["Chest"]);
+  });
+  it("the lift trained more counts more: 2 sessions a week against 1", () => {
+    const a = lifts({ "Bench press": [100, 2] }), b = lifts({ Dips: [90, 0] });
+    const once = b.sets.filter((s) => s.workoutId.endsWith("-0")); // dips only on Mondays
+    const m = by(muscleStrength([...a.sets, ...once], a.now));
+    expect(m.Chest.perWeek).toBeGreaterThan(1.1); expect(m.Chest.perWeek).toBeLessThan(1.6); // (2·16 + 0·8) / 24 ≈ 1.33
+  });
+  it("noisy data says so: a flat lift once a week with ±3 % days is 'not clear yet', not 'holding'", () => {
+    const { g } = rng(9), sets: LoggedSet[] = [], t0 = new Date(2026, 7, 17, 18).getTime();
+    for (let w = 0; w < 8; w++) sets.push({ at: t0 + w * 7 * D, workoutId: `q${w}`, exercise: "Squat", kg: (140 * (1 + (g() * 3) / 100)) / (1 + 5 / 30), reps: 5 });
+    const [q] = muscleStrength(sets, t0 + 55 * D);
+    expect(q.state).toBe("unclear");
+    expect(q.lo).toBeLessThan(-HOLDING); expect(q.hi).toBeGreaterThan(HOLDING);
+  });
+  it("only the last 8 weeks, and a lift needs 3 sessions in them", () => {
+    const w = lifts({ "Bench press": [100, 2] }, 3, 20);
+    const m = by(muscleStrength(w.sets, w.now));
+    expect(m.Chest.sessions).toBe(16);
+    const two = lifts({ "Bench press": [100, 2] }, 3, 1); // 2 sessions
+    expect(muscleStrength(two.sets, two.now)).toEqual([]);
   });
 });

@@ -11,7 +11,7 @@ import { loadBandBefore, useBand } from "../lib/band-client";
 import { goesWith, nights, type Factor, type Outcome } from "../lib/sleep";
 import { CARBS_G, sessionFacts, sessionFactors, SESSION_OUTCOMES, SHORT_MIN, slopeTest, UNDER_KCAL, type SessionFacts } from "../lib/sessionfacts";
 import { GoesWith, type GridCopy } from "./Sleep";
-import { mainLifts, sessions, setsPerMuscleWeek, thisWeek, type LiftTrend, type Session } from "../lib/liftstrength";
+import { mainLifts, muscleStrength, sessions, setsPerMuscleWeek, thisWeek, type LiftTrend, type MuscleStrength, type Session } from "../lib/liftstrength";
 import { nextTemplate, suggestNext, type LoggedSet } from "../lib/training";
 import { clock, dayLabel } from "../lib/time";
 import type { EntryOf } from "../lib/types";
@@ -31,6 +31,7 @@ export function TrainingPage({ now }: { now: number }) {
   const lifts = useMemo(() => mainLifts(sets), [sets]);
   const week = useMemo(() => thisWeek(ss, now), [ss, now]);
   const muscles = useMemo(() => setsPerMuscleWeek(sets, now), [sets, now]);
+  const strength = useMemo(() => muscleStrength(sets, now), [sets, now]);
   const feels = useMemo(() => entries.filter((e): e is EntryOf<"feel"> => e.kind === "feel" && (e.energy != null || e.mood != null)), [entries]);
   const [ref, w] = useWidth<HTMLDivElement>();
   const wide = w >= 900;
@@ -71,6 +72,7 @@ export function TrainingPage({ now }: { now: number }) {
         <Recent ss={ss} feels={feels} />
         {muscles.length > 0 && <Muscles rows={muscles} />}
       </div>
+      {strength.length > 0 && <MuscleStrengthRows rows={strength} />}
       <StrongSessions ss={ss} facts={facts} supplements={supplements} w={w} wide={wide} />
       <TrainingAfter ss={ss} ns={ns} entries={entries} hr={band?.hr ?? NO_HR} spans={spans} now={now} w={w} wide={wide} band={!!band} />
     </div>
@@ -144,6 +146,31 @@ function Muscles({ rows }: { rows: { muscle: string; usual: number; now: number 
         ))}
       </div>
       <p className="sl-note">Bar: your usual week. White tick: this week so far. Shaded: 10–20 working sets a week, what most programs aim for. Half a set for a muscle that only helps (triceps on bench).</p>
+    </section>
+  );
+}
+
+/** Strength per muscle (PLAN 82): each lift's trend as % a week, averaged over the lifts that mainly work it, with its range. */
+const STATE_WORD = { stronger: "a week", dropping: "a week", holding: "holding", unclear: "not clear yet" } as const;
+function MuscleStrengthRows({ rows }: { rows: MuscleStrength[] }) {
+  const max = 2, at = (v: number) => 50 + (Math.max(-max, Math.min(max, v)) / max) * 50;
+  return (
+    <section className="sl-p tp-mstr" aria-label="Strength per muscle, last 8 weeks">
+      <span className="cmp-k">Strength per muscle · last 8 weeks</span>
+      <div className="tp-mrows">
+        {rows.map((r) => (
+          <div key={r.muscle} className="tp-srow" data-muscle={r.muscle} data-state={r.state}>
+            <span>{r.muscle}<small>{r.lifts.map((l) => l.exercise).join(", ")}</small></span>
+            <span className="tp-strack" title={`90% range ${sgn(r.lo)} to ${sgn(r.hi)} % a week`}>
+              <i className="mid" />
+              <i className="range" style={{ left: `${at(r.lo)}%`, width: `${at(r.hi) - at(r.lo)}%` }} />
+              <i className="bar" style={{ left: `${Math.min(50, at(r.perWeek))}%`, width: `${Math.abs(at(r.perWeek) - 50)}%` }} />
+            </span>
+            <b>{sgn(r.perWeek)} %<small>{STATE_WORD[r.state]}</small></b>
+          </div>
+        ))}
+      </div>
+      <p className="sl-note">Each lift's trend as % a week of its own level, averaged over the lifts that mainly work the muscle — more sessions count more; what only helps (triceps on bench) is left out. The thin line is the 90% range: green when it's all above zero, red when all below, holding when it's all within ±0.25 %, otherwise not clear yet — a few more sessions will tell. On a cut, holding is a good result.</p>
     </section>
   );
 }

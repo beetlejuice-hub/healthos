@@ -980,8 +980,16 @@ below, in his words, grouped; A first (broken or wrong now), then the rest. Item
    counted), e2e/workoutsets.cjs, and the five workout suites unchanged.
 81. [ ] **More exercises, picked by muscle** — "Add more exercises and that i can choose when hitting a muscle- like i
    should do shoulder and i can choose between exercises and machine or dumbbell etc".
-82. [ ] **Strength per muscle group** — "Should also do a muscle group strength average taking in data from diff exercises
+82. [x] **Strength per muscle group** — "Should also do a muscle group strength average taking in data from diff exercises
    that target same muscle".
+   **Done 15 Oct** (owner: "ok"): Insights → Training, "Strength per muscle · last 8 weeks" (lib/liftstrength
+   muscleStrength). Each lift's 8-week trend as % a week of its own level, averaged over the lifts that mainly work the
+   muscle (weighted by sessions; half-credit muscles left out), with a 90% range from the lines' scatter: green when the
+   range is all above zero, red all below, "holding" all within ±0.25 %, else "not clear yet". The AI's Training section
+   gets the same line. Found on the way: without the range, a squat trained once a week in 2.5 kg steps (planted +0.6 %
+   a week) read as "holding" — now "not clear yet", and every range holds the planted gain. Checked: liftstrength.test
+   (planted bench +1 % and incline +3 % → chest ≈ +2 %; a drop found; flat steady → holding; flat noisy → not clear; the
+   lift trained more counts more; 8-week window), e2e/training.cjs (12 fake weeks, phone and laptop), screenshot.
 83. [x] **Calories burned** — "one would assume calories burned are already in the app…pls include". From the band (Google
    total / active calories) and workouts; into Today's energy balance.
    Research 13 Oct: Google gives `total-calories` (daily roll-up only, per civil day: POST …/total-calories/dataPoints:
