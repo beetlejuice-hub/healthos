@@ -865,6 +865,24 @@ email get Dev tools (`#dev`): raw entry editor, generate/remove sample, wipe acc
    make graphs or like interesting notices". The grids (Sleep, Heart, Mind) already test what goes with sleep and focus;
    next is one feed of what's new and clear across them. Digests: needs an AI key for the written part (owner, earlier:
    "no ai key yet") — asked.
+   Owner, 15 Oct: "do the digests". (claimed: main, 15 Oct — lib/review, ai/tasks review task, worker, components/Review,
+   Ai.tsx scheduling.) **Plan:**
+   - Why: the day has its read-back (21:00, "Your day, read back") and the morning read; nothing steps back to the week
+     or the month — where a cut, a habit or a training block actually shows.
+   - What: **end of day** stays the night read-back. **End of week**: Monday from 06:00, the Mon–Sun just gone (opened
+     later that week → then). **End of month**: the 1st from 06:00, the month just gone. Each lands in the AI tab with the
+     red badge: a title, a short summary, the week as a heat table (each measure, each day, against your usual — the
+     approved B colours), 2–4 notices each drawn with its own small chart, and 1–2 things to try next week / month.
+   - How: the app measures (lib/review, pure: the week's or month's numbers against your usual, training, weight against
+     the calorie goal's pace, strength per muscle); the AI writes (task "review", Opus, no web search, ≈ $0.15 a read,
+     ≈ $1 a month) and picks which measure each notice is about — the chart is drawn from the app's numbers, never the
+     AI's. Its lasting patterns go to memory like the night read's.
+   - Tested: review.test (when each is due — Monday 05:59 / 06:00, catch-up later in the week, done once, the 1st, a
+     Monday the 1st gets both, midnight; the week's numbers on a planted week; a complete Sunday counts), worker ai.test
+     (validated, schema, model), e2e (a Monday: the card, its heat table, a notice's chart, the badge, asked once).
+   - Phases: 1 the week read; 2 the month read (weeks as columns, weight and strength over the month); 3 if wanted, a
+     "this week so far" on Sunday evening.
+   - Open (defaults taken): Monday morning rather than Sunday night (Sunday's sleep and weigh-in count).
 66. [x] **Steps from the band** (9 Oct, owner: "go" — worker/band.ts, lib/band.ts `readSteps`, lib/steps.ts, lib/heart.ts
    `whyRaised`, lib/sleep.ts + lib/mind.ts rows, components/Heart.tsx, useNights.ts, MindPage.tsx). Owner: "I dont see it
    tracking daily steps … wondering if the data is valuable for us like more walking equals better sleep at night or better
