@@ -14,7 +14,7 @@ import { addDays, localDay } from "../lib/time";
 import type { Supplement } from "../lib/types";
 import { InboxCard } from "./Inbox";
 import { ReviewCard } from "./Review";
-import { dueReviews, weekFacts, weekLines, type Due } from "../lib/review";
+import { dueReviews, monthFacts, monthLines, weekFacts, weekLines, type Due } from "../lib/review";
 import { Md } from "./Md";
 
 const usd = (x: number) => (x < 0.1 ? `$${x.toFixed(3)}` : `$${x.toFixed(2)}`);
@@ -57,21 +57,23 @@ async function makeNight(day: string, force = false) {
 }
 
 /**
- * The week read (PLAN 65): the app measures the week, the AI writes it up; both are kept so the card draws the app's
- * numbers. Lasting patterns go to memory like the night read's. The month read is phase 2.
+ * The week and month reads (PLAN 65): the app measures, the AI writes it up; both are kept so the card draws the app's
+ * numbers. Lasting patterns go to memory like the night read's.
  */
 async function makeReview(d: Due) {
   const key = `review:${d.kind}:${d.key}`;
-  if (d.kind !== "week" || tried.has(key)) return;
+  if (tried.has(key)) return;
   tried.add(key);
-  const s = getState(), f = weekFacts(s.entries, s.workouts, s.settings, s.goals, d.from, d.to);
-  // a week with nothing in it gets no read (a new account, a week away)
+  const s = getState();
+  const f = d.kind === "week" ? weekFacts(s.entries, s.workouts, s.settings, s.goals, d.from, d.to) : monthFacts(s.entries, s.workouts, s.settings, s.goals, d.from, d.to);
+  // a week or month with nothing in it gets no read (a new account, time away)
   if (!f.rows.some((x) => x.value != null) && !f.training.sessions) return;
-  const r = await askAi({ task: "review", kind: d.kind, from: d.from, to: d.to, context: `${contextNow()}\n${weekLines(f).join("\n")}` });
+  const lines = "cols" in f ? monthLines(f) : weekLines(f), cols = "cols" in f ? f.cols : undefined;
+  const r = await askAi({ task: "review", kind: d.kind, from: d.from, to: d.to, context: `${contextNow()}\n${lines.join("\n")}` });
   if (!r.ok) return;
   const at = Date.now();
   act.setAi((a) => ({
-    reviews: [...(a.reviews ?? []).filter((x) => !(x.kind === d.kind && x.key === d.key)), { ...d, ...r.answer, at, rows: f.rows }].slice(-12),
+    reviews: [...(a.reviews ?? []).filter((x) => !(x.kind === d.kind && x.key === d.key)), { ...d, ...r.answer, at, rows: f.rows, ...(cols ? { cols } : {}) }].slice(-12),
     memory: [...a.memory, ...r.answer.remember.filter((x) => !a.memory.some((m) => m.text.toLowerCase() === x.toLowerCase())).map((x) => ({ id: newId(), text: x, at }))].slice(-60),
   }));
 }
@@ -116,7 +118,7 @@ export function useAiAuto(userId: string | undefined) {
       const target = h >= 20 ? addDays(today, 1) : h >= 5 ? today : null;
       if (target && ai.digest?.day !== target && !(target === today && ai.digest?.day === addDays(today, 1))) void makeDigest(target);
       if (h >= 10 && h < 22 && ai.questions?.day !== today) void makeQuestions(today);
-      // The week just gone, from Monday 06:00 (PLAN 65).
+      // The week just gone from Monday 06:00, the month just gone from the 1st (PLAN 65).
       for (const d of dueReviews(now.getTime(), (ai.reviews ?? []).map((r) => `${r.kind}:${r.key}`))) void makeReview(d);
       // Your day, read back: tonight from 21:00; or next morning if the app wasn't opened that evening.
       const yesterday = addDays(today, -1);

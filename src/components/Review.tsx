@@ -6,7 +6,7 @@
 
 import type { AiState } from "../lib/store";
 import type { ReviewRow } from "../lib/review";
-import { span } from "../lib/review";
+import { monthName, span } from "../lib/review";
 import { shadeAttrs } from "../lib/shade";
 import { Md } from "./Md";
 
@@ -21,19 +21,20 @@ const toneOf = (r: ReviewRow) => (r.state !== "hi" && r.state !== "lo" ? null : 
 
 export function ReviewCard({ r, first }: { r: Review; first?: boolean }) {
   const byKey = new Map(r.rows.map((x) => [x.k, x]));
+  const cols = r.cols ?? DAYS, when = r.kind === "month" ? monthName(r.from) : span(r.from, r.to);
   return (
-    <section className="msg byapp review" aria-label={`Your ${r.kind}, ${span(r.from, r.to)}`} data-review={`${r.kind}:${r.key}`} data-new={first || undefined}>
-      <small className="from">Your {r.kind} · {span(r.from, r.to)}</small>
+    <section className="msg byapp review" aria-label={`Your ${r.kind}, ${when}`} data-review={`${r.kind}:${r.key}`} data-kind={r.kind} data-new={first || undefined}>
+      <small className="from">Your {r.kind} · {when}</small>
       <h3 className="rv-title">{r.title}</h3>
       <Md text={r.summary} />
-      {r.rows.length > 0 && <WeekHeat rows={r.rows.filter((x) => !(x.days.every((v) => !v) && !x.value && !x.usual))} />}
+      {r.rows.length > 0 && <WeekHeat rows={r.rows.filter((x) => !(x.days.every((v) => !v) && !x.value && !x.usual))} cols={cols} kind={r.kind} />}
       {r.notices.map((n, i) => {
         const row = byKey.get(n.measure as ReviewRow["k"]);
         return (
           <div key={i} className="rv-n">
             <b>{n.title}</b>
             <p>{n.text}</p>
-            {row && <DayBars r={row} />}
+            {row && <DayBars r={row} cols={cols} />}
           </div>
         );
       })}
@@ -42,11 +43,11 @@ export function ReviewCard({ r, first }: { r: Review; first?: boolean }) {
   );
 }
 
-/** Each measure, each day, shaded against a usual day; the week against your usual week, with its arrow. */
-function WeekHeat({ rows }: { rows: ReviewRow[] }) {
+/** Each measure, each day (or each week of the month), shaded against your usual; the whole against your usual week, with its arrow. */
+function WeekHeat({ rows, cols, kind }: { rows: ReviewRow[]; cols: string[]; kind: Review["kind"] }) {
   return (
-    <table className="rv-heat" aria-label="The week, each day against your usual">
-      <thead><tr><th />{DAYS.map((d, i) => <th key={i}>{d}</th>)}<th>week</th></tr></thead>
+    <table className="rv-heat" data-kind={kind} aria-label={kind === "week" ? "The week, each day against your usual" : "The month, each week against your usual week"}>
+      <thead><tr><th />{cols.map((d, i) => <th key={i}>{d}</th>)}<th>{kind}</th></tr></thead>
       <tbody>
         {rows.map((r) => {
           const tone = toneOf(r);
@@ -63,21 +64,21 @@ function WeekHeat({ rows }: { rows: ReviewRow[] }) {
   );
 }
 
-/** A notice's chart: the week's days as dots on a line against a usual day (the band), coloured the way the heat table is. */
-function DayBars({ r }: { r: ReviewRow }) {
+/** A notice's chart: the week's days (or the month's weeks) as dots on a line against your usual (the band), coloured the way the heat table is. */
+function DayBars({ r, cols }: { r: ReviewRow; cols: string[] }) {
   const W = 280, H = 70, top = 8, base = 50, have = r.days.filter((v): v is number => v != null);
   const lo = Math.min(...have, r.lo ?? Infinity), hi = Math.max(...have, r.hi ?? -Infinity), pad = Math.max((hi - lo) * 0.15, r.unit === "/10" ? 0.5 : 1);
-  const a = lo - pad, b = hi + pad, Y = (v: number) => base - ((v - a) / (b - a)) * (base - top), cw = W / 7, X = (i: number) => i * cw + cw / 2;
+  const a = lo - pad, b = hi + pad, Y = (v: number) => base - ((v - a) / (b - a)) * (base - top), cw = W / cols.length, X = (i: number) => i * cw + cw / 2;
   let line = "", pen = false;
   r.days.forEach((v, i) => { if (v == null) { pen = false; return; } line += `${pen ? "L" : "M"}${X(i).toFixed(1)} ${Y(v).toFixed(1)}`; pen = true; });
   return (
-    <svg className="rv-bars" width={W} height={H} viewBox={`0 0 ${W} ${H}`} role="img" aria-label={`${r.name} each day of the week${r.lo != null ? `, against a usual day of ${full(r, r.lo)}–${full(r, r.hi!)}` : ""}`}>
+    <svg className="rv-bars" width={W} height={H} viewBox={`0 0 ${W} ${H}`} role="img" aria-label={`${r.name} ${cols.length === 7 ? "each day of the week" : "each week of the month"}${r.lo != null ? `, against your usual ${full(r, r.lo)}–${full(r, r.hi!)}` : ""}`}>
       {r.lo != null && r.hi != null && <><rect x={0} y={Y(r.hi)} width={W} height={Math.max(1, Y(r.lo) - Y(r.hi))} className="rv-usual" />{Y(r.lo) - Y(r.hi) >= 7 && <text x={W - 3} y={Y(r.lo) - 3} textAnchor="end" className="rv-ul">usual</text>}</>}
       <path d={line} className="rv-line" />
       {r.days.map((v, i) => (
         <g key={i}>
-          {v != null && <circle cx={X(i)} cy={Y(v)} r={4.5} className="rv-dot" data-tone={r.shades[i].lvl ? r.shades[i].tone! : undefined}><title>{`${["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"][i]}: ${full(r, v)}`}</title></circle>}
-          <text x={X(i)} y={H - 4} textAnchor="middle">{DAYS[i]}</text>
+          {v != null && <circle cx={X(i)} cy={Y(v)} r={4.5} className="rv-dot" data-tone={r.shades[i].lvl ? r.shades[i].tone! : undefined}><title>{`${cols.length === 7 ? ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"][i] : cols[i]}: ${full(r, v)}`}</title></circle>}
+          <text x={X(i)} y={H - 4} textAnchor="middle">{cols[i]}</text>
         </g>
       ))}
     </svg>

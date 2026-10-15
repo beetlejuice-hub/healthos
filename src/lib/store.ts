@@ -29,7 +29,7 @@ export type AiState = {
   /** The nightly read-back of a day (optional: older synced docs don't have it). */
   night?: (NightAnswer & { day: string; at: number }) | null;
   /** The week and month reads (PLAN 65), newest last: what the AI wrote, and the app's numbers it was written from (for the card's table and charts). */
-  reviews?: (Due & ReviewAnswer & { at: number; rows: ReviewRow[] })[];
+  reviews?: (Due & ReviewAnswer & { at: number; rows: ReviewRow[]; /** the columns: the week's days, or the month's weeks ("1–7") */ cols?: string[] })[];
   /** Titles already shown, so the morning read doesn't repeat itself. */
   shown: string[];
   /** Today's questions; daily ones are asked again every day without a new AI call. */

@@ -11,8 +11,12 @@ const REVIEW = { title: 'Better mood, protein a bit short', summary: 'Mood avera
   { title: 'Protein just under goal', text: '150 g a day against 160.', measure: 'protein' },
   { title: 'Steady training', text: 'Two sessions, as usual.', measure: '' },
 ], next: [{ what: 'A protein snack after training', why: 'closes the 10 g gap' }], remember: [] };
+const MONTH = { title: 'October: a lift in the second half', summary: 'Mood climbed from mid-month; weight down **2 kg**.', notices: [
+  { title: 'Mood from the 15th', text: 'The last two weeks above your usual week.', measure: 'mood' },
+  { title: 'Weight on pace', text: 'About 0.5 kg a week.', measure: 'weight' },
+], next: [{ what: 'Keep the Friday drinks to one', why: 'two a week every week' }], remember: [] };
 const ANSWERS = {
-  review: () => REVIEW,
+  review: (b) => (b.kind === 'month' ? MONTH : REVIEW),
   digest: () => ({ greeting: 'Morning!', items: [] }),
   questions: () => ({ questions: [] }),
   night: () => ({ summary: 'A day.', happened: [], notes: '', change: [], remember: [] }),
@@ -21,14 +25,14 @@ const ANSWERS = {
 (async () => {
   const b = await chromium.launch(); const errs = [];
   const check = (label, ok) => { console.log((ok ? 'PASS ' : 'FAIL ') + label); if (!ok) process.exitCode = 1; };
-  async function open(seed) {
+  async function open(seed, now = NOW) {
     tables.entries.clear(); tables.docs.clear(); calls.length = 0;
     const ctx = await b.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true });
     await ctx.route('https://ubfvaewfdbmecowoeuni.supabase.co/**', handle);
     await ctx.route('**/api/ai/usage**', (r) => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ usage: null, cap: 50, on: true }) }));
     await ctx.route('**/api/ai?**', (r) => { const body = r.request().postDataJSON(); calls.push(body); r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ answer: ANSWERS[body.task](body), usage: null, costUsd: 0.1, model: 'opus' }) }); });
     const pg = await ctx.newPage();
-    await pg.clock.install({ time: NOW });
+    await pg.clock.install({ time: now });
     pg.on('pageerror', (e) => errs.push('pageerror: ' + e.message));
     pg.on('console', (m) => { if (m.type() === 'error' && !/ERR_CERT|fonts|Failed to load resource/.test(m.text())) errs.push('console: ' + m.text()); });
     await pg.goto(APP);
@@ -37,13 +41,20 @@ const ANSWERS = {
     await pg.evaluate(([now, seed]) => {
       const k = 'healthos.v1:u-test', s = JSON.parse(localStorage.getItem(k) || '{}'), D = 864e5, e = [];
       s.goals = { kcal: 2400, p: 160, c: 300, f: 80 }; s.ai = { ...(s.ai || {}), reviews: [], seenAt: 0 };
-      if (seed) for (let i = 70; i >= 1; i--) {
+      if (seed === 'month') for (let t = Date.parse('2026-08-01T12:00:00'), i = 0; t < now - 12 * 3600e3; t += D, i++) {
+        const noise = (((Math.sin(i * 12.9898) * 43758.5453) % 1) + 1) % 1 - 0.5, late = t >= Date.parse('2026-10-15T00:00:00');
+        e.push({ id: 'f' + i, kind: 'feel', at: t + 2 * 3600e3, mood: (late ? 7.5 : 6) + noise * 2 });
+        e.push({ id: 'w' + i, kind: 'weight', at: t - 5 * 3600e3, kg: Math.round((84 - (0.5 / 7) * i + noise * 0.4) * 10) / 10 });
+        e.push({ id: 'k' + i, kind: 'food', at: t + 3600e3, name: 'Meal', grams: 500, macros: { kcal: Math.round(2200 + noise * 300), p: 150, c: 200, f: 70 } });
+        if (new Date(t).getDay() === 5) e.push({ id: 'd' + i, kind: 'drink', at: t + 8 * 3600e3, drinkId: 'beer', name: 'Beer', ml: 1000, caffeineMg: 0, alcoholG: 28, kcal: 430 });
+      }
+      else if (seed) for (let i = 70; i >= 1; i--) {
         const day = now - i * D, last = i <= 7, w = [0.3, -0.2, 0.1, -0.4, 0.2, 0, -0.1][i % 7], noise = (((Math.sin(i * 12.9898) * 43758.5453) % 1) + 1) % 1 - 0.5;
         e.push({ id: 'f' + i, kind: 'feel', at: day - 4 * 3600e3, mood: (last ? 7.5 : 6) + w });
         e.push({ id: 'k' + i, kind: 'food', at: day + 4 * 3600e3, name: 'Meal', grams: 500, macros: { kcal: Math.round(2400 + noise * 400), p: 150, c: 250, f: 80 } });
       }
       s.entries = e; localStorage.setItem(k, JSON.stringify(s));
-    }, [NOW, seed]);
+    }, [now, seed]);
     await pg.reload(); await pg.waitForSelector('nav.tabs');
     await pg.waitForFunction(() => true); await pg.waitForTimeout(1200);
     return { ctx, pg };
@@ -69,6 +80,24 @@ const ANSWERS = {
   await card.screenshot({ path: OUT + 'review-week.png' });
   await pg.reload(); await pg.waitForTimeout(1200);
   check('reloaded: still there, not asked again', calls.filter((c) => c.task === 'review').length === 1 && await pg.locator('.msg.review').count() === 1);
+  await ctx.close();
+
+  // Sunday 1 Nov: last week's read (catch-up, 19–25 Oct) and October's
+  ({ ctx, pg } = await open('month', new Date('2026-11-01T09:00:00').getTime()));
+  const due = calls.filter((c) => c.task === 'review').map((c) => `${c.kind} ${c.from}–${c.to}`);
+  check(`the 1st: the month just gone asked for, and last week's (${due.join(', ')})`, due.length === 2 && due.includes('month 2026-10-01–2026-10-31') && due.includes('week 2026-10-19–2026-10-25'));
+  check('the AI gets the month by its weeks', /## The month October 2026, as the app measured it[\s\S]*\[mood\] Mood: 6\.\d\/10 \(usual week 6\.\d\), higher than usual — the better way; by week: 1–7 \d\.\d, 8–14 \d\.\d, 15–21 7\.\d, 22–31 7\.\d/.test(calls.find((c) => c.kind === 'month')?.context ?? ''));
+  await pg.goto(APP + '#ai'); await pg.waitForSelector('.msg.review[data-kind="month"]');
+  const mc = pg.locator('.msg.review[data-kind="month"]');
+  const mt = (await mc.innerText()).replace(/\s+/g, ' ');
+  const heads = await mc.locator('.rv-heat thead th').allTextContents();
+  check(`the month card: its name, weeks as columns (${heads.join(' ')})`, /YOUR MONTH · OCTOBER 2026/i.test(mt) && /October: a lift in the second half/.test(mt) && heads.join('|') === '|1–7|8–14|15–21|22–31|month');
+  const mm = await mc.locator('tr[data-k="mood"] td.sh').evaluateAll((els) => els.map((e) => [e.textContent, e.dataset.tone ?? '', e.dataset.lvl ?? '0']));
+  check(`October's mood: the last two weeks clearly better (${mm.map((c) => c.join(' ')).join(' · ')})`, mm.length === 4 && mm.slice(2).every(([, t, l]) => t === 'better' && +l >= 2) && mm.slice(0, 2).every(([, , l]) => +l <= 1));
+  const wdots = await mc.locator('.rv-n').nth(1).locator('.rv-dot').count();
+  check(`a notice's chart has a dot per week of the month (${wdots})`, wdots === 4);
+  check(`fits the phone (${await pg.evaluate(() => document.documentElement.scrollWidth)} px)`, await pg.evaluate(() => document.documentElement.scrollWidth) <= 390);
+  await mc.screenshot({ path: OUT + 'review-month.png' });
   await ctx.close();
 
   ({ ctx, pg } = await open(false));

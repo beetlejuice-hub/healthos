@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { dueReviews, mondayOf, weekFacts, weekLines } from "./review";
+import { dueReviews, monthFacts, monthLines, monthWeeks, mondayOf, weekFacts, weekLines } from "./review";
 import { DEFAULT_SETTINGS } from "./store";
 import { addDays, atMinute } from "./time";
 import type { Entry } from "./types";
@@ -71,5 +71,45 @@ describe("the week's numbers (PLAN 65)", () => {
     expect(lines).toMatch(/\[mood\] Mood: 7\.\d\/10 \(usual 6\.\d\), higher than usual — the better way; each day: Mon 7\.\d/);
     expect(lines).toMatch(/\[kcal\] Calories: 2,4\d\d kcal \(usual 2,[34]\d\d\), about usual; each day: Mon [\d,]+, .* Sun 2,600/);
     expect(lines).toContain("Training: 2 sessions, 6 working sets (usual 2.0 sessions a week)");
+  });
+});
+
+describe("the month's numbers (PLAN 65, phase 2)", () => {
+  /** Aug–Oct 2026: mood about 6, from 15 Oct 7.5; weighed daily, losing 0.5 kg a week; 2 drinks every Friday. */
+  function world() {
+    const entries: Entry[] = [];
+    let n = 0;
+    for (let d = "2026-08-01"; d <= "2026-10-31"; d = addDays(d, 1)) {
+      const i = n++, noise = ((((Math.sin(i * 12.9898) * 43758.5453) % 1) + 1) % 1) - 0.5;
+      entries.push({ id: `f${i}`, kind: "feel", at: at(d, 14), mood: (d >= "2026-10-15" ? 7.5 : 6) + noise * 2 } as Entry);
+      entries.push({ id: `w${i}`, kind: "weight", at: at(d, 7), kg: Math.round((84 - (0.5 / 7) * i + noise * 0.4) * 10) / 10 } as Entry);
+      entries.push({ id: `k${i}`, kind: "food", at: at(d, 13), name: "x", grams: 100, macros: { kcal: Math.round(2200 + noise * 300), p: 150, c: 200, f: 70 } } as Entry);
+      if (new Date(at(d, 12)).getDay() === 5) entries.push({ id: `d${i}`, kind: "drink", at: at(d, 20), drinkId: "beer", name: "Beer", ml: 1000, caffeineMg: 0, alcoholG: 28, kcal: 430 } as Entry);
+    }
+    return entries;
+  }
+  const f = monthFacts(world(), [], DEFAULT_SETTINGS, { kcal: 2200, p: 160, c: 250, f: 70 }, "2026-10-01", "2026-10-31");
+  const row = (k: string) => f.rows.find((r) => r.k === k)!;
+
+  it("the month's weeks: 1–7, 8–14, 15–21, then the rest — a 3-day tail joins the week before", () => {
+    expect(f.cols).toEqual(["1–7", "8–14", "15–21", "22–31"]);
+    expect(monthWeeks("2026-11-01", "2026-11-30").map((w) => w[1])).toEqual(["2026-11-07", "2026-11-14", "2026-11-21", "2026-11-30"]);
+    expect(monthWeeks("2027-02-01", "2027-02-28").map((w) => w[1])).toEqual(["2027-02-07", "2027-02-14", "2027-02-21", "2027-02-28"]);
+  });
+  it("planted: mood up from the 15th — the first two weeks at most slightly off, the last three clearly better", () => {
+    const m = row("mood");
+    expect(m.shades.slice(0, 2).every((s) => s.lvl <= 1)).toBe(true);
+    expect(m.shades.slice(2).every((s) => s.tone === "better" && s.lvl >= 2)).toBe(true);
+    expect(m.days).toHaveLength(4);
+    expect(m.state).toBe("hi");
+  });
+  it("drinks as a total per week (2 every Friday = 2 a week), weight down 0.5 a week over the month", () => {
+    expect(row("drinks").days.slice(0, 3).map((v) => Math.round(v!))).toEqual([2, 2, 2]);
+    expect(row("drinks").days[3]).toBeCloseTo(2.8, 1); // 22–31: two Fridays in 10 days, not 4.7 from a 3-day tail
+    expect(f.weight!.start - f.weight!.end).toBeGreaterThan(1.8); expect(f.weight!.start - f.weight!.end).toBeLessThan(2.6); // 30 days × 0.5/7
+    expect(f.weight!.perWeek).toBeCloseTo(-0.5, 1);
+    const lines = monthLines(f).join("\n");
+    expect(lines).toContain("## The month October 2026");
+    expect(lines).toMatch(/\[mood\] Mood: 6\.\d\/10 \(usual week 6\.\d\), higher than usual — the better way; by week: 1–7 \d\.\d, 8–14 \d\.\d, 15–21 7\.\d, 22–31 7\.\d$/m);
   });
 });

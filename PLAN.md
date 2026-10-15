@@ -860,7 +860,7 @@ email get Dev tools (`#dev`): raw entry editor, generate/remove sample, wipe acc
        kg; recovery "about 13 min faster than in Jul (clear)" for ~11 planted). Limit: the board's 0.6 min/week only
        reaches p ≈ 0.02 in 12 weeks with a reading a minute — a real change needs to be about a minute a week, or more
        weeks, to show.
-65. [ ] **Noticing, and digests** — owner: "App should have a pretty complex n smart system of noticing patterns especially
+65. [x] **Noticing, and digests** — owner: "App should have a pretty complex n smart system of noticing patterns especially
    focusing on sleep and focus" and "AI should look at data at eod, eow, eom, and make suggestions, summaries, etc, even
    make graphs or like interesting notices". The grids (Sleep, Heart, Mind) already test what goes with sleep and focus;
    next is one feed of what's new and clear across them. Digests: needs an AI key for the written part (owner, earlier:
@@ -894,6 +894,15 @@ email get Dev tools (`#dev`): raw entry editor, generate/remove sample, wipe acc
      measure gets no chart, 390 px, reload asks nothing, an empty account asks nothing), screenshot. On the way:
      e2e/night.cjs waited a fixed ½ s for the read-back call and missed it once under load — it now waits for the call.
      Not checked: a real AI's week read (first one Monday 19 Oct, ≈ $0.15). Next: phase 2, the month read.
+   - **Phase 2 done 15 Oct — the month read.** From the 1st 06:00 (missed → within the first week), the month just gone
+     by its weeks (1–7, 8–14, 15–21, then the rest — a 1–3 day tail joins the week before: alone, one Friday in 3 days
+     read as 4.7 drinks a week), each shaded against your usual week in the 8 weeks before; weight's trend on the 1st and
+     the last day, training, food against the goal, strength per muscle. Same card, "Your month · October 2026", each
+     notice's chart a dot per week. Checked: review.test (the weeks; planted mood up from the 15th → the first two at
+     most slight, the last ones clearly better; 2 drinks every Friday → 2 a week; weight down 0.5 a week found),
+     e2e/review.cjs (Sunday 1 Nov: October's and last week's both asked, the month card's columns, shades and charts,
+     390 px), screenshot. Found on the way (my test, not the app): the month scene seeded with the first scene's date.
+     Phase 3 (a Sunday-evening "so far") only if wanted. Not checked: a real AI's month read (first one 1 Nov).
 66. [x] **Steps from the band** (9 Oct, owner: "go" — worker/band.ts, lib/band.ts `readSteps`, lib/steps.ts, lib/heart.ts
    `whyRaised`, lib/sleep.ts + lib/mind.ts rows, components/Heart.tsx, useNights.ts, MindPage.tsx). Owner: "I dont see it
    tracking daily steps … wondering if the data is valuable for us like more walking equals better sleep at night or better
