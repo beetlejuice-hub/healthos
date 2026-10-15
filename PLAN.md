@@ -1366,6 +1366,18 @@ below, in his words, grouped; A first (broken or wrong now), then the rest. Item
    https://claude.ai/artifact/RR8EThbFTXvECGmPdD4s3Z — A quiet signal (colour only where off your usual), B heat (tables
    and bars shaded by how far from usual, green better / red worse, recommended), C tiles and small charts. Waiting on
    the owner's pick; the green / amber / red are #101's zone colours, always with a word or arrow beside them.
+   - **Owner's pick: B** ("yea b is clearly winner here. do it"). **Phase 1 done 15 Oct:** lib/shade — a value against
+     its usual band: none inside it, then three steps by how far beyond (½ and 1½ band widths), green better / red worse /
+     grey when neither way is better; a 1–10 scale never under a point wide. At a glance: the week table is a heat map
+     (each day against a usual day, a key under it); the vitals' week value sits on its shade, and its sparkline's last 7
+     days, the area under them and today's dot take the week's colour (grey when usual); status dots are green / red.
+     Mind's best / worst days: dot pairs (these days against your other days), the gap red when the thing goes with a
+     lower mood, green with a better one, strong only when clear; the "clear" tag neutral there. Every "what goes with
+     what" grid (Sleep, Heart, Mind, Training) and Training's strength bars: green / red instead of blue / orange.
+     Checked: shade.test (5), e2e/glance.cjs (every row's shade and line agree with its word, phone and laptop; the
+     keys), e2e/mind.cjs (each pair's colour follows its numbers, strong only when clear). Next, phase 2: the Sleep
+     log's numbers, the Heart mornings' today, Food & body. Not reproduced: mindpage timed out twice in loaded runs
+     waiting for the page; three tries to provoke it (heavier load) all rendered in under a second.
 98. [ ] **AI, soon**
 98. [ ] **AI, soon** — "it should look at all the data, see whatsup, tell me clever tips, what to improve, and a whole bunch
    of stuff.. it should recommend me, or just understand protocols i give him, and help me set up in app, or just tell

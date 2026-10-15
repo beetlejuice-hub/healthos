@@ -6,7 +6,8 @@
 
 import { useMemo, type ReactNode } from "react";
 import { useStore } from "../lib/store";
-import { dayTone, glance, glanceDays, glanceSpan, weekDays, type GlanceDay, type MeasureStat } from "../lib/glance";
+import { dayShade, weekShade, glance, glanceDays, glanceSpan, weekDays, type GlanceDay, type MeasureStat } from "../lib/glance";
+import { shadeAttrs } from "../lib/shade";
 import type { Report } from "../lib/findings";
 import { dayLabel, atMinute, localDay } from "../lib/time";
 
@@ -83,13 +84,24 @@ function DayStrip({ stats, week, today }: { stats: MeasureStat[]; week: GlanceDa
         <thead><tr><th />{week.map((d) => { const dt = new Date(noon(d.day)); return <th key={d.day} className="n">{d.day === today ? "Today" : WD[dt.getDay()]}<small>{dt.getDate()}</small></th>; })}</tr></thead>
         <tbody>
           {rows.map((m) => <tr key={m.k}><th>{m.k === "sleep" ? "Sleep" : m.k === "kcal" ? "kcal" : m.name}</th>{week.map((d) => {
-            const v = d[m.k], tone = dayTone(m, v);
-            return <td key={d.day} className={`n${tone ? ` out ${tone}` : ""}`} data-tip={v == null ? undefined : `${dayLabel(noon(d.day))}: ${m.name} ${fmt(m, v)}${unitOf(m)}${m.day ? ` · a usual day ${fmt(m, m.day.p10)}–${fmt(m, m.day.p90)}` : ""}${d.day === today && m.partialToday ? " (so far)" : ""}`}>{v == null ? <span className="gl-dim">–</span> : short(m, v)}</td>;
+            const v = d[m.k], sh = dayShade(m, v);
+            // the heat view (PLAN 105): each day shaded by how far from a usual day, green better, red worse
+            return <td key={d.day} className="n sh" {...shadeAttrs(sh)} data-tip={v == null ? undefined : `${dayLabel(noon(d.day))}: ${m.name} ${fmt(m, v)}${unitOf(m)}${m.day ? ` · a usual day ${fmt(m, m.day.p10)}–${fmt(m, m.day.p90)}` : ""}${d.day === today && m.partialToday ? " (so far)" : ""}`}>{v == null ? <span className="gl-dim">–</span> : short(m, v)}</td>;
           })}</tr>)}
           <tr className="ev"><th>Events</th>{week.map((d) => <td key={d.day} className="n">{ev(d) || <span className="gl-dim">·</span>}</td>)}</tr>
         </tbody>
       </table></div>
-      <div className="gp-f"><span>● trained</span><span>✕ caffeine after 14:00</span><span>◆ drinks</span><span>✎ a note</span><span className="lgd"><i className="dot better" />/<i className="dot worse" /> outside a usual day</span></div>
+      <div className="gp-f"><span>● trained</span><span>✕ caffeine after 14:00</span><span>◆ drinks</span><span>✎ a note</span></div>
+      <HeatKey what="a usual day" />
+    </div>
+  );
+}
+
+/** The shades' key: worse ← usual → better, in the three steps (PLAN 105). */
+function HeatKey({ what }: { what: string }) {
+  return (
+    <div className="heatkey" aria-label={`Shades: further from ${what} is stronger; green better, red worse`}>
+      <span>worse</span>{[3, 2, 1].map((l) => <i key={`w${l}`} className="sh" data-tone="worse" data-lvl={l} />)}<i className="sh mid" />{[1, 2, 3].map((l) => <i key={`b${l}`} className="sh" data-tone="better" data-lvl={l} />)}<span>better than {what}</span>
     </div>
   );
 }
@@ -103,10 +115,13 @@ function Spark({ m }: { m: MeasureStat }) {
   const x = (i: number) => pad + (i / Math.max(1, vals.length - 1)) * (w - pad * 2 - 3), y = (v: number) => pad + (1 - (v - lo) / (hi - lo || 1)) * (h - pad * 2);
   const path = (ps: (readonly [number, number])[]) => ps.map((p, k) => `${k ? "L" : "M"}${x(p[0]).toFixed(1)},${y(p[1]).toFixed(1)}`).join("");
   const wk = pts.filter((p) => p[0] >= vals.length - 7), last = pts[pts.length - 1];
-  const tone = m.state === "hi" || m.state === "lo" ? (m.better === false ? "worse" : "now") : "now";
+  // the last 7 days in the week's colour (green better than usual, red worse, grey usual), with the area under them
+  const tone = weekShade(m).tone ?? "typ";
+  const area = wk.length > 1 ? `${path(wk)}L${x(wk[wk.length - 1][0]).toFixed(1)},${h}L${x(wk[0][0]).toFixed(1)},${h}Z` : "";
   return (
     <svg viewBox={`0 0 ${w} ${h}`} preserveAspectRatio="none" aria-hidden="true" className={`spark ${tone}`}>
       {m.day && <rect x="0" y={y(m.day.p90)} width={w} height={Math.max(1.5, y(m.day.p10) - y(m.day.p90))} className="band" />}
+      {area && <path d={area} className="area" />}
       <path d={path(pts)} className="before" />
       {wk.length > 1 && <path d={path(wk)} className="week" />}
       <circle cx={x(last[0])} cy={y(last[1])} r="2.6" className="end" />
@@ -139,7 +154,7 @@ function Vitals({ stats, trendDays }: { stats: MeasureStat[]; trendDays: number 
               <tr key={m.k} data-tip={tip}>
                 <td className="nm">{m.name}</td>
                 <td className="sp"><Spark m={m} /></td>
-                <td className="wv">{m.week != null ? <>{fmt(m, m.week)}<small>{m.unit}</small></> : <span className="gl-dim">–</span>}</td>
+                <td className="wv">{m.week != null ? <span className="sh" {...shadeAttrs(weekShade(m))}>{fmt(m, m.week)}<small>{m.unit}</small></span> : <span className="gl-dim">–</span>}</td>
                 <td className="n gl-dim2">{m.usualWeek ? `${fmt(m, m.usualWeek.p10)}–${fmt(m, m.usualWeek.p90)}` : ""}</td>
                 <td className={`n dlt ${dcls}`}>{delta(m)}</td>
                 <td>{m.state === "ok" ? <span className="st typ">Typical</span> : m.state === "hi" || m.state === "lo" ? <span className={`st ${m.better == null ? "neutral" : m.better ? "better" : "worse"}`}>{m.state === "hi" ? "▲ Higher" : "▼ Lower"}</span> : m.state === "building" ? <span className="st typ">Learning</span> : <span className="gl-dim">few days</span>}</td>
@@ -148,7 +163,8 @@ function Vitals({ stats, trendDays }: { stats: MeasureStat[]; trendDays: number 
           })];
         })}</tbody>
       </table></div>
-      <footer className="gp-f"><span className="lgd"><i className="band" />a usual day (middle 80%)</span><span className="lgd"><i className="ln now" />last 7 days</span><span className="lgd"><i className="ln before" />before</span><span className="lgd"><i className="dot better" />better</span><span className="lgd"><i className="dot worse" />worse</span><span className="lgd"><i className="dot neutral" />neither</span><span className="gl-dim">Ring or watch data (HRV, resting heart rate, sleep stages) joins this table once one is connected.</span></footer>
+      <footer className="gp-f"><span className="lgd"><i className="band" />a usual day (middle 80%)</span><span className="lgd"><i className="ln now" />last 7 days, coloured by how the week went</span><span className="lgd"><i className="ln before" />before</span></footer>
+      <HeatKey what="your usual week" />
     </section>
   );
 }

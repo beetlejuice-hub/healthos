@@ -27,6 +27,11 @@ const { chromium, APP, OUT, handle } = require('./harness.cjs');
     const vt = await pg.locator('.gl-vt').innerText();
     check(name + ': vitals table has mind and intake rows (no sleep ratings in the sample, so no sleep row)', /Mood/.test(vt) && /Calories/.test(vt) && /Weight/.test(vt) && !/Sleep rating/.test(vt));
     check(name + ': judged against a usual week', (name === 'phone' || /Usual week/i.test(vt)) && /(Typical|Higher|Lower)/.test(vt)); // a phone drops the usual-range column; the word still says it
+    // the heat view (PLAN 105): each row's shade and line agree with its word — better green, worse red, typical none
+    const rows = await pg.locator('.gl-vt tbody tr:not(.grp)').evaluateAll((trs) => trs.map((tr) => [tr.querySelector('.st')?.className ?? '', tr.querySelector('.wv .sh')?.dataset.tone ?? '', tr.querySelector('svg.spark')?.getAttribute('class') ?? '']));
+    const agree = rows.every(([st, tone, sp]) => /better/.test(st) ? tone === 'better' && /better/.test(sp) : /worse/.test(st) ? tone === 'worse' && /worse/.test(sp) : /typ/.test(st) ? tone === '' && !/better|worse/.test(sp) : true);
+    check(name + `: the heat view — every row's shade and line agree with its word (${rows.filter((r) => r[1]).map((r) => r[1]).join(', ') || 'none off usual'})`, rows.length > 3 && agree);
+    check(name + ': the heat keys say which shade is which', await pg.locator('.heatkey').count() === 2 && /worse[\s\S]*better than a usual day/.test(await pg.locator('.heatkey').first().innerText()));
     check(name + ': no "−0" deltas', !/−0(\.0)?\b(?!\.\d*[1-9])/.test(vt.replace(/−0\.\d*[1-9]\d*/g, '')));
     await pg.getByRole('button', { name: '7 days', exact: true }).click(); await pg.waitForTimeout(150);
     check(name + ': period switch reaches the sparklines', /Daily, last 7 days/i.test(await pg.locator('.gl-vt thead').innerText()));

@@ -122,7 +122,7 @@ function Recent({ ss, feels }: { ss: Session[]; feels: EntryOf<"feel">[] }) {
             <span className="tp-pct">{sgn(s.pct!)} %</span>
           </div>); })}
       </div>
-      <p className="sl-note">Bars: ±6 % around your trend · blue stronger, orange weaker than your line.</p>
+      <p className="sl-note">Bars: ±6 % around your trend · green stronger, red weaker than your line.</p>
     </section>
   );
 }
@@ -242,7 +242,7 @@ function SessionLanes({ ss, facts, supps, w }: { ss: Session[]; facts: SessionFa
         })}
         {months.map(([t, m]) => <text key={t} x={X(t)} y={H - 4} className="hp-t">{m}</text>)}
       </svg>
-      <p className="sl-note">Top: each session against your trend, blue above it, orange below. Under it, what came before; in white: under 6 h 30 asleep, {CARBS_G} g+ carbs, eating {UNDER_KCAL}+ kcal a day under your usual. Supplements: filled taken, hollow skipped, nothing when not answered.</p>
+      <p className="sl-note">Top: each session against your trend, green above it, red below. Under it, what came before; in white: under 6 h 30 asleep, {CARBS_G} g+ carbs, eating {UNDER_KCAL}+ kcal a day under your usual. Supplements: filled taken, hollow skipped, nothing when not answered.</p>
     </section>
   );
 }

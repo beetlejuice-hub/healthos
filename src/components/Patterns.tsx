@@ -11,6 +11,10 @@ import { patterns, type Row, type Side } from "../lib/patterns";
 
 const fmt = (r: Row, v: number) => (r.f.share ? `${Math.round(v * 100)}%` : r.f.dec === 0 ? Math.round(v).toLocaleString("en-GB") : v.toFixed(1));
 
+const pct = (v: number, max: number) => Math.max(0, Math.min(100, (v / max) * 100));
+/** Red when the thing goes with a lower mood (more often before your lowest days, less before your best), green the other way. */
+const toneOf = (kind: "worst" | "best", group: number, rest: number) => ((group > rest) === (kind === "worst") ? "worse" : "better");
+
 function SideCol({ side, kind }: { side: Side; kind: "worst" | "best" }) {
   const rows = side.rows.filter((r) => r.diff);
   const clear = rows.filter((r) => r.diff!.clear);
@@ -24,7 +28,12 @@ function SideCol({ side, kind }: { side: Side; kind: "worst" | "best" }) {
           return (
             <div className={`pt-row${r.diff!.clear ? " clear" : ""}`} key={r.f.k} data-tip={`${r.f.name}\nThese days: ${fmt(r, r.group)} (${r.nGroup})\nOther days: ${fmt(r, r.rest)} (${r.nRest})\nDifference ${r.diff!.value >= 0 ? "+" : "−"}${fmt(r, Math.abs(r.diff!.value))}, 95% range ${fmt(r, r.diff!.lo)} to ${fmt(r, r.diff!.hi)}\n${r.diff!.clear ? "Clear" : "Not clear yet"}`}>
               <span className="nm">{r.f.name}</span>
-              <span className="bars"><i className="g" style={{ width: `${Math.max(2, (r.group / max) * 100)}%` }} /><i className="r" style={{ width: `${Math.max(2, (r.rest / max) * 100)}%` }} /></span>
+              {/* the heat view (PLAN 105): these days' dot against your other days', joined in red when the thing goes with
+                  a lower mood, green with a better one — strong when clear, faint while "not yet" */}
+              <span className="db" data-tone={toneOf(kind, r.group, r.rest)} data-clear={r.diff!.clear || undefined} aria-hidden="true">
+                <i className="seg" style={{ left: `${pct(Math.min(r.group, r.rest), max)}%`, width: `${Math.abs(pct(r.group, max) - pct(r.rest, max))}%` }} />
+                <i className="o" style={{ left: `${pct(r.rest, max)}%` }} /><i className="t" style={{ left: `${pct(r.group, max)}%` }} />
+              </span>
               <span className="vals"><b>{fmt(r, r.group)}</b> vs {fmt(r, r.rest)}</span>
               <span className={`tag ${r.diff!.clear ? "s" : "w"}`}>{r.diff!.clear ? "clear" : "not yet"}</span>
             </div>
@@ -50,7 +59,7 @@ export function Patterns({ days }: { days: GlanceDay[] }) {
         <p className="gp-ans">Your bottom and top fifth of days by mood, and what came before them — that morning's sleep rating, the evening before, training, food — compared with every other day.</p></div>
         <span className="gp-meta">{p.rated} rated days</span></header>
       <div className="pt-cols"><SideCol side={p.worst} kind="worst" /><SideCol side={p.best} kind="best" /></div>
-      <footer className="gp-f"><span className="lgd"><i style={{ background: "var(--i-ink)" }} />these days</span><span className="lgd"><i style={{ background: "var(--i-line-2)" }} />your other days</span><span className="gl-dim">Goes with, not causes: a night out and a bad week can land together. "clear" = the 95% range stays off zero.</span></footer>
+      <footer className="gp-f"><span className="lgd"><i className="dot" style={{ background: "var(--i-ink)" }} />these days</span><span className="lgd"><i className="dot" style={{ background: "var(--i-dim)" }} />your other days</span><span className="lgd"><i style={{ background: "var(--sh-r)" }} />goes with a lower mood</span><span className="lgd"><i style={{ background: "var(--sh-g)" }} />with a better one · faint until clear</span><span className="gl-dim">Goes with, not causes: a night out and a bad week can land together. "clear" = the 95% range stays off zero.</span></footer>
     </section>
   );
 }

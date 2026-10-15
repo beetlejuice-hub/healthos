@@ -360,7 +360,7 @@ export function GoesWith({ ns, evs, wide, w, outcomes = OUTCOMES, factors = FACT
       {hidden.length > 0 && <details className="sl-note sl-hidden"><summary>Not enough {copy.what} yet for {hidden.length} more {hidden.length === 1 ? "row" : "rows"} — 5 with and 5 without each</summary>
         <p>{hidden.join(", ")}.</p></details>}
       {coming.length > 0 && <p className="sl-note sl-coming">Your last-night tags get a row from 5 nights each: {coming.map((c) => `${nightLabel(c.tag)} ${c.n} of 5`).join(", ")}.</p>}
-      <div className="sl-c-key"><span><i style={{ background: "#4f86dc" }} />{copy.toward}</span><span><i style={{ background: "#d9822b" }} />the other way</span></div>
+      <div className="sl-c-key"><span><i style={{ background: "var(--z-ideal)" }} />{copy.toward}</span><span><i style={{ background: "var(--z-poor)" }} />the other way</span></div>
     </section>
   );
 }

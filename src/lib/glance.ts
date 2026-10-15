@@ -12,6 +12,7 @@
  * Pure: entries in, numbers out. Nothing here says "causes"; it only says higher or lower than usual.
  */
 
+import { NO_SHADE, shade, type Shade } from "./shade";
 import type { Entry, EntryOf, Workout } from "./types";
 import type { Settings } from "./store";
 import { dailyFacts, type DayFacts } from "./insights";
@@ -152,6 +153,11 @@ export const weekDays = (days: GlanceDay[], today: string): GlanceDay[] => {
 };
 
 /** Whether a single day's value sits outside a usual day; with its tone. */
+/** A day's or the week's value as a shade against its usual (PLAN 105, the heat view): a 1–10 scale never under a point wide. */
+const minW = (m: Measure) => (m.unit === "/10" ? 1 : undefined);
+export const dayShade = (m: MeasureStat, v: number | null): Shade => (v == null || !m.day ? NO_SHADE : shade(v, m.day.p10, m.day.p90, m.good, minW(m)));
+export const weekShade = (m: MeasureStat): Shade => (m.week == null || !m.usualWeek || (m.state !== "hi" && m.state !== "lo") ? NO_SHADE : shade(m.week, m.usualWeek.p10, m.usualWeek.p90, m.good, minW(m)));
+
 export function dayTone(m: MeasureStat, v: number | null): "better" | "worse" | "neutral" | null {
   if (v == null || !m.day) return null;
   const out = v < m.day.p10 ? "lo" : v > m.day.p90 ? "hi" : null;

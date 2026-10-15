@@ -14,6 +14,8 @@
   --g-now: #3987e5; --g-down: #e66767;
   /* zones on a study's range (sleep score, 15 Oct): poor / fair / ideal — never alone, always with the word */
   --z-ideal: #2e9e55; --z-fair: #e9b949; --z-poor: #e5604f;
+  /* the heat view's lines and words (PLAN 105): the zone colours lifted for text and 2 px lines on the dark panel */
+  --sh-g: #4fc27a; --sh-r: #f07a6a;
   --ok: #a8dcc0; --warn: #f0b27a; --gym: #ffd166; --supp: #c7a8f0; --wt: #8fb3c9; --mood: #68c3e0; --hr: #ef7d6d;
   --f-sans: "Figtree", system-ui, sans-serif; --f-serif: "Newsreader", Georgia, serif;
   --f-cond: "Barlow Condensed", "Arial Narrow", sans-serif; --f-bar: "Barlow", system-ui, sans-serif;
@@ -286,7 +288,7 @@ a { color: inherit; }
 .lgd i { display: inline-block; width: 10px; height: 10px; border-radius: 3px; }
 .lgd i.t { background: var(--g-now); } .lgd i.h { background: var(--i-ink-2); } .lgd i.l { background: var(--i-line-2); }
 .lgd i.band { background: var(--g-band); } .lgd i.ln { height: 2px; width: 14px; border-radius: 1px; } .lgd i.ln.now { background: var(--g-now); } .lgd i.ln.before { background: var(--g-before); }
-.lgd i.dot, .gl-days i.dot { width: 7px; height: 7px; border-radius: 50%; } i.dot.better { background: var(--g-good); } i.dot.worse { background: var(--g-warn); } i.dot.neutral { background: var(--i-ink-2); }
+.lgd i.dot, .gl-days i.dot { width: 7px; height: 7px; border-radius: 50%; } i.dot.better { background: var(--sh-g); } i.dot.worse { background: var(--sh-r); } i.dot.neutral { background: var(--i-ink-2); }
 .gl-dim { color: var(--i-dim); } .gl-dim2 { color: var(--i-ink-2); }
 .gl-in { display: grid; gap: 6px; }
 .gl-big { font-size: 34px; font-weight: 600; letter-spacing: -.02em; line-height: 1; }
@@ -306,25 +308,25 @@ a { color: inherit; }
 .gl-days thead th small { display: block; font-weight: 400; color: var(--i-dim); font-size: 10.5px; }
 .inst .gl-days tbody th { font-family: var(--f-mono); font-size: 10px; letter-spacing: .06em; text-transform: uppercase; color: var(--i-dim); text-align: left; font-weight: 400; }
 .gl-days td { color: var(--i-ink-2); }
-.gl-days td.out { color: var(--i-ink); font-weight: 600; }
-.gl-days td.out::before { content: ""; display: inline-block; width: 6px; height: 6px; border-radius: 50%; margin-right: 4px; vertical-align: 1px; background: var(--i-ink-2); }
-.gl-days td.out.better::before { background: var(--g-good); } .gl-days td.out.worse::before { background: var(--g-warn); }
+.gl-days td.sh { border-radius: 6px; } .gl-days td.sh[data-lvl] { color: var(--i-ink); font-weight: 600; }
 .gl-days tr.ev td { color: var(--i-ink); font-size: 11px; letter-spacing: .04em; }
 .inst table.gl-vt { font-size: 13px; }
 .inst .gl-vt th { padding: 4px 8px 6px 0; }
 .inst .gl-vt td { padding: 3px 8px 3px 0; height: 27px; border-bottom: 1px solid var(--i-line); vertical-align: middle; white-space: nowrap; }
 .inst .gl-vt tr.grp td { font-family: var(--f-mono); font-size: 10px; letter-spacing: .08em; text-transform: uppercase; color: var(--i-dim); padding-top: 10px; border-bottom-color: var(--i-line-2); }
 .gl-vt .nm { font-weight: 500; color: var(--i-ink); }
-.gl-vt .wv { font-weight: 600; text-align: right; font-variant-numeric: tabular-nums; }
+.gl-vt .wv { font-weight: 600; text-align: right; font-variant-numeric: tabular-nums; } .gl-vt .wv .sh { padding: 2px 7px; border-radius: 7px; }
 .gl-vt .wv small { color: var(--i-dim); font-weight: 400; margin-left: 2px; font-size: 11px; }
 .gl-vt td.sp { width: 34%; min-width: 140px; padding-block: 0; }
 .gl-vt td.sp svg { display: block; width: 100%; height: 22px; max-width: none; }
 .spark .band { fill: var(--g-band); } .spark path { fill: none; vector-effect: non-scaling-stroke; stroke-linejoin: round; }
-.spark .before { stroke: var(--g-before); stroke-width: 1.2; } .spark .week { stroke: var(--g-now); stroke-width: 2; } .spark .end { fill: var(--g-now); }
-.spark.worse .week { stroke: var(--g-serious); } .spark.worse .end { fill: var(--g-serious); }
+.spark .before { stroke: var(--g-before); stroke-width: 1.2; } .spark .week { stroke: var(--i-ink-2); stroke-width: 2; } .spark .end { fill: var(--i-ink-2); } .spark .area { fill: rgba(147, 160, 164, .10); stroke: none; }
+/* the heat view (PLAN 105): the week's line, its area and today's dot take the week's colour */
+.spark.better .week { stroke: var(--sh-g); } .spark.better .end { fill: var(--sh-g); } .spark.better .area { fill: rgba(46, 158, 85, .22); }
+.spark.worse .week { stroke: var(--sh-r); } .spark.worse .end { fill: var(--sh-r); } .spark.worse .area { fill: rgba(229, 96, 79, .22); }
 .st { display: inline-flex; align-items: center; gap: 6px; font-size: 11.5px; font-weight: 600; color: var(--i-ink-2); }
 .st::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--i-line-2); }
-.st.better::before { background: var(--g-good); } .st.worse::before { background: var(--g-warn); } .st.neutral::before { background: var(--i-ink-2); }
+.st.better::before { background: var(--sh-g); } .st.worse::before { background: var(--sh-r); } .st.neutral::before { background: var(--i-ink-2); }
 .st.typ { color: var(--i-dim); font-weight: 400; }
 .dlt.good { color: var(--g-good-t); } .dlt.bad { color: var(--g-bad-t); } .dlt.flat { color: var(--i-dim); }
 .app.r-insights { --g-down: #e66767; --q0: #1d2633; --q1: #184f95; --q2: #1c5cab; --q3: #2a78d6; --q4: #5598e7; --q5: #9ec5f4; --qt0: #dce3e5; --qt1: #ffffff; --qt2: #ffffff; --qt3: #ffffff; --qt4: #0b0c0e; --qt5: #0b0c0e; }
@@ -415,8 +417,17 @@ a { color: inherit; }
 .pt-row { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(60px, 1fr) auto auto; gap: 10px; align-items: center; font-size: 12.5px; color: var(--i-ink-2); padding: 3px 0; border-bottom: 1px solid var(--i-line); }
 .pt-row.clear { color: var(--i-ink); }
 .pt-row .nm { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.pt-row .bars { display: grid; gap: 2px; } .pt-row .bars i { display: block; height: 4px; border-radius: 2px; }
-.pt-row .bars .g { background: var(--i-ink); } .pt-row .bars .r { background: var(--i-line-2); }
+/* a dot pair: these days (big, coloured) against your other days (small, grey), the gap red or green (PLAN 105) */
+.pt-row .db { position: relative; height: 16px; margin: 0 6px; }
+.pt-row .db::before { content: ""; position: absolute; left: -6px; right: -6px; top: 7px; height: 2px; background: var(--i-line); }
+.pt-row .db i { position: absolute; top: 50%; transform: translate(-50%, -50%); border-radius: 50%; }
+.pt-row .db .seg { transform: translateY(-50%); height: 4px; border-radius: 2px; }
+.pt-row .db .o { width: 8px; height: 8px; background: var(--i-dim); border: 2px solid var(--i-panel); }
+.pt-row .db .t { width: 11px; height: 11px; border: 2px solid var(--i-panel); }
+.pt-row .db[data-tone="worse"] .seg { background: rgba(229, 96, 79, .35); } .pt-row .db[data-tone="worse"] .t { background: #b98a84; }
+.pt-row .db[data-tone="better"] .seg { background: rgba(46, 158, 85, .35); } .pt-row .db[data-tone="better"] .t { background: #86ad93; }
+.pt-row .db[data-tone="worse"][data-clear] .seg { background: var(--sh-r); } .pt-row .db[data-tone="worse"][data-clear] .t { background: var(--sh-r); }
+.pt-row .db[data-tone="better"][data-clear] .seg { background: var(--sh-g); } .pt-row .db[data-tone="better"][data-clear] .t { background: var(--sh-g); }
 .pt-row .vals { font-variant-numeric: tabular-nums; white-space: nowrap; font-size: 12px; } .pt-row .vals b { color: var(--i-ink); }
 .pt-words { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
 .pt-word { border: 1px solid var(--i-line-2); border-radius: 999px; padding: 2px 9px; font-size: 12px; color: var(--i-ink); }
@@ -453,6 +464,8 @@ a { color: inherit; }
 .tag { font-family: var(--f-mono); font-size: 10.5px; padding: 1px 6px; border-radius: 4px; border: 1px solid var(--i-line-2); color: var(--i-ink-2); white-space: nowrap; }
 .tag.s { color: var(--ok); border-color: color-mix(in srgb, var(--ok) 45%, transparent); }
 .tag.w { color: var(--caf); border-color: color-mix(in srgb, var(--caf) 45%, transparent); }
+/* in the dot pairs the colour is the pair's (PLAN 105): the tag only says how sure */
+.pt-row .tag.s { color: var(--i-ink); border-color: var(--i-line-2); } .pt-row .tag.w { color: var(--i-dim); border-color: var(--i-line); }
 .needs { font-size: 12.5px; color: var(--i-dim); padding: 10px; border: 1px dashed var(--i-line-2); border-radius: 6px; }
 .notes { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
 .notes li { font-size: 12.5px; padding-left: 12px; position: relative; color: var(--i-ink-2); }
@@ -903,7 +916,7 @@ a { color: inherit; }
   /* the week strip fits without scrolling */
   .inst .gl-days th, .inst .gl-days td { padding: 3px 2px; font-size: 11px; }
   .inst .gl-days tbody th { font-size: 9px; letter-spacing: .03em; }
-  .gl-days td.out::before { margin-right: 2px; width: 5px; height: 5px; }
+
   /* patterns: the full name on its own line */
   .pt-row { grid-template-columns: minmax(50px, 1fr) auto auto; row-gap: 3px; }
   .pt-row .nm { grid-column: 1 / -1; white-space: normal; }
@@ -1150,10 +1163,11 @@ a { color: inherit; }
 .sl-mh { font: 500 10.5px var(--f-plex); color: var(--i-ink-2); text-align: center; }
 .sl-mf { font: 500 12.5px var(--f-plex); color: var(--i-ink); display: grid; } .sl-mf small { font: 400 10.5px var(--f-mono); color: var(--i-dim); }
 .sl-cell { height: 40px; border-radius: 4px; border: 1px solid var(--i-line); background: transparent; color: var(--i-dim); font: 500 11px var(--f-mono); padding: 0; }
-.sl-cell[data-sure="clear"][data-toward="better"] { background: rgba(79, 134, 220, .85); border-color: transparent; color: #0d1012; }
-.sl-cell[data-sure="clear"][data-toward="worse"] { background: rgba(217, 130, 43, .85); border-color: transparent; color: #0d1012; }
-.sl-cell[data-sure="likely"][data-toward="better"] { background: rgba(79, 134, 220, .3); color: var(--i-ink); }
-.sl-cell[data-sure="likely"][data-toward="worse"] { background: rgba(217, 130, 43, .3); color: var(--i-ink); }
+/* green toward better, red the other way (PLAN 105; were blue / orange) — the sign and the word "clear" / "likely" say it too */
+.sl-cell[data-sure="clear"][data-toward="better"] { background: rgba(46, 158, 85, .9); border-color: transparent; color: #08120c; }
+.sl-cell[data-sure="clear"][data-toward="worse"] { background: rgba(229, 96, 79, .9); border-color: transparent; color: #1a0907; }
+.sl-cell[data-sure="likely"][data-toward="better"] { background: rgba(46, 158, 85, .3); color: var(--i-ink); }
+.sl-cell[data-sure="likely"][data-toward="worse"] { background: rgba(229, 96, 79, .3); color: var(--i-ink); }
 .sl-cell[aria-pressed="true"] { outline: 2px solid var(--i-ink); outline-offset: 1px; }
 .sl-cell:disabled { opacity: .6; }
 .sl-c-key { display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: 11.5px; color: var(--i-ink-2); }
@@ -1319,7 +1333,7 @@ a { color: inherit; }
 .tp-sess { display: grid; grid-template-columns: minmax(0, 1fr) 84px 52px; gap: 10px; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--i-line); }
 .tp-sname { display: grid; min-width: 0; } .tp-sname b { font-size: 13.5px; font-weight: 500; color: var(--i-ink); } .tp-sname small { font: 400 11px var(--f-mono); color: var(--i-ink-2); overflow-wrap: anywhere; }
 .tp-bar { position: relative; height: 12px; border-left: 0; background: linear-gradient(var(--i-line), var(--i-line)) center / 1px 100% no-repeat; }
-.tp-bar i { position: absolute; top: 0; height: 12px; border-radius: 2px; } .tp-bar i.up { background: rgba(79, 134, 220, .85); } .tp-bar i.down { background: rgba(217, 130, 43, .85); }
+.tp-bar i { position: absolute; top: 0; height: 12px; border-radius: 2px; } .tp-bar i.up { background: rgba(46, 158, 85, .9); } .tp-bar i.down { background: rgba(229, 96, 79, .9); }
 .tp-pct { font: 500 12px var(--f-mono); color: var(--i-ink); text-align: right; }
 .tp-mrows { display: grid; gap: 8px; }
 .tp-mrow { display: grid; grid-template-columns: 84px minmax(0, 1fr) 34px; gap: 8px; align-items: center; font-size: 12.5px; color: var(--i-ink); }
@@ -1333,7 +1347,7 @@ a { color: inherit; }
 .tp-mtrack .tick { position: absolute; top: -3px; width: 2px; height: 18px; margin-left: -1px; background: var(--i-ink); }
 .tp-b { display: grid; gap: 12px; min-width: 0; }
 .tp-lanes .tp-lname { fill: var(--i-ink); font: 500 11px var(--f-plex, inherit); }
-.tp-lanes rect.up { fill: rgba(79, 134, 220, .85); } .tp-lanes rect.down { fill: rgba(217, 130, 43, .85); }
+.tp-lanes rect.up { fill: rgba(46, 158, 85, .9); } .tp-lanes rect.down { fill: rgba(229, 96, 79, .9); }
 .tp-lanes .hot { fill: var(--i-ink); } .tp-lanes .dim { fill: var(--i-line-2); }
 .tp-lanes .dim-fill { fill: var(--i-ink-2); } .tp-lanes .hollow { fill: none; stroke: var(--i-ink-2); stroke-width: 1.2; }
 .tp-c { display: grid; gap: 12px; min-width: 0; }
@@ -1423,3 +1437,10 @@ a { color: inherit; }
 .ai-calls li b { grid-row: 1 / span 2; grid-column: 2; align-self: center; font: 500 13px var(--f-mono); color: var(--c-ink); }
 /* the night's one thing on each small night (15 Oct) — quiet, cut short to fit */
 .sl-mini .what { display: block; min-height: 14px; font-size: 10.5px; line-height: 14px; color: var(--i-ink-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* the heat view (PLAN 105; owner, 15 Oct: "b is clearly winner"): a value shaded by how far from your usual — none inside
+   it, then three steps; green better, red worse, grey when neither way is better. Always on the number itself. */
+.sh[data-tone="better"][data-lvl="1"] { background: rgba(46, 158, 85, .18); } .sh[data-tone="better"][data-lvl="2"] { background: rgba(46, 158, 85, .34); } .sh[data-tone="better"][data-lvl="3"] { background: rgba(46, 158, 85, .55); color: #fff; }
+.sh[data-tone="worse"][data-lvl="1"] { background: rgba(229, 96, 79, .16); } .sh[data-tone="worse"][data-lvl="2"] { background: rgba(229, 96, 79, .32); } .sh[data-tone="worse"][data-lvl="3"] { background: rgba(229, 96, 79, .55); color: #fff; }
+.sh[data-tone="neutral"][data-lvl="1"] { background: rgba(147, 160, 164, .12); } .sh[data-tone="neutral"][data-lvl="2"] { background: rgba(147, 160, 164, .22); } .sh[data-tone="neutral"][data-lvl="3"] { background: rgba(147, 160, 164, .32); }
+.heatkey { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; padding: 6px 14px 12px; font-size: 11px; color: var(--i-ink-2); }
+.heatkey i { width: 16px; height: 10px; border-radius: 2px; } .heatkey i.mid { background: #1c2327; } .heatkey span:first-child { margin-right: 2px; } .heatkey span:last-child { margin-left: 2px; }
