@@ -240,26 +240,49 @@ export type AiRequest =
 export type AiAnswer<T extends Task> = T extends "describe" ? { items: DescribedItem[]; dropped: string[] } : T extends "supplement" ? SupplementAnswer : T extends "chat" ? ChatAnswer : T extends "questions" ? QuestionsAnswer : T extends "night" ? NightAnswer : DigestAnswer;
 
 /** What the Worker keeps per account (doc "ai_usage", written only by the Worker). */
-export type UsageDoc = { day: string; calls: number; dayUsd: number; month: string; monthUsd: number; byModel: Partial<Record<ModelChoice, number>> };
+/** One call, as billed: what it was, on which model, its tokens (cached reads and cache writes apart) and its cost. */
+export type CallLog = { at: number; task: Task; model: ModelChoice; in: number; cached: number; written: number; out: number; searches: number; usd: number };
+export type UsageDoc = { day: string; calls: number; dayUsd: number; month: string; monthUsd: number; byModel: Partial<Record<ModelChoice, number>>;
+  /** The last calls, newest last (owner, 15 Oct: "i feel like u are waay underestimating cost" — so the estimate is made from these). */
+  recent?: CallLog[] };
+/** Calls kept in the log. */
+export const RECENT_CALLS = 120;
+export const logOf = (at: number, task: Task, model: ModelChoice, u: Usage, usd: number): CallLog => ({
+  at, task, model, in: u.input_tokens, cached: u.cache_read_input_tokens ?? 0, written: u.cache_creation_input_tokens ?? 0, out: u.output_tokens, searches: u.server_tool_use?.web_search_requests ?? 0, usd });
 export const DAILY_CAP = 50;
 
 /**
- * A typical month, for the estimate in Settings (and the doc's model comparison): per day, ~10
- * everyday calls (food the parser didn't know, a photo, chat, questions). Chat and questions now send
- * up to two months of check-ins (~11k tokens; chat caches it after the first message), so the average
- * is ~4k in, ~0.7k out. Research: the morning read (~25k in with search results, 3 searches), the
- * nightly read-back (~13k in, no search) and a supplement look-up every few days. Real spend is
- * measured and shown next to it.
+ * A typical month, for the estimate in Settings, per task. The first estimate counted ~4k tokens a call and was well under
+ * (owner, 15 Oct: 4 calls, $0.24): chat, questions and the reads each send the data summary (~11k tokens), cached only
+ * for 5 minutes — a lone question pays all of it, plus the cache write — and thinking counts as output. So: these as a
+ * start, and from your own calls once there are some — each task's average tokens, priced at each model's rates.
  */
-export const TYPICAL_DAY = {
-  light: { calls: 6, input_tokens: 4000, output_tokens: 700 },
-  everyday: { calls: 4, input_tokens: 6000, output_tokens: 900 },
-  research: { calls: 2.2, input_tokens: 20000, output_tokens: 2500, searches: 1.6 },
+export const TYPICAL: Record<Task, { perDay: number; in: number; out: number; searches: number }> = {
+  describe: { perDay: 3, in: 2000, out: 600, searches: 0 },
+  questions: { perDay: 1, in: 13000, out: 900, searches: 0 },
+  chat: { perDay: 5, in: 14000, out: 1200, searches: 0 },
+  digest: { perDay: 1, in: 25000, out: 2500, searches: 3 },
+  night: { perDay: 1, in: 13000, out: 1500, searches: 0 },
+  supplement: { perDay: 0.2, in: 9000, out: 2000, searches: 3 },
 };
-export function estimateMonthUsd(models: Models): Record<Tier, number> & { total: number } {
-  const l = TYPICAL_DAY.light, e = TYPICAL_DAY.everyday, r = TYPICAL_DAY.research;
-  const light = 30 * l.calls * costUsd(models.light, { input_tokens: l.input_tokens, output_tokens: l.output_tokens });
-  const everyday = 30 * e.calls * costUsd(models.everyday, { input_tokens: e.input_tokens, output_tokens: e.output_tokens });
-  const research = 30 * r.calls * costUsd(models.research, { input_tokens: r.input_tokens, output_tokens: r.output_tokens, server_tool_use: { web_search_requests: r.searches } });
-  return { light, everyday, research, total: light + everyday + research };
+const TASKS = Object.keys(TYPICAL) as Task[];
+
+/** A task's average call from your log (its tokens, so it can be priced at any model), or the typical one. */
+function perCall(task: Task, recent: CallLog[]): Usage {
+  const mine = recent.filter((c) => c.task === task);
+  if (!mine.length) { const t = TYPICAL[task]; return { input_tokens: t.in, output_tokens: t.out, server_tool_use: { web_search_requests: t.searches } }; }
+  const avg = (f: (c: CallLog) => number) => mine.reduce((a, c) => a + f(c), 0) / mine.length;
+  return { input_tokens: avg((c) => c.in), cache_read_input_tokens: avg((c) => c.cached), cache_creation_input_tokens: avg((c) => c.written), output_tokens: avg((c) => c.out), server_tool_use: { web_search_requests: avg((c) => c.searches) } };
+}
+
+/** A month at these models: each task's average call × how often it comes (yours once the log spans 3+ days). */
+export function estimateMonthUsd(models: Models, recent: CallLog[] = []): Record<Tier, number> & { total: number; measured: number } {
+  const span = recent.length ? (recent[recent.length - 1].at - recent[0].at) / 86_400_000 : 0;
+  const out = { light: 0, everyday: 0, research: 0, total: 0, measured: recent.length };
+  for (const t of TASKS) {
+    const perDay = span >= 3 ? recent.filter((c) => c.task === t).length / span : TYPICAL[t].perDay;
+    const usd = 30 * perDay * costUsd(models[TIER[t]], perCall(t, recent));
+    out[TIER[t]] += usd; out.total += usd;
+  }
+  return out;
 }

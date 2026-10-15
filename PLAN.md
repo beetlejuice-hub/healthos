@@ -1335,6 +1335,15 @@ below, in his words, grouped; A first (broken or wrong now), then the rest. Item
    → Opus, also for an older doc; $20.40 this month → Haiku, $19.90 → Opus, a new month resets; usage says the budget),
    mdlite.test (bold, italic, not snake_case or "5 * 3", lists, the morning read's • bullets, HTML stays text), e2e/ai.cjs
    (a reply with bold, a list and italic drawn, no stars left). Not checked: a real reply from the live AI.
+   - **The estimate was too low** (owner, 15 Oct, a screenshot: 4 calls, $0.24 — "i feel like u are waay underestimating
+     cost"). It assumed ~4k tokens a call; chat, questions and the reads each send the ~11k-token data summary, cached only
+     5 minutes (a lone question pays all of it plus the cache write), thinking counts as output, and the morning read
+     (Opus, web search, ≈ $0.15) runs on its own. Now every call is logged as billed (task, model, tokens in / cached /
+     written / out, searches, cost; the last 120, in the usage doc), Settings → AI lists the last 12 with what each cost,
+     and the month's estimate is made from them — each task's average tokens priced at each model, and how often it
+     comes once the log spans 3 days; before any call, per-task first guesses at the real sizes (a chat ≈ 14k in, 1.2k
+     out). Checked: ai.test (four calls like the owner's ≈ $0.24 → a month past $15, not ≈ $4; 10 chats a day counts
+     10), worker test (the call logged as billed), e2e/ai.cjs (the list, "from your last N calls").
 98. [ ] **AI, soon**
 98. [ ] **AI, soon** — "it should look at all the data, see whatsup, tell me clever tips, what to improve, and a whole bunch
    of stuff.. it should recommend me, or just understand protocols i give him, and help me set up in app, or just tell

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { fromDescribed, judge } from "./apply";
 import { CONTEXT_MAX, buildContext, dayTimeline, feelByTime, moodJournal } from "./context";
-import { checkDescribe, checkNight, costUsd, jsonFrom, SYSTEM } from "./tasks";
+import { checkDescribe, checkNight, costUsd, estimateMonthUsd, jsonFrom, SYSTEM, type CallLog } from "./tasks";
 import { parseItem } from "../quickadd";
 import { feelWorld } from "../bench";
 import { EMPTY_AI, type State } from "../store";
@@ -160,5 +160,40 @@ describe("the AI's timing rule (PLAN 75)", () => {
       expect(text, task).toMatch(/Never link a check-in to something logged less than 30 minutes before it, and for supplements not less than an hour/);
       expect(text, task).toMatch(/an unticked day is unknown, not a day without/);
     }
+  });
+});
+
+describe("the month's estimate (owner, 15 Oct: \"i feel like u are waay underestimating cost\" — 4 calls, $0.24)", () => {
+  const D = 86_400_000;
+  const call = (at: number, task: CallLog["task"], model: CallLog["model"], u: { in: number; cached?: number; written?: number; out: number; searches?: number }): CallLog => {
+    const usage = { input_tokens: u.in, cache_read_input_tokens: u.cached ?? 0, cache_creation_input_tokens: u.written ?? 0, output_tokens: u.out, server_tool_use: { web_search_requests: u.searches ?? 0 } };
+    return { at, task, model, in: u.in, cached: u.cached ?? 0, written: u.written ?? 0, out: u.out, searches: u.searches ?? 0, usd: costUsd(model, usage) };
+  };
+  const models = { light: "haiku", everyday: "sonnet", research: "opus" } as const;
+  it("a first guess before any call: a chat carries the ~11k data summary — five a day on Sonnet ≈ $6, not the old ≈ $1", () => {
+    const e = estimateMonthUsd(models);
+    expect(e.everyday).toBeCloseTo(150 * (14000 * 2 + 1200 * 10) / 1e6, 6); // $6.00
+    expect(e.measured).toBe(0);
+  });
+  it("from your calls: four like the owner's (a morning read, questions, two chats ≈ $0.24) price each task at what it really took", () => {
+    const t0 = Date.parse("2026-10-15T09:00:00");
+    const rec = [
+      call(t0, "digest", "opus", { in: 24000, out: 2600, searches: 3 }),
+      call(t0 + 3600_000, "questions", "sonnet", { in: 12500, out: 900 }),
+      call(t0 + 2 * 3600_000, "chat", "sonnet", { in: 300, written: 11800, out: 1100 }),
+      call(t0 + 3 * 3600_000, "chat", "sonnet", { in: 300, written: 11800, out: 900 }),
+    ];
+    const spent = rec.reduce((a, c) => a + c.usd, 0);
+    expect(spent).toBeGreaterThan(0.2); expect(spent).toBeLessThan(0.3);
+    const e = estimateMonthUsd({ ...models, light: "sonnet" }, rec);
+    // a day of the typical mix at these real sizes: the morning read alone ≈ $0.18 a day — the month lands past $15
+    expect(e.measured).toBe(4); expect(e.research).toBeGreaterThan(5); expect(e.total).toBeGreaterThan(15);
+    // the same calls priced at Haiku for questions: the light tier costs a fraction
+    expect(estimateMonthUsd(models, rec).light).toBeLessThan(e.light / 10);
+  });
+  it("how often each task comes is yours once the log spans 3 days: 10 chats a day counts 10, not the typical 5", () => {
+    const t0 = Date.parse("2026-10-01T09:00:00");
+    const rec = Array.from({ length: 41 }, (_, i) => call(t0 + i * (D / 10), "chat", "sonnet", { in: 14000, out: 1200 }));
+    expect(estimateMonthUsd(models, rec).everyday).toBeCloseTo(30 * (41 / 4) * (14000 * 2 + 1200 * 10) / 1e6, 6); // 41 calls over 4 days: 10.25 a day, ≈ $12.30
   });
 });

@@ -10,7 +10,7 @@
 
 import Anthropic from "@anthropic-ai/sdk";
 import {
-  DAILY_CAP, MODELS, MONTHLY_USD, SCHEMAS, SYSTEM, TIER, checkChat, modelFor, checkDescribe, checkDigest, checkNight, checkQuestions, checkSupplement, costUsd, jsonFrom,
+  DAILY_CAP, MODELS, MONTHLY_USD, RECENT_CALLS, SCHEMAS, logOf, SYSTEM, TIER, checkChat, modelFor, checkDescribe, checkDigest, checkNight, checkQuestions, checkSupplement, costUsd, jsonFrom,
   type AiRequest, type ModelChoice, type Task, type UsageDoc,
 } from "../src/lib/ai/tasks";
 
@@ -145,7 +145,8 @@ export async function handleAi(req: Request, env: AiEnv, deps: Deps = { fetch: (
   try {
     const out = await callModel(body, choice, env.ANTHROPIC_API_KEY, deps, today);
     const cost = costUsd(choice, out.usage);
-    const next: UsageDoc = { ...usage, calls: usage.calls + 1, dayUsd: usage.dayUsd + cost, monthUsd: usage.monthUsd + cost, byModel: { ...usage.byModel, [choice]: (usage.byModel[choice] ?? 0) + cost } };
+    const next: UsageDoc = { ...usage, calls: usage.calls + 1, dayUsd: usage.dayUsd + cost, monthUsd: usage.monthUsd + cost, byModel: { ...usage.byModel, [choice]: (usage.byModel[choice] ?? 0) + cost },
+      recent: [...(usage.recent ?? []), logOf(deps.now(), body.task, choice, out.usage, cost)].slice(-RECENT_CALLS) };
     await writeUsage(user, env, deps, next);
     if (out.refused) return json({ error: "refused", message: "The AI declined this one.", usage: next, costUsd: cost }, 422);
     return json({ answer: out.answer, usage: next, costUsd: cost, model: choice });

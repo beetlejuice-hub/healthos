@@ -45,6 +45,8 @@ describe("/api/ai", () => {
     expect(body.answer.items[0].name).toBe("Long coffee, large");
     expect(body.costUsd).toBeCloseTo((1000 * 4 + 500 * 20) / 1e6, 6); // Opus 5.5 list price
     expect(w.docs.get("ai_usage")).toMatchObject({ day: "2026-10-01", calls: 1 });
+    // each call logged as billed, so Settings can show what it cost and estimate from it (owner, 15 Oct)
+    expect((w.docs.get("ai_usage") as { recent: unknown[] }).recent).toEqual([{ at: expect.any(Number), task: "describe", model: "opus", in: 1000, cached: 0, written: 0, out: 500, searches: 0, usd: body.costUsd }]);
     const sent = w.sent[0].body;
     expect(sent.model).toBe("claude-opus-5-5");
     expect(sent.fallbacks).toBe("default");

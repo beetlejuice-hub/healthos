@@ -16,6 +16,9 @@ import { InboxCard } from "./Inbox";
 import { Md } from "./Md";
 
 const usd = (x: number) => (x < 0.1 ? `$${x.toFixed(3)}` : `$${x.toFixed(2)}`);
+const k = (n: number) => (n >= 1000 ? `${(n / 1000).toFixed(1)}k` : String(Math.round(n)));
+const clockOf = (t: number) => new Date(t).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
+const TASK_WORDS: Record<string, string> = { describe: "food", questions: "questions", chat: "chat", digest: "morning read", night: "night read", supplement: "supplement" };
 
 /* ------------------------------------------------------------------ background: morning read + questions */
 
@@ -338,12 +341,13 @@ export function AiSettings() {
   const { on, usage, cap, budget } = useAiStatus();
   const [seeing, setSeeing] = useState(false);
   useEffect(() => { void refreshAiStatus(); }, []);
-  const est = estimateMonthUsd(ai.models);
+  const recent = usage?.recent ?? [];
+  const est = estimateMonthUsd(ai.models, recent);
   const now = new Date(), dim = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
   const projected = usage ? (usage.monthUsd / now.getDate()) * dim : null;
   const pick = (tier: Tier, m: ModelChoice) => act.setAi((a) => ({ models: { ...a.models, [tier]: m } }));
   const option = (tier: Tier) => (Object.keys(MODELS) as ModelChoice[]).map((m) => {
-    const e = estimateMonthUsd({ ...ai.models, [tier]: m })[tier];
+    const e = estimateMonthUsd({ ...ai.models, [tier]: m }, recent)[tier];
     return <option key={m} value={m}>{MODELS[m].label} · ≈ {usd(e)}/month</option>;
   });
   return (
@@ -356,7 +360,11 @@ export function AiSettings() {
       <label className="field">Food, photos and quick questions<select value={ai.models.light} onChange={(e) => pick("light", e.target.value as ModelChoice)}>{option("light")}</select></label>
       <label className="field">Chat (your questions about your data)<select value={ai.models.everyday} onChange={(e) => pick("everyday", e.target.value as ModelChoice)}>{option("everyday")}</select></label>
       <label className="field">Research (morning and nightly reads, supplement look-ups — with web search)<select value={ai.models.research} onChange={(e) => pick("research", e.target.value as ModelChoice)}>{option("research")}</select></label>
-      <p className="note">Estimate for a typical month with these: ≈ {usd(est.total)}. Past {usd(budget)} in a month everything drops to {MODELS.haiku.label} until the 1st; hard stop at {cap} calls a day.</p>
+      <p className="note">Estimate for a month with these: ≈ {usd(est.total)} — {est.measured ? `from your last ${est.measured} call${est.measured > 1 ? "s" : ""}` : "a first guess until you've used it"}. Past {usd(budget)} in a month everything drops to {MODELS.haiku.label} until the 1st; hard stop at {cap} calls a day.</p>
+      {recent.length > 0 && <details className="ai-calls"><summary>Last calls — what each cost</summary>
+        <ul>{[...recent].reverse().slice(0, 12).map((c) => <li key={c.at}><span>{clockOf(c.at)} · {TASK_WORDS[c.task]} · {MODELS[c.model].label.replace("Claude ", "")}</span><span>{k(c.in + c.cached + c.written)} in{c.cached ? ` (${k(c.cached)} cached)` : ""} · {k(c.out)} out{c.searches ? ` · ${c.searches} search${c.searches > 1 ? "es" : ""}` : ""}</span><b>{usd(c.usd)}</b></li>)}</ul>
+        <p className="note">"In" is mostly your data summary, sent with chats, questions and the reads — your words are a few tokens of it. "Out" includes the model's thinking.</p>
+      </details>}
       <h3>What the AI knows about me <span>it adds lines as you chat · delete any</span></h3>
       {ai.memory.length === 0 ? <p className="note">Nothing yet.</p> : <div className="chips mem">{ai.memory.map((m) => <span className="chip" key={m.id}>{m.text}<button type="button" aria-label={`Forget ${m.text}`} onClick={() => act.setAi((a) => ({ memory: a.memory.filter((x) => x.id !== m.id) }))}>✕</button></span>)}</div>}
       <button type="button" className="linkish" onClick={() => setSeeing(!seeing)}>{seeing ? "Hide" : "What the AI sees about me"}</button>

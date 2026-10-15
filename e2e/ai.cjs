@@ -16,7 +16,9 @@ const ANSWERS = {
   questions: () => ({ questions: [{ id: 'q', text: 'Your energy dips around 4pm — big lunch today?', why: 'to see if lunch size explains the dip', options: ['Big', 'Normal', 'Skipped'], key: 'lunch_size', repeat: 'daily' }] }),
   chat: () => ({ reply: 'Hey! Your **afternoon energy** is the thing to watch:\n- the cut-off experiment will tell us\n- *one* coffee before noon', remember: ['Usual coffee is a long coffee, big cup'] }),
 };
-const usage = (n) => ({ day: '2026-10-01', calls: n, dayUsd: n * 0.02, month: '2026-10', monthUsd: n * 0.02, byModel: { opus: n * 0.02 } });
+// each call as the worker logs it (owner, 15 Oct: "i feel like u are waay underestimating cost") — a chat carrying the data summary
+const logged = (i) => ({ at: Date.parse('2026-10-01T10:00:00') + i * 600_000, task: i % 2 ? 'chat' : 'questions', model: 'sonnet', in: 300, cached: 0, written: 11800, out: 1100, searches: 0, usd: 0.0414 });
+const usage = (n) => ({ day: '2026-10-01', calls: n, dayUsd: n * 0.0414, month: '2026-10', monthUsd: n * 0.0414, byModel: { sonnet: n * 0.0414 }, recent: Array.from({ length: n }, (_, i) => logged(i)) });
 const SALAMI = [['Salami', 380, 22, 1, 32], ['Salami', 400, 24, 1, 33], ['salami', 420, 25, 2, 35], ['Salami', 3900, 22, 1, 32]]
   .map(([name, kcal, p, c, f], i) => ({ id: `off:s${i}`, name, brand: `Brand ${i}`, per100: { kcal, p, c, f }, source: 'off' }));
 
@@ -117,6 +119,9 @@ const SALAMI = [['Salami', 380, 22, 1, 32], ['Salami', 400, 24, 1, 33], ['salami
     await pg.goto(APP + '#settings'); await pg.waitForTimeout(200);
     const card = await pg.locator('#ai').innerText();
     check('Settings: on, calls today, model choice with a monthly estimate', /AI\s*on/.test(card) && /Today \d+ of 50 calls/.test(card) && /Claude Opus 5\.5 · ≈ \$/.test(card));
+    const lc = await pg.locator('.ai-calls').evaluate((e) => { e.open = true; return e.innerText; }).catch(() => '');
+    check(`Settings: the last calls, each with its tokens and cost (${lc.split('\n').slice(1, 3).join(' / ')})`, /chat · Sonnet 5\.5\s*12\.1k in · 1\.1k out\s*\$0\.041/.test(lc) && /mostly your data summary/.test(lc));
+    check('Settings: the estimate says it comes from your calls', /from your last \d+ calls?/.test(await pg.locator('#ai').innerText()));
     check('memory shows what it learned', /Usual coffee is a long coffee, big cup/.test(card));
     await pg.getByRole('button', { name: 'Forget Usual coffee is a long coffee, big cup' }).click();
     check('…and you can delete it', !/Usual coffee is a long coffee/.test(await pg.locator('#ai').innerText()));
