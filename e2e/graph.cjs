@@ -73,6 +73,9 @@ const { chromium, APP, OUT, handle } = require('./harness.cjs');
     await pg.mouse.move(ob.x + LEFT + 14, ob.y + ob.height / 2); await pg.mouse.down(); await pg.mouse.move(ob.x + ob.width - RIGHT - 5, ob.y + ob.height / 2, { steps: 8 }); await pg.mouse.up(); await pg.waitForTimeout(150);
     const end = Number((await ov.getAttribute('data-window')).split(',')[1]);
     check(`[${vw}] dragging the overview window moves the view (${new Date(wa).toDateString()} → ends ${new Date(end).toDateString()})`, end > wz + 5 * 864e5);
+    // a long press reads the value, never selects the page (owner, 15 Oct: "it goes blue"): no text selection on the charts
+    const sel = await pg.evaluate(() => [...document.querySelectorAll('.mg-main, .mg-canvas, svg[role="img"]')].map((e) => getComputedStyle(e).userSelect || getComputedStyle(e).webkitUserSelect));
+    check(`[${vw}] charts can't be text-selected by a long press (${[...new Set(sel)].join(', ')} on ${sel.length})`, sel.length > 0 && sel.every((v) => v === 'none'));
     await ctx.close();
   }
   console.log('errors:', JSON.stringify(errs)); await b.close();
