@@ -1244,9 +1244,18 @@ below, in his words, grouped; A first (broken or wrong now), then the rest. Item
      the month-of-ordinary and monotonic tests still pass), e2e/readiness.cjs (the wine morning: 20, "take it easier", the
      note, HRV and resting HR red; ordinary: 87, no note). Not checked in the browser: the "slept poorly" tag (unit-tested
      logic, one line of markup).
-   - [ ] **What happened that night** — "at sleep, it should subtly show the thing that happened that night. like if i
+   - [x] **What happened that night** — "at sleep, it should subtly show the thing that happened that night. like if i
      slept w gf, if i was drunk, if i was scrolling too much before bed, if worked out late, if too much cafffeine, if went
-     to bed too late, etc - the most significant thing".
+     to bed too late, etc - the most significant thing". lib/standout: each thing that evening weighed by how much it
+     tends to matter and how much of it there was — drinks most (more each), caffeine at bed (30 mg+), a late night (an
+     hour past both 23:30 and your usual, so an owl's usual isn't "late"), training within 3 h of bed, stress 7+, phone
+     45 min+, a meal within 90 min, your tags (gf, out, worked late, your own words), a nap 30 min+. The night's own
+     numbers tip it: a thing gains when what it usually moves was off (drinks → HRV / heart rate asleep, caffeine and
+     phone → falling asleep), and that number is said beside it: "THAT NIGHT · 2 drinks · and HRV 20 % under your usual".
+     One quiet chip above the score; nothing when nothing stood out. Checked: standout.test (9: nothing → none; 4 drinks
+     over gf and phone; a 2-hour-late night over one drink; an owl isn't late; a slow-to-sleep night tips gf → phone;
+     caffeine over late training, under 30 mg not a thing; own tags, stress, meal, nap; unasked isn't counted),
+     e2e/sleep.cjs (the planted two beers, with that night's HRV). Next, offered: the same mark on the 14-night strip.
    - [ ] **App messages, colour and graphs across Insights** — proposal first (one question to the owner).
 98. [ ] **AI, soon** — "it should look at all the data, see whatsup, tell me clever tips, what to improve, and a whole bunch
    of stuff.. it should recommend me, or just understand protocols i give him, and help me set up in app, or just tell

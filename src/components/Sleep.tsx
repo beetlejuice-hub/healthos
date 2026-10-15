@@ -15,6 +15,7 @@ import { useNights } from "./useNights";
 import { useWidth } from "./useWidth";
 import { SleepScore } from "./SleepScore";
 import { sleepScore, type SleepScore as SleepScoreT } from "../lib/sleepscore";
+import { standout } from "../lib/standout";
 import { NightWords } from "./NightWords";
 import { nightLabel, tagFactors, tagsComing } from "../lib/lastnight";
 import { useStore } from "../lib/store";
@@ -77,6 +78,7 @@ function LastNight({ n, e, ns, band, data, wide, w, score }: { n: Night; e: Even
       <div className={`sl-b-grid${wide ? " wide" : ""}`}>
         <div className="sl-p sl-chart"><NightChart n={n} ns={ns} band={band} data={data} w={cw - 2} wide={wide} /></div>
         <div className="sl-p sl-nums">
+          <NightWhat n={n} e={e} ns={ns} score={score} />
           <SleepScore s={score} />
           <div className="sl-asleep"><b>{dur(n.asleep)}</b> <span>asleep · {dur((n.up - n.bed) / MIN)} in bed · {Math.round((n.asleep / ((n.up - n.bed) / MIN)) * 100)} % of it asleep</span></div>
           <NightMore n={n} />
@@ -170,6 +172,13 @@ function NightChart({ n, ns, band, data, w, wide }: { n: Night; ns: Night[]; ban
       {usualBand.length > 1 && wide && <text x={w - R} y={hy0 + 4 * RW + 42} textAnchor="end" className="cmp-s">grey: the middle half of your other nights at each time · red: a 5-minute average</text>}
     </svg>
   );
+}
+
+/** The one thing that stood out that evening (owner, 15 Oct: "subtly show the thing that happened that night … the most significant thing"). */
+function NightWhat({ n, e, ns, score }: { n: Night; e: Evening; ns: Night[]; score: SleepScoreT }) {
+  const so = useMemo(() => standout(n, e, ns, score), [n, e, ns, score]);
+  if (!so) return null;
+  return <p className="sl-what" data-what={so.id}><span className="k">That night</span><b>{so.label}</b>{so.also && <span className="also">and {so.also}</span>}</p>;
 }
 
 /** What the score's parts don't hold: the nap that day, when the heart rate bottomed out, this morning's resting rate. */
