@@ -1214,6 +1214,30 @@ below, in his words, grouped; A first (broken or wrong now), then the rest. Item
    readiness.test (planted HRV −30 %, a low week, resting HR +4, 5-hour week, 3× training each found; ordinary months ≤2
    of 20 under 70; noise costs nothing; monotonic), worker data test, e2e/readiness.cjs (the line names HRV, six parts,
    Today's sleep score = the Sleep page's with Today opened first, ordinary reads "ready").
+101. [ ] **15 Oct notes** (claimed: this session, 15 Oct — lib/sleepscore, SleepScore, Sleep.tsx, lib/readiness, Readiness)
+   - [x] **Sleep score on the studies' ranges, drawn so it reads** — "pls dont make the score compared to my ususal, it
+     should have a range, like taken from studies, like an ideal scenario, an average one, and a bad one, and then compare
+     this and my usual to the last nights sleep..cause if my usual is pretty bad, it will still show me a good score";
+     "I went to bed earlier and timing is at 0/15"; of the old range rows: "i like the ranges and dots etc i just dont get
+     it really". Each part now has fixed zones — ideal / fair / poor — from the research, and is scored on them, never on
+     your usual: length 25 (NSF 2015: 7–9 ideal, 6–7 fair, under 6 poor; past 9 fair, past 10 poor), asleep in bed 10
+     (NSF 2017: 85 %+), awake in the night 7 (≤ 20 min), wakings over 5 min 3 (0–1), fell asleep in 5 (≤ 30 min), deep 7
+     (13 %+ of sleep), REM 8 (20 %+), fell asleep at 5 (22:00–23:00 ideal — Nikbakhtian 2021, lowest heart risk; earlier
+     is fair, never 0; past 00:30 poor), HRV 8 and heart rate asleep 7 (the one place with no one-size range, so against
+     your usual in drink-sized steps: HRV 8 % under fine, 20 % under poor; +1.5 bpm fine, +4 poor), your rating 15.
+     Each part is one bar in red / amber / green zones with this night's dot (coloured by zone, the zone in words beside
+     it) and a tick for your usual, "ideal 7–9 h · your usual 7 h 40" under it; a key under the list. This replaces both
+     the score's grey bars and the old range rows; nap, lowest heart rate and resting rate went to one line under them.
+     Boundaries go to the better zone, as the NSF words them (85 % is ideal, 75 % fair). Words on Fitbit's bands. Checked:
+     sleepscore.test (15: a poor usual doesn't make a poor night good, an earlier bedtime than usual gets full marks, a
+     wine-like night's heart parts both red, …), e2e/sleepscore.cjs at 390 px (5 h → 6.3 of 25 poor, dot at 5 h and tick
+     at 7 h 40 where they belong, every part one dot, the key), e2e/sleep.cjs.
+   - [ ] **Readiness after a bad night** — "Charge6 app says 16 readiness … after drinking a bottle of wine but i feel like
+     app didnt punish ut enough, it days readiness 68 and doesn’t highlight eniugh that i slept poorly".
+   - [ ] **What happened that night** — "at sleep, it should subtly show the thing that happened that night. like if i
+     slept w gf, if i was drunk, if i was scrolling too much before bed, if worked out late, if too much cafffeine, if went
+     to bed too late, etc - the most significant thing".
+   - [ ] **App messages, colour and graphs across Insights** — proposal first (one question to the owner).
 98. [ ] **AI, soon** — "it should look at all the data, see whatsup, tell me clever tips, what to improve, and a whole bunch
    of stuff.. it should recommend me, or just understand protocols i give him, and help me set up in app, or just tell
    me to tell you to set up correctly in app". With #65, #67, #91 (waits on the AI key).

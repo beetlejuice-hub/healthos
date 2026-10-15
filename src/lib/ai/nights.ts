@@ -30,7 +30,7 @@ export function nightLines(ns: Night[], evs: Evening[], supplements: Pick<Supple
       e.tags?.length && `last night: ${e.tags.map(nightLabel).join(", ")}`, e.phoneMin != null && `${phoneLabel(e.phoneMin)} before sleep`, e.rating != null && `rated it ${e.rating}/10`].filter(Boolean);
     // the night out of 100 as the Sleep page shows it (PLAN 97), so the AI and the page say the same number
     const sc = sleepScore(n, e.rating, ns);
-    return `${n.day} (night from ${n.eve}): score ${sc.score}/100${sc.left.length ? ` (without ${sc.left.map((l) => l.name.toLowerCase()).join(", ")})` : ""}, ${band.join(", ")}${eve.length ? ` · evening before: ${eve.join(", ")}` : ""}`;
+    return `${n.day} (night from ${n.eve}): score ${sc.score}/100${sc.left.length ? ` (without ${sc.left.map((l) => (/^[A-Z]{2}/.test(l.name) ? l.name : l.name[0].toLowerCase() + l.name.slice(1))).join(", ")})` : ""}, ${band.join(", ")}${eve.length ? ` · evening before: ${eve.join(", ")}` : ""}`;
   });
 }
 

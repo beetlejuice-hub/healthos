@@ -87,7 +87,8 @@ function world(seed = 5) {
   check(`B on top: "Last night · Wed 7 → Thu 8 Oct" (${await pg.locator('.sl .sl-title').innerText()})`, /Last night · Wed 7 → Thu 8 Oct/.test(await pg.locator('.sl .sl-title').innerText()));
   const facts = await pg.locator('.sl .sl-facts').innerText();
   check(`what was different: the two beers and the later, higher low (${facts.split('\n').slice(1, 4).join(' / ')})`, /2 drinks, the last \d+ (min|h \d\d) before bed\./.test(facts) && /Lowest heart rate \d\d at \d\d:\d\d, (1 h \d\d|\d+ min) later than usual \(usually about \d\d\)\./.test(facts));
-  check('every number of the night against your range (10 rows, each with a bar)', await pg.locator('.sl .sl-bul-r').count() === 10 && await pg.locator('.sl .sl-bul-r svg rect').count() >= 8);
+  check('the night\'s numbers on the studies\' zones (8+ bars, a dot each), the nap and lowest heart rate under them', await pg.locator('.sl .sl-sp.z').count() >= 8 && await pg.locator('.sl .sl-sp.z .zb .dot').count() === await pg.locator('.sl .sl-sp.z').count()
+    && /nap that day: (none|\d+ min) · lowest heart rate \d+ bpm at \d\d:\d\d/.test(await pg.locator('.sl .sl-more').innerText().catch(() => '')));
   const chartTxt = (await pg.locator('.sl .sl-chart svg text').allTextContents()).join('|');
   check(`the chart: stages, the evening (beers, workout), the lowest heart rate marked (${(chartTxt.match(/lowest \d+ at \d\d:\d\d/) || [''])[0]})`, /lowest \d+ at \d\d:\d\d/.test(chartTxt) && /2 drinks/.test(chartTxt) && /Push day/.test(chartTxt) && await pg.locator('.sl .sl-chart svg rect').count() >= 20);
   await pg.locator('.sl .sl-b').screenshot({ path: OUT + 'sleep-b-laptop.png' });

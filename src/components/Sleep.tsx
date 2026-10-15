@@ -58,7 +58,7 @@ export function SleepNights({ data, band, now, entries, halfLifeMin }: { data: L
           {([14, 30, 90] as const).map((d) => <button key={d} type="button" aria-pressed={span === d} onClick={() => setSpan(d)}>{d} nights</button>)}
         </div>
       </div>
-      <LastNight n={n} e={e} ns={ns} evs={evs} band={band} data={data} wide={wide} w={w} score={scores[si]} />
+      <LastNight n={n} e={e} ns={ns} band={band} data={data} wide={wide} w={w} score={scores[si]} />
       <Minis ns={ns.slice(-14)} scores={scores.slice(-14).map((x) => x.score)} sel={n.id} onSel={setSel} w={w} />
       <NightLog ns={ns} evs={evs} sel={n} onSel={setSel} wide={wide} w={w} workouts={data.workouts} meals={data.meals} />
       <GoesWith ns={ns} evs={evs} wide={wide} w={w} factors={factors} />
@@ -68,7 +68,7 @@ export function SleepNights({ data, band, now, entries, halfLifeMin }: { data: L
 
 /* ------------------------------------------------------------------ B · last night, in depth */
 
-function LastNight({ n, e, ns, evs, band, data, wide, w, score }: { n: Night; e: Evening; ns: Night[]; evs: Evening[]; band: BandData; data: Lanes; wide: boolean; w: number; score: SleepScoreT }) {
+function LastNight({ n, e, ns, band, data, wide, w, score }: { n: Night; e: Evening; ns: Night[]; band: BandData; data: Lanes; wide: boolean; w: number; score: SleepScoreT }) {
   const others = ns.filter((x) => x.id !== n.id);
   const said = facts(n, e, ns, { clock, dur: (m) => (m < 60 ? `${Math.round(m)} min` : dur(m)) });
   const cw = wide ? w - 360 - 12 : w;
@@ -79,7 +79,7 @@ function LastNight({ n, e, ns, evs, band, data, wide, w, score }: { n: Night; e:
         <div className="sl-p sl-nums">
           <SleepScore s={score} />
           <div className="sl-asleep"><b>{dur(n.asleep)}</b> <span>asleep · {dur((n.up - n.bed) / MIN)} in bed · {Math.round((n.asleep / ((n.up - n.bed) / MIN)) * 100)} % of it asleep</span></div>
-          <Bullets n={n} e={e} ns={ns} ratings={evs.map((x) => x.rating)} />
+          <NightMore n={n} />
           <div className="sl-facts">
             <span className="cmp-k">What was different</span>
             {said.length ? said.map((s) => <p key={s}>{s}</p>) : <p>Nothing stood out against your other {others.length} nights.</p>}
@@ -172,39 +172,14 @@ function NightChart({ n, ns, band, data, w, wide }: { n: Night; ns: Night[]; ban
   );
 }
 
-function Bullets({ n, e, ns, ratings }: { n: Night; e: Evening; ns: Night[]; ratings: (number | null)[] }) {
-  const evs = (k: (x: Night) => number | null) => ns.map(k);
-  const rows: [string, number | null, (number | null)[], (v: number) => string][] = [
-    ["Fell asleep in", n.latency, evs((x) => x.latency), (v) => `${Math.round(v)} min`],
-    ["Awake in the night", n.awake, evs((x) => x.awake), (v) => `${Math.round(v)} min`],
-    ["Deep sleep", n.deep, evs((x) => x.deep), (v) => `${Math.round(v)} min`],
-    ["REM", n.rem, evs((x) => x.rem), (v) => `${Math.round(v)} min`],
-    ["Nap that day", n.nap?.min ?? 0, [], (v) => (v ? `${Math.round(v)} min` : "none")],
-    ["Lowest heart rate", n.low, evs((x) => x.low), (v) => `${Math.round(v)} bpm`],
-    ["…came at", n.lowAt == null ? null : clockH(n.lowAt, n.eve), evs((x) => (x.lowAt == null ? null : clockH(x.lowAt, x.eve))), (v) => clock(atMinute(n.eve, 0) + v * HOUR)],
-    ["HRV", n.hrv, evs((x) => x.hrv), (v) => `${Math.round(v)} ms`],
-    ["Resting heart rate", n.rhr, evs((x) => x.rhr), (v) => `${Math.round(v)} bpm`],
-    ["Your rating", e.rating, ratings, (v) => `${v}/10`],
-  ];
-  const BW = 130, RH = 30;
-  return (
-    <div className="sl-bul" role="list" aria-label="Each number from this night against the middle half of your nights">
-      {rows.map(([name, v, all, fmt]) => {
-        const s = all.filter((x): x is number => x != null), u = usual(s), mn = Math.min(...s, v ?? Infinity), mx = Math.max(...s, v ?? -Infinity);
-        const BX = (x: number) => 6 + ((x - mn) / (mx - mn || 1)) * (BW - 12), out = u && v != null && (v < u.lo || v > u.hi);
-        return (
-          <div key={name} className="sl-bul-r" role="listitem" data-out={out || undefined}>
-            <span>{name}</span><b>{v == null ? "–" : fmt(v)}</b>
-            <svg width={BW} height={RH - 10} viewBox={`0 0 ${BW} ${RH - 10}`} aria-hidden="true">
-              {u && <><rect x={BX(u.lo)} y={5} width={Math.max(2, BX(u.hi) - BX(u.lo))} height={10} fill="var(--i-ink-2)" fillOpacity=".2" /><line x1={BX(u.mid)} x2={BX(u.mid)} y1={3} y2={17} stroke="var(--i-ink-2)" strokeWidth="1.5" /></>}
-              {v != null && u && <circle cx={BX(v)} cy={10} r={4.5} fill="var(--i-ink)" stroke="var(--i-panel)" strokeWidth="2" />}
-            </svg>
-          </div>
-        );
-      })}
-      <span className="sl-bul-k">grey: the middle half of your nights · dot: this night</span>
-    </div>
-  );
+/** What the score's parts don't hold: the nap that day, when the heart rate bottomed out, this morning's resting rate. */
+function NightMore({ n }: { n: Night }) {
+  const bits = [
+    `nap that day: ${n.nap?.min ? `${Math.round(n.nap.min)} min` : "none"}`,
+    n.low != null && `lowest heart rate ${Math.round(n.low)} bpm${n.lowAt != null ? ` at ${clock(n.lowAt)}` : ""}`,
+    n.rhr != null && `resting ${Math.round(n.rhr)} bpm`,
+  ].filter(Boolean);
+  return <p className="sl-more">{bits.join(" · ")}</p>;
 }
 
 /** The last 14 nights, small; tap one to open it above. */

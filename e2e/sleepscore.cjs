@@ -1,7 +1,9 @@
 // The night out of 100 (PLAN 97; owner, 14 Oct: "should do a 100/… pointing for my sleep based on all the sleep data,
-// length, etc i get and also add in my rating"). 20 fake nights from the band: in bed ~23:30, ~7 h 40 asleep with stages,
-// heart rate, HRV, each morning rated 8. Last night: in bed 01:30 (2 h late), 5 h asleep, not rated yet. The card must
-// show its parts with the right points, say the rating isn't in yet, and the strip must show every night's score.
+// length, etc i get and also add in my rating"; 15 Oct: on the studies' ranges, not your usual, drawn so it reads). 20 fake
+// nights from the band: in bed ~23:30, ~7 h 40 asleep with stages, heart rate, HRV, each morning rated 8. Last night: in
+// bed 01:30 (2 h late), 5 h asleep, not rated yet. The card must show its parts with the right points, each on a bar in
+// the study's zones with this night's dot and your usual's tick, say the rating isn't in yet, and the strip must show
+// every night's score.
 const { chromium, APP, OUT, handle } = require('./harness.cjs');
 
 const MIN = 60_000, HOUR = 3_600_000, D = 86_400_000, NOW = new Date('2026-10-14T09:30:00').getTime();
@@ -51,13 +53,20 @@ function world() {
   await pg.waitForFunction(() => +document.querySelector('.sl')?.dataset.nights >= 20, null, { timeout: 15000 }).catch(() => {});
   await pg.waitForTimeout(300);
   const card = pg.locator('.sl .sl-score');
-  const part = (id) => card.locator(`.sl-sp[data-part="${id}"]`).evaluate((e) => [+e.dataset.got, e.querySelector('.why').textContent]).catch(() => null);
+  const part = (id) => card.locator(`.sl-sp[data-part="${id}"]`).evaluate((e) => [+e.dataset.got, e.querySelector('.why').textContent, e.dataset.zone, e.querySelector('.ref')?.textContent,
+    parseFloat(e.querySelector('.zb .dot')?.style.left), parseFloat(e.querySelector('.zb .u')?.style.left), e.querySelector('.zb .dot')?.className]).catch(() => null);
   const score = +(await card.getAttribute('data-score'));
-  check(`last night: 5 h, not rated — "fair", not good (${(await card.locator('.sl-score-n').innerText()).replace(/\n/g, ' ')})`, score >= 60 && score < 80 && /\/ 100 · fair/.test(await card.locator('.sl-score-n').innerText()));
-  const len = await part('length'), tim = await part('timing');
-  check(`length: 5 h asleep is 10 of 35 (${len})`, len && len[0] === 10 && /^5 h 00 asleep/.test(len[1]));
-  // in bed 2 h late, up a little early: both ends said, and some of timing's 10 off
-  check(`timing: falling asleep 2 h late and waking, both said, some of its 10 off (${tim})`, tim && tim[0] > 3 && tim[0] < 9 && /^asleep 2 h 0\d later than usual · up \d+ min earlier than usual$/.test(tim[1]));
+  check(`last night: 5 h, not rated — "fair", not good (${(await card.locator('.sl-score-n').innerText()).replace(/\n/g, ' ')})`, score >= 60 && score < 80 && /\/ 100 ·\s*fair/.test(await card.locator('.sl-score-n').innerText()));
+  const len = await part('length'), bt = await part('bedtime');
+  // 5 h is under the NSF's 6: poor, 6.3 of 25 — whatever your usual; drawn at 1/7 of the 4–11 h bar, your usual 7 h 40 past half
+  check(`length: 5 h asleep is poor, 6.3 of 25, ideal and usual said (${len})`, len && len[0] === 6.3 && len[1] === '5 h 00' && len[2] === 'poor' && /^ideal 7–9 h · your usual 7 h [34]\d$/.test(len[3]));
+  check(`length's bar: the dot red at 5 h, your usual's tick at 7 h 40 (${len && len.slice(4)})`, len && Math.abs(len[4] - 14.3) < 0.5 && len[5] > 50 && len[5] < 55 && /\bpoor\b/.test(len[6]));
+  // asleep at 01:42: past the study's window — poor, about 1 of 5
+  check(`fell asleep at 01:42: poor, about 1 of 5, against 22:00–23:00 (${bt})`, bt && bt[0] > 0.5 && bt[0] < 1.6 && bt[1] === '01:42' && bt[2] === 'poor' && /^ideal 22:00–23:00 · your usual 23:[34]\d$/.test(bt[3]));
+  const zs = await card.locator('.sl-sp.z').evaluateAll((els) => els.map((e) => [e.dataset.part, e.dataset.zone, e.querySelectorAll('.zb .dot').length, getComputedStyle(e.querySelector('.zb .dot')).backgroundColor]));
+  check(`every part on its zones, one dot each, the zone in words and colour (${zs.map((z) => z[0] + ':' + z[1]).join(' ')})`, zs.length === 10 && zs.every((z) => z[2] === 1 && /ideal|fair|poor/.test(z[1]))
+    && new Set(zs.filter((z) => z[1] === 'poor').map((z) => z[3])).size === 1 && zs.find((z) => z[1] === 'poor')[3] !== zs.find((z) => z[1] === 'ideal')?.[3]);
+  check('the key: this night, your usual, the three zones', /this night[\s\S]*your usual[\s\S]*ideal[\s\S]*fair[\s\S]*poor/.test(await card.locator('.sl-key').innerText().catch(() => '')));
   check(`not rated yet: said, and left out — not counted as 0 (${await card.locator('.sl-note').innerText().catch(() => '')})`, /your rating/.test(await card.locator('.sl-note').innerText().catch(() => '')) && await card.locator('.sl-sp[data-part="rating"]').count() === 0);
   const minis = await pg.locator('.sl .sl-mini').evaluateAll((els) => els.map((e) => +e.dataset.score));
   check(`the strip: every night's score, last night's the lowest (${minis.join(' ')})`, minis.length === 14 && minis.every((x) => x > 0 && x <= 100) && minis.at(-1) === score && minis.slice(0, -1).every((x) => x > score + 10));

@@ -28,6 +28,8 @@ export type Night = {
   latency: number;
   stages: { type: StageType; start: number; end: number }[];
   low: number | null; lowAt: number | null;
+  /** Average heart rate while asleep (from falling asleep to waking), when the band had most of the night (sleep score). */
+  meanHr?: number | null;
   hrv: number | null; rhr: number | null;
   nap: { start: number; end: number; min: number } | null;
 };
@@ -73,11 +75,12 @@ export function nights(sessions: SleepSession[], hr: HrMinute[], rhr: Record<str
     const awake = stages.length ? inNight.reduce((m, x) => m + (x.end - x.start) / MIN, 0) : (s.awakeMin ?? 0);
     const asleep = s.asleepMin ?? (stages.length ? asleepSt.reduce((m, x) => m + (x.end - x.start) / MIN, 0) : (wake - onset) / MIN - awake);
     const lo = lowestHr(hr, onset, wake), eve = eveOf(s.start), nap = naps.get(eve);
+    let hs = 0, hn = 0; for (let i = firstAt(hr, onset); i < hr.length && hr[i][0] <= wake; i++) { hs += hr[i][1]; hn++; }
     out.push({
       id: s.id, day, eve, bed: s.start, up: s.end, onset, wake, asleep,
       deep: s.stageMin.deep ?? sum("deep"), rem: s.stageMin.rem ?? sum("rem"), light: s.stageMin.light ?? sum("light"),
       awake, wakes: inNight.length, latency: Math.max(0, (onset - s.start) / MIN), stages,
-      low: lo?.low ?? null, lowAt: lo?.at ?? null, hrv: hrv[day] ?? null, rhr: rhr[day] ?? null,
+      low: lo?.low ?? null, lowAt: lo?.at ?? null, meanHr: hn >= 60 ? hs / hn : null, hrv: hrv[day] ?? null, rhr: rhr[day] ?? null,
       nap: nap ? { start: nap.start, end: nap.end, min: nap.asleepMin ?? (nap.end - nap.start) / MIN } : null,
     });
   }
