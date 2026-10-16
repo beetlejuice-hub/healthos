@@ -1351,6 +1351,12 @@ below, in his words, grouped; A first (broken or wrong now), then the rest. Item
    - **Status (16 Oct):** most of it is built — the AI sees all the data (#104), reads the morning, night, week and month
      (#103, #65), asks questions, and the chat looks things up (#67). Open: "understand protocols i give him, and help me
      set up in app" — the AI can remember a protocol but can't set anything up in the app yet.
+   - **Building (claimed: this session, 16 Oct — lib/ai/propose.ts, tasks.ts CHAT_TOOLS + chat prompt, Ai.tsx chat,
+     components/Proposal.tsx; owner: "go" on "the AI sets things up for you").** A chat tool `propose`: the AI turns a
+     protocol you give it into changes — add a supplement (dose, when), change a dose, mark one stopped / ran out /
+     taking again, set the calorie or protein goal or the fat-loss pace, start an experiment — each shown under its reply
+     as a card with Apply. Nothing changes until you tap it; checked again when you tap (the supplement still there, not
+     already added).
 99. [x] **Raised just after waking said "you said: sleep"** (14 Oct, owner: "explain the raised 1 stretch so far, and that
    7:20 - 7:45, why its elevated, waht u mean i said sleep"). The band's night ended 07:20; the 25 minutes after were
    awake, so they counted, and against a usual for 07:20–07:45 made mostly of mornings you were still asleep then, waking
