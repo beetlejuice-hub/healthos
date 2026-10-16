@@ -56,11 +56,17 @@ const READ = { greeting: 'Morning! 7 h last night — a better start.', items: [
   const card = await pg.locator('section.morning').innerText().catch(() => '');
   check(`Today shows the new read (${card.split('\n').slice(0, 2).join(' · ')})`, /7 h last night — a better start/.test(card) && !/Rough night/.test(card));
   await pg.locator('section.morning').screenshot({ path: OUT + 'morning-read.png' }).catch(() => {});
+  // owner, 16 Oct: folded by default, highlighted until opened once
+  const mr = pg.locator('section.morning');
+  check('the morning read is new until opened', await mr.getAttribute('data-new') === 'true');
+  await mr.locator('.mr-head').click(); await pg.waitForTimeout(150);
+  check('opened once: not new any more, and that sticks', await mr.getAttribute('data-new') === null && (await pg.evaluate((k) => JSON.parse(localStorage.getItem(k)).ai.digest.seen, KEY)) > 0);
   check('the news isn\'t on Today — it\'s a message', !/Creatine and sleep loss/.test(card));
   const badge = async () => (await pg.locator('nav.tabs a[href="#ai"] .tabbadge').textContent().catch(() => '')) || '0';
   check(`the AI tab's number says there's a message (${await badge()})`, await badge() === '1');
   await pg.reload(); await pg.waitForSelector('section.morning'); await pg.waitForTimeout(800);
   check('a reload doesn\'t write it again', calls.filter((x) => x.task === 'digest').length === 1);
+  check('after a reload: folded, not highlighted', await pg.locator('section.morning .mr-list').count() === 0 && await pg.locator('section.morning').getAttribute('data-new') === null);
   await pg.goto(APP + '#ai'); await pg.waitForTimeout(300);
   const chat = await pg.locator('.chat').innerText();
   check('the chat doesn\'t repeat the read — it\'s on Today (owner, 16 Oct)', !/☀️|a better start|Rough night|Sleep and focus/.test(chat));

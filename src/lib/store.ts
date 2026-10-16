@@ -28,9 +28,9 @@ export type AiState = {
   /** charts: what the AI asked to show under its reply (PLAN 67) — drawn from the app's data when shown. looked: the tools it used. */
   chat: { role: "user" | "assistant"; text: string; at: number; unprompted?: boolean; charts?: ChartSpec[]; looked?: string[]; /** Changes it proposed, applied only on your tap (PLAN 98). */ proposals?: Proposal[]; /** A news message's source (#109). */ source?: { title: string; url: string } }[];
   /** The morning read, for the day it's for. */
-  digest: { day: string; /** When it was written (lib/ai/morning). */ at?: number; greeting: string; items: DigestItem[]; read?: boolean } | null;
+  digest: { day: string; /** When it was written (lib/ai/morning). */ at?: number; greeting: string; items: DigestItem[]; read?: boolean; /** When you first opened it (16 Oct: highlighted until then). */ seen?: number } | null;
   /** The nightly read-back of a day (optional: older synced docs don't have it). */
-  night?: (NightAnswer & { day: string; at: number }) | null;
+  night?: (NightAnswer & { day: string; at: number; /** When you first opened it — a re-read is new again. */ seen?: number }) | null;
   /** The week and month reads (PLAN 65), newest last: what the AI wrote, and the app's numbers it was written from (for the card's table and charts). */
   reviews?: (Due & ReviewAnswer & { at: number; rows: ReviewRow[]; /** the columns: the week's days, or the month's weeks ("1–7") */ cols?: string[] })[];
   /** Titles already shown, so the morning read doesn't repeat itself. */

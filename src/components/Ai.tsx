@@ -149,6 +149,9 @@ export function useAiUnread() {
 
 /* ------------------------------------------------------------------ Today: the morning read */
 
+/** Not opened yet since it was (re)written: highlighted on Today (16 Oct). */
+const unseen = (x: { at?: number; seen?: number }) => !x.seen || (x.at != null && x.seen < x.at);
+
 const KIND: Record<DigestItem["type"], string> = { fact: "Fun fact", study: "New study", pattern: "Your data", protocol: "Try this" };
 
 export function startExperiment(p: NonNullable<DigestItem["protocol"]>) {
@@ -166,16 +169,18 @@ export function MorningRead() {
   const experiments = useStore((s) => s.ai.experiments);
   const running = experiments.filter((x) => !x.ended).map((x) => x.name);
   const today = localDay(Date.now());
-  const key = `healthos.mr-open:${d?.day ?? ""}`;
-  const [open, setOpenState] = useState(() => { try { return localStorage.getItem(key) === "1"; } catch { return false; } });
+  // folded every time Today opens; highlighted until you've opened it once (owner, 16 Oct: "collapsed at default … a
+  // subtle highlight … when it wasnt opened … after opening its just sits tehre collapsed not highlighted")
+  const [open, setOpenState] = useState(false);
   const [row, setRow] = useState<number | null>(null);
   // only a read written that morning: one written the evening before talks about the wrong night (16 Oct)
   if (!d || d.day > today || d.day < addDays(today, -1) || !freshRead(d)) return null;
-  const setOpen = (v: boolean) => { setOpenState(v); try { localStorage.setItem(key, v ? "1" : "0"); } catch { /* private mode: just this time */ } };
+  const fresh = unseen(d);
+  const setOpen = (v: boolean) => { setOpenState(v); if (v && fresh) act.setAi((a) => ({ digest: a.digest ? { ...a.digest, seen: Date.now() } : a.digest })); };
   return (
-    <section className={`card morning${open ? " open" : ""}`} aria-label="Morning read">
+    <section className={`card morning${open ? " open" : ""}`} aria-label="Morning read" data-new={fresh || undefined}>
       <button type="button" className="mr-head" aria-expanded={open} onClick={() => setOpen(!open)}>
-        <span className="k">Morning read</span><span className="when">{d.day === today ? "today" : "from yesterday"}</span>
+        <span className="k">Morning read</span><span className="when">{d.day === today ? "today" : "from yesterday"}</span>{fresh && <span className="rd-new">new</span>}
         {!open && <span className="mr-dots" aria-hidden="true">{d.items.map((i, k) => <i key={k} className={`mr-${i.type}`} />)}</span>}
         <span className="chev" aria-hidden="true">{open ? "▴" : "▾"}</span>
       </button>
@@ -208,17 +213,27 @@ export function MorningRead() {
 export function NightRead() {
   const n = useStore((s) => s.ai.night);
   const entries = useStore((s) => s.entries);
+  // folded every time Today opens, highlighted until opened (owner, 16 Oct: "the your day, read back cannot be made
+  // collapsed and i read it first time, now its just sitting there taking up space")
+  const [open, setOpenState] = useState(false);
   const now = Date.now(), today = localDay(now), tonight = n ? eveningOf(now) === n.day : false;
   if (!n || !(n.day === today || (n.day === addDays(today, -1) && new Date(now).getHours() < 12))) return null;
   // still that evening (to 04:00): logged more since → read it again; at 00:40 it's still "tonight" (#107)
   const newer = tonight && entries.some((e) => e.at > n.at && e.at >= dayWindow(n.day)[0] && e.at < dayWindow(n.day)[1]);
+  const fresh = unseen(n);
+  const setOpen = (v: boolean) => { setOpenState(v); if (v && fresh) act.setAi((a) => ({ night: a.night ? { ...a.night, seen: Date.now() } : a.night })); };
   return (
-    <section className="card night" aria-label="Your day, read back">
-      <h3>Your day, read back <span>{tonight ? "tonight" : "last night"}</span></h3>
-      <p className="greet">{n.summary}</p>
-      {n.happened.length > 0 && <ul className="night-list">{n.happened.map((h, i) => <li key={i}>{h}</li>)}</ul>}
-      {n.notes && <p className="night-notes"><small>Your notes</small>{n.notes}</p>}
-      {n.change.length > 0 && <div className="night-change"><small>Tomorrow, maybe</small>{n.change.map((c, i) => <p key={i}><b>{c.what}</b> {c.why}</p>)}</div>}
+    <section className={`card night${open ? " open" : ""}`} aria-label="Your day, read back" data-new={fresh || undefined}>
+      <button type="button" className="mr-head" aria-expanded={open} onClick={() => setOpen(!open)}>
+        <span className="k">Your day, read back</span><span className="when">{tonight ? "tonight" : "last night"}</span>{fresh && <span className="rd-new">new</span>}
+        <span className="chev" aria-hidden="true">{open ? "▴" : "▾"}</span>
+      </button>
+      <p className={`greet${open ? "" : " clamp2"}`} onClick={() => !open && setOpen(true)}>{n.summary}</p>
+      {open && <>
+        {n.happened.length > 0 && <ul className="night-list">{n.happened.map((h, i) => <li key={i}>{h}</li>)}</ul>}
+        {n.notes && <p className="night-notes"><small>Your notes</small>{n.notes}</p>}
+        {n.change.length > 0 && <div className="night-change"><small>Tomorrow, maybe</small>{n.change.map((c, i) => <p key={i}><b>{c.what}</b> {c.why}</p>)}</div>}
+      </>}
       {newer && <button type="button" className="linkish" onClick={() => void makeNight(n.day, true)}>You logged more since — read it again</button>}
     </section>
   );

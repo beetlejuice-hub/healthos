@@ -46,10 +46,22 @@ const ANSWERS = { night: () => NIGHT, digest: () => ({ greeting: 'Hi', items: []
   check('…and the notes marked as the user\'s own reasons', /## Why I felt that way \(my own notes on check-ins — take these seriously\)/.test(sent[0].context));
   check('…and the mood journal: every check-in of the last weeks', /## Mood journal, every check-in[\s\S]*2026-10-01: 14:00 M4 S8 "deadline at work"/.test(sent[0].context));
   check('what it learned that lasts goes into its memory', (await pg.evaluate(() => JSON.parse(localStorage.getItem('healthos.v1:u-test')))).ai.memory.some((m) => /deadline days/.test(m.text)));
-  const card = pg.getByLabel('Your day, read back');
-  const txt = await card.innerText();
-  check('Today: the read-back card with notes and tomorrow', /stress hit 8 at 14:00/.test(txt) && /YOUR NOTES|Your notes/i.test(txt) && /A 10-minute walk/.test(txt));
-  await card.scrollIntoViewIfNeeded(); await pg.screenshot({ path: OUT + 'night-card.png' });
+  // owner, 16 Oct: "collapsed at default … a subtle highlight … when it wasnt opened … after opening its just sits tehre
+  // collapsed not highlighted"
+  const card = pg.getByLabel('Your day, read back'), isNew = async () => (await card.getAttribute('data-new')) === 'true';
+  let txt = await card.innerText();
+  const foldedH = await card.evaluate((e) => Math.round(e.getBoundingClientRect().height));
+  check(`arrives folded — the summary, not the rest — and highlighted as new (${foldedH} px)`, /stress hit 8 at 14:00/.test(txt) && !/YOUR NOTES|Your notes|A 10-minute walk/i.test(txt) && await isNew() && /new/i.test(await card.locator('.mr-head').innerText()) && foldedH < 170);
+  await card.scrollIntoViewIfNeeded();
+  const bx = await card.boundingBox(); await pg.screenshot({ path: OUT + 'night-card-new.png', clip: { x: Math.max(0, bx.x - 24), y: bx.y - 12, width: Math.min(390, bx.width + 48), height: bx.height + 24 } });
+  const bar = await card.evaluate((e) => getComputedStyle(e, '::before').width);
+  check(`…the highlight shows inside the Now panel: an accent bar (${bar})`, bar === '3px');
+  await card.locator('.mr-head').click(); await pg.waitForTimeout(150);
+  txt = await card.innerText();
+  check('opened: notes and tomorrow; the highlight goes', /YOUR NOTES|Your notes/i.test(txt) && /A 10-minute walk/.test(txt) && !(await isNew()));
+  await card.screenshot({ path: OUT + 'night-card.png' });
+  await pg.reload(); await pg.waitForSelector('text=Settings'); await pg.waitForTimeout(200);
+  check('back on Today: folded again, not highlighted', !/YOUR NOTES|Your notes/i.test(await card.innerText()) && !(await isNew()));
   await pg.goto(APP + '#ai'); await pg.waitForTimeout(200);
   check('it isn\'t repeated in the AI chat — it\'s on Today (owner, 16 Oct)', !/🌙|A steady day/.test(await pg.locator('.chat').innerText()));
 
@@ -59,11 +71,12 @@ const ANSWERS = { night: () => NIGHT, digest: () => ({ greeting: 'Hi', items: []
   check('no automatic second call', calls.filter((c) => c.task === 'night').length === 1);
   await pg.getByRole('button', { name: /read it again/ }).click(); await pg.waitForTimeout(300);
   check('"read it again" asks once more, with the beer in it', calls.filter((c) => c.task === 'night').length === 2 && /21:40 drank Beer/.test(calls.filter((c) => c.task === 'night')[1].context));
+  check('the new read-back is new again: highlighted', await isNew());
 
   // Past midnight it's still that evening (#107): a beer at 00:20 belongs to the 1st, the card still says tonight.
   await pg.evaluate(() => { const k = 'healthos.v1:u-test', s = JSON.parse(localStorage.getItem(k)); s.entries.push({ id: 'b2', kind: 'drink', at: new Date(2026, 9, 2, 0, 20).getTime(), name: 'Beer', ml: 500, caffeineMg: 0, alcoholG: 20, kcal: 210 }); localStorage.setItem(k, JSON.stringify(s)); });
   await pg.clock.setFixedTime(new Date(2026, 9, 2, 0, 30)); await pg.goto(APP + '#today'); await pg.reload(); await pg.waitForSelector('text=Settings'); await pg.waitForTimeout(300);
-  check(`00:30: still "tonight", not re-asked by itself (${(await pg.getByLabel('Your day, read back').locator('h3').innerText()).replace(/\s+/g, ' ')})`, /tonight/.test(await pg.getByLabel('Your day, read back').locator('h3').innerText()) && calls.filter((c) => c.task === 'night').length === 2);
+  check(`00:30: still "tonight", not re-asked by itself (${(await pg.getByLabel('Your day, read back').locator('.mr-head').innerText()).replace(/\s+/g, ' ')})`, /tonight/.test(await pg.getByLabel('Your day, read back').locator('.mr-head').innerText()) && calls.filter((c) => c.task === 'night').length === 2);
   await pg.getByRole('button', { name: /read it again/ }).click(); await pg.waitForTimeout(300);
   const third = calls.filter((c) => c.task === 'night')[2];
   check('…the 00:20 beer offers a re-read; it\'s the 1st\'s, after the 21:40 one, marked, the header saying so', third && third.day === '2026-10-01'

@@ -1649,3 +1649,11 @@ below, in his words, grouped; A first (broken or wrong now), then the rest. Item
    empties it after asking; what the AI remembers and the app's findings stay. Checked: thread.test (grouping, open
    rules, the line), e2e/chatfold.cjs (the 13th folded with its question, the 14th's unseen news open, today open, tap
    opens, Clear empties and keeps memory, the button goes), screenshot.
+112. [x] **The reads fold by default, highlighted until opened** (16 Oct; owner: "the your day, read back cannot be made
+   collapsed and i read it first time, now its just sitting there taking up space. it should be like collapsed at
+   default, like the morning message and have like a subtle highlight or something when it wasnt opened … after opening
+   its just sits tehre collapsed not highlighted"). Both reads on Today start folded every time (the read-back shows its
+   summary in two lines); a "new" tag and a thin accent bar until opened once; opened is kept with the data (another
+   device sees it); a re-read read-back is new again. Checked: e2e/night.cjs and morningread.cjs (new → opened → folded
+   and plain after a reload; the re-read new again), screenshots. Pushed on the owner's "no test, push" — the full suite
+   wasn't run for this one.

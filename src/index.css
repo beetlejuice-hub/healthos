@@ -660,6 +660,11 @@ a { color: inherit; }
 .mr-body { display: grid; gap: 6px; padding: 0 0 12px; }
 .mr-body p { margin: 0; color: var(--c-ink-2); font-size: 14px; line-height: 1.45; }
 .mr-body a { font-size: 12.5px; color: var(--c-ink-2); } .mr-body .pill-btn { justify-self: start; margin-top: 2px; }
+/* both reads fold by default; a soft outline and a "new" tag until opened once (owner, 16 Oct) */
+.morning[data-new], .night[data-new] { box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--mood) 40%, transparent), 0 0 18px -6px color-mix(in srgb, var(--mood) 35%, transparent); }
+.rd-new { font: 600 9.5px var(--f-sans); letter-spacing: .08em; text-transform: uppercase; color: var(--mood); padding: 2px 7px; border-radius: 999px; background: color-mix(in srgb, var(--mood) 14%, transparent); }
+.night .greet.clamp2 { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; cursor: pointer; }
+.night .linkish { justify-self: start; font-size: 13px; }
 .q-own input { min-width: 0; }
 .question .q { margin: 0; font-size: 16px; line-height: 1.35; }
 .question .chips { display: flex; flex-wrap: wrap; gap: 8px; }
@@ -1003,6 +1008,10 @@ a { color: inherit; }
 .t2-now .card, .t2-now .hownow.calm-line, .t2-now .noticed-line, .t2-now .nextanswer { background: transparent; padding-left: 0; padding-right: 0; margin: 0; border-radius: 0; box-shadow: none; border-width: 0; }
 .t2-now .card { padding-top: 0; padding-bottom: 0; }
 .t2-now .card h3 { font-size: 18px; }
+/* new and not opened yet (16 Oct): a thin accent bar at the left edge and the tag in the moment's colour — no shift when it goes */
+.t2-now .card[data-new] { position: relative; }
+.t2-now .card[data-new]::before { content: ""; position: absolute; left: -10px; top: 14px; bottom: 4px; width: 3px; border-radius: 2px; background: var(--m-accent); opacity: .85; }
+.t2-now .rd-new { color: var(--m-accent); background: color-mix(in srgb, var(--m-accent) 16%, transparent); }
 .t2-now .noticed-line { font-size: 13.5px; }
 .t2-now .pill-btn.pri { background: var(--m-accent); color: #111; }
 .t2-items { display: grid; gap: 4px; }
