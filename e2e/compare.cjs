@@ -59,17 +59,22 @@ function world({ days, perMg = 0.035, seed = 7 }) {
     await pg.goto(APP);
     await pg.fill('input[type=email]', 'lukacsarnold9+healthtest@gmail.com'); await pg.fill('input[type=password]', 'secret123');
     await pg.getByRole('button', { name: 'Sign in' }).click(); await pg.waitForSelector('text=Settings');
-    // the first sync after signing in can land after the seed and save over it (the phone run lost every entry 1 in 2
-    // times, 16 Oct): let it finish first
-    await pg.waitForLoadState('networkidle');
-    await pg.evaluate((w) => { const k = 'healthos.v1:u-test', s = JSON.parse(localStorage.getItem(k) || '{}');
-      s.entries = [
-        ...w.doses.map((at, i) => ({ id: 'c' + i, kind: 'drink', at, name: 'Coffee', ml: 250, caffeineMg: 95, alcoholG: 0, kcal: 2 })),
-        ...w.meals.map((at, i) => ({ id: 'm' + i, kind: 'food', at, name: 'Lunch', grams: 400, macros: { kcal: 700, p: 40, c: 80, f: 22 } })),
-        ...w.checks.map((c, i) => ({ id: 'f' + i, kind: 'feel', at: c.at, mood: c.mood })),
-      ].sort((a, b) => a.at - b.at);
-      s.workouts = w.workouts; localStorage.setItem(k, JSON.stringify(s)); }, w);
-    await pg.goto(APP + hash); await pg.reload();
+    // A raw localStorage write isn't a change the app knows about: if its first sync after signing in saves its own
+    // state after the seed, the seed is gone (the phone run lost every entry 1 in 2 times on a clean checkout, and under
+    // a loaded run even after waiting for the network, 16 Oct). So: seed, reload, and check the app holds it — again if not.
+    for (let k = 0; k < 3; k++) {
+      await pg.waitForLoadState('networkidle');
+      await pg.evaluate((w) => { const k = 'healthos.v1:u-test', s = JSON.parse(localStorage.getItem(k) || '{}');
+        s.entries = [
+          ...w.doses.map((at, i) => ({ id: 'c' + i, kind: 'drink', at, name: 'Coffee', ml: 250, caffeineMg: 95, alcoholG: 0, kcal: 2 })),
+          ...w.meals.map((at, i) => ({ id: 'm' + i, kind: 'food', at, name: 'Lunch', grams: 400, macros: { kcal: 700, p: 40, c: 80, f: 22 } })),
+          ...w.checks.map((c, i) => ({ id: 'f' + i, kind: 'feel', at: c.at, mood: c.mood })),
+        ].sort((a, b) => a.at - b.at);
+        s.workouts = w.workouts; localStorage.setItem(k, JSON.stringify(s)); }, w);
+      await pg.goto(APP + hash); await pg.reload(); await pg.waitForLoadState('networkidle'); await pg.waitForTimeout(200);
+      if (await pg.evaluate(() => (JSON.parse(localStorage.getItem('healthos.v1:u-test') || '{}').entries || []).length > 0)) break;
+      console.log(`seed lost to the app's sync, seeding again (${k + 1})`);
+    }
     return { ctx, pg };
   }
   const settled = (pg) => pg.waitForFunction(() => { const s = document.querySelector('.cmp')?.getAttribute('data-sure'); return s && s !== 'working'; }, null, { timeout: 15000 });

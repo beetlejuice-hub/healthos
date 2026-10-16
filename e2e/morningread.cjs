@@ -59,7 +59,7 @@ const READ = { greeting: 'Morning! 7 h last night — a better start.', items: [
   check('a reload doesn\'t write it again', calls.filter((x) => x.task === 'digest').length === 1);
   await pg.goto(APP + '#ai'); await pg.waitForTimeout(300);
   const chat = await pg.locator('.chat').innerText();
-  check(`the chat gets the new one once, never the one written the evening before (${(chat.match(/☀️[^\n]*/g) || []).join(' | ')})`, (chat.match(/a better start/g) || []).length === 1 && !/Rough night/.test(chat));
+  check('the chat doesn\'t repeat it — it\'s on Today (owner, 16 Oct)', !/☀️|a better start|Rough night/.test(chat));
 
   console.log('errors:', JSON.stringify(errs));
   check('no page errors', errs.length === 0);

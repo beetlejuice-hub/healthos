@@ -81,7 +81,8 @@ const GOGOSI = [['Gogosi', 330, 6, 48, 13], ['Gogosi', 350, 7, 50, 14]].map(([na
     const own = await pg.evaluate(() => (JSON.parse(localStorage.getItem('healthos.v1:u-test') || '{}').entries || []).find((e) => e.kind === 'answer'));
     check(`answered in your own words: saved as said (${own && own.answer})`, own && own.answer === 'a huge kebab, then sleepy' && /big lunch/.test(own.question));
     check('answered → gone for today', await pg.locator('.question').count() === 0);
-    check('the AI tab has its red number: it wrote first', (await pg.locator('nav.tabs a[href="#ai"] .tabbadge').textContent().catch(() => '')) === '1');
+    // owner, 16 Oct: the ☀️ chat message "only says good morning, rest i can find in today window" — not posted any more
+    check('the morning read stays on Today: no red number on the AI tab for it', await pg.locator('nav.tabs a[href="#ai"] .tabbadge').count() === 0);
     await pg.screenshot({ path: OUT + 'ai-today.png', fullPage: true });
 
     // Food: built-in, database median, then the AI for the rest.
@@ -150,14 +151,14 @@ const GOGOSI = [['Gogosi', 330, 6, 48, 13], ['Gogosi', 350, 7, 50, 14]].map(([na
     check('shows dose, the psoriasis caution and its source', /300–600 mg[\s\S]*caution with psoriasis[\s\S]*NIH ODS/i.test(await pg.locator('.research').innerText()));
     await pg.screenshot({ path: OUT + 'ai-stack.png', fullPage: true });
 
-    // Chat: the unprompted morning message is there; ask; it remembers.
+    // Chat: the morning read isn't repeated in it; ask; it remembers.
     await pg.goto(APP + '#ai'); await pg.waitForTimeout(150);
-    check('the AI\'s first message is in the chat', /☀️ Morning! Quiet night/.test(await pg.locator('.chat').innerText()));
-    check('opening the chat clears the number', await pg.locator('nav.tabs a[href="#ai"] .tabbadge').count() === 0);
+    check('the morning read isn\'t repeated in the chat', !/☀️|Quiet night/.test(await pg.locator('.chat').innerText()));
     await pg.getByLabel('Message the AI').fill('what should I try?'); await pg.getByRole('button', { name: 'Send' }).click();
     await pg.waitForSelector('text=cut-off experiment will tell us');
     const chat = calls.find((c) => c.task === 'chat');
     check('chat starts with your message, with the context', chat.messages[0].role === 'user' && chat.messages[0].text === 'what should I try?' && /## My stack/.test(chat.context));
+    check('…which has the morning read, so "ask me about it" still works', /## On Today right now[^\n]*\n- Morning read \(this morning\): Morning! Quiet night[\s\S]*\[study\] Saffron and mood: new meta-analysis: Pooled trials/.test(chat.context));
     check('the chat gets the slim overview, told to ask the tools (no journal or band nights)', /## Last 7 days/.test(chat.context) && /## Ask the app for more/.test(chat.context) && !/## Mood journal|## My nights/.test(chat.context) && !/## Ask the app/.test(calls.find((c) => c.task === 'digest').context));
     // PLAN 67: the app ran the AI's calls on its own data and sent back its turn untouched, then every result in one message
     const rounds = calls.filter((c) => c.task === 'chat'), back = rounds[1]?.turn ?? [];

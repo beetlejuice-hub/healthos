@@ -58,7 +58,6 @@ async function makeNight(day: string, force = false) {
     night: { ...r.answer, day, at },
     // What it learned that lasts: into memory (shown in Settings → AI, deletable), no duplicates.
     memory: [...a.memory, ...r.answer.remember.filter((x) => !a.memory.some((m) => m.text.toLowerCase() === x.toLowerCase())).map((x) => ({ id: newId(), text: x, at }))].slice(-60),
-    chat: [...a.chat, { role: "assistant" as const, text: `🌙 ${r.answer.summary}${r.answer.change.length ? `\n\nTomorrow, maybe: ${r.answer.change.map((c) => c.what).join("; ")}.` : ""}`, at, unprompted: true }].slice(-80),
   }));
 }
 
@@ -101,12 +100,6 @@ async function makeQuestions(day: string) {
   }));
 }
 
-/** The morning read lands in the chat as a message from the AI once its day has come. */
-function postDigest() {
-  const { ai } = getState(), d = ai.digest, today = localDay(Date.now());
-  if (!d || d.day > today || !freshRead(d) || ai.chat.some((m) => m.unprompted && m.text.startsWith(`☀️ ${d.greeting}`))) return;
-  act.setAi((a) => ({ chat: [...a.chat, { role: "assistant" as const, text: `☀️ ${d.greeting}\n${d.items.map((i) => `• ${i.title}`).join("\n")}\n\nIt's on Today — ask me about any of it.`, at: Date.now(), unprompted: true }].slice(-80) }));
-}
 
 /**
  * Runs in the app shell. The morning read is written in the morning once last night is in (lib/ai/morning; owner,
@@ -115,8 +108,6 @@ function postDigest() {
  */
 export function useAiAuto(userId: string | undefined) {
   const { on } = useAiStatus();
-  const digest = useStore((s) => s.ai.digest);
-  useEffect(() => { postDigest(); }, [digest]);
   useEffect(() => { if (userId) void refreshAiStatus(); }, [userId]);
   useEffect(() => {
     if (!on) return;
@@ -132,7 +123,6 @@ export function useAiAuto(userId: string | undefined) {
       // wasn't opened that evening (lib/ai/nightread).
       const back = nightDue(now.getTime(), ai.night?.day, loggedOn);
       if (back) void makeNight(back);
-      postDigest();
     };
     tick();
     const t = setInterval(tick, 10 * 60_000);
@@ -337,7 +327,7 @@ export function AiScreen() {
     <div className="calm ai-screen">
       <div className="head"><span>Your AI</span><a href="#settings">Settings</a></div>
       <div className="chat" aria-live="polite">
-        {thread.length === 0 && <p className="note">Ask me anything about your data — I see your numbers, patterns, stack and About me. I'll also write to you: a morning read, quick questions, and anything interesting I find. The app writes here too: a heart-rate stretch it can't explain, a new finding to comment on.</p>}
+        {thread.length === 0 && <p className="note">Ask me anything about your data — I see your numbers, patterns, stack and About me. The morning read and your day read back are on Today — ask me about them here. I only write here myself with something new: a heart-rate stretch the app can't explain, a new finding to comment on, your week and month.</p>}
         {thread.map((x, i) => {
           const byApp = (y: (typeof thread)[number]) => "n" in y || "r" in y || !!y.m?.unprompted;
           const isNew = x.at > since && byApp(x) && !thread.slice(0, i).some((y) => y.at > since && byApp(y));

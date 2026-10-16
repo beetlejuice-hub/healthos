@@ -20,7 +20,7 @@ import { bodyDays, weightTrend } from "../tdee";
 import { addDays, atMinute, localDay } from "../time";
 import { nightsForAi } from "./nights";
 import { bandNow } from "../band-client";
-import { buildContext, timeline } from "./context";
+import { buildContext, onTodayLines, timeline } from "./context";
 import { dayWindow, dayWord } from "./nightread";
 import type { AiAnswer, AiRequest, Task, UsageDoc } from "./tasks";
 import { currentKg } from "../body";
@@ -71,6 +71,8 @@ export async function askAi<T extends Task>(req: Extract<AiRequest, { task: T }>
 
 /** The text the AI is told about you right now (also shown in Settings → AI → What the AI sees). */
 export function contextNow(state: State = getState(), now = Date.now(), { slim = false, todaySoFar = true } = {}): string {
+  // the chat sees what Today shows from the AI: it isn't posted in the chat any more (owner, 16 Oct)
+  const onToday = slim ? onTodayLines(state.ai, now) : [];
   const today = localDay(now), from = addDays(today, -90), to = addDays(today, -1);
   const days = dailyFacts(state.entries, state.workouts, state.settings, from, to);
   const report = notice(state.entries, state.goals, now, currentKg(state.entries, state.settings.bodyKg, now), { workouts: state.workouts, supplements: state.supplements, settings: state.settings });
@@ -84,7 +86,7 @@ export function contextNow(state: State = getState(), now = Date.now(), { slim =
   const ready = band ? readiness(today, nights(band.sleep, band.hr, band.rhr, band.hrv), rating, sets, now, { hrv: band.hrv, rhr: band.rhr }) : null;
   const ss = sessions(state.workouts, sets);
   return buildContext({ state, now, days, findings: report.found, patterns, weight: t ? { kg: t.nowKg, perWeek: t.perDay * 7 } : null, nights: nightsSeen,
-    today: todayLines(ready), training: trainingLines(ss, mainLifts(sets), thisWeek(ss, now), 6, muscleStrength(sets, now)), grids: gridLines(state.ai.inbox ?? []), slim,
+    today: todayLines(ready), training: trainingLines(ss, mainLifts(sets), thisWeek(ss, now), 6, muscleStrength(sets, now)), grids: gridLines(state.ai.inbox ?? []), slim, onToday,
     // today from midnight; before 04:00 it was still last night's evening, and says so (#107)
     ...(todaySoFar ? { todaySoFar: timeline(state, atMinute(today, 0), now + 1, (at) => (at < dayWindow(today)[0] ? " (last night, after midnight)" : "")) } : {}) });
 }

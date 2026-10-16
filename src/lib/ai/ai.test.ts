@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { fromDescribed, judge } from "./apply";
-import { ASK_MORE, CONTEXT_MAX, buildContext, dayTimeline, feelByTime, moodJournal } from "./context";
+import { ASK_MORE, CONTEXT_MAX, buildContext, onTodayLines, dayTimeline, feelByTime, moodJournal } from "./context";
 import { checkDescribe, checkNight, costUsd, estimateMonthUsd, jsonFrom, SYSTEM, type CallLog } from "./tasks";
 import { parseItem } from "../quickadd";
 import { feelWorld } from "../bench";
@@ -241,5 +241,22 @@ describe("the AI knows what today is (owner, 16 Oct: the morning read took yeste
   });
   it("every task is told: the listed days end yesterday, never call them today", () => {
     for (const text of Object.values(SYSTEM)) expect(text).toMatch(/"Last 14 days" ends yesterday — call those days yesterday or by their date, never "today"/);
+  });
+});
+
+describe("the chat sees what Today shows from the AI (owner, 16 Oct: the ☀️ message only repeated Today)", () => {
+  const at = (d: string, hm: string) => new Date(`2026-10-${d}T${hm}:00`).getTime();
+  const digest = { day: "2026-10-16", at: at("16", "07:41"), greeting: "Morning! 7 h last night.", items: [{ type: "study" as const, title: "Black seed oil and skin", text: "Still early science.", source: { title: "JAAD 2025", url: "https://example.org/b" } }] };
+  const night = { day: "2026-10-15", at: at("15", "21:40"), summary: "A steady day.", happened: [], notes: "", change: [{ what: "Walk at 14:00", why: "the dip" }], remember: [] };
+  it("this morning's read and last night's read-back, as Today shows them", () => {
+    expect(onTodayLines({ digest, night }, at("16", "09:00"))).toEqual([
+      "Morning read (this morning): Morning! 7 h last night.",
+      "  - [study] Black seed oil and skin: Still early science. (JAAD 2025, https://example.org/b)",
+      "Your day read back (last night, 2026-10-15): A steady day.",
+      "  - to try: Walk at 14:00 (the dip)",
+    ]);
+  });
+  it("not a read written the evening before; not last night's read-back after noon (Today hides both)", () => {
+    expect(onTodayLines({ digest: { ...digest, at: at("15", "20:31") }, night }, at("16", "12:30"))).toEqual([]);
   });
 });

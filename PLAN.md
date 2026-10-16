@@ -1606,3 +1606,15 @@ below, in his words, grouped; A first (broken or wrong now), then the rest. Item
    so far" marks 00:00–04:00 as "last night, after midnight". Checked: nightread.test (7 — the real old rule fails the
    00:40 case; the calendar-day window fails three), e2e/night.cjs (00:20 beer: still "tonight", the re-read has it
    after the 21:40 one, marked, under "tonight, past midnight"; next morning "last night"; noon gone).
+108. [x] **The morning read isn't repeated in the chat** (16 Oct, owner, with a screenshot of the ☀️ message: "feel like
+   this is an useless message, effectively it only says good mornign, rest i can find in today window..either dont
+   ssend good morning message or send something interesting w it. it should only send message when it has a new
+   finding, a new sttudy or whatever but if its displayed on today page then nonsensee"). The ☀️ morning read and the
+   🌙 day read back aren't posted in the chat any more (both are on Today), so they don't light the AI tab's number
+   either. The chat writes first only with what isn't on Today: a new finding to comment on, a heart-rate stretch to
+   explain, the week and month reads. "Ask me about it" still works: the chat's summary has "On Today right now" — the
+   morning read's items with their text and sources, and the read-back with what to try (only what Today shows: not a
+   read written the evening before, not last night's after noon). Checked: ai.test (what the chat is told, and not),
+   e2e/ai.cjs (no ☀️, no number for it, the chat's context has the read's study), e2e/morningread.cjs and night.cjs
+   (not repeated). Also: e2e/compare.cjs seeds, checks the app kept the seed and seeds again if its first sync saved
+   over it — the network wait alone wasn't enough under a loaded run; the full suite passed under load after.

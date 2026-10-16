@@ -51,7 +51,7 @@ const ANSWERS = { night: () => NIGHT, digest: () => ({ greeting: 'Hi', items: []
   check('Today: the read-back card with notes and tomorrow', /stress hit 8 at 14:00/.test(txt) && /YOUR NOTES|Your notes/i.test(txt) && /A 10-minute walk/.test(txt));
   await card.scrollIntoViewIfNeeded(); await pg.screenshot({ path: OUT + 'night-card.png' });
   await pg.goto(APP + '#ai'); await pg.waitForTimeout(200);
-  check('it lands in the AI chat too', /🌙 A steady day/.test(await pg.locator('body').innerText()));
+  check('it isn\'t repeated in the AI chat — it\'s on Today (owner, 16 Oct)', !/🌙|A steady day/.test(await pg.locator('.chat').innerText()));
 
   // Logged more after it was written → offer to read it again.
   await pg.evaluate(() => { const k = 'healthos.v1:u-test', s = JSON.parse(localStorage.getItem(k)); s.entries.push({ id: 'b1', kind: 'drink', at: new Date(2026, 9, 1, 21, 40).getTime(), name: 'Beer', ml: 500, caffeineMg: 0, alcoholG: 20, kcal: 210 }); localStorage.setItem(k, JSON.stringify(s)); });

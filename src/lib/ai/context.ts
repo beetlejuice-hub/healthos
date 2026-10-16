@@ -14,6 +14,7 @@ import { weekly } from "../weekly";
 import { personalSleep, ratedNights } from "../caffeine-sleep";
 import { doseCompare } from "../dose";
 import { nightLabel, phoneLabel } from "../lastnight";
+import { freshRead } from "./morning";
 
 const BANDS: [string, number, number][] = [["morning (5–11)", 5, 11], ["midday (11–14)", 11, 14], ["afternoon (14–18)", 14, 18], ["evening (18–24)", 18, 24]];
 const avg = (xs: number[]) => (xs.length ? Math.round((xs.reduce((a, b) => a + b, 0) / xs.length) * 10) / 10 : null);
@@ -141,6 +142,8 @@ export type ContextInput = {
   today?: string[]; training?: string[]; grids?: string[];
   /** The chat's version (PLAN 67 phase 3): an overview, no nights or journal, a week of days — it asks the app for the rest. */
   slim?: boolean;
+  /** The morning read and the day read back as Today shows them — the chat no longer repeats them, so it's told (16 Oct). */
+  onToday?: string[];
   /** Today's own entries so far, in order (dayTimeline) — "Last 14 days" ends yesterday (16 Oct: the AI took yesterday for today). */
   todaySoFar?: string[];
 };
@@ -167,7 +170,26 @@ export const ASK_MORE = "## Ask the app for more\nThis is an overview. For anyth
 /** The context's first line: what today is, so yesterday is never called "today" (owner, 16 Oct). */
 export const nowLine = (now: number, span = 14, today = true) => `Now: ${dayLabel(now)} ${new Date(now).getFullYear()}, ${clock(now)} — today is ${localDay(now)}. "Last ${span} days" ends yesterday (${addDays(localDay(now), -1)})${today ? `; today's own entries are under "Today so far"` : ""}. "Last night" is the night that ended this morning.`;
 
-function baseContext({ state, now, days, findings, patterns, weight, today = [], training = [], grids = [], slim, todaySoFar }: ContextInput): string {
+/**
+ * What's on Today from the AI right now, for the chat (owner, 16 Oct: the ☀️ message "only says good morning, rest i can
+ * find in today window" — so it's not posted any more; "ask me about it" still works because the chat sees it here).
+ */
+export function onTodayLines(ai: Pick<State["ai"], "digest" | "night">, now: number): string[] {
+  const today = localDay(now), yesterday = addDays(today, -1), out: string[] = [];
+  const d = ai.digest;
+  if (d && freshRead(d) && (d.day === today || d.day === yesterday)) {
+    out.push(`Morning read (${d.day === today ? "this morning" : "yesterday morning"}): ${d.greeting}`);
+    for (const i of d.items) out.push(`  - [${i.type}] ${i.title}: ${i.text}${i.source?.url ? ` (${i.source.title}, ${i.source.url})` : ""}${i.protocol ? ` — try: ${i.protocol.how}, ${i.protocol.days} days, measuring ${i.protocol.measure}` : ""}`);
+  }
+  const n = ai.night;
+  if (n && (n.day === today || (n.day === yesterday && new Date(now).getHours() < 12))) {
+    out.push(`Your day read back (${n.day === today ? "tonight" : "last night"}, ${n.day}): ${n.summary}`);
+    if (n.change.length) out.push(`  - to try: ${n.change.map((c) => `${c.what} (${c.why})`).join("; ")}`);
+  }
+  return out;
+}
+
+function baseContext({ state, now, days, findings, patterns, weight, today = [], training = [], grids = [], slim, todaySoFar, onToday = [] }: ContextInput): string {
   const { profile, supplements, ai, goals } = state;
   const en = state.settings?.energy;
   const names = new Map(supplements.map((s) => [s.id, s.name]));
@@ -175,12 +197,13 @@ function baseContext({ state, now, days, findings, patterns, weight, today = [],
   const lines = [
     // owner, 15 Oct: "make sure app sees all data, organized" — what's here, in order
     nowLine(now, slim ? 7 : 14, !!todaySoFar),
-    slim ? "Sections: About me · This morning · My stack · Last 7 days · Today so far · Training · How I feel by time of day · What the app found · Notes and answers · Mood engines · Ask the app for more."
+    slim ? "Sections: About me · This morning · On Today · My stack · Last 7 days · Today so far · Training · How I feel by time of day · What the app found · Notes and answers · Mood engines · Ask the app for more."
       : "Sections: About me · This morning · My stack · Last 14 days · Today so far · Training · How I feel by time of day · What the app found · Notes and answers · Mood engines · My nights · Mood journal.",
     "## About me",
     `Conditions: ${profile.conditions.join(", ") || "none listed"}. Medications: ${profile.meds.join(", ") || "none listed"}. Allergies: ${profile.allergies.join(", ") || "none listed"}.${profile.notes ? ` Notes: ${profile.notes}` : ""}`,
     `Goals: ${goals.kcal} kcal/day, ${goals.p} g protein.${en?.mode === "burn" ? ` The calorie goal follows my burn: burn − the deficit for ${en.pace} kg/week, to lose fat while keeping and building muscle${en.offset ? `; two-week check-ins moved it ${en.offset > 0 ? "+" : ""}${en.offset}` : ""}.` : ""}${weight ? ` Weight trend: ${weight.kg.toFixed(1)} kg, ${weight.perWeek >= 0 ? "+" : ""}${weight.perWeek.toFixed(2)} kg/week.` : ""}`,
     ...(today.length ? ["## This morning (readiness, as the app shows it)", ...today.map((l) => `- ${l}`)] : []),
+    ...(onToday.length ? ["## On Today right now, from you (the user reads these there; they aren't in this chat)", ...onToday.map((l) => (l.startsWith("  ") ? l : `- ${l}`))] : []),
     "## My stack",
     ...supplements.map((s) => `- ${s.name}${s.dose ? ` ${s.dose}` : ""} (${s.slot})${s.status ? ` — ${s.status === "low" ? "running low" : s.status === "out" ? "ran out" : "stopped"}` : s.active ? "" : " — paused"}`),
     ...(ai.memory.length ? ["## What you remember about me", ...ai.memory.map((m) => `- ${m.text}`)] : []),
