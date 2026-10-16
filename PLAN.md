@@ -1595,3 +1595,7 @@ below, in his words, grouped; A first (broken or wrong now), then the rest. Item
    check-in; on Today and in the chat once; a reload doesn't write it again). Found on the way: e2e/compare.cjs lost
    its seeded data 1 in 2 runs on a clean checkout (the first sync after sign-in saved over it) — it waits for that
    sync now; 3 of 3 pass. Not checked: the real account — your next morning read is the test.
+107. [ ] **The night read around midnight** (claimed: this session, 16 Oct — lib/ai/nightread.ts, context dayTimeline,
+   client nightContext, tasks NIGHT prompt, Ai.tsx NightRead + trigger; owner: "do 2"). Same kind of bug as #106: read
+   back the next morning, its header still said "## Today, as it happened" for yesterday; at 00:40 nothing was written;
+   a beer at 00:40 went to the next day by date, so no read-back ever had it. A day's read-back now runs to 04:00.
