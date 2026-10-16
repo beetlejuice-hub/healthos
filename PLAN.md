@@ -1629,3 +1629,10 @@ below, in his words, grouped; A first (broken or wrong now), then the rest. Item
    link, or an item's title again → dropped), e2e/morningread.cjs (one 📰 with its link, the number 1, the items not
    in the chat, a reload doesn't post it twice, opening the chat clears the number), screenshot. Not checked: how often
    the real model finds something — if it's every day, it's filler and the prompt needs tightening.
+110. [ ] **Readiness stays high after a wrecked night** (claimed: this session, 16 Oct — lib/readiness, Readiness card;
+   owner: "still dont know why readiness is so high every day even when wrecked sleep"). Reproduced through readiness():
+   5 h from 01:30 rated 4 with the heart as usual → 79 "good" (not rated: 84); three weeks of 5.5 h then 5 h → 78. The
+   heart parts are against your own usual (a run of short nights is "usual"), and last night only caps at 20 + 0.9 × the
+   sleep score (66 for 5 h). Fix: last night's hours cap it too — 7 h+ none, 6 h 75, 5 h 55, 4 h 35, 3 h 20.
+111. [ ] **Old chats folded** (claimed: this session, 16 Oct — Ai.tsx thread, Settings → AI; owner: "also i feel like
+   chats should be deleted? or like collapsed or whatever").
