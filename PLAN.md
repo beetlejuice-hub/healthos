@@ -138,15 +138,17 @@ email get Dev tools (`#dev`): raw entry editor, generate/remove sample, wipe acc
    Owner runs `supabase/migrations/0001_init.sql` once in the SQL editor.
 2. [x] **Deploy** — `wrangler deploy` builds first (`wrangler.jsonc`), so Cloudflare's default
    deploy command is enough.
-3. [ ] Owner sets real goals (Settings) and uses it for a few days.
-4. [ ] Wearable: pick the device, then import heart rate, sleep, HRV into the master graph.
-5. [ ] **Noticed** (findings engine; plan: https://claude.ai/code/artifact/f8d98b61-fc4a-421b-b7d7-ddbe1276e725).
+3. [x] Owner sets real goals (Settings) and uses it for a few days. Done — goals set; the calorie goal follows his burn since 16 Oct (#95).
+4. [x] Wearable: pick the device, then import heart rate, sleep, HRV into the master graph. Done as #48 (Charge 6).
+5. [x] **Noticed** (findings engine; plan: https://claude.ai/code/artifact/f8d98b61-fc4a-421b-b7d7-ddbe1276e725).
    Phase 1 **built 30 Sept**: `lib/findings.ts` (cards + "still checking"), `lib/tdee.ts` (real burn
    from intake − weight trend × 7,700; 95% trend range, 0.15 kg/wk smallest claim), `lib/bench.ts`
    (planted-effect worlds; burn inside its 90% range ~90% of seeds, <10% false weight alarms),
    Noticed section atop Insights, one ✕-able line on Today. Phase 2 started: **caffeine habit**
    (`lib/detectors/caffeine.ts`: mg/day, mg/kg band light/moderate/high = tolerance, usual drink,
    first/last time). Next: late caffeine, supp on/off, alcohol, protein vs strength, load, eating.
+   Ticked 16 Oct: those "next" ones were built as Connections (#38), the Sleep / Heart / Mind / Training grids and
+   Findings (#53–64); Noticed still carries the weight / burn / caffeine-habit cards.
 6. [x] **Stack check** (plan: https://claude.ai/code/artifact/67da9d55-42a1-4d3b-81cd-342a76bff245), built
    30 Sept. Settings → About me (conditions, medications, allergies, notes; synced `profile` doc).
    `lib/stackcheck/kb.ts`: curated items (EN + HU + brand names) and rules, each with evidence grade,
@@ -377,7 +379,7 @@ email get Dev tools (`#dev`): raw entry editor, generate/remove sample, wipe acc
    lasting patterns to the AI's memory (Settings → AI, deletable) when the journal shows them on
    several days. Cost estimate updated (≈4k tokens per everyday call). Real-model wording unverified
    until ANTHROPIC_API_KEY is set.
-38. [ ] **Insights, rethought** (claimed 3 Oct — `screens/Insights.tsx` + new components; prototypes first). Owner:
+38. [x] **Insights, rethought** (claimed 3 Oct — `screens/Insights.tsx` + new components; prototypes first). Owner:
    *"we have to rethink the insights page...Its a mess rn..its not clear whats what .. i dont like the new
    mood tracker..professional, medical almost, something clearly understandable, clear charts, nice ui"*.
    Prototypes: https://claude.ai/artifact/LK11ZcUcuuRptfH4DdRP5h — A clinical report (usual-range
@@ -419,7 +421,7 @@ email get Dev tools (`#dev`): raw entry editor, generate/remove sample, wipe acc
       supplement day by day (taken / not / stack not ticked, dose changes marked), coverage (`lib/body`
       coverage + test), methods. Replaces Sets per muscle + Supplements. Noticed moved under Connections
       (still the home of weight/burn/caffeine-habit findings; Today's link still lands on it).
-   6. [ ] Phone layout of the same page (after the owner checks desktop).
+   6. [x] Phone layout of the same page (after the owner checks desktop). Done as g below; the page later became #53.
    **Owner, 5 Oct: *"keep working on insights page, come up w new ideas, better graphs, nicer ui, smarter engine
    ...make it better..also change the mood plotting on the master graph"*.** Round 2 (claimed — MasterGraph,
    feelgraph, new lib/patterns.ts, Mind, Insights):
@@ -548,6 +550,8 @@ email get Dev tools (`#dev`): raw entry editor, generate/remove sample, wipe acc
    - **First real data (7 Oct):** owner connected, heart rate on the timeline — "the app really took the info and
      added to chart..fck yeah". Card times confused him ("date doesnt match even after clicking pull now"): fixed to
      "Newest reading · N min ago" vs "Checked Google", and Pull now says what it found.
+   - **Status (16 Oct):** phases 1–2 done — real bedtime and nights (#54), resting HR and HRV (#55), heart rate on the
+     Training page (#64). Open: phase 3, live heart rate over Bluetooth on the Workout screen — not started.
 49. [ ] **Band data, audited · a chart that shows effects** (claimed 7 Oct — worker/band.ts, lib/band*.ts, MasterGraph,
    new lib/hreffect.ts). Owner, 7 Oct: "next is going to be a really close look on how the app handles data, and also
    the design of the chart, we'll have to make it better for the eye and to be better to notice things like bpm average
@@ -582,6 +586,8 @@ email get Dev tools (`#dev`): raw entry editor, generate/remove sample, wipe acc
    - **Next (owner, 8 Oct):** "we will have to redesign the whole insights page … one by one we'll have to go through
      the parts, full effort, 2-3 prototypes, different ideas, and ill let u know whats good and whats not..first
      finish this". Then item 52.
+   - **Status (16 Oct):** phases 1–3 done (the redesign followed as #53–58). Open: phase 4, the long testing session on
+     his real data — needs the owner (agents can't read his account).
 50. [ ] **Idea, not now — heart rate per Tempo task.** Owner, 7 Oct: "i have the other app Tempo, and i plan to either
    from this app or that app to pull info so i can see what heart rate, etc i had from what task, so like i can see that
    work made me stressed, a walk lowered the avg heartbeat… not to do now, just noting for future".
@@ -593,7 +599,9 @@ email get Dev tools (`#dev`): raw entry editor, generate/remove sample, wipe acc
    calories, active minutes, active zone minutes, time and calories per heart-rate zone, exercise (the band's own
    workout detection), sedentary periods, SpO2 (+ daily), daily respiratory rate, VO2 max, nightly skin-temperature
    change, HRV samples, ECG / irregular rhythm notifications. Calories burned also closes the loop with food logged.
-53. [ ] **Insights as pages — Timeline first** (claimed 8 Oct — canvas, then Insights.tsx, MasterGraph, a new page shell).
+   - **Status (16 Oct):** steps (#66) and calories burned (#83, used by the calorie goal #95) are in. The rest of the list
+     (distance, floors, zones, SpO2, breathing rate, VO2 max, skin temperature, …) not started.
+53. [x] **Insights as pages — Timeline first** (claimed 8 Oct — canvas, then Insights.tsx, MasterGraph, a new page shell).
    Owner, 8 Oct: "Should we do the separate pages just like on the phone? … in one page i see one thing, like the master
    graph (i rate the current one a 10/6.5 …) on another page the possible findings, on another the sleep data … i need a
    more detailed, medical, data-centric look, rather than ai slop w glowing effects … also need to redesign the mood stuff
@@ -631,7 +639,9 @@ email get Dev tools (`#dev`): raw entry editor, generate/remove sample, wipe acc
        later day by an hour; a day with nothing eaten or drunk logged is unknown, not "none".
      - Not done yet: ⇄ (heart rate as the driver), more drivers (meals, steps once PLAN 52 brings them), a link from
        Findings' "pick any two" (daily) to this (within the day).
-54. [ ] **Insights → Sleep, redesigned** (claimed 8 Oct — canvas first, then Body.tsx's sleep panels move to a new
+   - Ticked 16 Oct: every page was built (Sleep #54, Heart #55, Mind #58, Training #64, colour #105). Compare's three
+     "not done yet" ideas above stay open, not started.
+54. [x] **Insights → Sleep, redesigned** (claimed 8 Oct — canvas first, then Body.tsx's sleep panels move to a new
    components/Sleep.tsx, numbers in a new lib/sleep.ts). Owner, 8 Oct, after Compare: "go" (on: "Sleep page, 2–3
    prototypes … it has the most data the band already gives and the least design so far"). Today the page shows only
    the morning rating, caffeine at bedtime and drinks; the band's nights (stages, time asleep, awake, time to fall
@@ -669,7 +679,7 @@ email get Dev tools (`#dev`): raw entry editor, generate/remove sample, wipe acc
      every night behind a cell). The old rating/caffeine/drinks panels stay below. Checked: 15 unit tests against known
      answers, e2e/sleep.cjs (25 checks: planted drink effect found, nothing else clear, laptop + phone), full suite 652
      PASS. Not checked: the owner's real nights (blocked from here) — first thing to look at when he opens it.
-55. [ ] **Insights → Heart, redesigned** (claimed 8 Oct — canvas first; then components/HeartEffects.tsx grows into a
+55. [x] **Insights → Heart, redesigned** (claimed 8 Oct — canvas first; then components/HeartEffects.tsx grows into a
    Heart page, numbers in lib/hrusual.ts or a new lib/heart.ts). Owner, 8 Oct, after the Sleep page: "3" (design the
    next Insights page; Heart picked as the default — most band data after Sleep, and he liked the heart views: "I super
    like the new heart bpm view"). Today the page has only the after-coffee / after-workout card; resting heart rate,
@@ -721,6 +731,8 @@ email get Dev tools (`#dev`): raw entry editor, generate/remove sample, wipe acc
      fake Google's night after one; BAND_OWNER overrides). Not checked here: e2e/*.cjs (they need /opt/node22's
      Playwright, not on the Mac) — the change is Worker-only. Needs from the owner: `TEMPO_KEY` secret in Cloudflare
      (same value as Tempo's HEALTHOS_KEY), then open HealthOS once so a sync names the band's owner.
+   - **Status (16 Oct):** the HealthOS side is live; Tempo's code doesn't call it yet (no `HEALTHOS_KEY` or
+     `/api/band/wake` in the Tempo repo). Open until Tempo uses it.
 57. [x] **Sleep page: the old panels stop repeating it** (claimed 9 Oct — components/Body.tsx, Insights.tsx one prop,
    e2e/body.cjs, e2e/sleep.cjs). Owner, 9 Oct: "do 2" (to "remove the old sleep panels from Body: they repeat what's on
    the Sleep page now"). Checked first: with the band, the rating (per night, against your range, in the grid) and
@@ -1077,6 +1089,9 @@ below, in his words, grouped; A first (broken or wrong now), then the rest. Item
    counted), e2e/workoutsets.cjs, and the five workout suites unchanged.
 81. [ ] **More exercises, picked by muscle** — "Add more exercises and that i can choose when hitting a muscle- like i
    should do shoulder and i can choose between exercises and machine or dumbbell etc".
+   - **Status (16 Oct):** part there — typing a muscle or a piece of equipment finds exercises (#94), Swap and + Add offer
+     the same muscle's others in one tap. Not built: browsing by muscle (tap shoulders → machine / dumbbell / cable
+     choices) and a bigger library.
 82. [x] **Strength per muscle group** — "Should also do a muscle group strength average taking in data from diff exercises
    that target same muscle".
    **Done 15 Oct** (owner: "ok"): Insights → Training, "Strength per muscle · last 8 weeks" (lib/liftstrength
@@ -1263,7 +1278,7 @@ below, in his words, grouped; A first (broken or wrong now), then the rest. Item
    after doing X, and just smartly ,like a assistant agent, doing its job".
 92. [ ] **Tempo ↔ HealthOS (future)** — "in the future we should connect tempo and healthos apps so healthos can see what i
    was doing at what times and how it affected me".
-93. [ ] **Too much?** — "Also lmk if its getting too much feature or functions". Answered in chat 13 Oct.
+93. [x] **Too much?** — "Also lmk if its getting too much feature or functions". Answered in chat 13 Oct.
 94. [x] **Workout screen, 14 Oct** (owner's notes, "after ur done") — "Can take out heartrate btw from workout screen";
    "Add more exercise options so i can change if i dont wanna do an exericse or machine is used"; "Add leg pushing
    machine"; "for like biceps dumbbels is the sets count as per hand or both..guess both?..so its doubled overall?";
@@ -1304,8 +1319,8 @@ below, in his words, grouped; A first (broken or wrong now), then the rest. Item
    Today uses it; reload and a second tap change nothing; by hand leaves it alone; measured beats the band; check-in
    −150 survives the next day — fails without the fix; nothing to work from says what's missing), screenshot looked at.
    Not checked: his real account, a real phone.
-96. [ ] **Good / bad shades** — "think about using green and red shades for some numbers, to highlight if bad or good, and
-   use shades to determine how bad or good..just subtly".
+96. [x] **Good / bad shades** — "think about using green and red shades for some numbers, to highlight if bad or good, and
+   use shades to determine how bad or good..just subtly". Done as #105 (phases 1 and 2, 15 Oct).
 97. [x] **Sleep score out of 100** — "should do a 100/… pointing for my sleep based on all the sleep data, length, etc i
    get and also add in my rating". (owner, 14 Oct: "do 1" — lib/sleepscore, components/SleepScore, Sleep page, AI lines)
    **Phase 1 done 14 Oct:** each night out of 100 from parts shown with their points and why — length 35 (full from 7 h,
@@ -1330,6 +1345,12 @@ below, in his words, grouped; A first (broken or wrong now), then the rest. Item
    wakings added, falling asleep full within 30 not 20, deep + REM 20 → 15, timing 5 → 10 and from both ends (falling
    asleep and waking — "2 h late to bed, up as usual" is an hour off, where the middle of the night hid it as 40 min, found
    by the e2e), rating 20 → 15, words on Fitbit's bands (90 / 80 / 60: a 5-hour night is "fair", 6 h "good").
+98. [ ] **AI, soon** — "it should look at all the data, see whatsup, tell me clever tips, what to improve, and a whole bunch
+   of stuff.. it should recommend me, or just understand protocols i give him, and help me set up in app, or just tell
+   me to tell you to set up correctly in app". With #65, #67, #91.
+   - **Status (16 Oct):** most of it is built — the AI sees all the data (#104), reads the morning, night, week and month
+     (#103, #65), asks questions, and the chat looks things up (#67). Open: "understand protocols i give him, and help me
+     set up in app" — the AI can remember a protocol but can't set anything up in the app yet.
 99. [x] **Raised just after waking said "you said: sleep"** (14 Oct, owner: "explain the raised 1 stretch so far, and that
    7:20 - 7:45, why its elevated, waht u mean i said sleep"). The band's night ended 07:20; the 25 minutes after were
    awake, so they counted, and against a usual for 07:20–07:45 made mostly of mornings you were still asleep then, waking
@@ -1352,7 +1373,7 @@ below, in his words, grouped; A first (broken or wrong now), then the rest. Item
    readiness.test (planted HRV −30 %, a low week, resting HR +4, 5-hour week, 3× training each found; ordinary months ≤2
    of 20 under 70; noise costs nothing; monotonic), worker data test, e2e/readiness.cjs (the line names HRV, six parts,
    Today's sleep score = the Sleep page's with Today opened first, ordinary reads "ready").
-101. [ ] **15 Oct notes** (claimed: this session, 15 Oct — lib/sleepscore, SleepScore, Sleep.tsx, lib/readiness, Readiness)
+101. [x] **15 Oct notes** (claimed: this session, 15 Oct — lib/sleepscore, SleepScore, Sleep.tsx, lib/readiness, Readiness)
    - [x] **Sleep score on the studies' ranges, drawn so it reads** — "pls dont make the score compared to my ususal, it
      should have a range, like taken from studies, like an ideal scenario, an average one, and a bad one, and then compare
      this and my usual to the last nights sleep..cause if my usual is pretty bad, it will still show me a good score";
@@ -1394,7 +1415,7 @@ below, in his words, grouped; A first (broken or wrong now), then the rest. Item
      over gf and phone; a 2-hour-late night over one drink; an owl isn't late; a slow-to-sleep night tips gf → phone;
      caffeine over late training, under 30 mg not a thing; own tags, stress, meal, nap; unasked isn't counted),
      e2e/sleep.cjs (the planted two beers, with that night's HRV). Next, offered: the same mark on the 14-night strip.
-   - [ ] **App messages** — owner, 15 Oct: "1, as per your recommendations" → #102. **Colour and graphs across
+   - [x] **App messages** — owner, 15 Oct: "1, as per your recommendations" → #102. **Colour and graphs across
      Insights** — owner: "then when done on next session do 2" (canvas first, the zone colours from #101 everywhere).
 102. [x] **Inbox: the app writes to you, in the AI tab** (claimed: this session, 15 Oct — lib/inbox, components/Inbox,
    components/useInbox, Ai.tsx, store's ai doc). **Phase 1 done 15 Oct** (below). Owner, 15 Oct: "Make sure app can see all my stats and send me messages like hey your heart
@@ -1530,8 +1551,3 @@ below, in his words, grouped; A first (broken or wrong now), then the rest. Item
      grey further off, darker the further — never red for food. Checked: e2e/sleep.cjs (78 shaded numbers, each with
      its arrow and the right colour for its column), e2e/heartpage.cjs (shaded only off the usual, the right way; the
      latest values), e2e/body.cjs (as many green days as the words count, phone and laptop), screenshots.
-98. [ ] **AI, soon**
-98. [ ] **AI, soon** — "it should look at all the data, see whatsup, tell me clever tips, what to improve, and a whole bunch
-   of stuff.. it should recommend me, or just understand protocols i give him, and help me set up in app, or just tell
-   me to tell you to set up correctly in app". With #65, #67, #91 (waits on the AI key).
-
