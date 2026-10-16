@@ -158,6 +158,7 @@ const GOGOSI = [['Gogosi', 330, 6, 48, 13], ['Gogosi', 350, 7, 50, 14]].map(([na
     await pg.waitForSelector('text=cut-off experiment will tell us');
     const chat = calls.find((c) => c.task === 'chat');
     check('chat starts with your message, with the context', chat.messages[0].role === 'user' && chat.messages[0].text === 'what should I try?' && /## My stack/.test(chat.context));
+    check('the chat gets the slim overview, told to ask the tools (no journal or band nights)', /## Last 7 days/.test(chat.context) && /## Ask the app for more/.test(chat.context) && !/## Mood journal|## My nights/.test(chat.context) && !/## Ask the app/.test(calls.find((c) => c.task === 'digest').context));
     // PLAN 67: the app ran the AI's calls on its own data and sent back its turn untouched, then every result in one message
     const rounds = calls.filter((c) => c.task === 'chat'), back = rounds[1]?.turn ?? [];
     const results = back[1]?.content ?? [];

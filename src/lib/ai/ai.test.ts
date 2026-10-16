@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { fromDescribed, judge } from "./apply";
-import { CONTEXT_MAX, buildContext, dayTimeline, feelByTime, moodJournal } from "./context";
+import { ASK_MORE, CONTEXT_MAX, buildContext, dayTimeline, feelByTime, moodJournal } from "./context";
 import { checkDescribe, checkNight, costUsd, estimateMonthUsd, jsonFrom, SYSTEM, type CallLog } from "./tasks";
 import { parseItem } from "../quickadd";
 import { feelWorld } from "../bench";
@@ -156,6 +156,26 @@ describe("the AI knows everything about mood (owner, 2 Oct)", () => {
     expect(year.length).toBeLessThanOrEqual(CONTEXT_MAX);
     expect(year).toContain('2026-10-02: slept 6');
     expect(year).not.toContain("2025-10-05:");
+  });
+  it("the chat gets the slim overview: a week of days, no nights or journal, told to ask the tools (PLAN 67 phase 3)", () => {
+    const days = Array.from({ length: 14 }, (_, i) => ({ day: addDays("2026-10-01", i - 13), logged: true, weekend: false, taken: new Set() }) as never);
+    const input = { state: many(60), now, days, findings: [], patterns: [], nights: ["2026-10-01 (night from 2026-09-30): bed 23:30"] };
+    const full = buildContext(input), slim = buildContext({ ...input, slim: true });
+    expect(full).toMatch(/## Mood journal[\s\S]*/);
+    expect(full).toContain("## My nights");
+    expect(full).not.toContain(ASK_MORE);
+    expect(slim).not.toContain("## Mood journal");
+    expect(slim).not.toContain("## My nights");
+    expect(slim).toContain("## My stack");
+    expect(slim).toContain("## Why I felt that way");
+    expect(slim.endsWith(ASK_MORE)).toBe(true);
+    expect(slim).toMatch(/Sections: [^\n]*Last 7 days[^\n]*Ask the app for more\.$/m);
+    expect(slim).not.toMatch(/Sections: [^\n]*Mood journal/);
+    // a week of days: the 14th-to-last is gone, the last 7 are there
+    expect(slim).toContain("## Last 7 days\n- 2026-09-25");
+    expect(slim).not.toContain("- 2026-09-24");
+    expect(full).toContain("- 2026-09-18");
+    expect(slim.length).toBeLessThan(full.length / 2);
   });
 });
 

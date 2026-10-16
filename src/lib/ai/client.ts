@@ -69,22 +69,25 @@ export async function askAi<T extends Task>(req: Extract<AiRequest, { task: T }>
 }
 
 /** The text the AI is told about you right now (also shown in Settings → AI → What the AI sees). */
-export function contextNow(state: State = getState(), now = Date.now()): string {
+export function contextNow(state: State = getState(), now = Date.now(), { slim = false } = {}): string {
   const today = localDay(now), from = addDays(today, -90), to = addDays(today, -1);
   const days = dailyFacts(state.entries, state.workouts, state.settings, from, to);
   const report = notice(state.entries, state.goals, now, currentKg(state.entries, state.settings.bodyKg, now), { workouts: state.workouts, supplements: state.supplements, settings: state.settings });
   const patterns = scout(days, state.supplements, (id) => !!state.scout[id]?.dismissed);
   const t = weightTrend(bodyDays(state.entries, addDays(today, -27), today));
   // the band's nights, when the band has sent some (PLAN 88): the AI used to see the ratings but not one night
-  const band = bandNow(), nightsSeen = band ? nightsForAi({ ...state, halfLifeMin: state.settings.halfLifeMin }, band, now) : [];
+  const band = bandNow(), nightsSeen = band && !slim ? nightsForAi({ ...state, halfLifeMin: state.settings.halfLifeMin }, band, now) : [];
   // this morning's readiness, training, and what the grids found (owner, 15 Oct: "make sure app sees all data, organized")
   const sets = state.entries.filter((e): e is EntryOf<"set"> => e.kind === "set") as LoggedSet[];
   const rating = (state.entries.find((e) => e.kind === "sleep" && localDay(e.at) === today && e.rating != null) as { rating?: number } | undefined)?.rating;
   const ready = band ? readiness(today, nights(band.sleep, band.hr, band.rhr, band.hrv), rating, sets, now, { hrv: band.hrv, rhr: band.rhr }) : null;
   const ss = sessions(state.workouts, sets);
   return buildContext({ state, now, days, findings: report.found, patterns, weight: t ? { kg: t.nowKg, perWeek: t.perDay * 7 } : null, nights: nightsSeen,
-    today: todayLines(ready), training: trainingLines(ss, mainLifts(sets), thisWeek(ss, now), 6, muscleStrength(sets, now)), grids: gridLines(state.ai.inbox ?? []) });
+    today: todayLines(ready), training: trainingLines(ss, mainLifts(sets), thisWeek(ss, now), 6, muscleStrength(sets, now)), grids: gridLines(state.ai.inbox ?? []), slim });
 }
+
+/** The chat's context (PLAN 67 phase 3): the overview only — the AI asks the app's tools for nights, days and the rest. */
+export const chatContext = (state: State = getState(), now = Date.now()) => contextNow(state, now, { slim: true });
 
 /** The nightly read-back's context: everything above, plus that day in order with your notes. */
 export function nightContext(day: string, state: State = getState(), now = Date.now()): string {

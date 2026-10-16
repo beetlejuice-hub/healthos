@@ -922,7 +922,7 @@ email get Dev tools (`#dev`): raw entry editor, generate/remove sample, wipe acc
    band.test (Google's shape), worker band.test (request, paging, hourly fallback), heart/sleep/mind tests (planted found,
    nothing planted stays quiet, band-off days out — each fails with its rule taken out), e2e/steps.cjs (390 px).
    Not checked: Google's real answer — first real check is the owner's band after the deploy.
-67. [ ] **AI chat that can look things up** — brainstormed 9 Oct, waiting on the owner (AI key). Owner: "a chat for ai …
+67. [x] **AI chat that can look things up** — brainstormed 9 Oct, waiting on the owner (AI key). Owner: "a chat for ai …
    it knows every data in app … pull data based on what i ask and answer it nicely. it can also send me messages of new
    findings". A chat exists (components/Ai.tsx) but sees only a written summary. Idea: tools the AI calls and the app
    answers from your data with the same tested engines (find, day, series, compare, after, findings, show-a-chart);
@@ -972,7 +972,14 @@ email get Dev tools (`#dev`): raw entry editor, generate/remove sample, wipe acc
      Checked: chattools.test (planted: +4 bpm resting heart rate the morning after a beer found clear; nothing planted on
      mood → not clear; magnesium +1 mood found, unanswered days left out; the 3 days with nothing logged not counted as
      "without" — fails if they are; too few days says so; nights and sessions from fixtures), worker ai.test (the tool
-     list), e2e/ai.cjs. Next (phase 3): slim the written summary now the tools carry the detail.
+     list), e2e/ai.cjs.
+   - **Phase 3 done 16 Oct** (owner: "do part3"). The chat now gets the overview only (client `chatContext`, context
+     `slim`): a week of days instead of 14, no band nights, no check-in journal (those were most of the up-to-44k
+     characters sent with every chat round), ending with "Ask the app for more" naming the tools; the prompt says the
+     summary is only an overview. The reads (morning, night, week/month) and supplement look-ups keep the full one.
+     Settings → "What the AI sees" says which gets what. Checked: ai.test (slim has no journal or nights, keeps stack
+     and notes, a week of days, under half the full one — fails with slim ignored or with 14 days kept), e2e/ai.cjs
+     (the chat's context is the slim one, the morning read's isn't). Not checked: a real chat on the real account.
 
 ---
 

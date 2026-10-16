@@ -6,7 +6,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { act, getState, newId, useStore, type Experiment } from "../lib/store";
-import { askAi, contextNow, nightContext, refreshAiStatus, useAiStatus } from "../lib/ai/client";
+import { askAi, chatContext, contextNow, nightContext, refreshAiStatus, useAiStatus } from "../lib/ai/client";
 import { runChatTool, type ChartSpec } from "../lib/ai/chattools";
 import { bandNow } from "../lib/band-client";
 import { ChatChart } from "./ChatChart";
@@ -294,7 +294,7 @@ export function AiScreen() {
     const first = hist.findIndex((m) => m.role === "user");
     const messages = hist.slice(first).map((m) => ({ role: m.role, text: m.text }));
     // built once: every tool round of this message sends it byte for byte (it's cached, and the AI's thinking is tied to it)
-    const context = `${contextNow()}${first > 0 ? `\n\n## Your earlier messages to me\n${hist.slice(0, first).map((m) => m.text).join("\n")}` : ""}`;
+    const context = `${chatContext()}${first > 0 ? `\n\n## Your earlier messages to me\n${hist.slice(0, first).map((m) => m.text).join("\n")}` : ""}`;
     // The AI may ask the app for exact data (PLAN 67): run its calls here, send the results back, until it answers.
     let turn: ChatTurn[] = [];
     const charts: ChartSpec[] = [], looked: string[] = [], learned: string[] = [];
@@ -463,7 +463,7 @@ export function AiSettings() {
       <h3>What the AI knows about me <span>it adds lines as you chat · delete any</span></h3>
       {ai.memory.length === 0 ? <p className="note">Nothing yet.</p> : <div className="chips mem">{ai.memory.map((m) => <span className="chip" key={m.id}>{m.text}<button type="button" aria-label={`Forget ${m.text}`} onClick={() => act.setAi((a) => ({ memory: a.memory.filter((x) => x.id !== m.id) }))}>✕</button></span>)}</div>}
       <button type="button" className="linkish" onClick={() => setSeeing(!seeing)}>{seeing ? "Hide" : "What the AI sees about me"}</button>
-      {seeing && <pre className="ctx">{contextNow()}</pre>}
+      {seeing && <><pre className="ctx">{contextNow()}</pre><p className="note">That's what the reads get. Chat gets the top of it (a week of days, no nights or journal) and looks the rest up when you ask.</p></>}
     </div>
   );
 }
