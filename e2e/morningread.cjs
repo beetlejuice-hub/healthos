@@ -10,7 +10,8 @@ const READ = { greeting: 'Morning! 7 h last night — a better start.', items: [
   { type: 'pattern', title: 'Yesterday was foggy', text: 'Focus 3 at 11:36 yesterday, after 5 h of sleep.' },
   { type: 'study', title: 'Sleep and focus', text: 'A short night costs focus the next day.', source: { title: 'Sleep 2025', url: 'https://example.org/s' } },
   { type: 'fact', title: 'Caffeine half-life', text: 'About five hours.', source: { title: 'NIH', url: 'https://example.org/c' } },
-] };
+], // something new (#109): a message in the chat, not on Today
+  news: { title: 'Creatine and sleep loss', text: 'A 2026 trial: creatine kept reaction time up after a sleepless night.', source: { title: 'Sci Rep 2026', url: 'https://example.org/cr' } } };
 
 (async () => {
   const b = await chromium.launch(); const errs = [];
@@ -55,11 +56,19 @@ const READ = { greeting: 'Morning! 7 h last night — a better start.', items: [
   const card = await pg.locator('section.morning').innerText().catch(() => '');
   check(`Today shows the new read (${card.split('\n').slice(0, 2).join(' · ')})`, /7 h last night — a better start/.test(card) && !/Rough night/.test(card));
   await pg.locator('section.morning').screenshot({ path: OUT + 'morning-read.png' }).catch(() => {});
+  check('the news isn\'t on Today — it\'s a message', !/Creatine and sleep loss/.test(card));
+  const badge = async () => (await pg.locator('nav.tabs a[href="#ai"] .tabbadge').textContent().catch(() => '')) || '0';
+  check(`the AI tab's number says there's a message (${await badge()})`, await badge() === '1');
   await pg.reload(); await pg.waitForSelector('section.morning'); await pg.waitForTimeout(800);
   check('a reload doesn\'t write it again', calls.filter((x) => x.task === 'digest').length === 1);
   await pg.goto(APP + '#ai'); await pg.waitForTimeout(300);
   const chat = await pg.locator('.chat').innerText();
-  check('the chat doesn\'t repeat it — it\'s on Today (owner, 16 Oct)', !/☀️|a better start|Rough night/.test(chat));
+  check('the chat doesn\'t repeat the read — it\'s on Today (owner, 16 Oct)', !/☀️|a better start|Rough night|Sleep and focus/.test(chat));
+  const news = pg.locator('.msg.assistant', { hasText: 'Creatine and sleep loss' });
+  check(`the news is there once, with its source as a link (${(await news.innerText().catch(() => '')).replace(/\s+/g, ' ')})`, await news.count() === 1
+    && /📰 Creatine and sleep loss A 2026 trial/.test((await news.innerText()).replace(/\s+/g, ' ')) && await news.locator('a.msg-src').getAttribute('href') === 'https://example.org/cr');
+  await news.screenshot({ path: OUT + 'news-message.png' });
+  check('opening the chat clears the number', await pg.locator('nav.tabs a[href="#ai"] .tabbadge').count() === 0);
 
   console.log('errors:', JSON.stringify(errs));
   check('no page errors', errs.length === 0);

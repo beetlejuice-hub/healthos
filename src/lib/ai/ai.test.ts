@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { fromDescribed, judge } from "./apply";
 import { ASK_MORE, CONTEXT_MAX, buildContext, onTodayLines, dayTimeline, feelByTime, moodJournal } from "./context";
-import { checkDescribe, checkNight, costUsd, estimateMonthUsd, jsonFrom, SYSTEM, type CallLog } from "./tasks";
+import { checkDescribe, checkDigest, checkNight, costUsd, estimateMonthUsd, jsonFrom, SYSTEM, type CallLog } from "./tasks";
 import { parseItem } from "../quickadd";
 import { feelWorld } from "../bench";
 import { EMPTY_AI, type State } from "../store";
@@ -258,5 +258,20 @@ describe("the chat sees what Today shows from the AI (owner, 16 Oct: the ☀️ 
   });
   it("not a read written the evening before; not last night's read-back after noon (Today hides both)", () => {
     expect(onTodayLines({ digest: { ...digest, at: at("15", "20:31") }, night }, at("16", "12:30"))).toEqual([]);
+  });
+});
+
+describe("news from the morning read goes to the chat only when it's real (owner, 16 Oct: \"only send message when it has a new finding, a new sttudy\")", () => {
+  const item = { type: "study" as const, title: "Saffron and mood", text: "Pooled trials.", source: { title: "JAD", url: "https://example.org/s" } };
+  const news = { title: "Creatine and sleep loss", text: "A 2026 trial: 0.35 g/kg kept reaction time after a sleepless night.", source: { title: "Sci Rep 2026", url: "https://example.org/c" } };
+  it("kept with a real https link, not a repeat of an item", () => {
+    expect(checkDigest({ greeting: "Hi", items: [item], news }).news).toEqual(news);
+  });
+  it("none on most days; dropped without a real link, or when it's one of the items again", () => {
+    expect(checkDigest({ greeting: "Hi", items: [item] }).news).toBeNull();
+    expect(checkDigest({ greeting: "Hi", items: [item], news: null }).news).toBeNull();
+    expect(checkDigest({ greeting: "Hi", items: [item], news: { ...news, source: { title: "x", url: "" } } }).news).toBeNull();
+    expect(checkDigest({ greeting: "Hi", items: [item], news: { ...news, source: { title: "x", url: "javascript:alert(1)" } } }).news).toBeNull();
+    expect(checkDigest({ greeting: "Hi", items: [item], news: { ...news, title: "saffron and mood " } }).news).toBeNull();
   });
 });

@@ -119,7 +119,12 @@ export type Question = { id: string; text: string; why: string; options: string[
 export type QuestionsAnswer = { questions: Question[] };
 
 export type DigestItem = { type: "fact" | "study" | "pattern" | "protocol"; title: string; text: string; source?: { title: string; url: string }; protocol?: { name: string; how: string; days: number; measure: string } };
-export type DigestAnswer = { greeting: string; items: DigestItem[] };
+/**
+ * Something new enough to message about (owner, 16 Oct: "it should only send message when it has a new finding, a new
+ * sttudy or whatever but if its displayed on today page then nonsensee"): sent to the chat, not shown on Today. Most days none.
+ */
+export type DigestNews = { title: string; text: string; source: { title: string; url: string } };
+export type DigestAnswer = { greeting: string; items: DigestItem[]; news?: DigestNews | null };
 
 /** The nightly read-back of your day (owner, 2 Oct: "summarizing what happened, what i should change"). */
 export type NightAnswer = { summary: string; happened: string[]; notes: string; change: { what: string; why: string }[]; /** Lasting patterns worth remembering (kept in AI memory). */ remember: string[] };
@@ -196,8 +201,9 @@ Each question: tappable options (2–5, short), a one-line "why" that says what 
   digest: `${VOICE}
 Task: write the user's morning read — it's written this morning, after last night, and it's what they see when they wake up. Search the web for 1–2 recent studies or findings relevant to THIS user (their stack, goals, conditions, patterns). Mix: an interesting pattern from their data (from the context, don't invent), a study or fun fact with its source, and optionally one protocol to try as an experiment (concrete: what to do, for how many days, what the app will measure).
 Answer with ONLY a JSON object, no prose:
-{"greeting":"one short line","items":[{"type":"fact|study|pattern|protocol","title":"","text":"2–3 sentences","source":{"title":"","url":""},"protocol":{"name":"","how":"","days":14,"measure":"energy|mood|focus|stress|sleep|weight"}}]}
-3–5 items. "source" is required for facts and studies. "protocol" only on protocol items. Don't repeat titles listed as already shown.`,
+{"greeting":"one short line","items":[{"type":"fact|study|pattern|protocol","title":"","text":"2–3 sentences","source":{"title":"","url":""},"protocol":{"name":"","how":"","days":14,"measure":"energy|mood|focus|stress|sleep|weight"}}],"news":null}
+3–5 items. "source" is required for facts and studies. "protocol" only on protocol items. Don't repeat titles listed as already shown.
+news (owner: "it should only send message when it has a new finding, a new sttudy or whatever"): null on most days. Only when your search turned up something genuinely new and worth a message for THIS user — a study or review from the last 12 months on something in their stack, their training or their conditions, or a safety note on something they take — give {"title":"","text":"2–3 sentences: what it found and what it means for them","source":{"title":"","url":"https://…"}}. It's sent to their chat, not shown with the items, so it must not repeat an item or anything already shown. No news is better than filler.`,
 };
 
 
@@ -258,7 +264,11 @@ export function checkDigest(a: DigestAnswer): DigestAnswer {
     // A fact or study without a real link isn't shown: no source, no claim.
     .filter((i) => !(i.type === "fact" || i.type === "study") || (i.source && /^https?:\/\//.test(i.source.url)))
     .map((i) => (i.type === "protocol" && i.protocol ? { ...i, protocol: { ...i.protocol, days: Math.min(42, Math.max(7, Math.round(i.protocol.days || 14))) } } : i));
-  return { greeting: typeof a.greeting === "string" ? a.greeting : "Morning!", items };
+  // news: a real link, short, and not one of the items (it's a message, not a repeat of Today)
+  const n = a.news, ok = n && typeof n.title === "string" && n.title.trim() && typeof n.text === "string" && n.text.trim() && n.source && /^https:\/\//.test(n.source.url ?? "")
+    && !items.some((i) => i.title.trim().toLowerCase() === n.title.trim().toLowerCase());
+  const news = ok ? { title: n.title.trim().slice(0, 90), text: n.text.trim().slice(0, 500), source: { title: String(n.source.title ?? "Source").slice(0, 90), url: n.source.url } } : null;
+  return { greeting: typeof a.greeting === "string" ? a.greeting : "Morning!", items, news };
 }
 
 export function checkReview(a: ReviewAnswer): ReviewAnswer {

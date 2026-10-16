@@ -1618,3 +1618,14 @@ below, in his words, grouped; A first (broken or wrong now), then the rest. Item
    e2e/ai.cjs (no ☀️, no number for it, the chat's context has the read's study), e2e/morningread.cjs and night.cjs
    (not repeated). Also: e2e/compare.cjs seeds, checks the app kept the seed and seeds again if its first sync saved
    over it — the network wait alone wasn't enough under a loaded run; the full suite passed under load after.
+109. [x] **The AI messages you only with something new** (16 Oct; owner: "do 1", on "let the AI write first when there's
+   something new" — the other half of "either dont ssend good morning message or send something interesting w it. it
+   should only send message when it has a new finding, a new sttudy or whatever"). No extra call: the morning read,
+   which already searches the web, can return one "news" — only when it found something genuinely new for this user (a
+   study or review from the last 12 months on their stack, training or conditions, or a safety note on something they
+   take); null on most days, "no news is better than filler". It goes to the chat as a 📰 message with its source as a
+   link (the AI tab's number lights), never on Today, never a repeat of an item; dropped without an https link. New
+   findings in the data already message through the app's inbox. Checked: ai.test (kept; none; no link, a javascript:
+   link, or an item's title again → dropped), e2e/morningread.cjs (one 📰 with its link, the number 1, the items not
+   in the chat, a reload doesn't post it twice, opening the chat clears the number), screenshot. Not checked: how often
+   the real model finds something — if it's every day, it's filler and the prompt needs tightening.

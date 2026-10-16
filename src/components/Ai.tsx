@@ -41,7 +41,13 @@ async function makeDigest(day: string) {
   const ai = getState().ai;
   const r = await askAi({ task: "digest", context: contextNow(), shown: ai.shown.slice(-40) });
   if (!r.ok) return;
-  act.setAi((a) => ({ digest: { day, at: Date.now(), greeting: r.answer.greeting, items: r.answer.items }, shown: [...a.shown, ...r.answer.items.map((i) => i.title)].slice(-80) }));
+  const n = r.answer.news, at = Date.now();
+  act.setAi((a) => ({
+    digest: { day, at, greeting: r.answer.greeting, items: r.answer.items },
+    shown: [...a.shown, ...r.answer.items.map((i) => i.title), ...(n ? [n.title] : [])].slice(-80),
+    // something new is a message (owner, 16 Oct: "only send message when it has a new finding, a new sttudy"); the rest is on Today
+    ...(n && !a.chat.some((m) => m.unprompted && m.text.startsWith(`📰 **${n.title}**`)) ? { chat: [...a.chat, { role: "assistant" as const, text: `📰 **${n.title}**\n\n${n.text}`, at, unprompted: true, source: n.source }].slice(-80) } : {}),
+  }));
 }
 
 /** Anything logged in that day's evening-to-04:00 window (#107: a beer at 00:40 is that evening's). */
@@ -336,6 +342,7 @@ export function AiScreen() {
             <div key={x.key} className={`msg ${x.m!.role}${x.m!.unprompted ? " first" : ""}`} data-new={isNew || undefined}>
               {x.m!.role === "assistant" ? <Md text={x.m!.text} /> : x.m!.text}
               {x.m!.charts?.map((c, k) => <ChatChart key={k} c={c} />)}
+              {x.m!.source && /^https:\/\//.test(x.m!.source.url) && <a className="msg-src" href={x.m!.source.url} target="_blank" rel="noopener noreferrer">{x.m!.source.title} ↗</a>}
               {x.m!.proposals?.length ? <Proposals at={x.m!.at} list={x.m!.proposals} now={now} onAdded={(s) => { if (on) void researchSupplement(s); }} /> : null}
               {lookedAt(x.m!.looked) && <small className="looked">looked at your {lookedAt(x.m!.looked)}</small>}
               {x.m!.role === "assistant" && <time className="ts" dateTime={new Date(x.m!.at).toISOString()}>{stampOf(x.m!.at, now)}</time>}
