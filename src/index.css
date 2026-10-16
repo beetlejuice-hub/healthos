@@ -1519,3 +1519,5 @@ a { color: inherit; }
 .cc-dot[data-partial] { fill: var(--c-card); stroke: var(--c-ink); }
 .cc-avg { stroke: var(--c-ink-2); stroke-width: 1; stroke-dasharray: 3 3; opacity: .7; }
 .msg .looked { display: block; margin-top: 6px; font: 400 10.5px var(--f-mono); color: var(--c-dim); }
+.question .q-acts { display: flex; gap: 18px; }
+.msg .ts { display: block; margin-top: 4px; font: 400 10.5px var(--f-mono); color: var(--c-dim); text-align: right; }

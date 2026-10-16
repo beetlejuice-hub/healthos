@@ -1480,6 +1480,13 @@ below, in his words, grouped; A first (broken or wrong now), then the rest. Item
    Checked: sections.test (the three blocks' lines, known answers), e2e/ai.cjs (folded under 200 px with "3 things to
    read", opens to rows with kinds, the protocol still starts an experiment, a reply in your own words saved as said),
    e2e/sleep.cjs (drink nights on the strip say "2 drinks", last night among them).
+   **16 Oct, quick questions and the chat** (owner, with a screenshot: "Stop asking this is not working also i should be
+   able to skip question"; "Should add a time stamp for ai sendning messages"). Found: "Stop asking this" only took the
+   question off the daily list — today's copy stayed on screen, and nothing kept the AI from adding it again. Now it goes
+   at once and for good (`ai.stopped`; the AI is told never to ask it; a re-written one is dropped); "Skip" hides one
+   for today only (`ai.skipped`; a daily one is back tomorrow); neither saves an answer. Every AI message in the chat
+   shows when it was written (the time today, "yesterday 14:05", else the day). Checked: e2e/questions.cjs (fails on the
+   old code: the question stayed at "1 of 3"), e2e/ai.cjs (each AI message's time).
 105. [x] **Colour and graphs across Insights** (claimed: this session, 15 Oct — Glance, Mind, the grids, index.css; then
    #95 calories). Owner, 15 Oct: "The insight page has a lot of info on all pages. Thats good but everything is one color
    and it looks just too monotone. I feel like we should use red green as noted before and maybe more graphs, things that

@@ -167,6 +167,9 @@ const GOGOSI = [['Gogosi', 330, 6, 48, 13], ['Gogosi', 350, 7, 50, 14]].map(([na
     const cc = pg.locator('.msg.assistant .chat-chart').last();
     check(`the chart is under the reply, drawn from the app's numbers (${await cc.locator('circle').count()} dot, ${(await cc.locator('figcaption').innerText().catch(() => '')).replace(/\s+/g, ' ')})`, await cc.count() === 1 && await cc.getAttribute('data-measure') === 'kcal' && /Calories this week/.test(await cc.locator('figcaption').innerText()) && await cc.locator('circle[data-partial]').count() === 1);
     check('and says what it looked at', /looked at your log, numbers over time/.test(await pg.locator('.msg.assistant').last().innerText()));
+    // owner, 16 Oct: "Should add a time stamp for ai sendning messages"
+    const stamps = await pg.locator('.msg.assistant .ts').allTextContents();
+    check(`each AI message has its time (${stamps.join(', ')})`, stamps.length === await pg.locator('.msg.assistant').count() && stamps.every((t) => /^\d\d:\d\d$/.test(t)) && stamps.at(-1) === '15:00');
     await pg.locator('.msg.assistant').last().screenshot({ path: OUT + 'ai-chat-tools.png' });
     // owner, 15 Oct: "make sure it can make text bold, etc" — drawn, not shown as stars
     const md = await pg.locator('.msg.assistant .md').last().evaluate((e) => [e.querySelector('b')?.textContent, e.querySelectorAll('li').length, e.querySelector('i')?.textContent, e.textContent.includes('*')]).catch(() => null);

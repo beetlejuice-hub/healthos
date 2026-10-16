@@ -13,7 +13,7 @@ import { ChatChart } from "./ChatChart";
 import { CHAT_ROUNDS, MODELS, estimateMonthUsd, type ChatTurn, type DigestItem, type ModelChoice, type Question, type Tier } from "../lib/ai/tasks";
 import { judge } from "../lib/ai/apply";
 import { dailyFacts } from "../lib/insights";
-import { addDays, localDay } from "../lib/time";
+import { addDays, clock, dayLabel, localDay } from "../lib/time";
 import type { Supplement } from "../lib/types";
 import { InboxCard } from "./Inbox";
 import { ReviewCard } from "./Review";
@@ -86,9 +86,11 @@ async function makeQuestions(day: string) {
   if (tried.has(key)) return;
   tried.add(key);
   const ai = getState().ai;
-  const r = await askAi({ task: "questions", context: contextNow(), asked: [...ai.asked.slice(-30), ...ai.daily.map((q) => q.text)] });
+  const stopped = new Set(ai.stopped ?? []);
+  const r = await askAi({ task: "questions", context: contextNow(), asked: [...ai.asked.slice(-30), ...ai.daily.map((q) => q.text), ...[...stopped].map((k) => `(never ask again) ${k}`)] });
   if (!r.ok) return;
-  const list = r.answer.questions.map((q) => ({ ...q, id: `${day}:${q.key}` }));
+  // one you said to stop asking never comes back, even if the AI writes it again
+  const list = r.answer.questions.filter((q) => !stopped.has(q.key)).map((q) => ({ ...q, id: `${day}:${q.key}` }));
   act.setAi((a) => ({
     questions: { day, list },
     asked: [...a.asked, ...list.map((q) => q.text)].slice(-60),
@@ -226,7 +228,8 @@ export function AiQuestions() {
   const today = localDay(Date.now());
   const answeredToday = useMemo(() => new Set(entries.filter((e) => e.kind === "answer" && localDay(e.at) === today).map((e) => (e.kind === "answer" ? e.key : ""))), [entries, today]);
   const fresh = ai.questions?.day === today ? ai.questions.list : [];
-  const list: Question[] = [...fresh, ...ai.daily.filter((d) => !fresh.some((q) => q.key === d.key))].filter((q) => !answeredToday.has(q.key));
+  const stopped = new Set(ai.stopped ?? []), skipped = new Set(ai.skipped?.day === today ? ai.skipped.keys : []);
+  const list: Question[] = [...fresh, ...ai.daily.filter((d) => !fresh.some((q) => q.key === d.key))].filter((q) => !answeredToday.has(q.key) && !stopped.has(q.key) && !skipped.has(q.key));
   const [q] = list;
   // owner, 15 Oct: "for questions make sure i can write custom reply"
   const [own, setOwn] = useState("");
@@ -242,13 +245,23 @@ export function AiQuestions() {
         <button type="button" className="pill-btn" disabled={!own.trim()} onClick={() => answer(own)}>Send</button>
       </div>
       <small className="why">Why: {q.why}{q.repeat === "daily" ? " · asked daily" : ""}</small>
-      {q.repeat === "daily" && <button type="button" className="linkish" onClick={() => act.setAi((a) => ({ daily: a.daily.filter((d) => d.key !== q.key) }))}>Stop asking this</button>}
+      <div className="q-acts">
+        {/* skip: gone for today, no answer saved; a daily one comes back tomorrow */}
+        <button type="button" className="linkish" onClick={() => act.setAi((a) => ({ skipped: { day: today, keys: [...(a.skipped?.day === today ? a.skipped.keys : []), q.key] } }))}>Skip</button>
+        {/* stop: gone now and for good — the AI is told never to ask it again */}
+        {q.repeat === "daily" && <button type="button" className="linkish" onClick={() => act.setAi((a) => ({ daily: a.daily.filter((d) => d.key !== q.key), stopped: [...new Set([...(a.stopped ?? []), q.key])].slice(-60) }))}>Stop asking this</button>}
+      </div>
     </section>
   );
 }
 
 /* ------------------------------------------------------------------ the chat (#ai) */
 
+/** When the AI wrote (owner, 16 Oct: "Should add a time stamp for ai sendning messages"): the time today, else yesterday or the day. */
+export const stampOf = (at: number, now: number) => {
+  const d = localDay(at), today = localDay(now);
+  return d === today ? clock(at) : d === addDays(today, -1) ? `yesterday ${clock(at)}` : `${dayLabel(at)} ${clock(at)}`;
+};
 /** What each tool looked at, for the line under a reply. */
 const LOOKED: Record<string, string> = { day: "day", series: "numbers over time", find: "log", show_chart: "numbers over time" };
 const STARTERS = ["Why am I flat in the afternoon?", "Recommend a supplement or protocol to try", "What's worth logging more of?", "Explain my latest pattern"];
@@ -323,6 +336,7 @@ export function AiScreen() {
               {x.m!.role === "assistant" ? <Md text={x.m!.text} /> : x.m!.text}
               {x.m!.charts?.map((c, k) => <ChatChart key={k} c={c} />)}
               {x.m!.looked?.length ? <small className="looked">looked at your {[...new Set(x.m!.looked.filter((t) => t !== "remember").map((t) => LOOKED[t] ?? t))].join(", ")}</small> : null}
+              {x.m!.role === "assistant" && <time className="ts" dateTime={new Date(x.m!.at).toISOString()}>{stampOf(x.m!.at, now)}</time>}
             </div>
           );
         })}

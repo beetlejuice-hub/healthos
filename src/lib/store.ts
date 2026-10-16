@@ -38,6 +38,9 @@ export type AiState = {
   questions: { day: string; list: Question[] } | null;
   daily: Question[];
   asked: string[];
+  /** Questions you said to stop asking (their keys), and those skipped today (owner, 16 Oct: "Stop asking this is not working also i should be able to skip question"). */
+  stopped?: string[];
+  skipped?: { day: string; keys: string[] };
   /** Supplement look-ups, by supplement id. */
   research: Record<string, SupplementAnswer & { at: number; /** The name you typed when it was looked up. */ asked: string }>;
   /** Protocols you chose to try: the app compares before and during. */
