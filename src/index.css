@@ -1519,5 +1519,18 @@ a { color: inherit; }
 .cc-dot[data-partial] { fill: var(--c-card); stroke: var(--c-ink); }
 .cc-avg { stroke: var(--c-ink-2); stroke-width: 1; stroke-dasharray: 3 3; opacity: .7; }
 .msg .looked { display: block; margin-top: 6px; font: 400 10.5px var(--f-mono); color: var(--c-dim); }
+/* the AI's proposed changes, applied on a tap (PLAN 98) */
+.proposals { display: grid; gap: 8px; margin-top: 10px; }
+.propose { display: grid; gap: 6px; padding: 10px 12px; border-radius: 12px; background: var(--c-card-2); border: 1px solid var(--c-track); }
+.propose b { font-weight: 600; font-size: 14px; line-height: 1.35; }
+.propose .pr-why { color: var(--c-ink-2); font-size: 12.5px; line-height: 1.4; }
+.propose .pr-acts { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.propose .pr-acts .pill-btn { min-height: 36px; }
+.propose .pr-skip { color: var(--c-dim); font-size: 12px; }
+.propose .pr-done { color: var(--sh-g); font-size: 12.5px; }
+.propose .pr-done a { color: var(--c-ink-2); }
+.propose[data-state="applied"] { background: transparent; }
+.propose[data-state="dismissed"] b { color: var(--c-ink-2); font-weight: 500; }
+.propose .err { font-size: 12.5px; }
 .question .q-acts { display: flex; gap: 18px; }
 .msg .ts { display: block; margin-top: 4px; font: 400 10.5px var(--f-mono); color: var(--c-dim); text-align: right; }

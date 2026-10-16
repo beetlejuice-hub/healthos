@@ -15,10 +15,11 @@ import { difference, mean } from "../stats";
 import { nights as nightsOf } from "../sleep";
 import { sessions as sessionsOf } from "../liftstrength";
 import { working, type LoggedSet } from "../training";
+import { makeProposal, type Proposal } from "./propose";
 
-export type ToolData = { state: Pick<State, "entries" | "workouts" | "settings" | "supplements" | "ai">; band: BandData | null; now: number };
+export type ToolData = { state: Pick<State, "entries" | "workouts" | "settings" | "supplements" | "ai"> & { goals?: State["goals"] }; band: BandData | null; now: number };
 export type ChartSpec = { measure: SeriesKey; from: string; to: string; title: string };
-export type ToolOut = { text: string; error?: boolean; chart?: ChartSpec; remember?: string };
+export type ToolOut = { text: string; error?: boolean; chart?: ChartSpec; remember?: string; proposal?: Proposal };
 
 export const MEASURE: Record<SeriesKey, { name: string; unit: string; dec: 0 | 1; partial?: boolean }> = {
   mood: { name: "Mood", unit: "/10", dec: 1 }, energy: { name: "Energy", unit: "/10", dec: 1 }, focus: { name: "Focus", unit: "/10", dec: 1 },
@@ -222,6 +223,15 @@ function remember(input: Record<string, unknown>, d: ToolData): ToolOut {
   return { text: "Saved to memory.", remember: t };
 }
 
+/** A change for the user to apply (lib/ai/propose): checked here, shown as a card, made only when they tap Apply. */
+function propose(call: ToolCall, d: ToolData): ToolOut {
+  const { supplements, settings, ai, goals } = d.state;
+  if (!goals) return { text: "goals unavailable", error: true };
+  const p = makeProposal(call.input ?? {}, { supplements, settings, goals, ai }, call.id);
+  if (typeof p === "string") return { text: p, error: true };
+  return { text: `Shown under your reply as a card: "${p.label}". Nothing changes until they tap Apply — say it's waiting for them, not that it's done.`, proposal: p };
+}
+
 /** Run one call the AI made. Never throws: a bad input comes back as an error result the AI can correct. */
 export function runChatTool(call: ToolCall, d: ToolData): ToolOut {
   const input = call.input ?? {};
@@ -234,6 +244,7 @@ export function runChatTool(call: ToolCall, d: ToolData): ToolOut {
     case "compare": return compare(input, d);
     case "nights": return nightsTool(input, d);
     case "sessions": return sessionsTool(input, d);
+    case "propose": return propose(call, d);
     default: return { text: `no tool called ${String(call.name)}`, error: true };
   }
 }

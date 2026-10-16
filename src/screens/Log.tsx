@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { act, getState, newId, offerUndo, useStore } from "../lib/store";
 import { changeDose } from "../lib/dose";
 import { searchBasic } from "../lib/foods-basic";
-import { SLOTS, slotsOf, slotTime, type Slot } from "../lib/types";
+import { SLOTS, SUPP_STATUS_PATCH, slotsOf, slotTime, suppStatus, type Slot, type SuppStatus } from "../lib/types";
 import { searchFood } from "../lib/off";
 import { groupFoods, plausible, type ResultRow } from "../lib/foodgroup";
 import { StackBadge, useStackCheck } from "../components/StackCheck";
@@ -771,12 +771,8 @@ function CustomDrink({ onCancel, onDone }: { onCancel: () => void; onDone: (d: D
 
 /* ------------------------------------------------------------------ stack */
 
-type SuppStatus = "taking" | "low" | "out" | "stopped";
 const STATUSES: [SuppStatus, string][] = [["taking", "Taking"], ["low", "Running low"], ["out", "Ran out"], ["stopped", "Stopped"]];
-const statusOf = (s: Supplement): SuppStatus => (s.active ? (s.status === "low" ? "low" : "taking") : s.status === "stopped" ? "stopped" : "out");
-const STATUS_PATCH: Record<SuppStatus, Partial<Supplement>> = {
-  taking: { active: true, status: undefined }, low: { active: true, status: "low" }, out: { active: false, status: "out" }, stopped: { active: false, status: "stopped" },
-};
+const statusOf = suppStatus, STATUS_PATCH = SUPP_STATUS_PATCH;
 const STATUS_NOTE: Record<SuppStatus, string> = {
   taking: "On Today in its slot.",
   low: "Still on Today, plus a reminder to buy more.",

@@ -41,9 +41,9 @@ describe("/api/ai", () => {
     expect(r1.answer.turn).toEqual([{ role: "assistant", content: [think, { type: "text", text: "Let me look." }, use] }]); // exactly as it came, thinking included
     expect(r1.usage.calls).toBe(50);
     const sent = w.sent[0].body as { tools: { name: string; type?: string; strict?: boolean; max_uses?: number }[]; output_config: { format?: unknown }; tool_choice?: unknown };
-    expect(sent.tools.map((t) => t.name)).toEqual(["day", "series", "find", "show_chart", "compare", "nights", "sessions", "remember", "web_search"]);
-    expect(sent.tools.slice(0, 8).every((t) => t.strict === true)).toBe(true);
-    expect(sent.tools[8]).toMatchObject({ type: "web_search_20260209", max_uses: 3 });
+    expect(sent.tools.map((t) => t.name)).toEqual(["day", "series", "find", "show_chart", "compare", "nights", "sessions", "propose", "remember", "web_search"]);
+    expect(sent.tools.slice(0, 9).every((t) => t.strict === true)).toBe(true);
+    expect(sent.tools[9]).toMatchObject({ type: "web_search_20260209", max_uses: 3 });
     expect(sent.output_config.format).toBeUndefined(); // replies are Markdown now, not JSON
     expect(sent.tool_choice).toBeUndefined();
     // the app ran the tool; the same message continues — past the daily 50 it still goes through, and isn't counted again

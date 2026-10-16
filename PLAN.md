@@ -1345,18 +1345,27 @@ below, in his words, grouped; A first (broken or wrong now), then the rest. Item
    wakings added, falling asleep full within 30 not 20, deep + REM 20 → 15, timing 5 → 10 and from both ends (falling
    asleep and waking — "2 h late to bed, up as usual" is an hour off, where the middle of the night hid it as 40 min, found
    by the e2e), rating 20 → 15, words on Fitbit's bands (90 / 80 / 60: a 5-hour night is "fair", 6 h "good").
-98. [ ] **AI, soon** — "it should look at all the data, see whatsup, tell me clever tips, what to improve, and a whole bunch
+98. [x] **AI, soon** — "it should look at all the data, see whatsup, tell me clever tips, what to improve, and a whole bunch
    of stuff.. it should recommend me, or just understand protocols i give him, and help me set up in app, or just tell
    me to tell you to set up correctly in app". With #65, #67, #91.
    - **Status (16 Oct):** most of it is built — the AI sees all the data (#104), reads the morning, night, week and month
-     (#103, #65), asks questions, and the chat looks things up (#67). Open: "understand protocols i give him, and help me
-     set up in app" — the AI can remember a protocol but can't set anything up in the app yet.
-   - **Building (claimed: this session, 16 Oct — lib/ai/propose.ts, tasks.ts CHAT_TOOLS + chat prompt, Ai.tsx chat,
-     components/Proposal.tsx; owner: "go" on "the AI sets things up for you").** A chat tool `propose`: the AI turns a
+     (#103, #65), asks questions, and the chat looks things up (#67). The last part, "understand protocols i give him,
+     and help me set up in app", is below.
+   - **Done 16 Oct (owner: "go" on "the AI sets things up for you") — lib/ai/propose.ts, tasks.ts CHAT_TOOLS + chat
+     prompt, Ai.tsx chat, components/Proposal.tsx.** A chat tool `propose`: the AI turns a
      protocol you give it into changes — add a supplement (dose, when), change a dose, mark one stopped / ran out /
      taking again, set the calorie or protein goal or the fat-loss pace, start an experiment — each shown under its reply
      as a card with Apply. Nothing changes until you tap it; checked again when you tap (the supplement still there, not
-     already added).
+     already added). Cards read old → new ("Magnesium glycinate: 200 mg → 400 mg", "Protein goal 150 → 170 g"); a calorie goal
+     set by hand while it follows your burn says it stops following it. Apply sets what the stack editor's buttons set
+     (the dose keeps its history, so past days keep theirs; a new supplement is looked up like one added by hand); Not now
+     keeps Apply there; cards keep their state; a second Apply does nothing. A bad proposal (unknown or ambiguous name,
+     already so, out of range, kcal with pace) goes back to the AI as an error to fix; the same change twice in a reply is
+     one card. Found on the way: a reply whose tools only remembered or proposed showed an empty "looked at your" line.
+     Checked: propose.test (18 — known setups; each fails with its guard taken out: the re-check on Apply, a second Apply,
+     carbs following calories, burn turned off by a hand-set goal, running low counted as taking), worker ai.test (the
+     tool list), e2e/propose.cjs at 390 px (three cards from five calls, nothing changed before a tap, Apply / Not now /
+     reload / apply later, the stack shows both). Not checked: the real model calling it — first real use will tell.
 99. [x] **Raised just after waking said "you said: sleep"** (14 Oct, owner: "explain the raised 1 stretch so far, and that
    7:20 - 7:45, why its elevated, waht u mean i said sleep"). The band's night ended 07:20; the 25 minutes after were
    awake, so they counted, and against a usual for 07:20–07:45 made mostly of mornings you were still asleep then, waking

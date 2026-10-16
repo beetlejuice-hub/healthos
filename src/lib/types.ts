@@ -93,6 +93,13 @@ export type Supplement = {
   status?: "low" | "out" | "stopped";
 };
 
+/** Where a supplement stands, as the stack editor shows it, and the patch that puts it there. */
+export type SuppStatus = "taking" | "low" | "out" | "stopped";
+export const suppStatus = (s: Pick<Supplement, "active" | "status">): SuppStatus => (s.active ? (s.status === "low" ? "low" : "taking") : s.status === "stopped" ? "stopped" : "out");
+export const SUPP_STATUS_PATCH: Record<SuppStatus, Pick<Supplement, "active" | "status">> = {
+  taking: { active: true, status: undefined }, low: { active: true, status: "low" }, out: { active: false, status: "out" }, stopped: { active: false, status: "stopped" },
+};
+
 export type Entry =
   | { id: string; kind: "food"; at: number; foodId?: string; name: string; grams: number; macros: Macros; /** As you counted it: 2 × "egg". */ count?: number; unit?: string }
   | { id: string; kind: "drink"; at: number; drinkId?: string; name: string; ml: number; caffeineMg: number; alcoholG: number; kcal: number; p?: number; c?: number; f?: number }

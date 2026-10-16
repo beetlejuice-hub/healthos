@@ -10,6 +10,8 @@ import { askAi, chatContext, contextNow, nightContext, refreshAiStatus, useAiSta
 import { runChatTool, type ChartSpec } from "../lib/ai/chattools";
 import { bandNow } from "../lib/band-client";
 import { ChatChart } from "./ChatChart";
+import { Proposals } from "./Proposal";
+import type { Proposal } from "../lib/ai/propose";
 import { CHAT_ROUNDS, MODELS, estimateMonthUsd, type ChatTurn, type DigestItem, type ModelChoice, type Question, type Tier } from "../lib/ai/tasks";
 import { judge } from "../lib/ai/apply";
 import { dailyFacts } from "../lib/insights";
@@ -264,6 +266,8 @@ export const stampOf = (at: number, now: number) => {
 };
 /** What each tool looked at, for the line under a reply. */
 const LOOKED: Record<string, string> = { day: "day", series: "numbers over time", find: "log", show_chart: "numbers over time", compare: "days with and without", nights: "nights", sessions: "training" };
+/** "log, numbers over time" — what the reply's tools looked at; remembering and proposing aren't looking (empty: no line). */
+const lookedAt = (tools?: string[]) => [...new Set((tools ?? []).filter((t) => t !== "remember" && t !== "propose").map((t) => LOOKED[t] ?? t))].join(", ");
 const STARTERS = ["Why am I flat in the afternoon?", "Recommend a supplement or protocol to try", "What's worth logging more of?", "Explain my latest pattern"];
 
 export function AiScreen() {
@@ -297,14 +301,14 @@ export function AiScreen() {
     const context = `${chatContext()}${first > 0 ? `\n\n## Your earlier messages to me\n${hist.slice(0, first).map((m) => m.text).join("\n")}` : ""}`;
     // The AI may ask the app for exact data (PLAN 67): run its calls here, send the results back, until it answers.
     let turn: ChatTurn[] = [];
-    const charts: ChartSpec[] = [], looked: string[] = [], learned: string[] = [];
+    const charts: ChartSpec[] = [], looked: string[] = [], learned: string[] = [], proposals: Proposal[] = [];
     for (let round = 0; ; round++) {
       const r = await askAi({ task: "chat", messages, context, ...(turn.length ? { turn } : {}), ...(round >= CHAT_ROUNDS ? { final: true } : {}) });
       if (!r.ok) { setErr(r.message); return; }
       if (!r.answer.calls?.length || round >= CHAT_ROUNDS) {
         const at = Date.now();
         act.setAi((a) => ({
-          chat: [...a.chat, { role: "assistant" as const, text: r.answer.reply, at, ...(charts.length ? { charts: charts.slice(0, 2) } : {}), ...(looked.length ? { looked } : {}) }].slice(-80),
+          chat: [...a.chat, { role: "assistant" as const, text: r.answer.reply, at, ...(charts.length ? { charts: charts.slice(0, 2) } : {}), ...(looked.length ? { looked } : {}), ...(proposals.length ? { proposals } : {}) }].slice(-80),
           memory: [...a.memory, ...learned.filter((x) => !a.memory.some((m) => m.text.toLowerCase() === x.toLowerCase())).map((x) => ({ id: newId(), text: x, at }))].slice(-40),
         }));
         return;
@@ -313,6 +317,8 @@ export function AiScreen() {
       const results = r.answer.calls.map((c) => {
         const out = runChatTool(c, data);
         if (out.chart) charts.push(out.chart);
+        // the same change twice in one reply is one card
+        if (out.proposal) { if (proposals.some((p) => p.label === out.proposal!.label)) return { type: "tool_result", tool_use_id: c.id, content: "Already proposed in this reply." }; proposals.push(out.proposal); }
         if (out.remember) learned.push(out.remember);
         looked.push(c.name);
         return { type: "tool_result", tool_use_id: c.id, content: out.text, ...(out.error ? { is_error: true } : {}) };
@@ -335,7 +341,8 @@ export function AiScreen() {
             <div key={x.key} className={`msg ${x.m!.role}${x.m!.unprompted ? " first" : ""}`} data-new={isNew || undefined}>
               {x.m!.role === "assistant" ? <Md text={x.m!.text} /> : x.m!.text}
               {x.m!.charts?.map((c, k) => <ChatChart key={k} c={c} />)}
-              {x.m!.looked?.length ? <small className="looked">looked at your {[...new Set(x.m!.looked.filter((t) => t !== "remember").map((t) => LOOKED[t] ?? t))].join(", ")}</small> : null}
+              {x.m!.proposals?.length ? <Proposals at={x.m!.at} list={x.m!.proposals} now={now} onAdded={(s) => { if (on) void researchSupplement(s); }} /> : null}
+              {lookedAt(x.m!.looked) && <small className="looked">looked at your {lookedAt(x.m!.looked)}</small>}
               {x.m!.role === "assistant" && <time className="ts" dateTime={new Date(x.m!.at).toISOString()}>{stampOf(x.m!.at, now)}</time>}
             </div>
           );
