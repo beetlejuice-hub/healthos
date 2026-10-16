@@ -25,6 +25,12 @@
  * 20 + 90 × the heart parts' share (both gone: 20; one gone: 65; nothing off past 90 % of each: no cap) — and so does last
  * night, at most 20 + 0.9 × its score (a 50 night: 65; 89 and up: no cap). The parts still show what they add to; the
  * cap is said with its reason.
+ *
+ * Short nights (owner, 16 Oct: "still dont know why readiness is so high every day even when wrecked sleep"): a 5-hour night
+ * with the heart as usual added to 79, "good" — the heart's usual is your own recent weeks (a run of short nights is
+ * "usual"), and a 5 h night still scores 66 for sleep (it was otherwise calm). One short night costs attention and mood
+ * however calm the heart is (Lim & Dinges 2010, Van Dongen 2003), so the hours asleep cap it too: 7 h and up nothing,
+ * 6 h 75, 5 h 55, 4 h 35, 3 h 20 (straight lines between).
  */
 
 import type { Night } from "./sleep";
@@ -36,6 +42,8 @@ export type Readiness = {
   score: number; parts: RPart[]; left: { id: RPart["id"]; name: string; max: number }[]; word: string; day: string;
   /** What the parts add to, and the cap that held it lower, with why (null when nothing did). */
   added: number; cap: { to: number; why: string } | null; sleep: number;
+  /** Last night's minutes asleep. */
+  asleep: number;
 };
 
 export const BASE_DAYS = 28, BASE_MIN = 10;
@@ -45,6 +53,15 @@ const sd = (v: number[]) => { const m = mean(v); return Math.sqrt(v.reduce((a, x
 const median = (v: number[]) => { const s = [...v].sort((a, b) => a - b); return s.length % 2 ? s[(s.length - 1) / 2] : (s[s.length / 2 - 1] + s[s.length / 2]) / 2; };
 const hm = (min: number) => `${Math.floor(min / 60)} h ${String(Math.round(min % 60)).padStart(2, "0")}`;
 const ok = (v: number | null | undefined): v is number => v != null && Number.isFinite(v);
+
+/** How high readiness can go after this many minutes asleep (100: no cap). */
+export function shortNightCap(asleepMin: number): number {
+  const h = asleepMin / 60, pts: [number, number][] = [[3, 20], [4, 35], [5, 55], [6, 75], [7, 100]];
+  if (h >= 7) return 100;
+  if (h <= 3) return Math.max(10, 20 - 10 * (3 - h));
+  const i = pts.findIndex(([x]) => x > h), [x0, y0] = pts[i - 1], [x1, y1] = pts[i];
+  return y0 + ((h - x0) / (x1 - x0)) * (y1 - y0);
+}
 
 export const readyWord = (s: number) => (s >= 85 ? "ready" : s >= 70 ? "good" : s >= 60 ? "fair" : "take it easier");
 
@@ -78,7 +95,8 @@ export function readiness(day: string, ns: Night[], rating: number | null | unde
   part("rhr", "Resting HR", 20, ok(rhrToday) && mR != null && sR != null ? 1 - Math.max(0, (rhrToday - mR) / sR - 0.5) / 1.5 : null,
     ok(rhrToday) && mR != null ? `${Math.round(rhrToday)} bpm · usual ${Math.round(mR)}` : "");
   const sc = sleepScore(n, rating, ns);
-  part("sleep", "Last night", 25, sc.score / 100, `sleep score ${sc.score}${sc.left.some((l) => l.id === "rating") ? " (not rated yet)" : ""}`);
+  // the hours first: they're what a short night is (16 Oct)
+  part("sleep", "Last night", 25, sc.score / 100, `${ok(n.asleep) ? `${hm(n.asleep)} asleep · ` : ""}sleep score ${sc.score}${sc.left.some((l) => l.id === "rating") ? " (not rated yet)" : ""}`);
   const last7 = ns.filter((x) => x.day <= day && x.day > addDays(day, -7)).map((x) => x.asleep).filter(ok);
   part("balance", "Sleep this week", 15, last7.length >= 4 ? (mean(last7) / 60 - 5) / (NEED_H - 5) : null, last7.length >= 4 ? `${hm(mean(last7))} a night, ${last7.length} nights` : "");
   // training: working sets in the 2 days before now, against the same 2-day window on each of the 4 weeks' days
@@ -94,11 +112,12 @@ export function readiness(day: string, ns: Night[], rating: number | null | unde
   const share = (id: RPart["id"]) => { const p = parts.find((x) => x.id === id); return p ? p.got / p.max : null; };
   const h = share("hrv"), r = share("rhr"), heart = [h, r].filter(ok);
   const caps: { to: number; why: string }[] = [{ to: 20 + 0.9 * sc.score, why: `${sc.score < 60 ? "a poor night" : "last night"} — sleep score ${sc.score}` }];
+  if (ok(n.asleep) && n.asleep < 7 * 60) caps.push({ to: shortNightCap(n.asleep), why: `${hm(n.asleep)} asleep — a short night costs focus and mood however calm the heart is` });
   const well = (f: number | null) => (f != null && f < 0.5 ? "well " : "");
   if (heart.length) caps.push({ to: 20 + 90 * mean(heart), why: h != null && r != null && h < 0.5 && r < 0.5 ? "HRV and resting heart rate both well off your usual"
     : (h ?? 1) <= (r ?? 1) ? `HRV ${well(h)}under your usual` : `resting heart rate ${well(r)}over your usual` });
   const cap = caps.reduce((a, c) => (c.to < a.to ? c : a));
   const score = Math.round(Math.min(added, cap.to));
-  return { score, parts, left, word: readyWord(score), day, added: Math.round(added), cap: cap.to < added && Math.round(cap.to) < Math.round(added) ? { to: Math.round(cap.to), why: cap.why } : null, sleep: sc.score };
+  return { score, parts, left, word: readyWord(score), day, added: Math.round(added), cap: cap.to < added && Math.round(cap.to) < Math.round(added) ? { to: Math.round(cap.to), why: cap.why } : null, sleep: sc.score, asleep: n.asleep };
 }
 

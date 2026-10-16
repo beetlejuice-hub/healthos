@@ -2,7 +2,7 @@
 // some afternoons; heart rate climbs after waking whatever you drink, plus 3.5 bpm per 100 mg of caffeine in the
 // blood 40 minutes earlier (planted). Check-ins with nothing planted. Compare must find the caffeine one at about
 // the right size and delay, and must NOT call the mood one clear. Laptop and phone.
-const { chromium, APP, OUT, handle } = require('./harness.cjs');
+const { chromium, APP, OUT, handle, seed } = require('./harness.cjs');
 
 const MIN = 60_000;
 const NOW = new Date('2026-10-08T16:30:00').getTime();
@@ -59,22 +59,14 @@ function world({ days, perMg = 0.035, seed = 7 }) {
     await pg.goto(APP);
     await pg.fill('input[type=email]', 'lukacsarnold9+healthtest@gmail.com'); await pg.fill('input[type=password]', 'secret123');
     await pg.getByRole('button', { name: 'Sign in' }).click(); await pg.waitForSelector('text=Settings');
-    // A raw localStorage write isn't a change the app knows about: if its first sync after signing in saves its own
-    // state after the seed, the seed is gone (the phone run lost every entry 1 in 2 times on a clean checkout, and under
-    // a loaded run even after waiting for the network, 16 Oct). So: seed, reload, and check the app holds it — again if not.
-    for (let k = 0; k < 3; k++) {
-      await pg.waitForLoadState('networkidle');
-      await pg.evaluate((w) => { const k = 'healthos.v1:u-test', s = JSON.parse(localStorage.getItem(k) || '{}');
+    // the app's first sync can save over a raw seed (harness seed checks, and seeds again)
+    await seed(pg, APP + hash, (w) => { const k = 'healthos.v1:u-test', s = JSON.parse(localStorage.getItem(k) || '{}');
         s.entries = [
           ...w.doses.map((at, i) => ({ id: 'c' + i, kind: 'drink', at, name: 'Coffee', ml: 250, caffeineMg: 95, alcoholG: 0, kcal: 2 })),
           ...w.meals.map((at, i) => ({ id: 'm' + i, kind: 'food', at, name: 'Lunch', grams: 400, macros: { kcal: 700, p: 40, c: 80, f: 22 } })),
           ...w.checks.map((c, i) => ({ id: 'f' + i, kind: 'feel', at: c.at, mood: c.mood })),
         ].sort((a, b) => a.at - b.at);
         s.workouts = w.workouts; localStorage.setItem(k, JSON.stringify(s)); }, w);
-      await pg.goto(APP + hash); await pg.reload(); await pg.waitForLoadState('networkidle'); await pg.waitForTimeout(200);
-      if (await pg.evaluate(() => (JSON.parse(localStorage.getItem('healthos.v1:u-test') || '{}').entries || []).length > 0)) break;
-      console.log(`seed lost to the app's sync, seeding again (${k + 1})`);
-    }
     return { ctx, pg };
   }
   const settled = (pg) => pg.waitForFunction(() => { const s = document.querySelector('.cmp')?.getAttribute('data-sure'); return s && s !== 'working'; }, null, { timeout: 15000 });

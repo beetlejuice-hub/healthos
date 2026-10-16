@@ -6,7 +6,7 @@ import type { Notice } from "../inbox";
 
 describe("what the AI is told, organized (owner, 15 Oct: \"make sure app sees all data, organized\")", () => {
   it("this morning: readiness, what held it, every part with its points and zone, what isn't known", () => {
-    const r: Readiness = { score: 20, word: "take it easier", day: "2026-10-15", added: 47, sleep: 80, cap: { to: 20, why: "HRV and resting heart rate both well off your usual" },
+    const r: Readiness = { score: 20, word: "take it easier", day: "2026-10-15", added: 47, sleep: 80, asleep: 460, cap: { to: 20, why: "HRV and resting heart rate both well off your usual" },
       parts: [{ id: "hrv", name: "HRV this morning", got: 0, max: 20, why: "33 ms · usual 47", zone: "poor" }, { id: "sleep", name: "Last night", got: 20, max: 25, why: "sleep score 80", zone: "ideal" }],
       left: [{ id: "load", name: "Training", max: 10 }] };
     expect(todayLines(r)).toEqual([

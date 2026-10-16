@@ -2,7 +2,7 @@
 // stages, daily HRV and resting heart rate; check-ins three times a day (mood, energy, stress, focus). Planted: the day
 // after a drink evening, mood −1.0; energy +0.9 per hour asleep. Last night was short and after drinks, so this
 // morning's line has something to say. The page must find those and nothing else; without a band, only the calendar.
-const { chromium, APP, OUT, handle } = require('./harness.cjs');
+const { chromium, APP, OUT, handle, seed } = require('./harness.cjs');
 
 const MIN = 60_000, HOUR = 3_600_000;
 const NOW = new Date('2026-10-08T16:30:00').getTime();
@@ -60,8 +60,7 @@ function world({ seed = 3, band = true } = {}) {
     await pg.goto(APP);
     await pg.fill('input[type=email]', 'lukacsarnold9+healthtest@gmail.com'); await pg.fill('input[type=password]', 'secret123');
     await pg.getByRole('button', { name: 'Sign in' }).click(); await pg.waitForSelector('text=Settings');
-    await pg.evaluate((w) => { const k = 'healthos.v1:u-test', s = JSON.parse(localStorage.getItem(k) || '{}'); s.entries = w.entries; s.workouts = w.workouts; localStorage.setItem(k, JSON.stringify(s)); }, w);
-    await pg.goto(APP + '#insights/mind'); await pg.reload();
+    await seed(pg, APP + '#insights/mind', (w) => { const k = 'healthos.v1:u-test', s = JSON.parse(localStorage.getItem(k) || '{}'); s.entries = w.entries; s.workouts = w.workouts; localStorage.setItem(k, JSON.stringify(s)); }, w);
     await pg.waitForSelector('.mp[data-sec]');
     if (w.band) await pg.waitForFunction(() => +document.querySelector('.mp')?.dataset.nights >= 29, null, { timeout: 15000 }).catch(() => {});
     await pg.waitForTimeout(400);

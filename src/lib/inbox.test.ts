@@ -91,7 +91,7 @@ describe("new findings (owner: \"new findings that i can comment on, like not x 
 });
 
 describe("a low morning (owner, 15 Oct: \"can do\")", () => {
-  const R = (score: number, cap: Readiness["cap"]): Readiness => ({ score, word: "", day: TODAY, added: 58, sleep: 80, left: [], cap, parts: [
+  const R = (score: number, cap: Readiness["cap"]): Readiness => ({ score, word: "", day: TODAY, added: 58, sleep: 80, asleep: 460, left: [], cap, parts: [
     { id: "hrv", name: "HRV this morning", got: 0, max: 20, why: "33 ms · usual 47", zone: "poor" }, { id: "rhr", name: "Resting HR", got: 0, max: 20, why: "62 bpm · usual 54", zone: "poor" },
     { id: "sleep", name: "Last night", got: 20, max: 25, why: "sleep score 80", zone: "ideal" }] });
   it("held low: says why, what stood out last night, and asks", () => {

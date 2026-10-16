@@ -52,4 +52,19 @@ async function rate(pg, name, v) {
   const b = await t.boundingBox();
   await pg.mouse.click(b.x + ((v - 1) / 9) * b.width, b.y + b.height / 2);
 }
-module.exports = { rate, chromium, APP, OUT, handle, users, tables };
+/**
+ * Write test data straight into the app's saved state, open `url`, and make sure the app kept it. A raw localStorage write
+ * isn't a change the app knows about: its first sync after signing in can save its own state over it (Compare lost every
+ * entry 1 in 2 runs, Mind timed out under load — 16 Oct). Seeds, reloads, checks there are entries; up to 3 times.
+ */
+async function seed(pg, url, write, arg) {
+  for (let k = 0; k < 3; k++) {
+    await pg.waitForLoadState('networkidle');
+    await pg.evaluate(write, arg);
+    await pg.goto(url); await pg.reload(); await pg.waitForLoadState('networkidle'); await pg.waitForTimeout(200);
+    if (await pg.evaluate(() => (JSON.parse(localStorage.getItem('healthos.v1:u-test') || '{}').entries || []).length > 0)) return;
+    console.log(`seed lost to the app's sync, seeding again (${k + 1})`);
+  }
+}
+
+module.exports = { rate, chromium, APP, OUT, handle, users, tables, seed };

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { readiness, readyWord } from "./readiness";
+import { readiness, readyWord, shortNightCap } from "./readiness";
 import { rng } from "./bench";
 import { atMinute, localDay } from "./time";
 import type { Night } from "./sleep";
@@ -59,7 +59,8 @@ describe("readiness out of 100 (owner, 14 Oct)", () => {
   it("a poor night with the heart fine (4 h 30, asleep 01:40, rated 3) can't read \"ready\": held under 70, saying so", () => {
     const r = R(world(3, (k, n) => (k === 34 ? { asleep: 270, bed: n.bed + 2 * H, onset: n.onset + 2 * H, deep: 30, rem: 40 } : {})), 34, 3);
     expect(r.added).toBeGreaterThanOrEqual(80);
-    expect(r.score).toBeLessThan(70); expect(r.cap!.why).toMatch(/^a poor night — sleep score \d+$/); expect(part(r, "sleep")!.zone).toBe("poor");
+    // 16 Oct: the hours cap it before the sleep score does — 4 h 30 holds it at 45
+    expect(r.score).toBeLessThan(50); expect(r.cap!.why).toMatch(/^4 h 30 asleep — a short night/); expect(part(r, "sleep")!.zone).toBe("poor");
   });
   it("an ordinary morning isn't capped, and its parts read ideal", () => {
     const r = R(world(3));
@@ -115,5 +116,28 @@ describe("readiness out of 100 (owner, 14 Oct)", () => {
   });
   it("the words, as Oura's bands: 85+ ready, 70+ good, 60+ fair, under that take it easier", () => {
     expect([85, 84, 70, 69, 60, 59].map(readyWord)).toEqual(["ready", "good", "good", "fair", "fair", "take it easier"]);
+  });
+});
+
+describe("a short night can't read good, however calm the heart (owner, 16 Oct: \"readiness is so high every day even when wrecked sleep\")", () => {
+  const five = (k: number, n: Night): Partial<Night> => (k === 34 ? { asleep: 300, bed: n.bed + 2 * H, onset: n.bed + 2 * H + 15 * MIN, wake: n.bed + 2 * H + 320 * MIN, up: n.bed + 2 * H + 330 * MIN, deep: 40, rem: 55, light: 205 } : {});
+  it("5 h from 01:30, the heart as usual: was 79 \"good\" (84 not rated); now held at 55, saying why", () => {
+    for (const rating of [4, null]) {
+      const r = R(world(3, five), 34, rating);
+      expect(r.added).toBeGreaterThanOrEqual(85); // the parts alone still add up high: the heart was calm
+      expect(r.score).toBe(55); expect(r.word).toBe("take it easier");
+      expect(r.cap!.why).toBe("5 h 00 asleep — a short night costs focus and mood however calm the heart is");
+    }
+  });
+  it("three weeks of 5 h 30, so the heart's usual is short nights too: held at 65, not 78", () => {
+    const chronic = (k: number): Partial<Night> => (k >= 14 ? { asleep: 330, deep: 45, rem: 60, light: 225, hrv: 44, rhr: 57 } : {});
+    expect(R(world(3, (k) => chronic(k)), 34, 5).score).toBe(65);
+  });
+  it("the cap by hours: 7 h+ none, 6 h 75, 5 h 55, 4 h 35, 3 h 20, in between on a line", () => {
+    expect([480, 420, 390, 360, 330, 300, 240, 180, 120].map((m) => Math.round(shortNightCap(m)))).toEqual([100, 100, 88, 75, 65, 55, 35, 20, 10]);
+  });
+  it("6 h 50 isn't a wrecked night: an ordinary heart still reads good", () => {
+    const r = R(world(3, (k, n) => (k === 34 ? { asleep: 410, deep: n.deep, rem: n.rem } : {})), 34, 7);
+    expect(r.score).toBeGreaterThanOrEqual(80);
   });
 });

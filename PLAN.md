@@ -1629,10 +1629,18 @@ below, in his words, grouped; A first (broken or wrong now), then the rest. Item
    link, or an item's title again → dropped), e2e/morningread.cjs (one 📰 with its link, the number 1, the items not
    in the chat, a reload doesn't post it twice, opening the chat clears the number), screenshot. Not checked: how often
    the real model finds something — if it's every day, it's filler and the prompt needs tightening.
-110. [ ] **Readiness stays high after a wrecked night** (claimed: this session, 16 Oct — lib/readiness, Readiness card;
+110. [x] **Readiness stays high after a wrecked night** (16 Oct — lib/readiness, Readiness card;
    owner: "still dont know why readiness is so high every day even when wrecked sleep"). Reproduced through readiness():
    5 h from 01:30 rated 4 with the heart as usual → 79 "good" (not rated: 84); three weeks of 5.5 h then 5 h → 78. The
    heart parts are against your own usual (a run of short nights is "usual"), and last night only caps at 20 + 0.9 × the
-   sleep score (66 for 5 h). Fix: last night's hours cap it too — 7 h+ none, 6 h 75, 5 h 55, 4 h 35, 3 h 20.
+   sleep score (66 for 5 h). Fix: last night's hours cap it too — 7 h+ none, 6 h 75, 5 h 55, 4 h 35, 3 h 20 (one short
+   night costs attention and mood however calm the heart is: Lim & Dinges 2010, Van Dongen 2003). The card flags "short
+   night" under 6 h and the last-night line leads with the hours ("5 h 00 asleep · sleep score 73"). Checked:
+   readiness.test (5 h → 55 rated or not, saying why; three weeks of 5 h 30 → 65; the cap's points; 6 h 50 still 80+;
+   the ordinary month still has at most 2 of 20 mornings under 70 — all short-night tests fail without the cap),
+   e2e/readiness.cjs (a 5 h night from 01:30 with the heart as usual: 55, "take it easier", "short night", the held-at
+   note; the wine morning and the ordinary one as before). Open, the owner's call: the sleep score itself gives a 5 h
+   night 66–73 because length is 25 of its 100 (Fitbit weighs time asleep about half). Also: the e2e harness has
+   `seed()` — seed, reload, check the app kept it, again if not; compare and mindpage use it (mindpage's load timeouts).
 111. [ ] **Old chats folded** (claimed: this session, 16 Oct — Ai.tsx thread, Settings → AI; owner: "also i feel like
    chats should be deleted? or like collapsed or whatever").
