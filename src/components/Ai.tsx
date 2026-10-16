@@ -4,7 +4,7 @@
  * Calls: lib/ai/client.ts → Worker /api/ai. Contract and checks: lib/ai/tasks.ts.
  */
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import { act, getState, newId, useStore, type Experiment } from "../lib/store";
 import { askAi, chatContext, contextNow, nightContext, refreshAiStatus, useAiStatus } from "../lib/ai/client";
 import { runChatTool, type ChartSpec } from "../lib/ai/chattools";
@@ -15,7 +15,7 @@ import type { Proposal } from "../lib/ai/propose";
 import { CHAT_ROUNDS, MODELS, estimateMonthUsd, type ChatTurn, type DigestItem, type ModelChoice, type Question, type Tier } from "../lib/ai/tasks";
 import { judge } from "../lib/ai/apply";
 import { dailyFacts } from "../lib/insights";
-import { addDays, clock, dayLabel, localDay } from "../lib/time";
+import { addDays, atMinute, clock, dayLabel, localDay } from "../lib/time";
 import type { Supplement } from "../lib/types";
 import { InboxCard } from "./Inbox";
 import { ReviewCard } from "./Review";
@@ -23,6 +23,7 @@ import { dueReviews, monthFacts, monthLines, weekFacts, weekLines, type Due } fr
 import { Md } from "./Md";
 import { digestDue, freshRead, nightIn } from "../lib/ai/morning";
 import { dayWindow, eveningOf, nightDue } from "../lib/ai/nightread";
+import { byDay, foldLine } from "../lib/ai/thread";
 
 const usd = (x: number) => (x < 0.1 ? `$${x.toFixed(3)}` : `$${x.toFixed(2)}`);
 const k = (n: number) => (n >= 1000 ? `${(n / 1000).toFixed(1)}k` : String(Math.round(n)));
@@ -329,26 +330,38 @@ export function AiScreen() {
     }
   };
 
+  const byApp = (y: (typeof thread)[number]) => "n" in y || "r" in y || !!y.m?.unprompted;
+  const render = (x: (typeof thread)[number], i: number) => {
+            const isNew = x.at > since && byApp(x) && !thread.slice(0, i).some((y) => y.at > since && byApp(y));
+        if ("r" in x) return <ReviewCard key={x.key} r={x.r!} first={isNew} />;
+        return "n" in x ? <InboxCard key={x.key} n={x.n!} now={now} first={isNew} /> : (
+          <div key={x.key} className={`msg ${x.m!.role}${x.m!.unprompted ? " first" : ""}`} data-new={isNew || undefined}>
+            {x.m!.role === "assistant" ? <Md text={x.m!.text} /> : x.m!.text}
+            {x.m!.charts?.map((c, k) => <ChatChart key={k} c={c} />)}
+            {x.m!.source && /^https:\/\//.test(x.m!.source.url) && <a className="msg-src" href={x.m!.source.url} target="_blank" rel="noopener noreferrer">{x.m!.source.title} ↗</a>}
+            {x.m!.proposals?.length ? <Proposals at={x.m!.at} list={x.m!.proposals} now={now} onAdded={(s) => { if (on) void researchSupplement(s); }} /> : null}
+            {lookedAt(x.m!.looked) && <small className="looked">looked at your {lookedAt(x.m!.looked)}</small>}
+            {x.m!.role === "assistant" && <time className="ts" dateTime={new Date(x.m!.at).toISOString()}>{stampOf(x.m!.at, now)}</time>}
+          </div>
+        );
+      
+  };
+  // old days fold to one line each (owner, 16 Oct: "chats should be deleted? or like collapsed"): today, anything unseen
+  // and the last 6 hours stay open (lib/ai/thread)
+  const index = new Map(thread.map((x, i) => [x.key, i]));
+  const days = byDay(thread, now, (x) => x.at > since && byApp(x));
+  const said = (x: (typeof thread)[number]) => ("m" in x && x.m ? { mine: x.m.role === "user", text: x.m.text } : { mine: false, text: "n" in x && x.n ? x.n.title : "r" in x && x.r ? x.r.title : "" });
   return (
     <div className="calm ai-screen">
       <div className="head"><span>Your AI</span><a href="#settings">Settings</a></div>
       <div className="chat" aria-live="polite">
         {thread.length === 0 && <p className="note">Ask me anything about your data — I see your numbers, patterns, stack and About me. The morning read and your day read back are on Today — ask me about them here. I only write here myself with something new: a heart-rate stretch the app can't explain, a new finding to comment on, your week and month.</p>}
-        {thread.map((x, i) => {
-          const byApp = (y: (typeof thread)[number]) => "n" in y || "r" in y || !!y.m?.unprompted;
-          const isNew = x.at > since && byApp(x) && !thread.slice(0, i).some((y) => y.at > since && byApp(y));
-          if ("r" in x) return <ReviewCard key={x.key} r={x.r!} first={isNew} />;
-          return "n" in x ? <InboxCard key={x.key} n={x.n!} now={now} first={isNew} /> : (
-            <div key={x.key} className={`msg ${x.m!.role}${x.m!.unprompted ? " first" : ""}`} data-new={isNew || undefined}>
-              {x.m!.role === "assistant" ? <Md text={x.m!.text} /> : x.m!.text}
-              {x.m!.charts?.map((c, k) => <ChatChart key={k} c={c} />)}
-              {x.m!.source && /^https:\/\//.test(x.m!.source.url) && <a className="msg-src" href={x.m!.source.url} target="_blank" rel="noopener noreferrer">{x.m!.source.title} ↗</a>}
-              {x.m!.proposals?.length ? <Proposals at={x.m!.at} list={x.m!.proposals} now={now} onAdded={(s) => { if (on) void researchSupplement(s); }} /> : null}
-              {lookedAt(x.m!.looked) && <small className="looked">looked at your {lookedAt(x.m!.looked)}</small>}
-              {x.m!.role === "assistant" && <time className="ts" dateTime={new Date(x.m!.at).toISOString()}>{stampOf(x.m!.at, now)}</time>}
-            </div>
-          );
-        })}
+        {days.map((g) => (g.open ? <Fragment key={g.day}>{g.items.map((x) => render(x, index.get(x.key)!))}</Fragment> : (
+          <details key={g.day} className="day-fold">
+            <summary><b>{dayLabel(atMinute(g.day, 720))}</b> · {g.items.length} message{g.items.length > 1 ? "s" : ""}{foldLine(g.items.map(said)) && <span> · {foldLine(g.items.map(said))}</span>}</summary>
+            {g.items.map((x) => render(x, index.get(x.key)!))}
+          </details>
+        )))}
         {busy > 0 && <div className="msg assistant typing">…</div>}
         {err && <p className="err">{err}</p>}
         <div ref={end} />
@@ -469,6 +482,11 @@ export function AiSettings() {
         <ul>{[...recent].reverse().slice(0, 12).map((c) => <li key={c.at}><span>{clockOf(c.at)} · {TASK_WORDS[c.task]} · {MODELS[c.model].label.replace("Claude ", "")}</span><span>{k(c.in + c.cached + c.written)} in{c.cached ? ` (${k(c.cached)} cached)` : ""} · {k(c.out)} out{c.searches ? ` · ${c.searches} search${c.searches > 1 ? "es" : ""}` : ""}</span><b>{usd(c.usd)}</b></li>)}</ul>
         <p className="note">"In" is mostly your data summary, sent with chats, questions and the reads — your words are a few tokens of it. "Out" includes the model's thinking.</p>
       </details>}
+      {ai.chat.length > 0 && <>
+        <h3>The chat <span>old days fold on their own</span></h3>
+        {/* owner, 16 Oct: "chats should be deleted? or like collapsed or whatever" */}
+        <button type="button" className="pill-btn" onClick={() => { if (confirm(`Clear the chat — all ${ai.chat.length} messages? What the AI remembers about you stays, and so do the app's findings.`)) act.setAi({ chat: [] }); }}>Clear the chat ({ai.chat.length} messages)</button>
+      </>}
       <h3>What the AI knows about me <span>it adds lines as you chat · delete any</span></h3>
       {ai.memory.length === 0 ? <p className="note">Nothing yet.</p> : <div className="chips mem">{ai.memory.map((m) => <span className="chip" key={m.id}>{m.text}<button type="button" aria-label={`Forget ${m.text}`} onClick={() => act.setAi((a) => ({ memory: a.memory.filter((x) => x.id !== m.id) }))}>✕</button></span>)}</div>}
       <button type="button" className="linkish" onClick={() => setSeeing(!seeing)}>{seeing ? "Hide" : "What the AI sees about me"}</button>

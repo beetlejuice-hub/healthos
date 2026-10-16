@@ -1642,5 +1642,10 @@ below, in his words, grouped; A first (broken or wrong now), then the rest. Item
    note; the wine morning and the ordinary one as before). Open, the owner's call: the sleep score itself gives a 5 h
    night 66–73 because length is 25 of its 100 (Fitbit weighs time asleep about half). Also: the e2e harness has
    `seed()` — seed, reload, check the app kept it, again if not; compare and mindpage use it (mindpage's load timeouts).
-111. [ ] **Old chats folded** (claimed: this session, 16 Oct — Ai.tsx thread, Settings → AI; owner: "also i feel like
-   chats should be deleted? or like collapsed or whatever").
+111. [x] **Old chats folded** (16 Oct — lib/ai/thread, Ai.tsx thread, Settings → AI; owner: "also i feel like chats
+   should be deleted? or like collapsed or whatever"). Both: the AI tab folds each older day to one line — "Tue 13 Oct ·
+   2 messages · what should I eat before the gym?" — tap to open; today stays open, and so does a day with something
+   not seen yet or anything from the last 6 hours (a chat past midnight). Settings → AI → "Clear the chat (N messages)"
+   empties it after asking; what the AI remembers and the app's findings stay. Checked: thread.test (grouping, open
+   rules, the line), e2e/chatfold.cjs (the 13th folded with its question, the 14th's unseen news open, today open, tap
+   opens, Clear empties and keeps memory, the button goes), screenshot.
