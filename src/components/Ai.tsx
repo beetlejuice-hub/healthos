@@ -8,7 +8,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { act, getState, newId, useStore, type Experiment } from "../lib/store";
 import { askAi, chatContext, contextNow, nightContext, refreshAiStatus, useAiStatus } from "../lib/ai/client";
 import { runChatTool, type ChartSpec } from "../lib/ai/chattools";
-import { bandNow } from "../lib/band-client";
+import { bandNow, onNights } from "../lib/band-client";
 import { ChatChart } from "./ChatChart";
 import { Proposals } from "./Proposal";
 import type { Proposal } from "../lib/ai/propose";
@@ -21,6 +21,7 @@ import { InboxCard } from "./Inbox";
 import { ReviewCard } from "./Review";
 import { dueReviews, monthFacts, monthLines, weekFacts, weekLines, type Due } from "../lib/review";
 import { Md } from "./Md";
+import { digestDue, freshRead, nightIn } from "../lib/ai/morning";
 
 const usd = (x: number) => (x < 0.1 ? `$${x.toFixed(3)}` : `$${x.toFixed(2)}`);
 const k = (n: number) => (n >= 1000 ? `${(n / 1000).toFixed(1)}k` : String(Math.round(n)));
@@ -39,7 +40,7 @@ async function makeDigest(day: string) {
   const ai = getState().ai;
   const r = await askAi({ task: "digest", context: contextNow(), shown: ai.shown.slice(-40) });
   if (!r.ok) return;
-  act.setAi((a) => ({ digest: { day, greeting: r.answer.greeting, items: r.answer.items }, shown: [...a.shown, ...r.answer.items.map((i) => i.title)].slice(-80) }));
+  act.setAi((a) => ({ digest: { day, at: Date.now(), greeting: r.answer.greeting, items: r.answer.items }, shown: [...a.shown, ...r.answer.items.map((i) => i.title)].slice(-80) }));
 }
 
 /** From this hour the day is read back; it can be refreshed if you log more after. */
@@ -103,14 +104,13 @@ async function makeQuestions(day: string) {
 /** The morning read lands in the chat as a message from the AI once its day has come. */
 function postDigest() {
   const { ai } = getState(), d = ai.digest, today = localDay(Date.now());
-  if (!d || d.day > today || ai.chat.some((m) => m.unprompted && m.text.startsWith(`☀️ ${d.greeting}`))) return;
+  if (!d || d.day > today || !freshRead(d) || ai.chat.some((m) => m.unprompted && m.text.startsWith(`☀️ ${d.greeting}`))) return;
   act.setAi((a) => ({ chat: [...a.chat, { role: "assistant" as const, text: `☀️ ${d.greeting}\n${d.items.map((i) => `• ${i.title}`).join("\n")}\n\nIt's on Today — ask me about any of it.`, at: Date.now(), unprompted: true }].slice(-80) }));
 }
 
 /**
- * Runs in the app shell. The morning read is written in the evening for the next day (owner: "at
- * quiet hours it should send me fun facts, news, patterns, protocols so in the morning I can
- * review"), or first thing in the morning if the app wasn't opened the evening before. Questions
+ * Runs in the app shell. The morning read is written in the morning once last night is in (lib/ai/morning; owner,
+ * 16 Oct: "looks like app does daily read based on yyesterdays data" — it was written the evening before). Questions
  * come once a day from 10:00.
  */
 export function useAiAuto(userId: string | undefined) {
@@ -122,8 +122,9 @@ export function useAiAuto(userId: string | undefined) {
     if (!on) return;
     const tick = () => {
       const now = new Date(), h = now.getHours(), today = localDay(now.getTime()), ai = getState().ai;
-      const target = h >= 20 ? addDays(today, 1) : h >= 5 ? today : null;
-      if (target && ai.digest?.day !== target && !(target === today && ai.digest?.day === addDays(today, 1))) void makeDigest(target);
+      const rated = getState().entries.some((e) => e.kind === "sleep" && e.rating != null && localDay(e.at) === today);
+      const target = digestDue(now.getTime(), ai.digest, nightIn(bandNow()?.sleep, rated, now.getTime()));
+      if (target) void makeDigest(target);
       if (h >= 10 && h < 22 && ai.questions?.day !== today) void makeQuestions(today);
       // The week just gone from Monday 06:00, the month just gone from the 1st (PLAN 65).
       for (const d of dueReviews(now.getTime(), (ai.reviews ?? []).map((r) => `${r.kind}:${r.key}`))) void makeReview(d);
@@ -135,9 +136,11 @@ export function useAiAuto(userId: string | undefined) {
     };
     tick();
     const t = setInterval(tick, 10 * 60_000);
+    // the band's nights arrive a few seconds after the app opens: look again then, not 10 minutes later
+    const off = onNights(tick);
     const vis = () => document.visibilityState === "visible" && tick();
     document.addEventListener("visibilitychange", vis);
-    return () => { clearInterval(t); document.removeEventListener("visibilitychange", vis); };
+    return () => { clearInterval(t); off(); document.removeEventListener("visibilitychange", vis); };
   }, [on]);
 }
 
@@ -169,7 +172,8 @@ export function MorningRead() {
   const key = `healthos.mr-open:${d?.day ?? ""}`;
   const [open, setOpenState] = useState(() => { try { return localStorage.getItem(key) === "1"; } catch { return false; } });
   const [row, setRow] = useState<number | null>(null);
-  if (!d || d.day > today || d.day < addDays(today, -1)) return null;
+  // only a read written that morning: one written the evening before talks about the wrong night (16 Oct)
+  if (!d || d.day > today || d.day < addDays(today, -1) || !freshRead(d)) return null;
   const setOpen = (v: boolean) => { setOpenState(v); try { localStorage.setItem(key, v ? "1" : "0"); } catch { /* private mode: just this time */ } };
   return (
     <section className={`card morning${open ? " open" : ""}`} aria-label="Morning read">

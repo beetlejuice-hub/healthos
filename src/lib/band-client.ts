@@ -97,6 +97,14 @@ export function useBand(): State {
   return useSyncExternalStore((f) => { subs.add(f); return () => subs.delete(f); }, () => state, () => state);
 }
 
+/** Call `f` when more of the band's nights come in — without re-rendering anything (the morning read waits for last night). */
+export function onNights(f: () => void): () => void {
+  let n = state.data?.sleep.length ?? 0;
+  const g = () => { const m = state.data?.sleep.length ?? 0; if (m !== n) { n = m; f(); } };
+  subs.add(g);
+  return () => { subs.delete(g); };
+}
+
 /** On app open and every 15 minutes while it's open and visible. */
 let started = false;
 export function startBand(): void {

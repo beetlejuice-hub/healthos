@@ -9,7 +9,7 @@ import type { State } from "../store";
 import type { DayFacts } from "../insights";
 import type { Finding } from "../findings";
 import type { Pattern } from "../scout";
-import { addDays, clock, localDay } from "../time";
+import { addDays, clock, dayLabel, localDay } from "../time";
 import { weekly } from "../weekly";
 import { personalSleep, ratedNights } from "../caffeine-sleep";
 import { doseCompare } from "../dose";
@@ -132,6 +132,8 @@ export type ContextInput = {
   today?: string[]; training?: string[]; grids?: string[];
   /** The chat's version (PLAN 67 phase 3): an overview, no nights or journal, a week of days — it asks the app for the rest. */
   slim?: boolean;
+  /** Today's own entries so far, in order (dayTimeline) — "Last 14 days" ends yesterday (16 Oct: the AI took yesterday for today). */
+  todaySoFar?: string[];
 };
 
 export function buildContext(input: ContextInput): string {
@@ -153,15 +155,19 @@ export function buildContext(input: ContextInput): string {
 /** The chat's last section: everything left out is one question away. */
 export const ASK_MORE = "## Ask the app for more\nThis is an overview. For anything beyond it — a day in full, a measure day by day, my notes, with vs without something, my nights from the band, my sessions — call day, series, find, compare, nights or sessions instead of guessing.";
 
-function baseContext({ state, now, days, findings, patterns, weight, today = [], training = [], grids = [], slim }: ContextInput): string {
+/** The context's first line: what today is, so yesterday is never called "today" (owner, 16 Oct). */
+export const nowLine = (now: number, span = 14) => `Now: ${dayLabel(now)} ${new Date(now).getFullYear()}, ${clock(now)} — today is ${localDay(now)}. "Last ${span} days" ends yesterday (${addDays(localDay(now), -1)}); today's own entries are under "Today so far". "Last night" is the night that ended this morning.`;
+
+function baseContext({ state, now, days, findings, patterns, weight, today = [], training = [], grids = [], slim, todaySoFar }: ContextInput): string {
   const { profile, supplements, ai, goals } = state;
   const en = state.settings?.energy;
   const names = new Map(supplements.map((s) => [s.id, s.name]));
   const answers = state.entries.filter((e) => e.kind === "answer" && e.at > now - 14 * 86_400_000).slice(-20);
   const lines = [
     // owner, 15 Oct: "make sure app sees all data, organized" — what's here, in order
-    slim ? "Sections: About me · This morning · My stack · Last 7 days · Training · How I feel by time of day · What the app found · Notes and answers · Mood engines · Ask the app for more."
-      : "Sections: About me · This morning · My stack · Last 14 days · Training · How I feel by time of day · What the app found · Notes and answers · Mood engines · My nights · Mood journal.",
+    nowLine(now, slim ? 7 : 14),
+    slim ? "Sections: About me · This morning · My stack · Last 7 days · Today so far · Training · How I feel by time of day · What the app found · Notes and answers · Mood engines · Ask the app for more."
+      : "Sections: About me · This morning · My stack · Last 14 days · Today so far · Training · How I feel by time of day · What the app found · Notes and answers · Mood engines · My nights · Mood journal.",
     "## About me",
     `Conditions: ${profile.conditions.join(", ") || "none listed"}. Medications: ${profile.meds.join(", ") || "none listed"}. Allergies: ${profile.allergies.join(", ") || "none listed"}.${profile.notes ? ` Notes: ${profile.notes}` : ""}`,
     `Goals: ${goals.kcal} kcal/day, ${goals.p} g protein.${en?.mode === "burn" ? ` The calorie goal follows my burn: burn − the deficit for ${en.pace} kg/week, to lose fat while keeping and building muscle${en.offset ? `; two-week check-ins moved it ${en.offset > 0 ? "+" : ""}${en.offset}` : ""}.` : ""}${weight ? ` Weight trend: ${weight.kg.toFixed(1)} kg, ${weight.perWeek >= 0 ? "+" : ""}${weight.perWeek.toFixed(2)} kg/week.` : ""}`,
@@ -172,6 +178,7 @@ function baseContext({ state, now, days, findings, patterns, weight, today = [],
     ...(ai.experiments.filter((x) => !x.ended).length ? ["## Experiments running", ...ai.experiments.filter((x) => !x.ended).map((x) => `- ${x.name} since ${x.start} (${x.days} days, measuring ${x.measure})`)] : []),
     slim ? "## Last 7 days" : "## Last 14 days",
     ...days.slice(slim ? -7 : -14).map((d) => `- ${dayLine(d, names)}`),
+    ...(todaySoFar ? [`## Today so far (${dayLabel(now)}, up to ${clock(now)})`, ...(todaySoFar.length ? todaySoFar.map((l) => `- ${l}`) : ["- nothing logged yet"])] : []),
     ...(training.length ? ["## Training", ...training.map((l) => `- ${l}`)] : []),
     "## How I feel by time of day (last 30 days)",
     ...(feelByTime(state, now).map((l) => `- ${l}`) || []),

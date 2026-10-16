@@ -223,3 +223,23 @@ describe("the month's estimate (owner, 15 Oct: \"i feel like u are waay underest
     expect(estimateMonthUsd(models, rec).everyday).toBeCloseTo(30 * (41 / 4) * (14000 * 2 + 1200 * 10) / 1e6, 6); // 41 calls over 4 days: 10.25 a day, ≈ $12.30
   });
 });
+
+describe("the AI knows what today is (owner, 16 Oct: the morning read took yesterday for today)", () => {
+  const now = new Date(2026, 9, 16, 7, 40).getTime(), D = 86_400_000;
+  const st = { entries: [
+    { id: "y", kind: "feel", at: now - D + 4 * 3600e3, focus: 3, note: "foggy" },
+    { id: "t", kind: "sleep", at: now - 10 * 60e3, rating: 4 },
+  ], workouts: [], supplements: [], settings: { halfLifeMin: 300, bedMinute: 23 * 60, coffeeMg: 95, bodyKg: 78, usualDrink: null }, profile: { conditions: [], meds: [], allergies: [], notes: "" }, goals: DEFAULT_GOALS, ai: EMPTY_AI } as unknown as State;
+  const days = [{ day: "2026-10-15", logged: true, weekend: false, taken: new Set() }] as never;
+  it("the first line says today's date and that the days listed end yesterday", () => {
+    const c = buildContext({ state: st, now, days, findings: [], patterns: [], todaySoFar: dayTimeline(st, "2026-10-16") });
+    expect(c.split("\n")[0]).toBe('Now: Fri 16 Oct 2026, 07:40 — today is 2026-10-16. "Last 14 days" ends yesterday (2026-10-15); today\'s own entries are under "Today so far". "Last night" is the night that ended this morning.');
+    const today = c.slice(c.indexOf("## Today so far"), c.indexOf("\n##", c.indexOf("## Today so far") + 3));
+    expect(today).toBe("## Today so far (Fri 16 Oct, up to 07:40)\n- 07:30 rated last night's sleep 4/10");
+    expect(today).not.toMatch(/foggy|focus 3/); // yesterday's check-in isn't today's
+    expect(buildContext({ state: st, now, days, findings: [], patterns: [], slim: true })).toMatch(/^Now: .*"Last 7 days" ends yesterday/);
+  });
+  it("every task is told: the listed days end yesterday, never call them today", () => {
+    for (const text of Object.values(SYSTEM)) expect(text).toMatch(/"Last 14 days" ends yesterday — call those days yesterday or by their date, never "today"/);
+  });
+});

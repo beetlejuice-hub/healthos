@@ -59,6 +59,9 @@ function world({ days, perMg = 0.035, seed = 7 }) {
     await pg.goto(APP);
     await pg.fill('input[type=email]', 'lukacsarnold9+healthtest@gmail.com'); await pg.fill('input[type=password]', 'secret123');
     await pg.getByRole('button', { name: 'Sign in' }).click(); await pg.waitForSelector('text=Settings');
+    // the first sync after signing in can land after the seed and save over it (the phone run lost every entry 1 in 2
+    // times, 16 Oct): let it finish first
+    await pg.waitForLoadState('networkidle');
     await pg.evaluate((w) => { const k = 'healthos.v1:u-test', s = JSON.parse(localStorage.getItem(k) || '{}');
       s.entries = [
         ...w.doses.map((at, i) => ({ id: 'c' + i, kind: 'drink', at, name: 'Coffee', ml: 250, caffeineMg: 95, alcoholG: 0, kcal: 2 })),

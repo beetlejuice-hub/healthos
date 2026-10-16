@@ -1105,7 +1105,6 @@ below, in his words, grouped; A first (broken or wrong now), then the rest. Item
      left out), e2e/session.cjs (swap opens on quads; Machine → machines only; Forearms has none → All; shoulders +
      dumbbell; the kind stays; tap → swapped; + Add opens on the last exercise's muscle), e2e/workoutpick.cjs, phone
      screenshots.
-   - **Next after this (owner, 16 Oct, IMPORTANT):** "looks like app does daily read based on yyesterdays data".
 82. [x] **Strength per muscle group** — "Should also do a muscle group strength average taking in data from diff exercises
    that target same muscle".
    **Done 15 Oct** (owner: "ok"): Insights → Training, "Strength per muscle · last 8 weeks" (lib/liftstrength
@@ -1580,3 +1579,19 @@ below, in his words, grouped; A first (broken or wrong now), then the rest. Item
      grey further off, darker the further — never red for food. Checked: e2e/sleep.cjs (78 shaded numbers, each with
      its arrow and the right colour for its column), e2e/heartpage.cjs (shaded only off the usual, the right way; the
      latest values), e2e/body.cjs (as many green days as the words count, phone and laptop), screenshots.
+106. [x] **The morning read used yesterday's data** (16 Oct, owner, IMPORTANT, with a screenshot: "looks like app does
+   daily read based on yyesterdays data" — "Rough night: 5 hours plus drinks", "Today's 11:36 check-in had focus at 3").
+   Cause, from the code: the read for a morning was written from 20:00 the evening before (the old "send it during
+   quiet hours" rule), so it couldn't know the night it greeted you after, and the summary never said what today is —
+   the last day it listed (yesterday) read as "today". Fixed (lib/ai/morning, Ai.tsx, context, tasks): written in the
+   morning once last night is in (the band has a night ending this morning, or you rated your sleep), from 11:00
+   anyway, never after 18:00; a read for today written before that morning isn't shown and is written again, once
+   (today's included). The summary starts "Now: Fri 16 Oct 2026, 07:40 — today is …; "Last 14 days" ends yesterday",
+   has "Today so far", and every task is told never to call yesterday "today". The band's nights arriving after the
+   app opens re-check it at once (without re-rendering the app). Checked: morning.test (6 — the old evening rule, no
+   rewrite of the stale read, and not waiting for the night each fail them), ai.test (the first line, today's entries
+   only), e2e/morningread.cjs (evening: nothing written; next morning before the night: the stale read hidden, nothing
+   written; a sleep rating → one read, its context saying Fri 16 Oct and today's entries without yesterday's 11:36
+   check-in; on Today and in the chat once; a reload doesn't write it again). Found on the way: e2e/compare.cjs lost
+   its seeded data 1 in 2 runs on a clean checkout (the first sync after sign-in saved over it) — it waits for that
+   sync now; 3 of 3 pass. Not checked: the real account — your next morning read is the test.

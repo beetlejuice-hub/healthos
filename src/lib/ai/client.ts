@@ -69,7 +69,7 @@ export async function askAi<T extends Task>(req: Extract<AiRequest, { task: T }>
 }
 
 /** The text the AI is told about you right now (also shown in Settings → AI → What the AI sees). */
-export function contextNow(state: State = getState(), now = Date.now(), { slim = false } = {}): string {
+export function contextNow(state: State = getState(), now = Date.now(), { slim = false, todaySoFar = true } = {}): string {
   const today = localDay(now), from = addDays(today, -90), to = addDays(today, -1);
   const days = dailyFacts(state.entries, state.workouts, state.settings, from, to);
   const report = notice(state.entries, state.goals, now, currentKg(state.entries, state.settings.bodyKg, now), { workouts: state.workouts, supplements: state.supplements, settings: state.settings });
@@ -83,7 +83,7 @@ export function contextNow(state: State = getState(), now = Date.now(), { slim =
   const ready = band ? readiness(today, nights(band.sleep, band.hr, band.rhr, band.hrv), rating, sets, now, { hrv: band.hrv, rhr: band.rhr }) : null;
   const ss = sessions(state.workouts, sets);
   return buildContext({ state, now, days, findings: report.found, patterns, weight: t ? { kg: t.nowKg, perWeek: t.perDay * 7 } : null, nights: nightsSeen,
-    today: todayLines(ready), training: trainingLines(ss, mainLifts(sets), thisWeek(ss, now), 6, muscleStrength(sets, now)), grids: gridLines(state.ai.inbox ?? []), slim });
+    today: todayLines(ready), training: trainingLines(ss, mainLifts(sets), thisWeek(ss, now), 6, muscleStrength(sets, now)), grids: gridLines(state.ai.inbox ?? []), slim, ...(todaySoFar ? { todaySoFar: dayTimeline(state, today) } : {}) });
 }
 
 /** The chat's context (PLAN 67 phase 3): the overview only — the AI asks the app's tools for nights, days and the rest. */
@@ -92,7 +92,7 @@ export const chatContext = (state: State = getState(), now = Date.now()) => cont
 /** The nightly read-back's context: everything above, plus that day in order with your notes. */
 export function nightContext(day: string, state: State = getState(), now = Date.now()): string {
   const tl = dayTimeline(state, day);
-  return `${contextNow(state, now)}\n## Today, as it happened (${day})\n${tl.length ? tl.map((l) => `- ${l}`).join("\n") : "- nothing logged"}`;
+  return `${contextNow(state, now, { todaySoFar: false })}\n## Today, as it happened (${day})\n${tl.length ? tl.map((l) => `- ${l}`).join("\n") : "- nothing logged"}`;
 }
 
 /** Downscale a photo to ≤1024 px JPEG before sending: cheaper, faster, and plenty to see a plate. */
