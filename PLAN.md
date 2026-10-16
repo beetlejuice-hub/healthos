@@ -1092,6 +1092,11 @@ below, in his words, grouped; A first (broken or wrong now), then the rest. Item
    - **Status (16 Oct):** part there — typing a muscle or a piece of equipment finds exercises (#94), Swap and + Add offer
      the same muscle's others in one tap. Not built: browsing by muscle (tap shoulders → machine / dumbbell / cable
      choices) and a bigger library.
+   - **Building (claimed: this session, 16 Oct — lib/training MUSCLES, lib/exsearch equipOf/byMuscle, components/
+     MuscleBrowse.tsx, Workout.tsx Swap/Add; owner: "2").** In Swap and + Add: pick a muscle (the current exercise's is
+     picked already), then Machine / Cable / Dumbbell / Barbell / Bodyweight, then the exercise — yours first. About 40
+     more exercises (calves, glutes, back and arm variations). Canvas skipped: a small change inside an existing box.
+   - **Next after this (owner, 16 Oct, IMPORTANT):** "looks like app does daily read based on yyesterdays data".
 82. [x] **Strength per muscle group** — "Should also do a muscle group strength average taking in data from diff exercises
    that target same muscle".
    **Done 15 Oct** (owner: "ok"): Insights → Training, "Strength per muscle · last 8 weeks" (lib/liftstrength
