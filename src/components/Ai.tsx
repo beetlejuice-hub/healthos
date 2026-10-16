@@ -263,7 +263,7 @@ export const stampOf = (at: number, now: number) => {
   return d === today ? clock(at) : d === addDays(today, -1) ? `yesterday ${clock(at)}` : `${dayLabel(at)} ${clock(at)}`;
 };
 /** What each tool looked at, for the line under a reply. */
-const LOOKED: Record<string, string> = { day: "day", series: "numbers over time", find: "log", show_chart: "numbers over time" };
+const LOOKED: Record<string, string> = { day: "day", series: "numbers over time", find: "log", show_chart: "numbers over time", compare: "days with and without", nights: "nights", sessions: "training" };
 const STARTERS = ["Why am I flat in the afternoon?", "Recommend a supplement or protocol to try", "What's worth logging more of?", "Explain my latest pattern"];
 
 export function AiScreen() {

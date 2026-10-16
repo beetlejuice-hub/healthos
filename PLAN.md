@@ -963,6 +963,16 @@ email get Dev tools (`#dev`): raw entry editor, generate/remove sample, wipe acc
      Today's — food and drinks; a drinks-only day still isn't a logged day): insights.test (Today's number, the old
      800-for-a-beer-day expectation now 1,019, fails without). Not checked: a real AI's tool use (first chat after the
      deploy).
+   - **Phase 2 done 16 Oct** (owner: "lets do chart part2"). Three more tools: `compare` — a measure on days with a
+     thing against days without (drinks, training, caffeine after 14:00, food after 21:00, a 900+ kcal meal, weekend, a
+     supplement: taken against answered "not taken"), same day or the next morning, with the difference and its 95%
+     range (stats.difference, the grids' test) — days with nothing logged are unknown, never "without"; `nights` — the
+     band's nights (bed, up, asleep, stages, awake, lowest / average heart rate, HRV, a nap) through lib/sleep; `sessions`
+     — training sessions with sets, volume, strength against your trend and each lift's best set (lib/liftstrength).
+     Checked: chattools.test (planted: +4 bpm resting heart rate the morning after a beer found clear; nothing planted on
+     mood → not clear; magnesium +1 mood found, unanswered days left out; the 3 days with nothing logged not counted as
+     "without" — fails if they are; too few days says so; nights and sessions from fixtures), worker ai.test (the tool
+     list), e2e/ai.cjs. Next (phase 3): slim the written summary now the tools carry the detail.
 
 ---
 

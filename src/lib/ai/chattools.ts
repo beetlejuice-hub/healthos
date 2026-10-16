@@ -9,7 +9,12 @@ import type { BandData } from "../band";
 import { glanceDays } from "../glance";
 import { dayTimeline } from "./context";
 import { addDays, clock, dayLabel, localDay, atMinute, DAY } from "../time";
-import { SERIES_KEYS, type SeriesKey, type ToolCall } from "./tasks";
+import { COMPARE_THINGS, SERIES_KEYS, type CompareThing, type SeriesKey, type ToolCall } from "./tasks";
+import { dailyFacts, type DayFacts } from "../insights";
+import { difference, mean } from "../stats";
+import { nights as nightsOf } from "../sleep";
+import { sessions as sessionsOf } from "../liftstrength";
+import { working, type LoggedSet } from "../training";
 
 export type ToolData = { state: Pick<State, "entries" | "workouts" | "settings" | "supplements" | "ai">; band: BandData | null; now: number };
 export type ChartSpec = { measure: SeriesKey; from: string; to: string; title: string };
@@ -129,6 +134,87 @@ function find(input: Record<string, unknown>, d: ToolData): ToolOut {
     ...hits.slice(0, 25).map((h) => `- ${localDay(h.at)} ${name(localDay(h.at)).slice(0, 3)} ${clock(h.at)} ${h.line}`)].join("\n") };
 }
 
+/** Whether a day had the thing, or null when it can't be told (nothing logged that day: never counted as "without"). */
+function hadThing(f: DayFacts, thing: CompareThing, suppId: string | null): boolean | null {
+  switch (thing) {
+    case "drinks": return f.logged ? f.alcoholG > 0 : null;
+    case "trained": return f.logged || f.mood != null || f.trained ? f.trained : null;
+    case "late_caffeine": return f.logged ? f.lateCaffeineMg > 0 : null;
+    case "late_meal": return f.kcal != null ? f.lateEat : null;
+    case "big_meal": return f.bigMealKcal != null ? f.bigMealKcal >= 900 : null;
+    case "weekend": return f.weekend;
+    case "supplement": return suppId && f.taken.has(suppId) ? true : suppId && f.skipped.has(suppId) ? false : null;
+  }
+}
+const THING: Record<CompareThing, string> = { drinks: "drinks", trained: "training", late_caffeine: "caffeine after 14:00", late_meal: "food after 21:00", big_meal: "a 900+ kcal meal", weekend: "weekend days", supplement: "" };
+
+function compare(input: Record<string, unknown>, d: ToolData): ToolOut {
+  const k = input.measure as SeriesKey, thing = input.thing as CompareThing, today = localDay(d.now), next = input.when === "next_day";
+  if (!SERIES_KEYS.includes(k)) return { text: `measure must be one of ${SERIES_KEYS.join(", ")}`, error: true };
+  if (!COMPARE_THINGS.includes(thing)) return { text: `thing must be one of ${COMPARE_THINGS.join(", ")}`, error: true };
+  const s = span(input, today);
+  if (typeof s === "string") return { text: s, error: true };
+  let suppId: string | null = null, label = THING[thing];
+  if (thing === "supplement") {
+    const want = typeof input.supplement === "string" ? fold(input.supplement.trim()) : "";
+    const sup = want ? d.state.supplements.find((x) => fold(x.name).includes(want) || fold(x.id) === want) : undefined;
+    if (!sup) return { text: `no supplement in the stack matches "${input.supplement}" — the stack: ${d.state.supplements.map((x) => x.name).join(", ")}`, error: true };
+    suppId = sup.id; label = sup.name;
+  }
+  const facts = new Map(dailyFacts(d.state.entries, d.state.workouts, d.state.settings, s.from, s.to).map((f) => [f.day, f]));
+  const m = MEASURE[k], vals = new Map(seriesOf(k, s.from, next ? addDays(s.to, 1) : s.to, d).map((x) => [x.day, x.v]));
+  const yes: number[] = [], no: number[] = [];
+  for (let x = s.from; x <= s.to; x = addDays(x, 1)) {
+    const f = facts.get(x), at = next ? addDays(x, 1) : x, v = vals.get(at);
+    // today's calories, steps… are partway: not a day to compare
+    if (!f || v == null || (m.partial && at === today)) continue;
+    const had = hadThing(f, thing, suppId);
+    if (had != null) (had ? yes : no).push(v);
+  }
+  const what = `${m.name}${next ? " the next day" : ""} with ${label} vs without, ${s.from} to ${s.to}`;
+  const avg = (xs: number[]) => (xs.length ? fmtMeasure(k, mean(xs)) : "–");
+  const groups = `with: average ${avg(yes)} over ${yes.length} day${yes.length === 1 ? "" : "s"}; without: ${avg(no)} over ${no.length}`;
+  const r = difference(yes, no);
+  if (!r) return { text: `${what} — ${groups}. Too few days on one side (3 each needed) to say anything yet.` };
+  const sign = (v: number) => `${v >= 0 ? "+" : "−"}${fmtMeasure(k, Math.abs(v))}`;
+  return { text: `${what} — ${groups}. Difference ${sign(r.value)} (95% range ${sign(r.lo)} to ${sign(r.hi)}): ${r.clear ? "clear" : "not clear — the range crosses zero"}. Goes with, not proof of cause.` };
+}
+
+const hm = (min: number) => `${Math.floor(min / 60)} h ${String(Math.round(min % 60)).padStart(2, "0")}`;
+
+function nightsTool(input: Record<string, unknown>, d: ToolData): ToolOut {
+  const today = localDay(d.now), s = span(input, today);
+  if (typeof s === "string") return { text: s, error: true };
+  if (Date.parse(`${s.to}T12:00:00`) - Date.parse(`${s.from}T12:00:00`) > 59 * DAY) return { text: "at most 60 nights at a time", error: true };
+  const b = d.band;
+  if (!b?.sleep.length) return { text: "No nights from the band yet." };
+  const ns = nightsOf(b.sleep, b.hr, b.rhr, b.hrv).filter((n) => n.day >= s.from && n.day <= s.to);
+  if (!ns.length) return { text: `No band nights between ${s.from} and ${s.to}.` };
+  const lines = ns.map((n) => [
+    `${n.day} ${name(n.day).slice(0, 3)}: bed ${clock(n.bed)}, up ${clock(n.up)}, asleep ${hm(n.asleep)}`,
+    n.deep != null && `deep ${Math.round(n.deep)} min`, n.rem != null && `REM ${Math.round(n.rem)} min`, n.light != null && `light ${Math.round(n.light)} min`,
+    `awake ${Math.round(n.awake)} min (${n.wakes}×)`, `fell asleep in ${Math.round(n.latency)} min`,
+    n.low != null && `lowest HR ${Math.round(n.low)}`, n.meanHr != null && `average HR ${Math.round(n.meanHr)}`, n.hrv != null && `HRV ${Math.round(n.hrv)} ms`,
+    n.nap && `nap that day ${Math.round(n.nap.min)} min`,
+  ].filter(Boolean).join(", "));
+  return { text: [`${ns.length} night${ns.length === 1 ? "" : "s"} from the band, ${s.from} to ${s.to} (each under the morning it ended):`, ...lines.map((l) => `- ${l}`)].join("\n") };
+}
+
+function sessionsTool(input: Record<string, unknown>, d: ToolData): ToolOut {
+  const today = localDay(d.now), s = span(input, today);
+  if (typeof s === "string") return { text: s, error: true };
+  const sets = d.state.entries.filter((e) => e.kind === "set") as unknown as LoggedSet[];
+  const ss = sessionsOf(d.state.workouts, sets).filter((x) => localDay(x.startedAt) >= s.from && localDay(x.startedAt) <= s.to);
+  if (!ss.length) return { text: `No training sessions between ${s.from} and ${s.to}.` };
+  const lines = ss.map((x) => {
+    const best = new Map<string, LoggedSet>();
+    for (const t of working(x.sets)) { const c = best.get(t.exercise); if (!c || t.kg * (1 + t.reps / 30) > c.kg * (1 + c.reps / 30)) best.set(t.exercise, t); }
+    const lifts = [...best.values()].map((t) => `${t.exercise} ${t.kg} kg × ${t.reps}`).join("; ");
+    return `- ${localDay(x.startedAt)} ${name(localDay(x.startedAt)).slice(0, 3)} ${clock(x.startedAt)} ${x.template}: ${x.workingSets} working sets, ${Math.round(x.volume).toLocaleString("en-GB")} kg volume${x.pct != null ? `, strength ${x.pct >= 0 ? "+" : ""}${x.pct.toFixed(1)} % against your trend` : ""}${lifts ? ` · best sets: ${lifts}` : ""}`;
+  });
+  return { text: [`${ss.length} session${ss.length === 1 ? "" : "s"}, ${s.from} to ${s.to}:`, ...lines].join("\n") };
+}
+
 function remember(input: Record<string, unknown>, d: ToolData): ToolOut {
   const t = typeof input.text === "string" ? input.text.trim() : "";
   if (t.length < 4 || t.length > 200) return { text: "one short line, 4–200 characters", error: true };
@@ -145,6 +231,9 @@ export function runChatTool(call: ToolCall, d: ToolData): ToolOut {
     case "find": return find(input, d);
     case "show_chart": return series(input, d, true);
     case "remember": return remember(input, d);
+    case "compare": return compare(input, d);
+    case "nights": return nightsTool(input, d);
+    case "sessions": return sessionsTool(input, d);
     default: return { text: `no tool called ${String(call.name)}`, error: true };
   }
 }

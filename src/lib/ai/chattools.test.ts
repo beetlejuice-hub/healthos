@@ -74,3 +74,75 @@ describe("the chat's tools answer from the app's data (PLAN 67)", () => {
     expect(run("nope", {}).error).toBe(true);
   });
 });
+
+describe("chat part 2: compare, nights, sessions (PLAN 67)", () => {
+  const T0 = "2026-08-17", N = 60, noise = (i: number, k: number) => ((((Math.sin(i * 12.9898 + k * 78.233) * 43758.5453) % 1) + 1) % 1) - 0.5;
+  const day = (i: number) => {
+    const d = new Date(`${T0}T12:00:00`); d.setDate(d.getDate() + i);
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  };
+  /**
+   * 60 days: mood ~6, +1 on days magnesium was taken (even days); magnesium answered "not taken" on days i%4==1, left
+   * unanswered otherwise; a beer every 3rd evening, and the next morning's resting heart rate 4 bpm higher; days 50–52 with
+   * nothing logged at all. No effect of drinks on mood is planted.
+   */
+  function world2() {
+    const entries: Entry[] = [], rhr: Record<string, number> = {};
+    for (let i = 0; i < N; i++) {
+      const d = day(i);
+      rhr[d] = 54 + (i > 0 && (i - 1) % 3 === 0 ? 4 : 0) + noise(i, 1) * 3;
+      if (i >= 50 && i <= 52) continue;
+      entries.push({ id: `f${i}`, kind: "feel", at: at(d, 14), mood: Math.round((6 + (i % 2 === 0 ? 1 : 0) + noise(i, 2) * 2) * 10) / 10 } as Entry);
+      entries.push({ id: `k${i}`, kind: "food", at: at(d, 13), name: "Lunch", grams: 400, macros: { kcal: 700, p: 40, c: 80, f: 20 } } as Entry);
+      if (i % 3 === 0) entries.push({ id: `b${i}`, kind: "drink", at: at(d, 21), drinkId: "beer", name: "Beer", ml: 500, caffeineMg: 0, alcoholG: 19.7, kcal: 215 } as Entry);
+      if (i % 2 === 0) entries.push({ id: `m${i}`, kind: "supp", at: at(d, 22), suppId: "mag", status: "taken" } as Entry);
+      else if (i % 4 === 1) entries.push({ id: `m${i}`, kind: "supp", at: at(d, 22), suppId: "mag", status: "skipped" } as Entry);
+    }
+    return { entries, rhr };
+  }
+  const w = world2(), now2 = at(day(N), 9);
+  const d2: ToolData = { state: { entries: w.entries, workouts: [], settings: DEFAULT_SETTINGS, supplements: [{ id: "mag", name: "Magnesium", dose: "400 mg", slot: "evening", at: 1320, active: true }], ai: EMPTY_AI }, band: { hr: [], sleep: [], rhr: w.rhr, hrv: {} }, now: now2 };
+  const run2 = (name: string, input: Record<string, unknown>) => runChatTool({ id: "t", name: name as never, input }, d2);
+  const span2 = { from: day(0), to: day(N - 1) };
+
+  it("planted: the morning after a beer, resting heart rate about 4 bpm higher — found, clear", () => {
+    const t = run2("compare", { measure: "rhr", thing: "drinks", supplement: "", when: "next_day", ...span2 }).text;
+    const diff = Number(t.match(/Difference \+([\d.]+) bpm/)?.[1]);
+    expect(diff).toBeGreaterThan(3); expect(diff).toBeLessThan(5);
+    expect(t).toMatch(/: clear\. Goes with, not proof of cause\.$/);
+    expect(t).toContain("Resting heart rate the next day with drinks vs without");
+    // the band has days 50–52 too, but nothing was logged then — not "without drinks", just unknown
+    expect(t).toMatch(/with: average [\d.]+ bpm over 19 days; without: [\d.]+ bpm over 37\./);
+  });
+  it("nothing planted: mood on drink days isn't called different — and the 3 empty days aren't counted as without", () => {
+    const t = run2("compare", { measure: "mood", thing: "drinks", supplement: "", when: "same_day", ...span2 }).text;
+    expect(t).toMatch(/not clear — the range crosses zero/);
+    expect(t).toMatch(/with: average [\d.]+\/10 over 19 days; without: [\d.]+\/10 over 38/); // 57 logged days, not 60
+  });
+  it("planted: mood about 1 point higher on magnesium days — taken against answered not taken; unanswered left out", () => {
+    const t = run2("compare", { measure: "mood", thing: "supplement", supplement: "magnes", when: "same_day", ...span2 }).text;
+    expect(t).toContain("Mood with Magnesium vs without");
+    expect(t).toMatch(/over 2[78] days; without: [\d.]+\/10 over 1[45]\./); // taken on even days, "not taken" on i%4==1 only
+    const diff = Number(t.match(/Difference \+([\d.]+)\/10/)?.[1]);
+    expect(diff).toBeGreaterThan(0.6); expect(diff).toBeLessThan(1.4);
+    expect(t).toMatch(/: clear\./);
+    expect(run2("compare", { measure: "mood", thing: "supplement", supplement: "zinc", when: "same_day", ...span2 })).toMatchObject({ error: true, text: expect.stringContaining("the stack: Magnesium") });
+  });
+  it("too few days on a side says so instead of a number", () => {
+    expect(run2("compare", { measure: "mood", thing: "drinks", supplement: "", when: "same_day", from: day(0), to: day(4) }).text).toContain("Too few days on one side");
+  });
+  it("nights: the band's nights with bed, up and stages; sessions: each with its best sets", () => {
+    const T = (d: string, h: number) => atMinute(d, 0) + h * 3_600_000;
+    const sleep = [{ id: "n1", start: T("2026-10-13", 23), end: T("2026-10-13", 31), asleepMin: null, awakeMin: null, toFallAsleepMin: 10, nap: false, stageMin: {},
+      stages: [{ type: "awake", start: T("2026-10-13", 23), end: T("2026-10-13", 23) + 600_000 }, { type: "light", start: T("2026-10-13", 23) + 600_000, end: T("2026-10-13", 26) }, { type: "deep", start: T("2026-10-13", 26), end: T("2026-10-13", 27.5) }, { type: "rem", start: T("2026-10-13", 27.5), end: T("2026-10-13", 31) }] }];
+    const withNight: ToolData = { ...data, band: { ...band, sleep } as never };
+    const nt = runChatTool({ id: "t", name: "nights", input: { from: "2026-10-10", to: "2026-10-15" } }, withNight).text;
+    expect(nt).toMatch(/^1 night from the band[\s\S]*- 2026-10-14 Wed: bed 23:00, up 07:00, asleep 7 h \d\d, deep 90 min, REM 210 min/);
+    expect(nt).toContain("HRV 48 ms");
+    expect(runChatTool({ id: "t", name: "nights", input: { from: "2026-10-10", to: "2026-10-15" } }, data).text).toBe("No nights from the band yet.");
+    const sets = [80, 82.5].flatMap((kg, j) => [5, 5, 4].map((reps, k) => ({ id: `s${j}${k}`, kind: "set", at: at(j ? "2026-10-14" : "2026-10-12", 18, k), workoutId: `w${j}`, exercise: "Bench press", kg, reps })));
+    const withTraining: ToolData = { ...data, state: { ...data.state, entries: [...entries, ...sets] as Entry[], workouts: [{ id: "w0", template: "Push", startedAt: at("2026-10-12", 18), endedAt: at("2026-10-12", 19) }, { id: "w1", template: "Push", startedAt: at("2026-10-14", 18), endedAt: at("2026-10-14", 19) }] as never } };
+    const st = runChatTool({ id: "t", name: "sessions", input: { from: "2026-10-01", to: "2026-10-15" } }, withTraining).text;
+    expect(st).toMatch(/^2 sessions[\s\S]*- 2026-10-14 Wed 18:00 Push: 3 working sets, 1,155 kg volume · best sets: Bench press 82.5 kg × 5/);
+  });
+});
