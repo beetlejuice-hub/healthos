@@ -17,10 +17,11 @@ import { dailyFacts } from "../insights";
 import { notice } from "../findings";
 import { scout } from "../scout";
 import { bodyDays, weightTrend } from "../tdee";
-import { addDays, localDay } from "../time";
+import { addDays, atMinute, localDay } from "../time";
 import { nightsForAi } from "./nights";
 import { bandNow } from "../band-client";
-import { buildContext, dayTimeline } from "./context";
+import { buildContext, timeline } from "./context";
+import { dayWindow, dayWord } from "./nightread";
 import type { AiAnswer, AiRequest, Task, UsageDoc } from "./tasks";
 import { currentKg } from "../body";
 
@@ -83,7 +84,9 @@ export function contextNow(state: State = getState(), now = Date.now(), { slim =
   const ready = band ? readiness(today, nights(band.sleep, band.hr, band.rhr, band.hrv), rating, sets, now, { hrv: band.hrv, rhr: band.rhr }) : null;
   const ss = sessions(state.workouts, sets);
   return buildContext({ state, now, days, findings: report.found, patterns, weight: t ? { kg: t.nowKg, perWeek: t.perDay * 7 } : null, nights: nightsSeen,
-    today: todayLines(ready), training: trainingLines(ss, mainLifts(sets), thisWeek(ss, now), 6, muscleStrength(sets, now)), grids: gridLines(state.ai.inbox ?? []), slim, ...(todaySoFar ? { todaySoFar: dayTimeline(state, today) } : {}) });
+    today: todayLines(ready), training: trainingLines(ss, mainLifts(sets), thisWeek(ss, now), 6, muscleStrength(sets, now)), grids: gridLines(state.ai.inbox ?? []), slim,
+    // today from midnight; before 04:00 it was still last night's evening, and says so (#107)
+    ...(todaySoFar ? { todaySoFar: timeline(state, atMinute(today, 0), now + 1, (at) => (at < dayWindow(today)[0] ? " (last night, after midnight)" : "")) } : {}) });
 }
 
 /** The chat's context (PLAN 67 phase 3): the overview only — the AI asks the app's tools for nights, days and the rest. */
@@ -91,8 +94,11 @@ export const chatContext = (state: State = getState(), now = Date.now()) => cont
 
 /** The nightly read-back's context: everything above, plus that day in order with your notes. */
 export function nightContext(day: string, state: State = getState(), now = Date.now()): string {
-  const tl = dayTimeline(state, day);
-  return `${contextNow(state, now, { todaySoFar: false })}\n## Today, as it happened (${day})\n${tl.length ? tl.map((l) => `- ${l}`).join("\n") : "- nothing logged"}`;
+  // the day runs to 04:00: a beer at 00:40 is that evening's; the header says whether it's today, past midnight or
+  // yesterday (read back the next morning) — it used to say "Today" for yesterday (#107)
+  const [from, to] = dayWindow(day), w = dayWord(day, now);
+  const tl = timeline(state, from, Math.min(to, now + 1), (at) => (localDay(at) !== day ? " (after midnight)" : ""));
+  return `${contextNow(state, now, { todaySoFar: false })}\n## The day being read back: ${w.label} (${w.when}), as it happened — it runs to 04:00 the next morning\n${tl.length ? tl.map((l) => `- ${l}`).join("\n") : "- nothing logged"}`;
 }
 
 /** Downscale a photo to ≤1024 px JPEG before sending: cheaper, faster, and plenty to see a plate. */

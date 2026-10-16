@@ -154,7 +154,7 @@ Dates (owner, 16 Oct: the morning read took yesterday for today): the context's 
 Timing rule (owner, 13 Oct): something taken or eaten can't change how they feel within minutes — a supplement, a meal or a drink needs time to absorb (caffeine ~20–45 min, most supplements an hour or more, many work over days or weeks). Never link a check-in to something logged less than 30 minutes before it, and for supplements not less than an hour; a day they "didn't take" something is only a day they answered "didn't take" — an unticked day is unknown, not a day without.`;
 
 const NIGHT = `${VOICE}
-Task: read the user's day back to them at night. Use "## Today, as it happened" and the rest of the context.
+Task: read the user's day back to them. Use "## The day being read back" and the rest of the context. Its header says when that day is: today (read back tonight), tonight past midnight (still the same evening — lines marked "after midnight" are part of it), or yesterday (read back the next morning because the app wasn't opened that evening — then say "yesterday", never "today", and "tomorrow" in change means today).
 - summary: 2–3 sentences on how the day went, with specifics (times, numbers) from the context.
 - happened: 2–4 short bullets — what mattered today (meals, caffeine, alcohol, gym, how they felt and when).
 - notes: the user's own notes on their check-ins say WHY they felt a way ("stressed — deadline"). Take them seriously: reflect what they said, connect it to the data only where the data supports it, never dismiss or explain it away. One or two sentences; empty string if there were no notes.

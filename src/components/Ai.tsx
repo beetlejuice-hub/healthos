@@ -22,6 +22,7 @@ import { ReviewCard } from "./Review";
 import { dueReviews, monthFacts, monthLines, weekFacts, weekLines, type Due } from "../lib/review";
 import { Md } from "./Md";
 import { digestDue, freshRead, nightIn } from "../lib/ai/morning";
+import { dayWindow, eveningOf, nightDue } from "../lib/ai/nightread";
 
 const usd = (x: number) => (x < 0.1 ? `$${x.toFixed(3)}` : `$${x.toFixed(2)}`);
 const k = (n: number) => (n >= 1000 ? `${(n / 1000).toFixed(1)}k` : String(Math.round(n)));
@@ -43,9 +44,8 @@ async function makeDigest(day: string) {
   act.setAi((a) => ({ digest: { day, at: Date.now(), greeting: r.answer.greeting, items: r.answer.items }, shown: [...a.shown, ...r.answer.items.map((i) => i.title)].slice(-80) }));
 }
 
-/** From this hour the day is read back; it can be refreshed if you log more after. */
-export const NIGHT_FROM_H = 21;
-const loggedOn = (day: string) => getState().entries.some((e) => localDay(e.at) === day);
+/** Anything logged in that day's evening-to-04:00 window (#107: a beer at 00:40 is that evening's). */
+const loggedOn = (day: string) => { const [from, to] = dayWindow(day); return getState().entries.some((e) => e.at >= from && e.at < to); };
 
 async function makeNight(day: string, force = false) {
   const key = `night:${day}:${force ? Date.now() : ""}`;
@@ -128,10 +128,10 @@ export function useAiAuto(userId: string | undefined) {
       if (h >= 10 && h < 22 && ai.questions?.day !== today) void makeQuestions(today);
       // The week just gone from Monday 06:00, the month just gone from the 1st (PLAN 65).
       for (const d of dueReviews(now.getTime(), (ai.reviews ?? []).map((r) => `${r.kind}:${r.key}`))) void makeReview(d);
-      // Your day, read back: tonight from 21:00; or next morning if the app wasn't opened that evening.
-      const yesterday = addDays(today, -1);
-      if (h >= NIGHT_FROM_H && ai.night?.day !== today && loggedOn(today)) void makeNight(today);
-      else if (h >= 5 && h < 12 && ai.night?.day !== yesterday && ai.night?.day !== today && loggedOn(yesterday)) void makeNight(yesterday);
+      // Your day, read back: tonight from 21:00 (past midnight still tonight, until 04:00); or the next morning if the app
+      // wasn't opened that evening (lib/ai/nightread).
+      const back = nightDue(now.getTime(), ai.night?.day, loggedOn);
+      if (back) void makeNight(back);
       postDigest();
     };
     tick();
@@ -211,17 +211,18 @@ export function MorningRead() {
 export function NightRead() {
   const n = useStore((s) => s.ai.night);
   const entries = useStore((s) => s.entries);
-  const now = Date.now(), today = localDay(now);
+  const now = Date.now(), today = localDay(now), tonight = n ? eveningOf(now) === n.day : false;
   if (!n || !(n.day === today || (n.day === addDays(today, -1) && new Date(now).getHours() < 12))) return null;
-  const newer = n.day === today && entries.some((e) => localDay(e.at) === today && e.at > n.at);
+  // still that evening (to 04:00): logged more since → read it again; at 00:40 it's still "tonight" (#107)
+  const newer = tonight && entries.some((e) => e.at > n.at && e.at >= dayWindow(n.day)[0] && e.at < dayWindow(n.day)[1]);
   return (
     <section className="card night" aria-label="Your day, read back">
-      <h3>Your day, read back <span>{n.day === today ? "tonight" : "last night"}</span></h3>
+      <h3>Your day, read back <span>{tonight ? "tonight" : "last night"}</span></h3>
       <p className="greet">{n.summary}</p>
       {n.happened.length > 0 && <ul className="night-list">{n.happened.map((h, i) => <li key={i}>{h}</li>)}</ul>}
       {n.notes && <p className="night-notes"><small>Your notes</small>{n.notes}</p>}
       {n.change.length > 0 && <div className="night-change"><small>Tomorrow, maybe</small>{n.change.map((c, i) => <p key={i}><b>{c.what}</b> {c.why}</p>)}</div>}
-      {newer && <button type="button" className="linkish" onClick={() => void makeNight(today, true)}>You logged more since — read it again</button>}
+      {newer && <button type="button" className="linkish" onClick={() => void makeNight(n.day, true)}>You logged more since — read it again</button>}
     </section>
   );
 }

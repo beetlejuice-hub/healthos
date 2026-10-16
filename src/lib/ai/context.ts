@@ -9,7 +9,7 @@ import type { State } from "../store";
 import type { DayFacts } from "../insights";
 import type { Finding } from "../findings";
 import type { Pattern } from "../scout";
-import { addDays, clock, dayLabel, localDay } from "../time";
+import { addDays, atMinute, clock, dayLabel, localDay } from "../time";
 import { weekly } from "../weekly";
 import { personalSleep, ratedNights } from "../caffeine-sleep";
 import { doseCompare } from "../dose";
@@ -38,19 +38,28 @@ const feelText = (e: Extract<State["entries"][number], { kind: "feel" }>) =>
  * the note you wrote. The nightly read-back is built on it; notes are quoted exactly.
  */
 export function dayTimeline(state: Pick<State, "entries" | "workouts">, day: string): string[] {
-  const es = state.entries.filter((e) => localDay(e.at) === day).sort((a, b) => a.at - b.at);
-  const lines: string[] = [];
+  return timeline(state, atMinute(day, 0), atMinute(addDays(day, 1), 0));
+}
+
+/**
+ * Everything logged from `from` up to `to`, in time order (not by the clock's text: 00:40 comes after 22:00), one line
+ * each. `mark` adds a word after the time — "(after midnight)" in an evening that runs past it.
+ */
+export function timeline(state: Pick<State, "entries" | "workouts">, from: number, to: number, mark: (at: number) => string = () => ""): string[] {
+  const es = state.entries.filter((e) => e.at >= from && e.at < to);
+  const rows: [number, string][] = [];
+  const push = (at: number, line: string) => rows.push([at, line]);
   for (const e of es) {
-    const t = clock(e.at);
-    if (e.kind === "food") lines.push(`${t} ate ${e.name} (${Math.round(e.macros.kcal)} kcal, P ${Math.round(e.macros.p)} g)`);
-    else if (e.kind === "drink") lines.push(`${t} drank ${e.name}${e.caffeineMg ? ` (${e.caffeineMg} mg caffeine)` : ""}${e.alcoholG ? ` (${e.alcoholG} g alcohol)` : ""}`);
-    else if (e.kind === "feel") lines.push(`${t} check-in: ${feelText(e) || "no ratings"}${e.doing?.length ? ` · up to: ${e.doing.join(", ")}` : ""}${e.note ? ` · my note: "${e.note}"` : ""}`);
-    else if (e.kind === "sleep" && (e.rating != null || e.tags?.length || e.phoneMin != null)) lines.push(`${t} ${e.rating != null ? `rated last night's sleep ${e.rating}/10` : "about last night"}${e.slow ? ", slow to fall asleep" : ""}${e.tags?.length ? ` · last night: ${e.tags.map(nightLabel).join(", ")}` : ""}${e.phoneMin != null ? ` · ${phoneLabel(e.phoneMin)} before sleep` : ""}`);
-    else if (e.kind === "weight") lines.push(`${t} weighed ${e.kg} kg`);
-    else if (e.kind === "supp" && e.status === "skipped") lines.push(`${t} skipped a supplement`);
+    const t = clock(e.at) + mark(e.at);
+    if (e.kind === "food") push(e.at, `${t} ate ${e.name} (${Math.round(e.macros.kcal)} kcal, P ${Math.round(e.macros.p)} g)`);
+    else if (e.kind === "drink") push(e.at, `${t} drank ${e.name}${e.caffeineMg ? ` (${e.caffeineMg} mg caffeine)` : ""}${e.alcoholG ? ` (${e.alcoholG} g alcohol)` : ""}`);
+    else if (e.kind === "feel") push(e.at, `${t} check-in: ${feelText(e) || "no ratings"}${e.doing?.length ? ` · up to: ${e.doing.join(", ")}` : ""}${e.note ? ` · my note: "${e.note}"` : ""}`);
+    else if (e.kind === "sleep" && (e.rating != null || e.tags?.length || e.phoneMin != null)) push(e.at, `${t} ${e.rating != null ? `rated last night's sleep ${e.rating}/10` : "about last night"}${e.slow ? ", slow to fall asleep" : ""}${e.tags?.length ? ` · last night: ${e.tags.map(nightLabel).join(", ")}` : ""}${e.phoneMin != null ? ` · ${phoneLabel(e.phoneMin)} before sleep` : ""}`);
+    else if (e.kind === "weight") push(e.at, `${t} weighed ${e.kg} kg`);
+    else if (e.kind === "supp" && e.status === "skipped") push(e.at, `${t} skipped a supplement`);
   }
-  for (const w of state.workouts ?? []) if (localDay(w.startedAt) === day) lines.push(`${clock(w.startedAt)} gym: ${w.template ?? "workout"}`);
-  return lines.sort().slice(0, 60);
+  for (const w of state.workouts ?? []) if (w.startedAt >= from && w.startedAt < to) push(w.startedAt, `${clock(w.startedAt)}${mark(w.startedAt)} gym: ${w.template ?? "workout"}`);
+  return rows.sort((a, b) => a[0] - b[0]).slice(0, 60).map(([, l]) => l);
 }
 
 /** The why behind ratings, last 14 days: "13:10 mood 4, stress 7 — 'deadline at work'". */
@@ -156,7 +165,7 @@ export function buildContext(input: ContextInput): string {
 export const ASK_MORE = "## Ask the app for more\nThis is an overview. For anything beyond it — a day in full, a measure day by day, my notes, with vs without something, my nights from the band, my sessions — call day, series, find, compare, nights or sessions instead of guessing.";
 
 /** The context's first line: what today is, so yesterday is never called "today" (owner, 16 Oct). */
-export const nowLine = (now: number, span = 14) => `Now: ${dayLabel(now)} ${new Date(now).getFullYear()}, ${clock(now)} — today is ${localDay(now)}. "Last ${span} days" ends yesterday (${addDays(localDay(now), -1)}); today's own entries are under "Today so far". "Last night" is the night that ended this morning.`;
+export const nowLine = (now: number, span = 14, today = true) => `Now: ${dayLabel(now)} ${new Date(now).getFullYear()}, ${clock(now)} — today is ${localDay(now)}. "Last ${span} days" ends yesterday (${addDays(localDay(now), -1)})${today ? `; today's own entries are under "Today so far"` : ""}. "Last night" is the night that ended this morning.`;
 
 function baseContext({ state, now, days, findings, patterns, weight, today = [], training = [], grids = [], slim, todaySoFar }: ContextInput): string {
   const { profile, supplements, ai, goals } = state;
@@ -165,7 +174,7 @@ function baseContext({ state, now, days, findings, patterns, weight, today = [],
   const answers = state.entries.filter((e) => e.kind === "answer" && e.at > now - 14 * 86_400_000).slice(-20);
   const lines = [
     // owner, 15 Oct: "make sure app sees all data, organized" — what's here, in order
-    nowLine(now, slim ? 7 : 14),
+    nowLine(now, slim ? 7 : 14, !!todaySoFar),
     slim ? "Sections: About me · This morning · My stack · Last 7 days · Today so far · Training · How I feel by time of day · What the app found · Notes and answers · Mood engines · Ask the app for more."
       : "Sections: About me · This morning · My stack · Last 14 days · Today so far · Training · How I feel by time of day · What the app found · Notes and answers · Mood engines · My nights · Mood journal.",
     "## About me",

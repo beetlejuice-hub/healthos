@@ -42,7 +42,7 @@ const ANSWERS = { night: () => NIGHT, digest: () => ({ greeting: 'Hi', items: []
   for (let i = 0; i < 40 && !calls.some((c) => c.task === 'night'); i++) await pg.waitForTimeout(100);
   const sent = calls.filter((c) => c.task === 'night');
   check('one read-back asked for, for today', sent.length === 1 && sent[0].day === '2026-10-01');
-  check('the AI gets the day in order, the note quoted exactly', /## Today, as it happened \(2026-10-01\)[\s\S]*08:10 drank Coffee[\s\S]*14:00 check-in: mood 4, stress 8 · my note: "deadline at work"/.test(sent[0].context));
+  check('the AI gets the day in order, the note quoted exactly', /## The day being read back: Thu 1 Oct \(today\), as it happened[^\n]*\n[\s\S]*08:10 drank Coffee[\s\S]*14:00 check-in: mood 4, stress 8 · my note: "deadline at work"/.test(sent[0].context));
   check('…and the notes marked as the user\'s own reasons', /## Why I felt that way \(my own notes on check-ins — take these seriously\)/.test(sent[0].context));
   check('…and the mood journal: every check-in of the last weeks', /## Mood journal, every check-in[\s\S]*2026-10-01: 14:00 M4 S8 "deadline at work"/.test(sent[0].context));
   check('what it learned that lasts goes into its memory', (await pg.evaluate(() => JSON.parse(localStorage.getItem('healthos.v1:u-test')))).ai.memory.some((m) => /deadline days/.test(m.text)));
@@ -60,9 +60,18 @@ const ANSWERS = { night: () => NIGHT, digest: () => ({ greeting: 'Hi', items: []
   await pg.getByRole('button', { name: /read it again/ }).click(); await pg.waitForTimeout(300);
   check('"read it again" asks once more, with the beer in it', calls.filter((c) => c.task === 'night').length === 2 && /21:40 drank Beer/.test(calls.filter((c) => c.task === 'night')[1].context));
 
+  // Past midnight it's still that evening (#107): a beer at 00:20 belongs to the 1st, the card still says tonight.
+  await pg.evaluate(() => { const k = 'healthos.v1:u-test', s = JSON.parse(localStorage.getItem(k)); s.entries.push({ id: 'b2', kind: 'drink', at: new Date(2026, 9, 2, 0, 20).getTime(), name: 'Beer', ml: 500, caffeineMg: 0, alcoholG: 20, kcal: 210 }); localStorage.setItem(k, JSON.stringify(s)); });
+  await pg.clock.setFixedTime(new Date(2026, 9, 2, 0, 30)); await pg.goto(APP + '#today'); await pg.reload(); await pg.waitForSelector('text=Settings'); await pg.waitForTimeout(300);
+  check(`00:30: still "tonight", not re-asked by itself (${(await pg.getByLabel('Your day, read back').locator('h3').innerText()).replace(/\s+/g, ' ')})`, /tonight/.test(await pg.getByLabel('Your day, read back').locator('h3').innerText()) && calls.filter((c) => c.task === 'night').length === 2);
+  await pg.getByRole('button', { name: /read it again/ }).click(); await pg.waitForTimeout(300);
+  const third = calls.filter((c) => c.task === 'night')[2];
+  check('…the 00:20 beer offers a re-read; it\'s the 1st\'s, after the 21:40 one, marked, the header saying so', third && third.day === '2026-10-01'
+    && /## The day being read back: Thu 1 Oct \(tonight, past midnight\)[\s\S]*21:40 drank Beer[\s\S]*00:20 \(after midnight\) drank Beer/.test(third.context));
+
   // Next morning it's still there; after noon it's gone.
   await pg.clock.setFixedTime(new Date(2026, 9, 2, 8, 0)); await pg.reload(); await pg.waitForSelector('text=Settings'); await pg.waitForTimeout(300);
-  check('next morning: shown as "last night", not re-asked', /last night/.test(await pg.getByLabel('Your day, read back').innerText()) && calls.filter((c) => c.task === 'night').length === 2);
+  check('next morning: shown as "last night", not re-asked', /last night/.test(await pg.getByLabel('Your day, read back').innerText()) && calls.filter((c) => c.task === 'night').length === 3);
   await pg.clock.setFixedTime(new Date(2026, 9, 2, 12, 30)); await pg.reload(); await pg.waitForSelector('text=Settings'); await pg.waitForTimeout(200);
   check('after noon: gone', await pg.getByLabel('Your day, read back').count() === 0);
   console.log('errors:', JSON.stringify(errs));

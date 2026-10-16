@@ -1,0 +1,61 @@
+import { describe, expect, it } from "vitest";
+import { dayWindow, dayWord, eveningOf, nightDue } from "./nightread";
+import { nightContext } from "./client";
+import { DEFAULT_SETTINGS, EMPTY_AI, type State } from "../store";
+import { DEFAULT_GOALS } from "../types";
+
+// Owner, 16 Oct: "do 2" — the night read-back around midnight, after the morning read took yesterday for today (#106).
+const at = (d: string, hm: string) => new Date(`2026-10-${d}T${hm}:00`).getTime();
+const logged15 = (day: string) => day === "2026-10-15";
+
+describe("which day is read back, and when", () => {
+  it("tonight from 21:00; past midnight it's still tonight, until 04:00", () => {
+    expect(nightDue(at("15", "20:59"), undefined, logged15)).toBeNull();
+    expect(nightDue(at("15", "21:30"), undefined, logged15)).toBe("2026-10-15");
+    expect(nightDue(at("16", "00:40"), undefined, logged15)).toBe("2026-10-15"); // opened first at 00:40: it used to wait until 05:00
+    expect(nightDue(at("16", "03:59"), undefined, logged15)).toBe("2026-10-15");
+    expect(nightDue(at("16", "00:40"), "2026-10-15", logged15)).toBeNull(); // done at 21:30 — refreshed only when asked
+  });
+  it("from 04:00 until noon, yesterday's if it wasn't read back; not after noon; nothing logged, nothing read", () => {
+    expect(nightDue(at("16", "07:40"), "2026-10-14", logged15)).toBe("2026-10-15");
+    expect(nightDue(at("16", "07:40"), "2026-10-15", logged15)).toBeNull();
+    expect(nightDue(at("16", "12:05"), "2026-10-14", logged15)).toBeNull();
+    expect(nightDue(at("16", "21:30"), "2026-10-15", () => false)).toBeNull();
+  });
+  it("an evening runs to 04:00", () => {
+    expect([eveningOf(at("16", "00:40")), eveningOf(at("16", "03:59")), eveningOf(at("16", "04:00")), eveningOf(at("15", "23:59"))]).toEqual(["2026-10-15", "2026-10-15", "2026-10-16", "2026-10-15"]);
+    expect(dayWindow("2026-10-15")).toEqual([at("15", "04:00"), at("16", "04:00")]);
+  });
+  it("names the day the way it is: today, tonight past midnight, yesterday", () => {
+    expect(dayWord("2026-10-15", at("15", "21:30"))).toEqual({ label: "Thu 15 Oct", when: "today" });
+    expect(dayWord("2026-10-15", at("16", "00:40")).when).toBe("tonight, past midnight");
+    expect(dayWord("2026-10-15", at("16", "07:40")).when).toBe("yesterday");
+  });
+});
+
+describe("what the read-back is given", () => {
+  const st = { entries: [
+    { id: "w", kind: "drink", at: at("15", "22:10"), name: "Wine", ml: 150, caffeineMg: 0, alcoholG: 14, kcal: 120 },
+    { id: "b", kind: "drink", at: at("16", "00:40"), name: "Beer", ml: 500, caffeineMg: 0, alcoholG: 20, kcal: 210 },
+    { id: "m", kind: "food", at: at("15", "08:30"), name: "Eggs", grams: 150, macros: { kcal: 220, p: 18, c: 1, f: 15 } },
+    { id: "n", kind: "food", at: at("16", "09:00"), name: "Oats", grams: 80, macros: { kcal: 300, p: 10, c: 50, f: 6 } },
+  ], workouts: [], supplements: [], settings: DEFAULT_SETTINGS, profile: { conditions: [], meds: [], allergies: [], notes: "" }, goals: DEFAULT_GOALS, ai: EMPTY_AI, foods: [], drinks: [], templates: [], scout: {} } as unknown as State;
+  const section = (c: string) => c.slice(c.indexOf("## The day being read back"));
+  it("past midnight: the beer at 00:40 is that evening's, after the wine, marked; the header says so", () => {
+    const s = section(nightContext("2026-10-15", st, at("16", "00:50")));
+    expect(s.split("\n")).toEqual([
+      "## The day being read back: Thu 15 Oct (tonight, past midnight), as it happened — it runs to 04:00 the next morning",
+      "- 08:30 ate Eggs (220 kcal, P 18 g)", "- 22:10 drank Wine (14 g alcohol)", "- 00:40 (after midnight) drank Beer (20 g alcohol)",
+    ]);
+  });
+  it("read back the next morning: called yesterday, still with the beer, without the next morning's oats", () => {
+    const c = nightContext("2026-10-15", st, at("16", "09:30"));
+    expect(c).not.toContain("## Today, as it happened");
+    expect(section(c)).toMatch(/^## The day being read back: Thu 15 Oct \(yesterday\)[^\n]*\n- 08:30 ate Eggs[^\n]*\n- 22:10 drank Wine[^\n]*\n- 00:40 \(after midnight\) drank Beer[^\n]*$/);
+    expect(c).not.toContain("Oats");
+    expect(c.split("\n")[0]).toMatch(/^Now: Fri 16 Oct 2026, 09:30 — today is 2026-10-16\. "Last 14 days" ends yesterday \(2026-10-15\)\. "Last night"/); // no "Today so far" promised
+  });
+  it("the next day's read-back doesn't get the 00:40 beer again", () => {
+    expect(section(nightContext("2026-10-16", st, at("16", "21:30")))).not.toContain("Beer");
+  });
+});
