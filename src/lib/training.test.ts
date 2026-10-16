@@ -118,7 +118,7 @@ describe("same muscle, different exercise", () => {
   });
   it("offers other exercises for that muscle, compounds first, not what's already planned today", () => {
     expect(sameMuscle("Squat")).toEqual(["Front squat", "Leg press", "Hack squat", "Bulgarian split squat", "Lunges", "Leg extension"]);
-    expect(sameMuscle("Leg curl", ["Romanian deadlift"])).toEqual(["Seated leg curl", "Lying leg curl", "Nordic curl", "Good morning"]);
+    expect(sameMuscle("Leg curl", ["Romanian deadlift"])).toEqual(["Seated leg curl", "Lying leg curl", "Nordic curl", "Good morning", "Stiff-leg deadlift", "Single-leg RDL"]);
     expect(sameMuscle("Pec deck", [], 3)).toEqual(["Bench press", "Incline DB press", "Dips"]);
     expect(sameMuscle("Squat")).not.toContain("Squat");
     expect(sameMuscle("Made-up lift")).toEqual([]);

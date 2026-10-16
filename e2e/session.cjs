@@ -21,12 +21,26 @@ const { chromium, APP, OUT, handle } = require('./harness.cjs');
   await pg.locator('.dcard', { hasText: 'Push + Quads' }).getByRole('button', { name: 'Start' }).click(); await pg.waitForTimeout(200);
   check('starts on the first exercise, cardio listed at the end of the session', await curName() === 'Squat' && /Then: 20 min stairmaster/.test(await pg.locator('.tile.plan').innerText()));
 
-  // Squat rack taken: swap, one tap, same muscle.
+  // Squat rack taken: swap — pick by muscle (#81), opened on quads; then machine; one tap.
   await pg.locator('.tile.cur').getByRole('button', { name: 'Swap' }).click();
-  const swapTxt = await pg.locator('.addex').innerText();
-  check(`swap offers the same muscle in one tap (${swapTxt.split('\n').slice(1, 3).join(' ')})`, /Same muscle \(quads\)/.test(swapTxt) && /Hack squat/.test(swapTxt) && !/Leg extension\n/.test(swapTxt.split('Same muscle')[0]));
-  check('…but not what\'s already planned today (leg extension is)', !(await pg.locator('.addex .picks button').allInnerTexts()).includes('Leg extension'));
-  await pg.locator('.addex .picks button', { hasText: 'Hack squat' }).click(); await pg.waitForTimeout(150);
+  const box = pg.locator('.addex'), pressed = async (g) => (await box.locator(`[aria-label="${g}"] button[aria-pressed="true"]`).allInnerTexts()).join();
+  const listed = async () => box.locator('.mb-list button b').allInnerTexts();
+  let ls = await listed();
+  check(`swap opens on the squat's muscle, quads (${await pressed('Muscle')}: ${ls.slice(0, 4).join(', ')}…)`, await pressed('Muscle') === 'Quads' && ls.includes('Hack squat') && ls.includes('Front squat'));
+  check('…but not what\'s already planned today (leg extension is)', !ls.includes('Leg extension') && !ls.includes('Squat'));
+  await box.locator('[aria-label="Equipment"] button', { hasText: 'Machine' }).click();
+  ls = await listed();
+  check(`Machine: only the machines (${ls.join(', ')})`, ls.includes('Hack squat') && ls.includes('Leg press') && !ls.includes('Front squat') && !ls.includes('Goblet squat'));
+  await pg.screenshot({ path: OUT + 'session-bymuscle.png' });
+  await box.locator('[aria-label="Muscle"] button', { hasText: 'Forearms' }).click();
+  check(`another muscle without machines falls back to All (${await pressed('Equipment')})`, await pressed('Equipment') === 'All' && (await listed()).includes('Wrist curl'));
+  await box.locator('[aria-label="Muscle"] button', { hasText: 'Shoulders' }).click(); await box.locator('[aria-label="Equipment"] button', { hasText: 'Dumbbell' }).click();
+  ls = await listed();
+  check(`shoulders, dumbbell: the owner's example (${ls.join(', ')})`, ls.includes('Arnold press') && ls.includes('Front raise') && !ls.includes('Shoulder press machine') && !ls.includes('DB shoulder press') /* planned today */);
+  await box.locator('[aria-label="Muscle"] button', { hasText: 'Quads' }).click();
+  check(`the kind you picked stays as you change muscle (${await pressed('Equipment')})`, await pressed('Equipment') === 'Dumbbell' && !(await listed()).includes('Hack squat'));
+  await box.locator('[aria-label="Equipment"] button', { hasText: 'All' }).click();
+  await box.locator('.mb-list button', { hasText: 'Hack squat' }).click(); await pg.waitForTimeout(150);
   check('tap → swapped', await curName() === 'Hack squat');
 
   // Owner, 6 Oct: "set the kg, and reps w the + - and it saves so i can just hit log … or keep same and hit again".
@@ -50,10 +64,10 @@ const { chromium, APP, OUT, handle } = require('./harness.cjs');
   // One more, same muscle as the last exercise.
   await pg.locator('.tile.cur .picks button', { hasText: '+ Add' }).click(); await pg.waitForTimeout(100);
   const last = await curName();
-  const addTxt = await pg.locator('.addex').innerText();
-  check(`add offers the same muscle as ${last}`, new RegExp(`Same muscle as ${last}`).test(addTxt) && await pg.locator('.addex .picks button').count() >= 1);
-  const extra = (await pg.locator('.addex .picks button').allInnerTexts())[0];
-  await pg.locator('.addex .picks button').first().click(); await pg.waitForTimeout(150);
+  const addMuscle = await pressed('Muscle');
+  check(`add opens on the muscle of ${last} (${addMuscle})`, last === 'Leg extension' && addMuscle === 'Quads' && await box.locator('.mb-list button').count() >= 1);
+  const extra = (await listed())[0];
+  await box.locator('.mb-list button').first().click(); await pg.waitForTimeout(150);
   check(`added and on it (${extra})`, await curName() === extra && await pg.locator('.tile.cardio').count() === 0);
   await logSets(3);
   await pg.screenshot({ path: OUT + 'session-cardio.png' });

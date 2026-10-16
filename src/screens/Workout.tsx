@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { act, newId, useStore } from "../lib/store";
-import { e1rm, exerciseHistory, isBest, isDumbbell, warmKg, warmsUp, mainMuscle, nextTemplate, restLeft, sameMuscle, sessionPlan, sessionSummary, suggestNext, templateProblems, volume, type Suggestion } from "../lib/training";
+import { e1rm, exerciseHistory, isBest, isDumbbell, warmKg, warmsUp, mainMuscle, nextTemplate, restLeft, sessionPlan, sessionSummary, suggestNext, templateProblems, volume, type Suggestion } from "../lib/training";
 import { PROGRAMS, asSplit, asTemplate } from "../lib/programs";
 import { MuscleMap } from "../components/MuscleMap";
 import { DayCard } from "../components/DayCard";
 import { ExercisePicker } from "../components/ExercisePicker";
+import { MuscleBrowse } from "../components/MuscleBrowse";
 import { useMyExercises } from "../components/useMyExercises";
 import { nameFor, pickFor } from "../lib/exsearch";
 import { clock, dayLabel } from "../lib/time";
@@ -165,9 +166,13 @@ function Session({ w }: { w: Workout }) {
   const [adding, setAdding] = useState<"add" | "swap" | null>(null);
   const [newEx, setNewEx] = useState("");
   const [showHist, setShowHist] = useState(false);
-  // One-tap choices for a swap or an add: the same muscle as the exercise you're on, not already in today's plan.
-  // All of them, not the first few (owner, 14 Oct: "Add more exercise options so i can change if … machine is used").
-  const alts = adding && plan[i] ? sameMuscle(plan[i].name, plan.map((e) => e.name), 12) : [];
+  // Swap / add: pick by muscle, opened on the muscle of the exercise you're on, without what's already planned (#81;
+  // owner, 14 Oct: "Add more exercise options so i can change if … machine is used").
+  const startMuscle = adding && plan[i] ? mainMuscle(plan[i].name) : null;
+  const planned = useMemo(() => plan.map((e) => e.name), [plan]);
+  // it opens under the exercise, mostly below the fold on a phone: bring it up so the muscles and the list show
+  const addRef = useRef<HTMLDivElement>(null);
+  useEffect(() => { if (adding) addRef.current?.scrollIntoView({ block: "start", behavior: "smooth" }); }, [adding]);
   const mineEx = useMyExercises();
   // Add or swap an exercise for today only; the saved split doesn't change. A typed name you already have is that one.
   const applyEx = (picked?: string) => {
@@ -177,11 +182,11 @@ function Session({ w }: { w: Workout }) {
     setAdding(null); setNewEx("");
   };
   const addBox = adding && (
-    <div className="tile addex">
+    <div className="tile addex" ref={addRef}>
       <span className="k">{adding === "swap" ? `Swap ${plan[i]?.name} for` : "Add an exercise"}</span>
       {/* the box first, so the keyboard doesn't cover it; while you type, the matches take the chips' place */}
-      <ExercisePicker autoFocus={!alts.length} value={newEx} placeholder="Search: name, machine, muscle…" label="Exercise to add" onChange={setNewEx} onPick={(n) => applyEx(n)} />
-      {alts.length > 0 && !newEx.trim() && <div className="picks" aria-label="Same muscle, another exercise"><span className="s">Same muscle{adding === "add" && plan[i] ? ` as ${plan[i].name}` : ""} ({mainMuscle(plan[i]?.name ?? "")?.toLowerCase()}):</span>{alts.map((n) => <button type="button" key={n} onClick={() => applyEx(n)}>{n}</button>)}</div>}
+      <ExercisePicker autoFocus={!startMuscle} value={newEx} placeholder="Search: name, machine, muscle…" label="Exercise to add" onChange={setNewEx} onPick={(n) => applyEx(n)} />
+      {!newEx.trim() && <MuscleBrowse start={startMuscle} skip={planned} onPick={(n) => applyEx(n)} />}
       <div className="grid2"><button type="button" className="kbtn" onClick={() => setAdding(null)}>Cancel</button><button type="button" className="kbtn pri" disabled={!newEx.trim()} onClick={() => applyEx()}>{adding === "swap" ? "Swap" : "Add"}{newEx.trim() ? ` → ${pickFor(newEx, mineEx)}` : ""}</button></div>
     </div>
   );

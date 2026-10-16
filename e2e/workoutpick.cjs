@@ -25,7 +25,7 @@ const { chromium, APP, OUT, handle } = require('./harness.cjs');
 
   // swap the squat: every same-muscle exercise, and typing finds the leg press by the owner's words
   await pg.locator('.exacts').getByRole('button', { name: 'Swap' }).click();
-  const chips = await pg.locator('.addex .picks button').allInnerTexts();
+  const chips = await pg.locator('.addex .mb-list button b').allInnerTexts();
   check(`swap: all the quad exercises, machines too (${chips.length}: ${chips.join(', ')})`, chips.length >= 8 && chips.includes('Leg press') && chips.includes('Pendulum squat') && !chips.includes('Leg extension'));
   await pg.getByLabel('Exercise to add').fill('leg push'); await pg.waitForTimeout(100);
   const legs = await options();

@@ -76,14 +76,37 @@ const MUSCLE_WORDS: Record<string, string> = {
 /** Equipment, from the name, or said here for the ones whose name doesn't. */
 const MACHINES = new Set(["Leg press", "Hack squat", "Leg extension", "Leg curl", "Seated leg curl", "Lying leg curl", "Pec deck", "Seated calf raise", "Pendulum squat", "Belt squat", "Reverse pec deck", "Single-leg leg press", "Leg press calf raise", "Lat pulldown", "Close-grip lat pulldown"]);
 const CABLES = new Set(["Lat pulldown", "Close-grip lat pulldown", "Seated cable row", "Tricep pushdown", "Rope pushdown", "Face pull", "Cable crunch", "Straight-arm pulldown", "Pallof press"]);
-function equipment(name: string): string {
-  const n = name.toLowerCase(), out: string[] = [];
-  if (MACHINES.has(name) || /machine|smith/.test(n)) out.push("machine gep gepi");
-  if (CABLES.has(name) || /cable/.test(n)) out.push("cable kabel csiga");
-  if (/\b(db|dumbbells?)\b/.test(n) || /^(hammer|concentration|incline db|arnold|goblet|tricep kickback)/.test(n)) out.push("dumbbell db kezisulyzo egykezes");
-  if (/barbell|bench press|squat$|deadlift|^overhead press|pendlay|ez-bar|rack pull|good morning|shrugs/.test(n) && !/db|machine|smith/.test(n)) out.push("barbell rud");
-  return out.join(" ");
+export const EQUIPS = ["machine", "cable", "dumbbell", "barbell", "bodyweight", "other"] as const;
+export type Equip = (typeof EQUIPS)[number];
+export const EQUIP_NAMES: Record<Equip, string> = { machine: "Machine", cable: "Cable", dumbbell: "Dumbbell", barbell: "Barbell", bodyweight: "Bodyweight", other: "Other" };
+const EQUIP_WORDS: Record<Equip, string> = { machine: "machine gep gepi", cable: "cable kabel csiga", dumbbell: "dumbbell db kezisulyzo egykezes", barbell: "barbell rud", bodyweight: "bodyweight sajat testsuly", other: "" };
+/** The ones the name doesn't give away (#81: browsing a muscle by machine / dumbbell / …): how it's usually done. */
+const EQUIP_OF: Record<string, Equip> = {
+  "Pull-ups": "bodyweight", "Chin-ups": "bodyweight", "Dips": "bodyweight", "Push-ups": "bodyweight", "Diamond push-ups": "bodyweight", "Bench dips": "bodyweight",
+  "Inverted row": "bodyweight", "Plank": "bodyweight", "Side plank": "bodyweight", "Hanging leg raise": "bodyweight", "Hanging knee raise": "bodyweight",
+  "Decline sit-up": "bodyweight", "Dead bug": "bodyweight", "Russian twist": "bodyweight", "Back extension": "bodyweight", "Dead hang": "bodyweight",
+  "Nordic curl": "bodyweight", "Sissy squat": "bodyweight", "Glute-ham raise": "bodyweight", "Glute bridge": "bodyweight", "Calf raise": "bodyweight", "Single-leg calf raise": "bodyweight",
+  "Bulgarian split squat": "dumbbell", "Bicep curl": "dumbbell", "Lateral raise": "dumbbell", "Front raise": "dumbbell", "Chest fly": "dumbbell", "Rear delt fly": "dumbbell", "Chest-supported row": "dumbbell",
+  "Overhead tricep extension": "dumbbell", "Lunges": "dumbbell", "Walking lunges": "dumbbell", "Reverse lunge": "dumbbell", "Step-ups": "dumbbell", "Single-leg RDL": "dumbbell",
+  "Wrist curl": "dumbbell", "Reverse wrist curl": "dumbbell", "Farmer's carry": "dumbbell", "Spider curl": "dumbbell", "Zottman curl": "dumbbell",
+  "T-bar row": "barbell", "Preacher curl": "barbell", "Skull crusher": "barbell", "Hip thrust": "barbell", "Upright row": "barbell", "Reverse curl": "barbell",
+  "Landmine press": "barbell", "Z press": "barbell", "Meadows row": "barbell", "Seal row": "barbell", "JM press": "barbell",
+  "Single-arm lat pulldown": "cable", "Standing leg curl": "machine", "Donkey calf raise": "machine",
+  "Wrist roller": "other", "Plate pinch": "other", "Ab wheel": "other", "Kettlebell swing": "other",
+};
+/** Every kind of equipment an exercise's name says, most specific first ("Hack squat": machine, then barbell). */
+function equipments(name: string): Equip[] {
+  if (EQUIP_OF[name]) return [EQUIP_OF[name]];
+  const n = name.toLowerCase(), out: Equip[] = [];
+  if (MACHINES.has(name) || /machine|smith/.test(n)) out.push("machine");
+  if (CABLES.has(name) || /cable/.test(n)) out.push("cable");
+  if (/\b(db|dumbbells?)\b/.test(n) || /^(hammer|concentration|incline db|arnold|goblet|tricep kickback)/.test(n)) out.push("dumbbell");
+  if (/barbell|bench press|squat$|deadlift|^overhead press|pendlay|ez-bar|rack pull|good morning|shrugs/.test(n) && !/db|machine|smith/.test(n)) out.push("barbell");
+  return out;
 }
+/** The one kind it's listed under when you browse a muscle. */
+export const equipOf = (name: string): Equip => equipments(name)[0] ?? "other";
+const equipment = (name: string) => equipments(name).map((e) => EQUIP_WORDS[e]).join(" ");
 
 /** Lower case, accents and apostrophes off, other punctuation to spaces: "Farmer's carry" → "farmers carry", "Csukló" → "csuklo". */
 export const fold = (s: string) => s.normalize("NFD").replace(/\p{M}/gu, "").replace(/['’]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
@@ -134,3 +157,16 @@ export function exerciseSearch(q: string, mine: string[] = [], limit = 8): Found
  * new name. A really new name that matches something is still one tap away, on its own "new exercise" row.
  */
 export const pickFor = (typed: string, mine: string[] = []) => (typed.trim() ? sameName(typed, mine) ?? exerciseSearch(typed, mine, 1)[0]?.name ?? nameFor(typed, mine) : "");
+
+export type Browsed = { name: string; equip: Equip; mine: boolean };
+/**
+ * Browsing a muscle (#81; owner: "i should do shoulder and i can choose between exercises and machine or dumbbell etc"):
+ * every exercise it's a main muscle of — Dips under chest and triceps — yours first (most recent first), then the
+ * library's, without `skip` (what's already planned).
+ */
+export function byMuscle(muscle: string, mine: string[] = [], skip: string[] = []): Browsed[] {
+  const mineSet = new Set(mine);
+  return [...new Set([...mine, ...Object.keys(MUSCLES)])]
+    .filter((n) => !skip.includes(n) && (MUSCLES[n]?.[muscle] ?? 0) >= 1)
+    .map((n) => ({ name: n, equip: equipOf(n), mine: mineSet.has(n) }));
+}

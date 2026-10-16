@@ -1087,15 +1087,24 @@ below, in his words, grouped; A first (broken or wrong now), then the rest. Item
    last 3 sessions had one ("Skip warm-up" one tap — "sometimes just 3"); a new exercise offers "Warm-up first". Planned
    sets done: "Next: …" and "+ Set 4" side by side — suggested, never forced. Checked: training.test (habit, weight, not
    counted), e2e/workoutsets.cjs, and the five workout suites unchanged.
-81. [ ] **More exercises, picked by muscle** — "Add more exercises and that i can choose when hitting a muscle- like i
+81. [x] **More exercises, picked by muscle** — "Add more exercises and that i can choose when hitting a muscle- like i
    should do shoulder and i can choose between exercises and machine or dumbbell etc".
    - **Status (16 Oct):** part there — typing a muscle or a piece of equipment finds exercises (#94), Swap and + Add offer
      the same muscle's others in one tap. Not built: browsing by muscle (tap shoulders → machine / dumbbell / cable
      choices) and a bigger library.
-   - **Building (claimed: this session, 16 Oct — lib/training MUSCLES, lib/exsearch equipOf/byMuscle, components/
-     MuscleBrowse.tsx, Workout.tsx Swap/Add; owner: "2").** In Swap and + Add: pick a muscle (the current exercise's is
-     picked already), then Machine / Cable / Dumbbell / Barbell / Bodyweight, then the exercise — yours first. About 40
-     more exercises (calves, glutes, back and arm variations). Canvas skipped: a small change inside an existing box.
+   - **Done 16 Oct (owner: "2") — lib/training MUSCLES, lib/exsearch equipOf/byMuscle, components/MuscleBrowse.tsx,
+     Workout.tsx Swap/Add.** In Swap and + Add: the muscle (the current exercise's is picked already), then Machine /
+     Cable / Dumbbell / Barbell / Bodyweight (only the kinds that muscle has; the kind you picked stays as you change
+     muscle, or falls back to All), then the exercise — yours first, nothing already planned today. An exercise with two
+     main muscles shows under both (dips: chest and triceps). 45 more exercises (147 now): calves 3 → 8, glutes 4 → 12,
+     plus back, arm, chest and core variations. Every exercise has one kind; the ones the name hides are set by hand
+     (pull-ups bodyweight, lateral raise dumbbell). The box scrolls up when it opens so the list isn't under the tab bar.
+     Typing still works as before and finds "bodyweight back". Found on the phone: "Bulgarian split squat · barbell" (the
+     name rule read "…squat" as a barbell squat) — set by hand, with a test. Canvas skipped: small, inside an existing box.
+     Checked: exsearch.test (every exercise has a kind; shoulders by kind; two-muscle exercises; yours first; planned
+     left out), e2e/session.cjs (swap opens on quads; Machine → machines only; Forearms has none → All; shoulders +
+     dumbbell; the kind stays; tap → swapped; + Add opens on the last exercise's muscle), e2e/workoutpick.cjs, phone
+     screenshots.
    - **Next after this (owner, 16 Oct, IMPORTANT):** "looks like app does daily read based on yyesterdays data".
 82. [x] **Strength per muscle group** — "Should also do a muscle group strength average taking in data from diff exercises
    that target same muscle".

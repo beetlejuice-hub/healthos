@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { exerciseSearch, pickFor, sameName } from "./exsearch";
+import { byMuscle, equipOf, EQUIPS, exerciseSearch, pickFor, sameName } from "./exsearch";
 import { MUSCLES, sameMuscle } from "./training";
 
 const names = (q: string, mine: string[] = [], n = 8) => exerciseSearch(q, mine, n).map((f) => f.name);
@@ -62,5 +62,39 @@ describe("finding an exercise while typing (PLAN 94)", () => {
     expect(sameMuscle("Leg press", [], 20)).toEqual(expect.arrayContaining(["Hack squat", "Smith machine squat", "Pendulum squat", "Belt squat"]));
     expect(sameMuscle("Chest press machine", [], 20)).toEqual(expect.arrayContaining(["Bench press", "Pec deck", "Cable fly"]));
     expect(sameMuscle("Lat pulldown", [], 20)).toEqual(expect.arrayContaining(["Pull-ups", "Assisted pull-up machine", "Machine row"]));
+  });
+});
+
+describe("browsing by muscle (#81: \"i should do shoulder and i can choose between exercises and machine or dumbbell etc\")", () => {
+  it("every exercise in the library has one equipment kind, and the ones the name hides are right", () => {
+    const kinds = Object.keys(MUSCLES).map((n) => [n, equipOf(n)] as const);
+    expect(kinds.filter(([, e]) => !EQUIPS.includes(e))).toEqual([]);
+    expect(kinds.filter(([, e]) => e === "other").map(([n]) => n).sort()).toEqual(["Ab wheel", "Kettlebell swing", "Plate pinch", "Wrist roller"]);
+    expect(["Pull-ups", "Dips", "Lateral raise", "Hack squat", "Lat pulldown", "Cable fly", "Goblet squat", "Bench press", "Smith machine squat"].map(equipOf))
+      .toEqual(["bodyweight", "bodyweight", "dumbbell", "machine", "machine", "cable", "dumbbell", "barbell", "machine"]);
+    // "…squat" reads as a barbell squat — not these two (seen on the phone: "Bulgarian split squat · barbell")
+    expect(["Squat", "Front squat", "Bulgarian split squat", "Sissy squat"].map(equipOf)).toEqual(["barbell", "barbell", "dumbbell", "bodyweight"]);
+  });
+  it("shoulders: every main-shoulder exercise, by kind — the machine, the cable and the dumbbell ones", () => {
+    const sh = byMuscle("Shoulders");
+    const of = (e: string) => sh.filter((x) => x.equip === e).map((x) => x.name);
+    expect(of("machine")).toEqual(["Shoulder press machine", "Machine lateral raise", "Reverse pec deck", "Smith machine shoulder press"]);
+    expect(of("cable")).toEqual(expect.arrayContaining(["Face pull", "Cable lateral raise", "Cable rear delt fly"]));
+    expect(of("dumbbell")).toEqual(expect.arrayContaining(["Lateral raise", "DB shoulder press", "Arnold press", "Front raise", "Rear delt fly"]));
+    expect(sh.some((x) => x.name === "Bench press")).toBe(false); // shoulders only help there
+  });
+  it("an exercise with two main muscles is under both; yours first, most recent first; what's planned is left out", () => {
+    expect(byMuscle("Triceps").some((x) => x.name === "Dips") && byMuscle("Chest").some((x) => x.name === "Dips")).toBe(true);
+    const back = byMuscle("Back", ["Seal row", "Bench press", "Lat pulldown"], ["Pull-ups"]);
+    expect(back.slice(0, 2)).toEqual([{ name: "Seal row", equip: "barbell", mine: true }, { name: "Lat pulldown", equip: "machine", mine: true }]);
+    expect(back.some((x) => x.name === "Pull-ups" || x.name === "Bench press")).toBe(false);
+  });
+  it("calves and glutes have real choice now (3–4 each before)", () => {
+    expect(byMuscle("Calves").length).toBeGreaterThanOrEqual(7);
+    expect(byMuscle("Glutes").length).toBeGreaterThanOrEqual(12);
+  });
+  it("the kinds are found by typing too: 'bodyweight back', 'gepi vall'", () => {
+    expect(exerciseSearch("bodyweight back", [], 10).map((f) => f.name)).toEqual(expect.arrayContaining(["Pull-ups", "Chin-ups", "Inverted row"]));
+    expect(exerciseSearch("gepi vall", [], 10).map((f) => f.name)).toEqual(expect.arrayContaining(["Shoulder press machine", "Machine lateral raise"]));
   });
 });
