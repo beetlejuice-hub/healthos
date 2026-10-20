@@ -15,8 +15,10 @@
  * a score says how it fits the goal. Pure.
  */
 
-import type { Food } from "./types";
-import type { FoodItem } from "./foodday";
+import type { Entry, Food } from "./types";
+import { mealOf, type FoodItem } from "./foodday";
+import { BASIC_FOODS } from "./foods-basic";
+import { clock } from "./time";
 import { macrosOf } from "./nutrition";
 import { nutriScore, type NutriGrade } from "./nutriscore";
 import { bedtimeOn } from "./caffeine-sleep";
@@ -80,4 +82,33 @@ export function plateScore(items: { kcal: number; s: ItemScore | null }[]): { sc
   if (!counted.length || unscored) return { score: null, unscored };
   const kcal = counted.reduce((a, x) => a + x.kcal, 0);
   return { score: Math.round(counted.reduce((a, x) => a + x.kcal * x.s!.score!, 0) / kcal), unscored: 0 };
+}
+
+const BASIC = new Map(BASIC_FOODS.map((f) => [f.id, f as Food]));
+/** What an item was logged from: your saved copy, with the built-in table's nutrients when the copy predates them. */
+export function foodFor(e: FoodItem, foods: Food[]): Food | undefined {
+  if (e.kind !== "food" || !e.foodId) return undefined;
+  const mine = foods.find((f) => f.id === e.foodId), b = BASIC.get(e.foodId);
+  return mine ? { ...mine, nutri: mine.nutri ?? b?.nutri, noGrade: mine.noGrade ?? b?.noGrade } : b;
+}
+
+/**
+ * The day's plates for the night read-back (PLAN 139 phase 3; owner: "AI can reflect on this at EOD, letting me know what
+ * i should change") — one line a meal, its score and each item's parts, so the AI names the plate that fit best and the
+ * one swap that would lift the lowest, from the app's numbers, in the call it already makes. `window`: the read-back's
+ * day, to 04:00 — a snack at 00:40 is that evening's, last, "after midnight".
+ */
+export function plateLines(entries: Entry[], foods: Food[], day: string, window: [number, number], bedMinute: number): string[] {
+  const items = entries.filter((e): e is FoodItem => (e.kind === "food" || e.kind === "drink") && e.at >= window[0] && e.at < window[1] && macrosOf(e) != null).sort((a, b) => a.at - b.at);
+  const meals = new Map<string, FoodItem[]>();
+  for (const e of items) { const k = localDay(e.at) === day ? mealOf(e.at) : "After midnight"; meals.set(k, [...(meals.get(k) ?? []), e]); }
+  return [...meals].map(([name, es]) => {
+    const its = es.map((e) => ({ e, s: itemScore(e, foodFor(e, foods), bedMinute), kcal: macrosOf(e)!.kcal }));
+    const p = plateScore(its.map((x) => ({ kcal: x.kcal, s: x.s })));
+    const named = its.filter((x) => x.s).map(({ e, s }) => s!.score != null
+      ? `${e.name} ${s!.score} (${s!.parts.map((q) => `${q.id} ${Math.round(q.got)}/${q.max}: ${q.why}`).join("; ")})`
+      : `${e.name} — no score (${s!.missing})`);
+    const times = [...new Set(es.map((e) => clock(e.at)))], kcal = its.reduce((a, x) => a + x.kcal, 0);
+    return `${name} ${times[0]}${times.length > 1 ? `–${times.at(-1)}` : ""}, ${Math.round(kcal)} kcal: ${p.score ?? "no plate score"}${named.length ? ` — ${named.join(" · ")}` : ""}`;
+  });
 }

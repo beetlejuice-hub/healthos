@@ -40,7 +40,17 @@ describe("what the read-back is given", () => {
     { id: "m", kind: "food", at: at("15", "08:30"), name: "Eggs", grams: 150, macros: { kcal: 220, p: 18, c: 1, f: 15 } },
     { id: "n", kind: "food", at: at("16", "09:00"), name: "Oats", grams: 80, macros: { kcal: 300, p: 10, c: 50, f: 6 } },
   ], workouts: [], supplements: [], settings: DEFAULT_SETTINGS, profile: { conditions: [], meds: [], allergies: [], notes: "" }, goals: DEFAULT_GOALS, ai: EMPTY_AI, foods: [], drinks: [], templates: [], scout: {} } as unknown as State;
-  const section = (c: string) => c.slice(c.indexOf("## The day being read back"));
+  // the day's own section (the plates follow it — tested below)
+  const section = (c: string) => { const a = c.slice(c.indexOf("## The day being read back")), z = a.indexOf("\n## ", 3); return z < 0 ? a : a.slice(0, z); };
+  it("the day's plates with their food scores follow it (PLAN 139): the 00:40 beer last, after midnight; not the next morning's oats", () => {
+    const c = nightContext("2026-10-15", st, at("16", "10:00"));
+    const plates = c.slice(c.indexOf("## Plates that day")).split("\n");
+    expect(plates[0]).toBe("## Plates that day, with the app's food score (0–100: goal 45 — protein per 100 kcal; quality 35 — Nutri-Score; timing 20 — hours before bed)");
+    expect(plates.slice(1).map((l) => l.split(":")[0])).toEqual(["- Breakfast 08", "- Late 22", "- After midnight 00"]);
+    expect(plates[1]).toBe("- Breakfast 08:30, 220 kcal: no plate score — Eggs — no score (not a food the app knows)");
+    expect(plates[2]).toMatch(/^- Late 22:10, \d+ kcal: 0 — Wine 0 \(goal 0\/45: 0\.0 g protein per 100 kcal; quality 0\/35: alcohol; timing 0\/20: 0\.8 h before bed\)$/);
+    expect(c).not.toMatch(/Oats/);
+  });
   it("past midnight: the beer at 00:40 is that evening's, after the wine, marked; the header says so", () => {
     const s = section(nightContext("2026-10-15", st, at("16", "00:50")));
     expect(s.split("\n")).toEqual([

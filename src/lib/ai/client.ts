@@ -22,6 +22,7 @@ import { nightsForAi } from "./nights";
 import { bandNow } from "../band-client";
 import { buildContext, onTodayLines, timeline } from "./context";
 import { dayWindow, dayWord } from "./nightread";
+import { plateLines } from "../foodscore";
 import type { AiAnswer, AiRequest, Task, UsageDoc } from "./tasks";
 import { currentKg } from "../body";
 
@@ -100,7 +101,9 @@ export function nightContext(day: string, state: State = getState(), now = Date.
   // yesterday (read back the next morning) — it used to say "Today" for yesterday (#107)
   const [from, to] = dayWindow(day), w = dayWord(day, now);
   const tl = timeline(state, from, Math.min(to, now + 1), (at) => (localDay(at) !== day ? " (after midnight)" : ""));
-  return `${contextNow(state, now, { todaySoFar: false })}\n## The day being read back: ${w.label} (${w.when}), as it happened — it runs to 04:00 the next morning\n${tl.length ? tl.map((l) => `- ${l}`).join("\n") : "- nothing logged"}`;
+  // the day's plates with their food scores (PLAN 139): what fit the goal best, and the one swap that would help most
+  const plates = plateLines(state.entries, state.foods, day, [from, Math.min(to, now + 1)], state.settings.bedMinute);
+  return `${contextNow(state, now, { todaySoFar: false })}\n## The day being read back: ${w.label} (${w.when}), as it happened — it runs to 04:00 the next morning\n${tl.length ? tl.map((l) => `- ${l}`).join("\n") : "- nothing logged"}${plates.length ? `\n## Plates that day, with the app's food score (0–100: goal 45 — protein per 100 kcal; quality 35 — Nutri-Score; timing 20 — hours before bed)\n${plates.map((l) => `- ${l}`).join("\n")}` : ""}`;
 }
 
 /** Downscale a photo to ≤1024 px JPEG before sending: cheaper, faster, and plenty to see a plate. */

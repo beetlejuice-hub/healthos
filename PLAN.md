@@ -1812,7 +1812,7 @@ D questions answered in chat. Numbered on from #112.
    whatever?) looks like it has a much more advanced food logging sections so maybe if my loggings go there, it could kind
    of figure out what other nutrients that foods has and lmk? and lots of other stuff that i log here in app but not in
    that app" — needs a look at what Google's API lets an app write.
-139. [ ] **A score for each food and plate** (owner, 20 Oct) — "i think we should do a food/plate score system. like how
+139. [x] **A score for each food and plate** (owner, 20 Oct) — "i think we should do a food/plate score system. like how
    bad/good it is. idk if theres a database for this but i think there is.Like how healthy, how good it is for my goal,
    etc, how good is the timing. like a score next to the plate, for each item and for in total too (the plate), and i can
    click on it and observe whats up. AI can reflect on this at EOD, letting me know whati should change. i know theres a
@@ -1847,7 +1847,13 @@ D questions answered in chat. Numbered on from #112.
    shows "—" with "✨ Ask the AI for its nutrients" — one light call on the tap, kept on the food. Checked:
    foodscore2.test (pack grade kept, worked out when missing, half a label not graded, AI nutri kept and scored 46,
    nonsense dropped — 4 of 5 fail on the old code), e2e/foodscore.cjs (pack E scored; the schnitzel "—" → ask → 71, kept),
-   foodday/ai/scan/labelphoto/searchpass/drinks still pass. Next: phase 3 (the night read-back).
+   foodday/ai/scan/labelphoto/searchpass/drinks still pass.
+   **Phase 3 done (20 Oct):** the night read-back's context gets "## Plates that day" — each meal of the read-back's day
+   (to 04:00, so a 00:40 snack is that evening's, last, "after midnight") with its plate score and each item's three
+   parts — and the prompt: one "happened" bullet may name the plate that fit best; when a plate scored under 60, one
+   "change" may be the single swap that would lift it most, read from its parts. No extra AI call. Checked:
+   nightread.test (the plates in order, the beer after midnight in, the next morning's oats out, the scores' lines),
+   e2e night/morningread/foodday/foodscore. #139 done; later ideas: a 7-day strip of plate scores, a plate's parts graded.
 
 ### D · Asked — answered in chat (20 Oct)
 - "Would a lower upper body then a full body day work better than the current 3 full body day?"

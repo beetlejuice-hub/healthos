@@ -11,8 +11,7 @@ import { useEffect, useMemo, useState } from "react";
 import { act, useStore } from "../lib/store";
 import { amountOf, foodDay, type FoodItem } from "../lib/foodday";
 import { macrosOf } from "../lib/nutrition";
-import { itemScore, plateScore, type ItemScore } from "../lib/foodscore";
-import { BASIC_FOODS } from "../lib/foods-basic";
+import { foodFor, itemScore, plateScore, type ItemScore } from "../lib/foodscore";
 import type { Food } from "../lib/types";
 import { go, LOG_FOR_KEY } from "../lib/nav";
 import { addDays, atMinute, clock, dayLabel, localDay } from "../lib/time";
@@ -20,7 +19,6 @@ import { EntryEdit } from "./EntryEdit";
 import { askAi, useAiStatus } from "../lib/ai/client";
 
 const fmt = (n: number) => Math.round(n).toLocaleString("en-GB");
-const BASIC = new Map(BASIC_FOODS.map((f) => [f.id, f as Food]));
 /** 70+ fits well, 40+ in between, under 40 fits the goal less — never "bad". */
 const band = (s: number | null) => (s == null ? "none" : s >= 70 ? "ideal" : s >= 40 ? "fair" : "poor");
 
@@ -32,9 +30,9 @@ export function FoodDay({ day: first, onClose }: { day: string; onClose: () => v
   const [day, setDay] = useState(first);
   const [edit, setEdit] = useState<string | null>(null), [sure, setSure] = useState<string | null>(null);
   const d = useMemo(() => foodDay(entries, day), [entries, day]);
-  // what each item was logged from: the built-in table's nutrients win over a copy saved before they existed
+  // what each item was logged from (lib/foodscore foodFor)
   const { scores, foodOf } = useMemo(() => {
-    const of = (e: FoodItem): Food | undefined => { if (e.kind !== "food" || !e.foodId) return undefined; const mine = foods.find((f) => f.id === e.foodId), b = BASIC.get(e.foodId); return mine ? { ...mine, nutri: mine.nutri ?? b?.nutri, noGrade: mine.noGrade ?? b?.noGrade } : b; };
+    const of = (e: FoodItem) => foodFor(e, foods);
     const items = d.meals.flatMap((m) => m.items);
     return { scores: new Map(items.map((e) => [e.id, itemScore(e, of(e), bedMinute)])), foodOf: new Map(items.map((e) => [e.id, of(e)])) };
   }, [d, foods, bedMinute]);
