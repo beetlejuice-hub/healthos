@@ -34,6 +34,9 @@ export type Signal = {
   get: (d: DayFacts) => number | null;
   /** Master-graph lane to show it on. */
   lane?: string;
+  /** Only ever the cause: what you take is your choice, not something a gym day does to you (owner, 20 Oct, on "On the
+   *  day after a gym day, L-theanine tends to be higher": "makes not much sense..?? more l theanine on gym days??"). */
+  causeOnly?: boolean;
 };
 
 export function signals(supplements: Supplement[]): Signal[] {
@@ -54,7 +57,7 @@ export function signals(supplements: Supplement[]): Signal[] {
     { id: "stress", family: "feel", name: "stress", get: (d) => d.stress, lane: "stress" },
   ];
   for (const x of supplements) {
-    s.push({ id: `supp-${x.id}`, family: `supp-${x.id}`, name: x.name, yes: `a ${x.name} day`, get: (d) => { const had = suppDay(d, x.id); return had == null ? null : had ? 1 : 0; }, lane: "supps" });
+    s.push({ id: `supp-${x.id}`, family: `supp-${x.id}`, name: x.name, yes: `a ${x.name} day`, get: (d) => { const had = suppDay(d, x.id); return had == null ? null : had ? 1 : 0; }, lane: "supps", causeOnly: true });
   }
   return s;
 }
@@ -101,6 +104,9 @@ const fmt = (v: number, unit?: string) => (unit === "kcal" || unit === "mg" || u
 export function pair(a: Signal, b: Signal, lag: 0 | 1, facts: DayFacts[]): Pattern | null {
   // Same day, a yes/no thing leads the sentence: "On a gym day, calories…", not "Calories and gym…".
   if (lag === 0 && b.yes && !a.yes) return pair(b, a, 0, facts);
+  // A supplement is never the outcome: same day it leads the sentence instead; the next day, or next to another
+  // supplement (one stack, taken together), there's nothing to say.
+  if (b.causeOnly) return lag === 0 && !a.causeOnly ? pair(b, a, 0, facts) : null;
   const xs: number[] = [], ys: number[] = [], we: boolean[] = [], dayOf: string[] = [];
   facts.forEach((d, i) => {
     const e = facts[i + lag]; if (!e) return;

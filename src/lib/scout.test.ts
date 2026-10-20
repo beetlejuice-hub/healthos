@@ -58,6 +58,25 @@ describe("scout", () => {
     expect(q.held / q.of).toBeGreaterThan(0.6);
   });
 
+  it("a supplement is only ever the cause — never 'more L-theanine the day after a gym day' (owner, 20 Oct)", () => {
+    // Saffron taken on gym days and the day after (it's in the gym-bag stack), skipped otherwise; and it lifts that
+    // evening's mood by 1.5.
+    let asOutcome = 0, asCause = 0;
+    for (let seed = 1; seed <= 20; seed++) {
+      const f = feelWorld({ seed, days: 60 });
+      f.forEach((d, i) => { const on = d.trained || !!f[i - 1]?.trained; d.taken = new Set(on ? ["saffron"] : []); d.skipped = new Set(on ? [] : ["saffron"]);
+        if (on && d.mood != null) d.mood = Math.min(10, d.mood + 1.5); });
+      const ps = scout(f, STACK);
+      if (ps.some((p) => p.b.id === "supp-saffron")) asOutcome++;
+      if (ps.some((p) => p.a.id === "supp-saffron" && p.b.id === "mood")) asCause++;
+      // not even when asked for the pair directly, either way round, same day or next
+      expect(pair(sig("gym"), sig("supp-saffron"), 1, f)).toBeNull();
+      expect(pair(sig("gym"), sig("supp-saffron"), 0, f)?.b.id ?? "gym").toBe("gym");
+    }
+    expect(asOutcome).toBe(0);
+    expect(asCause).toBeGreaterThanOrEqual(15);
+  });
+
   it("dismissing is per family pair, so a twin can't take its place", () => {
     const f = [1, 2, 3, 4, 5].map((seed) => bigMealWorld(seed, 2.5)).find((w) => scout(w, STACK).some((p) => p.id === "feel~food"))!;
     const id = "feel~food";

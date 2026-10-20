@@ -1691,9 +1691,13 @@ D questions answered in chat. Numbered on from #112.
    every day word for word (no new AI call), and this one carried that morning's number. Now a daily question can't hold
    numbers (tasks `timeless`: one that does is asked once), the prompt says its text must hold on any day, and Today
    drops the stale one already saved. Checked: ai.test, e2e/questions.cjs.
-119. [ ] **Nonsense "worth a look"** — screenshot: "On the day after a gym day, Black cumin seed oil / L-theanine /
+119. [x] **Nonsense "worth a look"** — screenshot: "On the day after a gym day, Black cumin seed oil / L-theanine /
    Creatine tends to be higher (1.0 vs 0.8)" — "makes not much sense..?? more l theanine on gym days??" (a supplement
-   taken isn't an outcome).
+   taken isn't an outcome). The scout paired every signal with every other, both ways, so a supplement could be the
+   "result". Now a supplement is only ever the cause (scout `causeOnly`): same day it leads the sentence ("On a Saffron
+   day, your mood…"), the next day or next to another supplement there's nothing said. Also reaches the AI's "early
+   patterns". Checked: scout.test (saffron taken on and after gym days: never the outcome in 20 fake months, still found
+   as the cause of a planted mood lift — fails with the old pairing).
 120. [ ] **A "most confident finding" the app can't defend** — screenshot of the chat: 15 days with black cumin seed oil,
    1 without, yet its after-a-dose −2.1 was called the most confident finding — "interesting that the most confident
    finding yet is one that even the app can't defend".
