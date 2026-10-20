@@ -74,5 +74,7 @@ export function mealFood(id: string, name: string, lines: Line[], pieces: number
       ...(pieces > 1 ? [{ name: "whole batch", g: Math.round(grams) }] : []),
     ],
     servingG: Math.round(grams / pieces),
+    // what's in it, so the AI sees the plate's insides, not just its name (20 Oct)
+    parts: lines.map((l) => ({ name: l.food.name, g: Math.round(gramsOf(l)) })),
   };
 }

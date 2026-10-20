@@ -1680,8 +1680,12 @@ D questions answered in chat. Numbered on from #112.
    now (it followed your last 3 sessions); "Skip warm-up" is one tap. Checked: training.test, e2e/workoutsets.cjs (a new
    exercise starts on a warm-up, skip → working set with "Warm-up first" offered); session, simple and workoutpick skip
    it where they log working sets.
-117. [ ] **The AI can't see what's in a meal** — "Rn ai can't see whats inside my meals so if i log 3 diff food in one
-   meal it only sees the title of meal so pls fix"
+117. [x] **The AI can't see what's in a meal** — "Rn ai can't see whats inside my meals so if i log 3 diff food in one
+   meal it only sees the title of meal so pls fix". Foods logged together are separate entries (the AI saw each); a
+   "Save as one plate" food kept only its name and macros. Plates now keep their parts (Food.parts), and the AI's day
+   timeline says "ate Chicken rice plate (360 kcal, P 35 g) — made of: Chicken breast 100 g, Rice, cooked 150 g" for the
+   portion eaten; the chat's find finds a plate by what's in it. Plates saved before today have no parts to show.
+   Checked: ai.test (parts kept, the timeline line, find by "chicken").
 118. [ ] **A daily question with yesterday's facts** — screenshot: "Stress is at 6 this morning. What's sitting on it most
    today?" ("asked daily") — "question posed as today but it was last day and it was answered already".
 119. [ ] **Nonsense "worth a look"** — screenshot: "On the day after a gym day, Black cumin seed oil / L-theanine /

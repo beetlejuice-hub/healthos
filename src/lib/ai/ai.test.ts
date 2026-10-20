@@ -3,6 +3,8 @@ import { fromDescribed, judge } from "./apply";
 import { ASK_MORE, CONTEXT_MAX, buildContext, onTodayLines, dayTimeline, feelByTime, moodJournal } from "./context";
 import { checkDescribe, checkDigest, checkNight, costUsd, estimateMonthUsd, jsonFrom, SYSTEM, type CallLog } from "./tasks";
 import { parseItem } from "../quickadd";
+import { mealFood } from "../units";
+import { runChatTool } from "./chattools";
 import { feelWorld } from "../bench";
 import { EMPTY_AI, type State } from "../store";
 import { DEFAULT_GOALS } from "../types";
@@ -273,5 +275,22 @@ describe("news from the morning read goes to the chat only when it's real (owner
     expect(checkDigest({ greeting: "Hi", items: [item], news: { ...news, source: { title: "x", url: "" } } }).news).toBeNull();
     expect(checkDigest({ greeting: "Hi", items: [item], news: { ...news, source: { title: "x", url: "javascript:alert(1)" } } }).news).toBeNull();
     expect(checkDigest({ greeting: "Hi", items: [item], news: { ...news, title: "saffron and mood " } }).news).toBeNull();
+  });
+});
+
+describe("the AI sees what's in a plate (owner, 20 Oct: \"it only sees the title of meal\")", () => {
+  const t = new Date(2026, 9, 20, 13, 0).getTime();
+  const plate = mealFood("custom:plate1", "Chicken rice plate", [
+    { food: { id: "c", name: "Chicken breast", per100: { kcal: 165, p: 31, c: 0, f: 4 }, source: "basic" }, count: 1, unit: null, grams: 200 },
+    { food: { id: "r", name: "Rice, cooked", per100: { kcal: 130, p: 3, c: 28, f: 0 }, source: "basic" }, count: 1, unit: null, grams: 300 },
+  ], 2, "plate");
+  const st = { entries: [{ id: "e", kind: "food", at: t, foodId: plate.id, name: "Chicken rice plate", grams: 250, macros: { kcal: 360, p: 35, c: 42, f: 4 } }], workouts: [], foods: [plate] } as never;
+  it("a saved plate keeps its parts; the day's timeline lists them for the portion eaten (half the batch here)", () => {
+    expect(plate.parts).toEqual([{ name: "Chicken breast", g: 200 }, { name: "Rice, cooked", g: 300 }]);
+    expect(dayTimeline(st, "2026-10-20")).toEqual(["13:00 ate Chicken rice plate (360 kcal, P 35 g) — made of: Chicken breast 100 g, Rice, cooked 150 g"]);
+  });
+  it("the chat's find finds a plate by what's in it", () => {
+    const out = runChatTool({ id: "x", name: "find", input: { text: "chicken" } }, { state: { ...(st as object), supplements: [], settings: {}, ai: EMPTY_AI } as never, band: null, now: t + 1000 });
+    expect(out.text).toMatch(/food: Chicken rice plate \(360 kcal\) — made of Chicken breast, Rice, cooked/);
   });
 });

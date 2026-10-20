@@ -17,7 +17,7 @@ import { sessions as sessionsOf } from "../liftstrength";
 import { working, type LoggedSet } from "../training";
 import { makeProposal, type Proposal } from "./propose";
 
-export type ToolData = { state: Pick<State, "entries" | "workouts" | "settings" | "supplements" | "ai"> & { goals?: State["goals"] }; band: BandData | null; now: number };
+export type ToolData = { state: Pick<State, "entries" | "workouts" | "settings" | "supplements" | "ai"> & { goals?: State["goals"]; foods?: State["foods"] }; band: BandData | null; now: number };
 export type ChartSpec = { measure: SeriesKey; from: string; to: string; title: string };
 export type ToolOut = { text: string; error?: boolean; chart?: ChartSpec; remember?: string; proposal?: Proposal };
 
@@ -116,11 +116,13 @@ function find(input: Record<string, unknown>, d: ToolData): ToolOut {
   const q = typeof input.text === "string" ? fold(input.text.trim()) : "";
   if (q.length < 2) return { text: "give a word to look for (2+ letters)", error: true };
   const since = d.now - FIND_DAYS * DAY, sup = new Map(d.state.supplements.map((s) => [s.id, s.name]));
+  // a plate's parts too: "chicken" finds the chicken-and-rice plate (20 Oct)
+  const parts = new Map((d.state.foods ?? []).filter((f) => f.parts?.length).map((f) => [f.id, f.parts!.map((p) => p.name)]));
   const hits: { at: number; line: string }[] = [];
   const hit = (at: number, what: string, ...texts: (string | undefined)[]) => { if (texts.some((t) => t && fold(t).includes(q))) hits.push({ at, line: what }); };
   for (const e of d.state.entries) {
     if (e.at < since || e.at > d.now) continue;
-    if (e.kind === "food") hit(e.at, `food: ${e.name} (${Math.round(e.macros.kcal)} kcal)`, e.name);
+    if (e.kind === "food") hit(e.at, `food: ${e.name} (${Math.round(e.macros.kcal)} kcal)${e.foodId && parts.has(e.foodId) ? ` — made of ${parts.get(e.foodId)!.join(", ")}` : ""}`, e.name, ...(e.foodId ? parts.get(e.foodId) ?? [] : []));
     else if (e.kind === "drink") hit(e.at, `drink: ${e.name}`, e.name);
     else if (e.kind === "supp") hit(e.at, `supplement ${e.status}: ${sup.get(e.suppId) ?? e.suppId}`, sup.get(e.suppId), e.suppId);
     else if (e.kind === "feel") hit(e.at, `check-in${e.doing?.length ? ` · up to: ${e.doing.join(", ")}` : ""}${e.note ? ` · note: "${e.note}"` : ""}`, e.note, ...(e.doing ?? []));

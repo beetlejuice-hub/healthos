@@ -38,7 +38,7 @@ const feelText = (e: Extract<State["entries"][number], { kind: "feel" }>) =>
  * One day in order — what was eaten and drunk, the gym, every check-in with what you were up to and
  * the note you wrote. The nightly read-back is built on it; notes are quoted exactly.
  */
-export function dayTimeline(state: Pick<State, "entries" | "workouts">, day: string): string[] {
+export function dayTimeline(state: Pick<State, "entries" | "workouts"> & { foods?: State["foods"] }, day: string): string[] {
   return timeline(state, atMinute(day, 0), atMinute(addDays(day, 1), 0));
 }
 
@@ -46,13 +46,14 @@ export function dayTimeline(state: Pick<State, "entries" | "workouts">, day: str
  * Everything logged from `from` up to `to`, in time order (not by the clock's text: 00:40 comes after 22:00), one line
  * each. `mark` adds a word after the time — "(after midnight)" in an evening that runs past it.
  */
-export function timeline(state: Pick<State, "entries" | "workouts">, from: number, to: number, mark: (at: number) => string = () => ""): string[] {
+export function timeline(state: Pick<State, "entries" | "workouts"> & { foods?: State["foods"] }, from: number, to: number, mark: (at: number) => string = () => ""): string[] {
+  const foods = new Map((state.foods ?? []).map((f) => [f.id, f]));
   const es = state.entries.filter((e) => e.at >= from && e.at < to);
   const rows: [number, string][] = [];
   const push = (at: number, line: string) => rows.push([at, line]);
   for (const e of es) {
     const t = clock(e.at) + mark(e.at);
-    if (e.kind === "food") push(e.at, `${t} ate ${e.name} (${Math.round(e.macros.kcal)} kcal, P ${Math.round(e.macros.p)} g)`);
+    if (e.kind === "food") push(e.at, `${t} ate ${e.name} (${Math.round(e.macros.kcal)} kcal, P ${Math.round(e.macros.p)} g)${madeOf(e.foodId ? foods.get(e.foodId) : undefined, e.grams)}`);
     else if (e.kind === "drink") push(e.at, `${t} drank ${e.name}${e.caffeineMg ? ` (${e.caffeineMg} mg caffeine)` : ""}${e.alcoholG ? ` (${e.alcoholG} g alcohol)` : ""}`);
     else if (e.kind === "feel") push(e.at, `${t} check-in: ${feelText(e) || "no ratings"}${e.doing?.length ? ` · up to: ${e.doing.join(", ")}` : ""}${e.note ? ` · my note: "${e.note}"` : ""}`);
     else if (e.kind === "sleep" && (e.rating != null || e.tags?.length || e.phoneMin != null)) push(e.at, `${t} ${e.rating != null ? `rated last night's sleep ${e.rating}/10` : "about last night"}${e.slow ? ", slow to fall asleep" : ""}${e.tags?.length ? ` · last night: ${e.tags.map(nightLabel).join(", ")}` : ""}${e.phoneMin != null ? ` · ${phoneLabel(e.phoneMin)} before sleep` : ""}`);
@@ -61,6 +62,14 @@ export function timeline(state: Pick<State, "entries" | "workouts">, from: numbe
   }
   for (const w of state.workouts ?? []) if (w.startedAt >= from && w.startedAt < to) push(w.startedAt, `${clock(w.startedAt)}${mark(w.startedAt)} gym: ${w.template ?? "workout"}`);
   return rows.sort((a, b) => a[0] - b[0]).slice(0, 60).map(([, l]) => l);
+}
+
+/** A plate's insides for the portion eaten: " — made of: pasta 150 g, chicken 120 g" (owner, 20 Oct). */
+function madeOf(f: { parts?: { name: string; g: number }[] } | undefined, grams: number): string {
+  const total = (f?.parts ?? []).reduce((a, p) => a + p.g, 0);
+  if (!f?.parts?.length || !total || !(grams > 0)) return "";
+  const k = grams / total;
+  return ` — made of: ${f.parts.map((p) => `${p.name} ${Math.max(1, Math.round(p.g * k))} g`).join(", ")}`;
 }
 
 /** The why behind ratings, last 14 days: "13:10 mood 4, stress 7 — 'deadline at work'". */

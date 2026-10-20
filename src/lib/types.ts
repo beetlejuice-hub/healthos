@@ -20,6 +20,8 @@ export type Food = {
   source: "off" | "usda" | "basic" | "custom" | "typical" | "ai";
   /** What you typed when the AI made it ("bolognese spaghetti w mayo") — matched next time, free. */
   aka?: string;
+  /** A plate or recipe you made: what's in the whole batch (owner, 20 Oct: the AI "only sees the title of meal"). */
+  parts?: { name: string; g: number }[];
   /** For an AI estimate: what it assumed ("a 300 ml cup, double shot"). */
   note?: string;
   barcode?: string;
