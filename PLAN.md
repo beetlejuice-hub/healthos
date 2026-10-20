@@ -1817,7 +1817,22 @@ D questions answered in chat. Numbered on from #112.
    etc, how good is the timing. like a score next to the plate, for each item and for in total too (the plate), and i can
    click on it and observe whats up. AI can reflect on this at EOD, letting me know whati should change. i know theres a
    website or app for checking how good is the food, how toxic etc, but thats for barcode readings only i think…anyway,
-   lets brainstorm ts". Brainstorm sent in chat (20 Oct); waiting on his three picks before building.
+   lets brainstorm ts". His picks (20 Oct): a number, worked out by the app ("I wont really b able to add the number or
+   letter for home foods … if its you i choose number"), goal first, shown in What I ate. (claimed: this session, 20 Oct
+   — lib/nutriscore, lib/foodscore, foods-basic, off, ai/tasks describe, FoodDay)
+   **Plan.** Each item 0–100 = **Goal 45** (protein per 100 kcal — what keeps muscle on a cut: 8 g+ full, 3 g or less
+   little) + **Quality 35** (its Nutri-Score: A 35, B 28, C 18, D 9, E 0; alcohol 0 — the EU's public formula: sugar,
+   saturated fat, salt and calories against protein, fibre and fruit/veg) + **Timing 20** (3 h+ before your bedtime full,
+   1 h or less none; alcohol near bed none). A plate = the items by calories. Under ~15 kcal (black coffee) isn't
+   scored. Tap a score → its three parts and why. **No score until quality is known** — without it an apple scores like
+   a pizza (both low protein), so a food without nutrients shows "—" and says what's missing.
+   Where quality comes from: packaged — Open Food Facts' own grade (search/scan); home food the AI describes — the same
+   call returns sugar, saturated fat, fibre, salt and fruit/veg share, the app grades it; built-in foods — those four
+   added to the table. Wording: "fits your goal less", never "bad food".
+   Phases: 1 the formulas + built-in foods + What I ate (scores, plate, breakdown); 2 Open Food Facts grade + AI
+   nutrients for home food; 3 the read-back at night says which plate fit best and the one swap that would help most
+   (no extra AI call). Checked by: the formulas on known cases (the published thresholds, worked examples), plates
+   against hand sums, e2e on the phone.
 
 ### D · Asked — answered in chat (20 Oct)
 - "Would a lower upper body then a full body day work better than the current 3 full body day?"
