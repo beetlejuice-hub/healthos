@@ -83,7 +83,8 @@ export function AboutMe() {
   const set = (patch: Partial<Profile>) => act.setProfile({ ...p, ...patch });
   return (
     <div className="card" id="about">
-      <h3>About me <span>used by the stack check</span></h3>
+      <h3>About me <span>used by the stack check and the AI</span></h3>
+      <Tags label="My goals" hint="lose fat, keep muscle…" values={p.aims ?? []} onChange={(aims) => set({ aims })} />
       <Tags label="Conditions" hint="psoriasis, asthma…" values={p.conditions} onChange={(conditions) => set({ conditions })} recognise />
       <Tags label="Medications" hint="name as on the box: Daivobet, Otezla…" values={p.meds} onChange={(meds) => set({ meds })} recognise />
       <Tags label="Allergies" hint="nuts, penicillin…" values={p.allergies} onChange={(allergies) => set({ allergies })} />

@@ -1620,3 +1620,8 @@ span.fd-score[data-band="none"] { background: none; min-width: 34px; }
 .fd-why .pill-btn { background: var(--c-bg); }
 .tile.cur .variants { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
 .tile.cur .variants .kbtn[aria-pressed="true"] { background: var(--gym); color: #1a1508; }
+/* PLAN 131: what you're working towards, asked in the AI tab while none are given */
+.goals-ask { display: grid; gap: 8px; }
+.goals-ask .note { margin: 0; }
+.goals-ask .chips .pill-btn[aria-pressed="true"] { background: var(--c-ink); color: var(--c-bg); }
+.goals-ask input { background: var(--c-card-2); border: 1px solid #ffffff14; border-radius: 12px; color: var(--c-ink); padding: 10px 12px; font: inherit; font-size: 16px; width: 100%; min-width: 0; box-sizing: border-box; }

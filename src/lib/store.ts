@@ -95,7 +95,7 @@ export type State = {
   ai: AiState;
 };
 
-export type Profile = { conditions: string[]; meds: string[]; allergies: string[]; notes: string };
+export type Profile = { conditions: string[]; meds: string[]; allergies: string[]; notes: string; /** What you're working towards, in your words (PLAN 131); unset on older docs. */ aims?: string[] };
 export const EMPTY_PROFILE: Profile = { conditions: [], meds: [], allergies: [], notes: "" };
 
 export const DEFAULT_SETTINGS: Settings = { halfLifeMin: 300, bedMinute: 23 * 60, coffeeMg: 95, bodyKg: 78, usualDrink: null };

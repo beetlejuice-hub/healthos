@@ -10,6 +10,7 @@ import { askAi, chatContext, contextNow, nightContext, refreshAiStatus, useAiSta
 import { runChatTool, type ChartSpec } from "../lib/ai/chattools";
 import { bandNow, onNights } from "../lib/band-client";
 import { ChatChart } from "./ChatChart";
+import { GoalsAsk } from "./GoalsAsk";
 import { Proposals } from "./Proposal";
 import type { Proposal } from "../lib/ai/propose";
 import { CHAT_ROUNDS, MODELS, estimateMonthUsd, timeless, type ChatTurn, type DigestItem, type ModelChoice, type Question, type Tier } from "../lib/ai/tasks";
@@ -296,9 +297,12 @@ const LOOKED: Record<string, string> = { day: "day", series: "numbers over time"
 /** "log, numbers over time" — what the reply's tools looked at; remembering and proposing aren't looking (empty: no line). */
 const lookedAt = (tools?: string[]) => [...new Set((tools ?? []).filter((t) => t !== "remember" && t !== "propose").map((t) => LOOKED[t] ?? t))].join(", ");
 const STARTERS = ["Why am I flat in the afternoon?", "Recommend a supplement or protocol to try", "What's worth logging more of?", "Explain my latest pattern"];
+/** With goals given (PLAN 131), the first starter asks for suggestions toward them. */
+const FOR_GOALS: [string, string] = ["Suggestions for my goals", "Based on my goals, what are 3 concrete things to try this week? Tie each to a goal and to my own numbers."];
 
 export function AiScreen() {
   const ai = useStore((s) => s.ai);
+  const aims = useStore((s) => (s.profile.aims?.length ?? 0) > 0);
   const { on, busy } = useAiStatus();
   const [text, setText] = useState("");
   const [err, setErr] = useState<string | null>(null);
@@ -392,7 +396,8 @@ export function AiScreen() {
         <div ref={end} />
       </div>
       {on === false && <AiOff />}
-      <div className="chips starters">{STARTERS.map((s) => <button key={s} type="button" className="pill-btn" disabled={!on || busy > 0} onClick={() => void send(s)}>{s}</button>)}</div>
+      <GoalsAsk />
+      <div className="chips starters">{(aims ? [FOR_GOALS, ...STARTERS.map((s): [string, string] => [s, s])] : STARTERS.map((s): [string, string] => [s, s])).map(([label, msg]) => <button key={label} type="button" className="pill-btn" disabled={!on || busy > 0} onClick={() => void send(msg)}>{label}</button>)}</div>
       <div className="row-add chatbox">
         <input value={text} placeholder="Ask…" aria-label="Message the AI" onChange={(e) => setText(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") void send(text); }} />
         <button type="button" className="pill-btn pri" disabled={!text.trim() || !on || busy > 0} onClick={() => void send(text)}>Send</button>

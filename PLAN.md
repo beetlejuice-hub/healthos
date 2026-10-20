@@ -1816,8 +1816,14 @@ D questions answered in chat. Numbered on from #112.
    the last of its kind and the week so far, in its "Your workout" part (lib/cardio). Defaults picked: kcal by MET, not
    by heart rate (that needs age and sex, which the app doesn't have); 3 h auto-end. Next: heart-rate zones once a max
    heart rate is known, and cardio on the Training page.
-131. [ ] **Goal-based suggestions** — "can we let ai, both health and other, the main one, give me suggestions based on my
+131. [x] **Goal-based suggestions** — "can we let ai, both health and other, the main one, give me suggestions based on my
    goals (it can ask me what my goals are) - ?"
+   Done (20 Oct): while none are given, the AI tab asks "What are you working towards?" — tap what fits (lose fat, keep
+   muscle · get stronger · sleep better · more energy · less stress · better focus) and/or say your own, Save; they live
+   in Settings → About me ("My goals", each removable). Every AI task's context has them in About me, and every task's
+   rules say to tie each suggestion to one and name it, never pushing a goal not named; the chat's first starter becomes
+   "Suggestions for my goals". Also fixed: the AI's shared rules still said an unticked supplement day was unknown —
+   now #124's rule. Tempo's AI ("other") isn't in this repo — with #136.
 132. [ ] **The AI scouts new things** — "also ai should look out for studies, workout splits, and supps, foods, everything
    and recommend me new stuff from these categories too…or perhaps look at forums too and see whats up"
 133. [ ] **More interesting morning reads** — "can we make the digest messages more intereesting? brainstorm this pls"

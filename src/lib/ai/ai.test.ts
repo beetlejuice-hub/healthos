@@ -190,12 +190,16 @@ describe("the AI knows everything about mood (owner, 2 Oct)", () => {
 });
 
 describe("the AI's timing rule (PLAN 75)", () => {
-  it("every task is told a supplement can't change a check-in minutes later, and an unticked day isn't a day without", () => {
+  it("every task is told a supplement can't change a check-in minutes later, and which days are days without (PLAN 124)", () => {
     // owner, 13 Oct: "if i take X and after 2 minutes i log very bad mood, you shouldnt connect X and low mood"
     for (const [task, text] of Object.entries(SYSTEM)) {
       expect(text, task).toMatch(/Never link a check-in to something logged less than 30 minutes before it, and for supplements not less than an hour/);
-      expect(text, task).toMatch(/an unticked day is unknown, not a day without/);
+      expect(text, task).toMatch(/not logged = not taken\); a day with nothing logged at all, and today until it's over, are unknown/);
+      expect(text, task).not.toMatch(/an unticked day is unknown/); // the 13 Oct rule, replaced on 20 Oct
     }
+  });
+  it("every task ties its suggestions to his goals when he named some (PLAN 131)", () => {
+    for (const [task, text] of Object.entries(SYSTEM)) expect(text, task).toMatch(/when About me lists "My goals", tie every suggestion/);
   });
 });
 
