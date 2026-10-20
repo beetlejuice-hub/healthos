@@ -59,6 +59,9 @@ const READ = { greeting: 'Morning! 7 h last night — a better start.', items: [
   // owner, 16 Oct: folded by default, highlighted until opened once
   const mr = pg.locator('section.morning');
   check('the morning read is new until opened', await mr.getAttribute('data-new') === 'true');
+  // owner, 20 Oct: "should add timestamp for new messages on today screen so its not just says new"
+  const when = await mr.locator('.mr-head .when').innerText().catch(() => '');
+  check(`…and says when it was written (${when})`, /^today · 07:4\d$/.test(when));
   await mr.locator('.mr-head').click(); await pg.waitForTimeout(150);
   check('opened once: not new any more, and that sticks', await mr.getAttribute('data-new') === null && (await pg.evaluate((k) => JSON.parse(localStorage.getItem(k)).ai.digest.seen, KEY)) > 0);
   check('the news isn\'t on Today — it\'s a message', !/Creatine and sleep loss/.test(card));

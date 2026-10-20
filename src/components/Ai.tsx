@@ -180,7 +180,7 @@ export function MorningRead() {
   return (
     <section className={`card morning${open ? " open" : ""}`} aria-label="Morning read" data-new={fresh || undefined}>
       <button type="button" className="mr-head" aria-expanded={open} onClick={() => setOpen(!open)}>
-        <span className="k">Morning read</span><span className="when">{d.day === today ? "today" : "from yesterday"}</span>{fresh && <span className="rd-new">new</span>}
+        <span className="k">Morning read</span><span className="when">{d.day === today ? "today" : "yesterday"}{d.at != null && <> · <time>{clock(d.at)}</time></>}</span>{fresh && <span className="rd-new">new</span>}
         {!open && <span className="mr-dots" aria-hidden="true">{d.items.map((i, k) => <i key={k} className={`mr-${i.type}`} />)}</span>}
         <span className="chev" aria-hidden="true">{open ? "▴" : "▾"}</span>
       </button>
@@ -225,7 +225,7 @@ export function NightRead() {
   return (
     <section className={`card night${open ? " open" : ""}`} aria-label="Your day, read back" data-new={fresh || undefined}>
       <button type="button" className="mr-head" aria-expanded={open} onClick={() => setOpen(!open)}>
-        <span className="k">Your day, read back</span><span className="when">{tonight ? "tonight" : "last night"}</span>{fresh && <span className="rd-new">new</span>}
+        <span className="k">Your day, read back</span><span className="when">{tonight ? "tonight" : "last night"} · <time>{clock(n.at)}</time></span>{fresh && <span className="rd-new">new</span>}
         <span className="chev" aria-hidden="true">{open ? "▴" : "▾"}</span>
       </button>
       <p className={`greet${open ? "" : " clamp2"}`} onClick={() => !open && setOpen(true)}>{n.summary}</p>

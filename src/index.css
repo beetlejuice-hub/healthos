@@ -644,7 +644,7 @@ a { color: inherit; }
 .morning { gap: 8px; }
 .mr-head { all: unset; cursor: pointer; display: flex; align-items: center; gap: 8px; min-height: 28px; }
 .mr-head .k { font: 600 11px var(--f-sans); letter-spacing: .1em; text-transform: uppercase; color: var(--c-ink-2); }
-.mr-head .when { font-size: 12px; color: var(--c-dim); }
+.mr-head .when { display: inline; font-size: 12px; color: var(--c-dim); }
 .mr-head .chev, .mr-row .chev { margin-left: auto; color: var(--c-dim); font-size: 12px; }
 .mr-dots { display: inline-flex; gap: 4px; margin-left: 4px; } .mr-dots i { width: 6px; height: 6px; border-radius: 50%; background: var(--c-ink-2); }
 .mr-dots i.mr-pattern { background: var(--mood); } .mr-dots i.mr-study { background: var(--supp); } .mr-dots i.mr-fact { background: var(--caf); } .mr-dots i.mr-protocol { background: var(--gym); }

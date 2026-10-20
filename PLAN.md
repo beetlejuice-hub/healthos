@@ -1725,7 +1725,10 @@ D questions answered in chat. Numbered on from #112.
    Vitamin D (the stack check's names), so no second one is made. The restock offer on Today stays. Checked:
    propose.test (fail on the old code), e2e/suppout.cjs (chip + chat cards on the phone), propose/supplog/stack/
    catchup/suppamount/today2 still pass.
-122. [ ] **Times, not just "new"** — "should add timestamp for new messages on today screen so its not just says new"
+122. [x] **Times, not just "new"** — "should add timestamp for new messages on today screen so its not just says new".
+   The morning read and the read-back say when they were written: "today · 07:40", "tonight · 21:30" (the "new" tag
+   stays until opened). Checked: e2e/morningread.cjs, e2e/night.cjs — which caught the time wrapping onto its own line
+   (a global `.when` grid), fixed.
 123. [ ] **More than one answer** — "Even at ai page i should be able to choose multiple answers for a question"
 
 ### B · Better versions of what's there

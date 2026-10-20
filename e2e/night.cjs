@@ -52,6 +52,8 @@ const ANSWERS = { night: () => NIGHT, digest: () => ({ greeting: 'Hi', items: []
   let txt = await card.innerText();
   const foldedH = await card.evaluate((e) => Math.round(e.getBoundingClientRect().height));
   check(`arrives folded — the summary, not the rest — and highlighted as new (${foldedH} px)`, /stress hit 8 at 14:00/.test(txt) && !/YOUR NOTES|Your notes|A 10-minute walk/i.test(txt) && await isNew() && /new/i.test(await card.locator('.mr-head').innerText()) && foldedH < 170);
+  const when = await card.locator('.mr-head .when').innerText().catch(() => '');
+  check(`…saying when it was written, not just "new" (${when})`, /^tonight · 21:30$/.test(when));
   await card.scrollIntoViewIfNeeded();
   const bx = await card.boundingBox(); await pg.screenshot({ path: OUT + 'night-card-new.png', clip: { x: Math.max(0, bx.x - 24), y: bx.y - 12, width: Math.min(390, bx.width + 48), height: bx.height + 24 } });
   const bar = await card.evaluate((e) => getComputedStyle(e, '::before').width);
