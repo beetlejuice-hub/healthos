@@ -8,7 +8,7 @@
 
 import type { Entry } from "./types";
 import { mean, median, difference } from "./stats";
-import { DAY } from "./time";
+import { DAY, dayLabel } from "./time";
 
 export const FAT = { windowDays: 14, minReadings: 3, outlierPts: 5, lo: 3, hi: 60 };
 
@@ -55,4 +55,17 @@ export function bodyFat(entries: Entry[], now: number): FatSummary {
 export function parseFat(v: string): number | null {
   const n = Number(v.replace(",", ".").replace("%", "").trim());
   return v.trim() && Number.isFinite(n) && n >= FAT.lo && n <= FAT.hi ? Math.round(n * 10) / 10 : null;
+}
+
+/**
+ * For the AI (PLAN 134; owner, 20 Oct: "My weight going up could be muscle too, the creatin hitting plus im back at gym"):
+ * the scale's body fat as 2-week averages and the change against the 2 weeks before, and creatine's first dose while its
+ * water still shows — so a rising scale isn't read as fat. Nothing to say: no lines.
+ */
+export function fatLines(entries: Entry[], now: number, creatineFrom: number | null): string[] {
+  const f = bodyFat(entries, now), sg = (v: number) => `${v >= 0 ? "+" : "−"}${Math.abs(v).toFixed(1)}`;
+  return [
+    ...(f.now ? [`Body fat (the scale's, 2-week average of ${f.now.n} readings): ${f.now.pct.toFixed(1)} %, fat ${f.now.fatKg.toFixed(1)} kg, lean ${f.now.leanKg.toFixed(1)} kg${f.change ? `; against the 2 weeks before: fat ${sg(f.change.fatKg)} kg, lean ${sg(f.change.leanKg)} kg — ${f.change.clear ? "a clear change" : "inside the scale's own swing, so not a change yet"}` : ""}.`] : []),
+    ...(creatineFrom != null && now - creatineFrom < 28 * DAY && creatineFrom <= now ? [`Creatine first logged ${dayLabel(creatineFrom)}: the first weeks hold 1–2 kg of water in the muscles — a rising scale then isn't fat.`] : []),
+  ];
 }

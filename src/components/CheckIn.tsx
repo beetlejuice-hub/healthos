@@ -5,26 +5,29 @@
 
 import { useMemo } from "react";
 import { act, useStore } from "../lib/store";
-import { checkIn } from "../lib/checkin";
+import { checkIn, creatineFrom } from "../lib/checkin";
+import { bodyFat } from "../lib/bodyfat";
 import { carbsG } from "../lib/energy";
 
 const n = (v: number) => Math.round(v).toLocaleString("en-GB");
 
 export function CheckInCard({ now }: { now: number }) {
-  const entries = useStore((s) => s.entries), goals = useStore((s) => s.goals), settings = useStore((s) => s.settings);
+  const entries = useStore((s) => s.entries), goals = useStore((s) => s.goals), settings = useStore((s) => s.settings), supps = useStore((s) => s.supplements);
   const last = settings.checkins?.at(-1)?.at;
   const c = useMemo(() => {
     const weights = entries.flatMap((e) => (e.kind === "weight" ? [{ at: e.at, kg: e.kg }] : []));
     const sets = entries.flatMap((e) => (e.kind === "set" ? [e] : []));
-    return checkIn(weights, sets, now, goals.kcal, last);
-  }, [entries, goals.kcal, now, last]);
+    // water from creatine, or muscle the scale's body fat can see, isn't read as fat (PLAN 134)
+    return checkIn(weights, sets, now, goals.kcal, last, { creatineFrom: creatineFrom(entries, supps), fat: bodyFat(entries, now).change });
+  }, [entries, goals.kcal, now, last, supps]);
   if (!c.due || "need" in c) return null;
+  // a held cut (PLAN 134: creatine's water or muscle on the scale) is still his to make
   const answer = (apply: boolean) => {
-    const kcalAfter = apply ? c.newKcal : c.kcal;
+    const step = c.delta || c.held || 0, kcalAfter = apply ? c.kcal + step : c.kcal;
     // Calories move with carbs; protein and fat stay where you set them.
-    if (apply && c.delta) act.setGoals({ ...goals, kcal: kcalAfter, c: Math.max(0, goals.c + carbsG(c.delta)) });
+    if (apply && step) act.setGoals({ ...goals, kcal: kcalAfter, c: Math.max(0, goals.c + carbsG(step)) });
     // With the goal from your burn, the step is kept on top of it (PLAN 95), so tomorrow's goal doesn't undo it.
-    const energy = settings.energy?.mode === "burn" && apply && c.delta ? { energy: { ...settings.energy, offset: settings.energy.offset + c.delta } } : {};
+    const energy = settings.energy?.mode === "burn" && apply && step ? { energy: { ...settings.energy, offset: settings.energy.offset + step } } : {};
     act.setSettings({ ...energy, checkins: [...(settings.checkins ?? []), { at: Date.now(), lossPerWeek: Math.round(c.lossPerWeek * 100) / 100, kcalBefore: c.kcal, kcalAfter }] });
   };
   return (
@@ -38,6 +41,7 @@ export function CheckInCard({ now }: { now: number }) {
       <span className="acts">
         {c.delta
           ? <><button type="button" className="pill-btn" onClick={() => answer(false)}>Keep {n(c.kcal)}</button><button type="button" className="pill-btn pri" onClick={() => answer(true)}>Set {n(c.newKcal)}</button></>
+          : c.held ? <><button type="button" className="pill-btn" onClick={() => answer(true)}>Cut 150 anyway</button><button type="button" className="pill-btn pri" onClick={() => answer(false)}>Keep {n(c.kcal)}</button></>
           : <button type="button" className="pill-btn pri" onClick={() => answer(false)}>OK</button>}
       </span>
     </div>

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { checkIn, liftsDropping } from "./checkin";
+import { checkIn, creatineFrom, liftsDropping } from "./checkin";
 import type { LoggedSet } from "./training";
 
 const DAY = 864e5;
@@ -81,5 +81,35 @@ describe("lifts dropping, per muscle (owner, 15 Oct: \"ok to 2\")", () => {
   it("the card says which muscles", () => {
     const c = checkIn(weighIns(-0.5), lifting(0.93), NOW, 2600);
     expect("why" in c && c.why).toMatch(/but chest and back and quads are getting weaker \(8-week trend\)/);
+  });
+});
+
+// PLAN 134 (owner, 20 Oct: "My weight going up could be muscle too, the creatin hitting plus im back at gym")
+describe("when the scale isn't fat: creatine water, or muscle the body fat can see", () => {
+  const cut = (c: ReturnType<typeof checkIn>) => ("delta" in c ? c.delta : null);
+  it("gaining 0.2 a week, creatine started 10 days ago → hold the cut, and say why", () => {
+    const c = checkIn(weighIns(0.2), lifting(1), NOW, 2600, undefined, { creatineFrom: NOW - 10 * DAY });
+    expect(cut(c)).toBe(0);
+    expect("held" in c && c.held).toBe(-150); // still offered: he may have been on it long before he logged it
+    expect("why" in c && c.why).toMatch(/but creatine started Sat 10 Oct, and it holds 1–2 kg of water in the muscles over the first weeks/);
+  });
+  it("creatine started 6 weeks ago: past the water, the rule cuts as written", () => {
+    expect(cut(checkIn(weighIns(0.2), lifting(1), NOW, 2600, undefined, { creatineFrom: NOW - 42 * DAY }))).toBe(-150);
+  });
+  it("the scale's body fat clearly down while weight holds → keep; a fat change inside the swing doesn't count", () => {
+    const c = checkIn(weighIns(-0.1), lifting(1), NOW, 2600, undefined, { fat: { clear: true, fatKg: -0.6, leanKg: 0.5 } });
+    expect(cut(c)).toBe(0);
+    expect("why" in c && c.why).toMatch(/fat went down 0\.6 kg in 2 weeks while lean went up 0\.5 kg, so the weight isn't fat — keep it$/);
+    expect(cut(checkIn(weighIns(-0.1), lifting(1), NOW, 2600, undefined, { fat: { clear: false, fatKg: -0.6, leanKg: 0.5 } }))).toBe(-150);
+    expect(cut(checkIn(weighIns(-0.1), lifting(1), NOW, 2600, undefined, { fat: { clear: true, fatKg: 0.4, leanKg: -0.2 } }))).toBe(-150);
+  });
+  it("only the cut is held: losing too fast still adds", () => {
+    expect(cut(checkIn(weighIns(-1), lifting(1), NOW, 2450, undefined, { creatineFrom: NOW - 5 * DAY }))).toBe(150);
+  });
+  it("creatine's first dose: by its name, taken, not \"didn't\"", () => {
+    const supps = [{ id: "creatine", name: "Creatine" }, { id: "mag", name: "Magnesium" }];
+    const es = [{ kind: "supp", at: 30, suppId: "creatine", status: "skipped" }, { kind: "supp", at: 50, suppId: "creatine", status: "taken" }, { kind: "supp", at: 10, suppId: "mag", status: "taken" }, { kind: "supp", at: 90, suppId: "creatine", status: "taken" }];
+    expect(creatineFrom(es, supps)).toBe(50);
+    expect(creatineFrom(es.slice(2, 3), supps)).toBeNull();
   });
 });

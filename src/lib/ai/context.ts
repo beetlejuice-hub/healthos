@@ -5,6 +5,8 @@
  * Pure, so it's tested and you can see exactly what leaves the phone (Settings → AI → "What the AI sees").
  */
 
+import { fatLines } from "../bodyfat";
+import { creatineFrom } from "../checkin";
 import type { State } from "../store";
 import type { DayFacts } from "../insights";
 import type { Finding } from "../findings";
@@ -216,6 +218,8 @@ function baseContext({ state, now, days, findings, patterns, weight, today = [],
     profile.aims?.length ? `My goals (in my words): ${profile.aims.join("; ")}.` : "My goals: not given yet — the app asks for them in the AI tab.",
     `Conditions: ${profile.conditions.join(", ") || "none listed"}. Medications: ${profile.meds.join(", ") || "none listed"}. Allergies: ${profile.allergies.join(", ") || "none listed"}.${profile.notes ? ` Notes: ${profile.notes}` : ""}`,
     `Goals: ${goals.kcal} kcal/day, ${goals.p} g protein.${en?.mode === "burn" ? ` The calorie goal follows my burn: burn − the deficit for ${en.pace} kg/week, to lose fat while keeping and building muscle${en.offset ? `; two-week check-ins moved it ${en.offset > 0 ? "+" : ""}${en.offset}` : ""}.` : ""}${weight ? ` Weight trend: ${weight.kg.toFixed(1)} kg, ${weight.perWeek >= 0 ? "+" : ""}${weight.perWeek.toFixed(2)} kg/week.` : ""}`,
+    // PLAN 134: what the scale's weight is made of, and creatine's water
+    ...fatLines(state.entries, now, creatineFrom(state.entries, supplements)),
     ...(today.length ? ["## This morning (readiness, as the app shows it)", ...today.map((l) => `- ${l}`)] : []),
     ...(onToday.length ? ["## On Today right now, from you (the user reads these there; they aren't in this chat)", ...onToday.map((l) => (l.startsWith("  ") ? l : `- ${l}`))] : []),
     "## My stack",

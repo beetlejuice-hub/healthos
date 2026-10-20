@@ -1827,8 +1827,17 @@ D questions answered in chat. Numbered on from #112.
 132. [ ] **The AI scouts new things** — "also ai should look out for studies, workout splits, and supps, foods, everything
    and recommend me new stuff from these categories too…or perhaps look at forums too and see whats up"
 133. [ ] **More interesting morning reads** — "can we make the digest messages more intereesting? brainstorm this pls"
-134. [ ] **Body fat / muscle** — "My weight going up could be muscle too, the creatin hitting plus im back at gym..should i
+134. [x] **Body fat / muscle** — "My weight going up could be muscle too, the creatin hitting plus im back at gym..should i
    log body fat % too?"
+   Done (20 Oct): the "Body fat %" box was already on every weigh-in (Today and Log, #20), read as 2-week averages split
+   into fat and lean kg. What was missing is that nothing used it. Now: (1) the two-week check-in doesn't cut 150 kcal
+   when the scale says "not losing" but the weight isn't fat — creatine first logged in the last 4 weeks (1–2 kg of water
+   in the muscles), or the scale's body fat clearly down while lean goes up. It says why and offers "Cut 150 anyway",
+   since he may have taken creatine before he logged it. His thresholds are unchanged; only the cut waits. (2) The AI gets
+   the body fat line (2-week average, fat and lean kg against the 2 weeks before, clear or inside the scale's swing) and
+   creatine's water while it lasts. Answer to his question: yes, use the box most mornings. One reading means little; the
+   2-week averages are what count. A tape at the navel once a week would be steadier than the scale (not built — say if
+   wanted).
 
 ### C · New parts
 135. [ ] **Noticings** — "a small text box where i can write things like I went downstairs to do something, something else

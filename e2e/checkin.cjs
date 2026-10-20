@@ -44,5 +44,21 @@ const { chromium, APP, OUT, handle } = require('./harness.cjs');
   s = await st();
   check('keeping changes nothing but is remembered', s.goals.kcal === 2450 && s.settings.checkins.length === 2);
   check('nothing scrolls sideways', await pg.evaluate(() => document.documentElement.scrollWidth <= (window.matchMedia('(max-width: 700px)').matches ? 390 : window.innerWidth)));
+
+  // PLAN 134 (owner, 20 Oct: "My weight going up could be muscle too, the creatin hitting plus im back at gym"): two weeks
+  // on, the scale up 0.2 a week — but creatine started 10 days ago. The cut is held and says why; still his to make.
+  await pg.clock.fastForward(14 * 864e5); await seed(28, 0.2);
+  await pg.evaluate(() => { const k = 'healthos.v1:u-test', s = JSON.parse(localStorage.getItem(k)), now = Date.now();
+    s.supplements = [...(s.supplements || []).filter((x) => x.id !== 'creatine'), { id: 'creatine', name: 'Creatine', dose: '5 g', slot: 'morning', at: 480, active: true }];
+    s.entries.push(...[10, 9, 8, 6, 4, 2, 1].map((d) => ({ id: 'cr' + d, kind: 'supp', at: now - d * 864e5, suppId: 'creatine', status: 'taken', slot: 'morning' })));
+    localStorage.setItem(k, JSON.stringify(s)); });
+  await pg.reload(); await pg.waitForTimeout(600);
+  const t3 = (await card.innerText().catch(() => '')).replace(/\s+/g, ' ');
+  check(`creatine 10 days in, the scale up: the cut is held, and says why (${t3.slice(0, 220)}…)`, /gaining about 0\.\d\d kg a week, under 0\.3 — but creatine started .* holds 1–2 kg of water/.test(t3) && /keep 2,450 kcal/i.test(t3));
+  check('…still his call: "Cut 150 anyway" next to Keep', await card.getByRole('button', { name: 'Cut 150 anyway' }).count() === 1 && await card.getByRole('button', { name: 'Keep 2,450' }).count() === 1);
+  await card.evaluate((el) => el.scrollIntoView({ block: 'center' })); await pg.waitForTimeout(100); await card.screenshot({ path: OUT + 'checkin-creatine.png' });
+  await card.getByRole('button', { name: 'Cut 150 anyway' }).click(); await pg.waitForTimeout(200);
+  s = await st();
+  check(`"Cut 150 anyway" cuts (${s.goals.kcal})`, s.goals.kcal === 2300 && s.settings.checkins.length === 3 && s.settings.checkins[2].kcalAfter === 2300);
   console.log('errors: ' + JSON.stringify(errs)); await b.close();
 })().catch((e) => { console.log('CRASH ' + e.message); process.exit(1); });
