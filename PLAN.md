@@ -1958,3 +1958,16 @@ D questions answered in chat. Numbered on from #112.
 - "should i log body fat % too?" (with #134)
 
 Order: A first (113 → 123), then B, then C; D in the chat. (claimed: this session, 20 Oct — A items as they're worked.)
+
+## 20 Oct, later — workout notes (owner, his words)
+140. [ ] **Dumbbell kg: one convention** — "In workout, some exercises like db bench press was logged w all kgs, not kg per
+   dumbbel and now data is lessed up … All sets on that example is logged as overall kg not per hand so far. I mean it
+   makes sense that it counts it overall but then dont put kg per dumbbell … lat raise was overall not per hand. So just
+   fix all pls to make it matching so wont get cofusinf". (claimed: this session, 20 Oct — training.ts volume/isDumbbell,
+   Workout.tsx label)
+141. [ ] **"Cant put things like 40,5 kg duh…pls fix"** — the workout weight box. (claimed: this session — Workout.tsx kg input)
+142. [ ] **Cardio hides the lifting** — "When starting cardio kg tracker for strength workout should disappear". (claimed:
+   this session — Workout.tsx Session)
+143. [ ] **Smart tracking and an overall strength graph** — "Can we make it so workouts are smart, rep and kg tracking is
+   smart and can we add more tracking to it so possibly a graph of my overall strength computed from kgs lifted and reps
+   how its evolving? Make it smart". (claimed: this session — lib/strength, Workout/Training pages)
