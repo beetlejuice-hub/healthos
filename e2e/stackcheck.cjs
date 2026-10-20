@@ -22,7 +22,7 @@ const { chromium, APP, OUT, handle } = require('./harness.cjs');
   await pg.getByLabel('Conditions').press('Enter');
   await pg.getByLabel('Medications').fill('Xyzzamab');
   check('unknown medication is said out loud', await pg.getByText(/Not in the checked list yet/).count() === 1);
-  await pg.getByLabel('Medications').fill('Otezla'); await pg.locator('#about .tags').nth(1).getByRole('button', { name: 'Add' }).click();
+  await pg.getByLabel('Medications').fill('Otezla'); await pg.locator('#about .tags', { has: pg.getByLabel('Medications') }).getByRole('button', { name: 'Add' }).click(); // by its label: My goals now comes first (PLAN 131)
   await pg.locator('#about').screenshot({ path: OUT + 'sc-about.png' });
 
   // Log a beer so alcohol is checked.
