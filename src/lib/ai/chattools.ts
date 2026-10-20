@@ -229,7 +229,7 @@ function remember(input: Record<string, unknown>, d: ToolData): ToolOut {
 function propose(call: ToolCall, d: ToolData): ToolOut {
   const { supplements, settings, ai, goals } = d.state;
   if (!goals) return { text: "goals unavailable", error: true };
-  const p = makeProposal(call.input ?? {}, { supplements, settings, goals, ai }, call.id);
+  const p = makeProposal(call.input ?? {}, { supplements, settings, goals, ai }, call.id, d.now);
   if (typeof p === "string") return { text: p, error: true };
   return { text: `Shown under your reply as a card: "${p.label}". Nothing changes until they tap Apply — say it's waiting for them, not that it's done.`, proposal: p };
 }

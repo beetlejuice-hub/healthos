@@ -23,6 +23,8 @@ describe("finding your supplement by name", () => {
     expect(findSupp(stack, "magnesium")).toMatchObject({ id: "mag" });
     expect((findSupp(stack, "vitamin") as Supplement[]).map((s) => s.id)).toEqual(["d", "c"]);
     expect(findSupp(stack, "zinc")).toBeNull();
+    // owner, 20 Oct: "vit d3" from his mom's stack is his Vitamin D, not a new one
+    expect([findSupp(stack, "vit d"), findSupp(stack, "Vit. D3"), findSupp(stack, "D3")]).toMatchObject([{ id: "d" }, { id: "d" }, { id: "d" }]);
   });
 });
 
@@ -76,6 +78,40 @@ describe("stop, ran out, taking again", () => {
   it("already so is refused — running low counts as still taking", () => {
     expect(makeProposal({ change: "supplement_status", supplement: "ashwagandha", status: "stopped", why: "" }, setup(), "p")).toBe("Ashwagandha is already stopped");
     expect(makeProposal({ change: "supplement_status", supplement: "vitamin c", status: "taking", why: "" }, setup(), "p")).toBe("Vitamin C is already being taken");
+  });
+});
+
+describe("logging something taken (owner, 20 Oct: \"i took from my moms stack … it should log without offering the restock option\")", () => {
+  const out = stack.map((s) => (s.id === "d" ? { ...s, active: false, status: "out" as const } : s));
+  it("one you ran out of: logged at the time said, with the amount, and it stays ran out", () => {
+    const p = ok(makeProposal({ change: "log_supplement", supplement: "vit d", amount: "2000 IU", time: "08:30", why: "from mom's bottle" }, setup({ supplements: out }), "p", NOW));
+    expect(p.label).toBe("Log Vitamin D 2000 IU · 08:30 · you're out: this doesn't restock it");
+    const r = done(applyProposal(p, setup({ supplements: out, entries: [] }), NOW, "x"));
+    expect(r.supplements).toBeUndefined();
+    expect(r.intake).toEqual({ op: "add", entry: { kind: "supp", at: new Date("2026-10-16T08:30:00").getTime(), suppId: "d", status: "taken", slot: "morning" } });
+    expect(r.text).toBe("Logged Vitamin D 2000 IU at 08:30 — still marked as ran out.");
+  });
+  it("a different amount than the plan's dose is kept on the intake", () => {
+    const p = ok(makeProposal({ change: "log_supplement", supplement: "magnesium", amount: "400 mg", why: "" }, setup(), "p", NOW));
+    const r = done(applyProposal(p, setup({ entries: [] }), NOW, "x"));
+    expect(r.intake).toMatchObject({ op: "add", entry: { suppId: "mag", amount: "400 mg", at: NOW } });
+  });
+  it("one that isn't yours: kept as a stopped one-off so it has a name — nothing asks for it on Today", () => {
+    const p = ok(makeProposal({ change: "log_supplement", supplement: "Vitamin B complex", amount: "1 tablet", why: "" }, setup(), "p", NOW));
+    expect(p.label).toBe("Log Vitamin B complex 1 tablet · 10:00 · not in your stack: logged as a one-off");
+    const r = done(applyProposal(p, setup({ entries: [] }), NOW, "nb"));
+    expect(r.supplements!.at(-1)).toMatchObject({ id: "nb", name: "Vitamin B complex", dose: "1 tablet", active: false, status: "stopped", slot: "morning" });
+    expect(r.intake).toMatchObject({ op: "add", entry: { suppId: "nb", status: "taken", at: NOW } });
+  });
+  it("a \"didn't take\" for that slot becomes \"took\", like the one-tap chip", () => {
+    const skipped = { id: "sk", kind: "supp" as const, at: NOW - 3600e3, suppId: "d", status: "skipped" as const, slot: "morning" as const };
+    const r = done(applyProposal(ok(makeProposal({ change: "log_supplement", supplement: "vitamin d", why: "" }, setup(), "p", NOW)), setup({ entries: [skipped] }), NOW, "x"));
+    expect(r.intake).toEqual({ op: "update", id: "sk", patch: { status: "taken", at: NOW } });
+  });
+  it("refused: later than now, a bad time, two matches", () => {
+    expect(makeProposal({ change: "log_supplement", supplement: "magnesium", time: "11:30", why: "" }, setup(), "p", NOW)).toBe("11:30 is later than now (10:00) — only something already taken can be logged");
+    expect(makeProposal({ change: "log_supplement", supplement: "magnesium", time: "9am", why: "" }, setup(), "p", NOW)).toMatch(/^time:/);
+    expect(makeProposal({ change: "log_supplement", supplement: "vitamin", why: "" }, setup(), "p", NOW)).toBe("\"vitamin\" matches Vitamin D and Vitamin C — name the one you mean");
   });
 });
 

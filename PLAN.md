@@ -1715,9 +1715,16 @@ D questions answered in chat. Numbered on from #112.
    of "trust these numbers". Checked: between.test (an evening supplement that does nothing, with a 1.5-point evening
    dip: blamed in 26 of 30 fake months before, ≤ 1 now; at half the evenings 13 → ≤ 3; the gym's planted lift still
    found), ai.test (the line), e2e/between.cjs.
-121. [ ] **Log a supplement you're out of, or one that isn't yours** — "Also I'm technically out of vit d and dont have vit
+121. [x] **Log a supplement you're out of, or one that isn't yours** — "Also I'm technically out of vit d and dont have vit
    b but i took from my moms stack so i should be able to tell ai i took x amount of vit d3 and it should log without
-   offering the restock option for vit d3. I mean it can offfer but also should be able to just log."
+   offering the restock option for vit d3. I mean it can offfer but also should be able to just log." The one-tap chips
+   ("Took one now?") left out anything ran out, and the AI could only propose restocking. Now: ran-out ones are on the
+   chips, marked "out" — a tap logs it and it stays ran out; the AI's propose has `log_supplement` (name, amount, time
+   today) → a "Log it" card: one you're out of is logged as is, one that isn't yours is kept as a stopped one-off (named,
+   with its history; Today never asks for it); a "didn't take" that morning becomes "took". "vit d3" / "D3" find your
+   Vitamin D (the stack check's names), so no second one is made. The restock offer on Today stays. Checked:
+   propose.test (fail on the old code), e2e/suppout.cjs (chip + chat cards on the phone), propose/supplog/stack/
+   catchup/suppamount/today2 still pass.
 122. [ ] **Times, not just "new"** — "should add timestamp for new messages on today screen so its not just says new"
 123. [ ] **More than one answer** — "Even at ai page i should be able to choose multiple answers for a question"
 

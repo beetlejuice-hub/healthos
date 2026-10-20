@@ -3,13 +3,17 @@
  * in app"). The chat's `propose` tool lands here: `makeProposal` checks what the AI asked for against your setup and words
  * it for the card; `applyProposal` makes the change when you tap Apply — checked again then, since a card can be tapped
  * days later (the supplement deleted, already added, the dose already changed). Nothing here changes anything by itself.
+ * `log_supplement` logs something taken — one you ran out of, or one that isn't yours (owner, 20 Oct: "i took from my moms
+ * stack so i should be able to tell ai i took x amount of vit d3 and it should log without offering the restock option").
  */
 
 import type { AiState, Experiment, State } from "../store";
-import { SLOTS, SUPP_STATUS_PATCH, slotTime, suppStatus, type Goals, type Slot, type Supplement } from "../types";
+import { SLOTS, SUPP_STATUS_PATCH, slotOf, slotTime, suppStatus, type Entry, type Goals, type Slot, type Supplement } from "../types";
 import { changeDose, doseAt } from "../dose";
 import { DEFAULT_ENERGY, PACES, withKcal, type Energy } from "../energy";
-import { localDay } from "../time";
+import { atMinute, clock, localDay, minuteOfDay } from "../time";
+import { logIntake, type Intake } from "../supplog";
+import { resolve } from "../stackcheck/check";
 import { EXPERIMENT_MEASURES, PACE_NAMES, PROPOSE_CHANGES, type ProposeChange } from "./tasks";
 
 type SetStatus = "taking" | "stopped" | "out";
@@ -24,15 +28,17 @@ export type Proposal = {
   supp?: { id?: string; name: string; dose?: string; slots?: Slot[]; status?: SetStatus };
   goals?: { kcal?: number; p?: number; pace?: number };
   experiment?: { name: string; how: string; days: number; measure: string };
+  /** log_supplement: when it was taken, and how much when they said. */
+  log?: { at: number; amount?: string };
   /** When you tapped Apply, or Not now. */
   applied?: number;
   dismissed?: number;
 };
 
-export type Setup = Pick<State, "supplements" | "goals" | "settings"> & { ai: Pick<AiState, "experiments"> };
-export type Applied = { supplements?: Supplement[]; goals?: Goals; energy?: Energy; experiments?: Experiment[]; text: string };
+export type Setup = Pick<State, "supplements" | "goals" | "settings"> & { ai: Pick<AiState, "experiments">; entries?: Entry[] };
+export type Applied = { supplements?: Supplement[]; goals?: Goals; energy?: Energy; experiments?: Experiment[]; intake?: Intake; text: string };
 
-const fold = (s: string) => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/\s+/g, " ").trim();
+const fold = (s: string) => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/\bvit\b\.?/g, "vitamin").replace(/\s+/g, " ").trim();
 const str = (x: unknown, max: number) => (typeof x === "string" && x.trim() && x.trim().length <= max ? x.trim() : null);
 const int = (x: unknown, lo: number, hi: number) => (typeof x === "number" && Number.isInteger(x) && x >= lo && x <= hi ? x : null);
 const kcalText = (n: number) => n.toLocaleString("en-GB");
@@ -42,23 +48,48 @@ const ALREADY: Record<SetStatus, string> = { taking: "being taken", stopped: "st
 const isNow = (s: Supplement, status: SetStatus) => suppStatus(s) === status || (status === "taking" && suppStatus(s) === "low");
 export const GOAL_RANGE = { kcal: [1200, 5000], p: [40, 350] } as const;
 
-/** Your supplement by name: the same name however written, else the one name that contains it (or it contains). */
+/**
+ * Your supplement by name: the same name however written ("vit d" is "vitamin d"), else the one name that contains it (or
+ * it contains), else the one that's the same thing to the stack check ("D3" is your "Vitamin D", "fekete kömény" your
+ * "Black cumin seed oil") — so logging "vit d3" doesn't make a second Vitamin D.
+ */
 export function findSupp(list: Supplement[], name: string): Supplement | Supplement[] | null {
   const q = fold(name);
   if (!q) return null;
   const same = list.find((s) => fold(s.name) === q);
   if (same) return same;
   const near = list.filter((s) => { const n = fold(s.name); return n && (n.includes(q) || q.includes(n)); });
-  return near.length === 1 ? near[0] : near.length ? near : null;
+  if (near.length) return near.length === 1 ? near[0] : near;
+  const kind = resolve(name), alike = kind ? list.filter((s) => resolve(s.name)?.key === kind.key) : [];
+  return alike.length === 1 ? alike[0] : alike.length ? alike : null;
 }
 
 const slotWords = (slots: Slot[]) => SLOTS.filter((x) => slots.includes(x.id)).map((x) => x.name).join(" + ");
 
 /** What the AI proposed, checked and worded — or why it can't be proposed (sent back to the AI so it can fix it). */
-export function makeProposal(input: Record<string, unknown>, s: Setup, id: string): Proposal | string {
+export function makeProposal(input: Record<string, unknown>, s: Setup, id: string, now = Date.now()): Proposal | string {
   const change = input.change as ProposeChange;
   const why = str(input.why, 200) ?? "";
   if (!PROPOSE_CHANGES.includes(change)) return `change must be one of ${PROPOSE_CHANGES.join(", ")}`;
+
+  if (change === "log_supplement") {
+    const name = str(input.supplement, 60);
+    if (!name) return "supplement: its name, up to 60 characters";
+    const found = findSupp(s.supplements, name);
+    if (Array.isArray(found)) return `"${name}" matches ${found.map((x) => x.name).join(" and ")} — name the one you mean`;
+    const amount = input.amount == null ? undefined : str(input.amount, 40);
+    if (amount === null) return "amount: what they took, e.g. \"2000 IU\", \"1 capsule\" — or leave it out for the usual dose";
+    let at = now;
+    if (input.time != null) {
+      const m = typeof input.time === "string" ? input.time.match(/^(\d{1,2}):(\d{2})$/) : null;
+      if (!m || +m[1] > 23 || +m[2] > 59) return "time: \"HH:MM\" today, or leave it out for now";
+      at = atMinute(localDay(now), +m[1] * 60 + +m[2]);
+      if (at > now) return `${input.time} is later than now (${clock(now)}) — only something already taken can be logged`;
+    }
+    const st = found ? suppStatus(found) : null;
+    const note = !found ? " · not in your stack: logged as a one-off" : st === "out" ? " · you're out: this doesn't restock it" : st === "stopped" ? " · stays stopped" : "";
+    return { id, change, why, supp: { ...(found ? { id: found.id } : {}), name: found?.name ?? name }, log: { at, ...(amount ? { amount } : {}) }, label: `Log ${found?.name ?? name}${amount ? ` ${amount}` : ""} · ${clock(at)}${note}` };
+  }
 
   if (change === "add_supplement" || change === "dose" || change === "supplement_status") {
     const name = str(input.supplement, 60);
@@ -118,6 +149,17 @@ export function makeProposal(input: Record<string, unknown>, s: Setup, id: strin
 /** Make the change now, against your setup as it is now — or say why it can't be made any more. */
 export function applyProposal(p: Proposal, s: Setup, now: number, id: string): Applied | string {
   if (p.applied) return "Already applied.";
+  if (p.change === "log_supplement") {
+    const { at, amount } = p.log!;
+    const near = p.supp!.id ? s.supplements.find((x) => x.id === p.supp!.id) : findSupp(s.supplements, p.supp!.name);
+    const cur = Array.isArray(near) ? undefined : near ?? undefined;
+    // Not yours: kept as a stopped one, so the intake has a name and a history — and nothing asks for it on Today.
+    const one: Supplement | undefined = cur ? undefined : { id, name: p.supp!.name, dose: amount ?? "", slot: slotOf(minuteOfDay(at)), at: slotTime(slotOf(minuteOfDay(at))), ...SUPP_STATUS_PATCH.stopped };
+    const sup = cur ?? one!;
+    const r = logIntake(sup, s.entries ?? [], at), extra = amount && amount !== doseAt(sup, at) ? { amount } : {};
+    const intake: Intake = r.op === "add" ? { op: "add", entry: { ...r.entry, ...extra } } : { op: "update", id: r.id, patch: { ...r.patch, ...extra } };
+    return { ...(one ? { supplements: [...s.supplements, one] } : {}), intake, text: `Logged ${sup.name}${amount ? ` ${amount}` : ""} at ${clock(at)}${cur && suppStatus(cur) === "out" ? " — still marked as ran out" : ""}.` };
+  }
   if (p.change === "add_supplement") {
     const { name, dose = "", slots = ["morning"] } = p.supp!;
     const found = findSupp(s.supplements, name);

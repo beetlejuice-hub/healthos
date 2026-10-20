@@ -7,11 +7,11 @@
 import { useState } from "react";
 import { act, getState, newId } from "../lib/store";
 import { applyProposal, type Proposal } from "../lib/ai/propose";
-import type { Supplement } from "../lib/types";
+import type { Entry, Supplement } from "../lib/types";
 import { clock, dayLabel, localDay } from "../lib/time";
 
 const WHERE: Record<Proposal["change"], [string, string]> = {
-  add_supplement: ["#log/stack", "Stack"], dose: ["#log/stack", "Stack"], supplement_status: ["#log/stack", "Stack"],
+  add_supplement: ["#log/stack", "Stack"], dose: ["#log/stack", "Stack"], supplement_status: ["#log/stack", "Stack"], log_supplement: ["#today", "Today"],
   goals: ["#settings", "Settings"], experiment: ["#insights/training", "Insights → Training"],
 };
 
@@ -27,6 +27,8 @@ function applyNow(at: number, p: Proposal, onAdded?: (s: Supplement) => void): {
   if (r.supplements) act.setSupplements(r.supplements);
   if (r.goals) act.setGoals(r.goals);
   if (r.energy) act.setSettings({ energy: r.energy });
+  if (r.intake?.op === "add") act.addEntry(r.intake.entry);
+  else if (r.intake) act.updateEntry(r.intake.id, r.intake.patch as Partial<Entry>);
   mark(at, p.id, { applied: now, dismissed: undefined }, r.experiments ? { experiments: r.experiments } : {});
   const added = p.change === "add_supplement" ? r.supplements?.at(-1) : undefined;
   if (added && onAdded) onAdded(added);
@@ -46,7 +48,7 @@ export function Proposals({ at, list, now, onAdded }: { at: number; list: Propos
             {p.why && !p.applied && !p.dismissed && <small className="pr-why">{p.why}</small>}
             {p.applied ? <small className="pr-done">✓ {s && !s.bad ? s.text : `Applied ${localDay(p.applied) === localDay(now) ? clock(p.applied) : dayLabel(p.applied)}`} · <a href={href}>see it in {where}</a></small>
               : <div className="pr-acts">
-                  <button type="button" className="pill-btn pri" onClick={() => apply(p)}>Apply</button>
+                  <button type="button" className="pill-btn pri" onClick={() => apply(p)}>{p.change === "log_supplement" ? "Log it" : "Apply"}</button>
                   {!p.dismissed && <button type="button" className="pill-btn" onClick={() => mark(at, p.id, { dismissed: now })}>Not now</button>}
                   {p.dismissed && <small className="pr-skip">not applied</small>}
                 </div>}
