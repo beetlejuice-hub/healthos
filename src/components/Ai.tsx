@@ -12,7 +12,7 @@ import { bandNow, onNights } from "../lib/band-client";
 import { ChatChart } from "./ChatChart";
 import { Proposals } from "./Proposal";
 import type { Proposal } from "../lib/ai/propose";
-import { CHAT_ROUNDS, MODELS, estimateMonthUsd, type ChatTurn, type DigestItem, type ModelChoice, type Question, type Tier } from "../lib/ai/tasks";
+import { CHAT_ROUNDS, MODELS, estimateMonthUsd, timeless, type ChatTurn, type DigestItem, type ModelChoice, type Question, type Tier } from "../lib/ai/tasks";
 import { judge } from "../lib/ai/apply";
 import { dailyFacts } from "../lib/insights";
 import { addDays, atMinute, clock, dayLabel, localDay } from "../lib/time";
@@ -103,7 +103,7 @@ async function makeQuestions(day: string) {
   act.setAi((a) => ({
     questions: { day, list },
     asked: [...a.asked, ...list.map((q) => q.text)].slice(-60),
-    daily: [...a.daily, ...list.filter((q) => q.repeat === "daily" && !a.daily.some((d) => d.key === q.key))].slice(-5),
+    daily: [...a.daily.filter(timeless), ...list.filter((q) => q.repeat === "daily" && !a.daily.some((d) => d.key === q.key))].slice(-5),
   }));
 }
 
@@ -248,7 +248,8 @@ export function AiQuestions() {
   const answeredToday = useMemo(() => new Set(entries.filter((e) => e.kind === "answer" && localDay(e.at) === today).map((e) => (e.kind === "answer" ? e.key : ""))), [entries, today]);
   const fresh = ai.questions?.day === today ? ai.questions.list : [];
   const stopped = new Set(ai.stopped ?? []), skipped = new Set(ai.skipped?.day === today ? ai.skipped.keys : []);
-  const list: Question[] = [...fresh, ...ai.daily.filter((d) => !fresh.some((q) => q.key === d.key))].filter((q) => !answeredToday.has(q.key) && !stopped.has(q.key) && !skipped.has(q.key));
+  // a daily question kept from before 20 Oct with a day's numbers in it ("Stress is at 6 this morning") isn't asked again
+  const list: Question[] = [...fresh, ...ai.daily.filter(timeless).filter((d) => !fresh.some((q) => q.key === d.key))].filter((q) => !answeredToday.has(q.key) && !stopped.has(q.key) && !skipped.has(q.key));
   const [q] = list;
   // owner, 15 Oct: "for questions make sure i can write custom reply"
   const [own, setOwn] = useState("");

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { fromDescribed, judge } from "./apply";
 import { ASK_MORE, CONTEXT_MAX, buildContext, onTodayLines, dayTimeline, feelByTime, moodJournal } from "./context";
-import { checkDescribe, checkDigest, checkNight, costUsd, estimateMonthUsd, jsonFrom, SYSTEM, type CallLog } from "./tasks";
+import { checkDescribe, checkDigest, checkNight, checkQuestions, costUsd, estimateMonthUsd, jsonFrom, SYSTEM, type CallLog } from "./tasks";
 import { parseItem } from "../quickadd";
 import { mealFood } from "../units";
 import { runChatTool } from "./chattools";
@@ -292,5 +292,17 @@ describe("the AI sees what's in a plate (owner, 20 Oct: \"it only sees the title
   it("the chat's find finds a plate by what's in it", () => {
     const out = runChatTool({ id: "x", name: "find", input: { text: "chicken" } }, { state: { ...(st as object), supplements: [], settings: {}, ai: EMPTY_AI } as never, band: null, now: t + 1000 });
     expect(out.text).toMatch(/food: Chicken rice plate \(360 kcal\) — made of Chicken breast, Rice, cooked/);
+  });
+});
+
+describe("a daily question reads right on any day (owner, 20 Oct: \"question posed as today but it was last day\")", () => {
+  const q = (text: string, repeat: "daily" | "once") => ({ id: "q", text, why: "w", options: ["a", "b"], key: "k", repeat });
+  it("one carrying today's numbers is asked once, not daily; a timeless one stays daily", () => {
+    const out = checkQuestions({ questions: [q("Stress is at 6 this morning. What's sitting on it most today?", "daily"), q("What's sitting on your stress most today?", "daily")] }).questions;
+    expect(out.map((x) => x.repeat)).toEqual(["once", "daily"]);
+  });
+  it("the prompt says so, and bans questions about how they log", () => {
+    expect(SYSTEM.questions).toMatch(/no numbers or facts from today/);
+    expect(SYSTEM.questions).toMatch(/questions about how they log/);
   });
 });

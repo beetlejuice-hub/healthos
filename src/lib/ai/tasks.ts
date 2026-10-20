@@ -196,8 +196,8 @@ Personality (owner, 15 Oct: "just a bit of personality too"): a sharp, warm frie
 Tools (owner: "pull data based on what i ask and answer it nicely"): the context is only an overview — it has a week of days and no band nights or check-in journal. For anything specific — a date, a stretch of days, "when did I last…", how one thing went, with vs without something, how they slept, their sessions — call day, series, find, compare, nights or sessions and answer from what they return, not from memory of the summary. Every number you state comes from the context or a tool result; never work one out yourself beyond simple arithmetic on them. Call several at once when you need several. show_chart when a trend over days or weeks says it better than words (it's drawn under your reply — mention it). remember for a lasting fact the user tells you or a pattern that keeps showing; never guesses. propose when they give you a protocol or plan or ask you to set something up (owner: "understand protocols i give him, and help me set up in app"): one call per change; then say what's waiting for them to tap — never say it's done, they apply it. Web search only for outside facts (a study, a food, a supplement), never for their data. Today's date is the last day in the context.
 Formatting: reply in plain Markdown (never JSON) — **bold** for the one thing that matters most (a number, the answer, the next step), *italic* sparingly, short "- " lists when listing 3+ things, blank lines between paragraphs. No headings, tables or code blocks.`,
   questions: `${VOICE}
-Task: ask 1–3 genuinely useful questions that help the app find patterns faster. Base each on something specific in the context: a dip at a time of day, a pattern that might be explained by something not logged, a gap in what's tracked. Good: "Your energy is often low around 4pm — did you have a big lunch today?" with options. Bad: generic wellness questions.
-Each question: tappable options (2–5, short), a one-line "why" that says what it would help find, a short snake_case key, and repeat="daily" if asking it every day would build a useful signal, else "once". Don't repeat questions listed as already asked.`,
+Task: ask 1–3 genuinely useful questions that help the app find patterns faster. Base each on something specific in the context: a dip at a time of day, a pattern that might be explained by something not logged, a gap in what's tracked, their goals (losing fat while keeping and building muscle, sleep, focus). Good: "Your energy is often low in the afternoon — did you have a big lunch today?" with options. Bad (owner, 20 Oct: "questions feel way too generic rn, like weight logged before bathroom"): generic wellness questions and questions about how they log ("before the bathroom?", "did you weigh after eating?") — ask about their life and body, not the app.
+Each question: tappable options (2–5, short), a one-line "why" that says what it would help find, a short snake_case key, and repeat="daily" if asking it every day would build a useful signal, else "once". A daily question is shown again every day word for word, so its text must hold on any day: no numbers or facts from today ("Stress is at 6 this morning" is once, never daily); put today's fact in "why" if it matters. Don't repeat questions listed as already asked.`,
   digest: `${VOICE}
 Task: write the user's morning read — it's written this morning, after last night, and it's what they see when they wake up. Search the web for 1–2 recent studies or findings relevant to THIS user (their stack, goals, conditions, patterns). Mix: an interesting pattern from their data (from the context, don't invent), a study or fun fact with its source, and optionally one protocol to try as an experiment (concrete: what to do, for how many days, what the app will measure).
 Answer with ONLY a JSON object, no prose:
@@ -295,8 +295,16 @@ export function checkNight(a: NightAnswer): NightAnswer {
   };
 }
 
+/**
+ * A question asked again every day is shown word for word without a new AI call, so it must read right on any day (owner,
+ * 20 Oct: "Stress is at 6 this morning…" came back the next day). Numbers are today's facts: no digits in a daily one.
+ */
+export const timeless = (q: { text: string }) => !/\d/.test(q.text);
+
 export function checkQuestions(a: QuestionsAnswer): QuestionsAnswer {
-  return { questions: (a.questions ?? []).filter((q) => q.text && q.options?.length >= 2 && q.options.length <= 6).slice(0, 3).map((q) => ({ ...q, key: q.key.toLowerCase().replace(/[^a-z0-9_]+/g, "_").slice(0, 40) || "q" })) };
+  return { questions: (a.questions ?? []).filter((q) => q.text && q.options?.length >= 2 && q.options.length <= 6).slice(0, 3).map((q) => ({ ...q,
+    // a daily one carrying today's numbers is asked once instead
+    repeat: q.repeat === "daily" && !timeless(q) ? "once" as const : q.repeat, key: q.key.toLowerCase().replace(/[^a-z0-9_]+/g, "_").slice(0, 40) || "q" })) };
 }
 
 export function checkChat(a: ChatAnswer): ChatAnswer {

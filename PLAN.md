@@ -1686,8 +1686,11 @@ D questions answered in chat. Numbered on from #112.
    timeline says "ate Chicken rice plate (360 kcal, P 35 g) — made of: Chicken breast 100 g, Rice, cooked 150 g" for the
    portion eaten; the chat's find finds a plate by what's in it. Plates saved before today have no parts to show.
    Checked: ai.test (parts kept, the timeline line, find by "chicken").
-118. [ ] **A daily question with yesterday's facts** — screenshot: "Stress is at 6 this morning. What's sitting on it most
-   today?" ("asked daily") — "question posed as today but it was last day and it was answered already".
+118. [x] **A daily question with yesterday's facts** — screenshot: "Stress is at 6 this morning. What's sitting on it most
+   today?" ("asked daily") — "question posed as today but it was last day and it was answered already". A daily question is shown again
+   every day word for word (no new AI call), and this one carried that morning's number. Now a daily question can't hold
+   numbers (tasks `timeless`: one that does is asked once), the prompt says its text must hold on any day, and Today
+   drops the stale one already saved. Checked: ai.test, e2e/questions.cjs.
 119. [ ] **Nonsense "worth a look"** — screenshot: "On the day after a gym day, Black cumin seed oil / L-theanine /
    Creatine tends to be higher (1.0 vs 0.8)" — "makes not much sense..?? more l theanine on gym days??" (a supplement
    taken isn't an outcome).
@@ -1704,7 +1707,8 @@ D questions answered in chat. Numbered on from #112.
 124. [ ] **Not logged = not taken** — "if i dont take a supp, like not log it, it should be taken as if i did not take it.
    if i click in the followup that i took it, data should be modified accordingly" (changes the rule from 13 Oct that an
    unticked day is unknown).
-125. [ ] **Questions less generic** — "questions feel way too generic rn, like weight logged before bathroom, etc"
+125. [ ] **Questions less generic** — "questions feel way too generic rn, like weight logged before bathroom, etc" — prompt
+   (20 Oct): tie questions to their patterns and goals; no questions about how they log. To judge on real questions.
 126. [ ] **Exercise variants** — "On workouts can we have the exercises as like incline bench press and the i can choose
    wheter machine, bench w barbell, bemch w dumbbell etc? Idk if it changes anything tho"
 127. [ ] **What makes a night good and restorative; restlessness** — "pls dive into what makes a nights sleep a good nights
