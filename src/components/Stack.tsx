@@ -92,8 +92,8 @@ export function SuppMatrix({ days, period }: { days: GlanceDay[]; period: number
   return (
     <Panel cls="gl-supps" kick="Supplements" title="Taken, day by day"
       ans={<>{rates.filter((r) => r.of).map((r) => `${r.s.name} ${Math.round((r.took / r.of) * 100)}%`).join(" · ")}.{low.length ? ` Under 80%: ${low.map((r) => r.s.name).join(", ")}.` : ""} Whether each one shows in how you feel is in Connections above.</>}
-      meta={`last ${list.length} days · % of days you ticked your stack`}
-      foot={<><span className="lgd"><i style={{ background: "var(--supp)" }} />taken</span><span className="lgd"><i style={{ background: "var(--i-line-2)" }} />not taken</span><span className="lgd"><i style={{ background: "var(--i-panel-2)" }} />stack not ticked that day</span><span className="lgd"><i className="ln" style={{ background: "var(--g-now)" }} />dose changed</span></>}>
+      meta={`last ${list.length} days · % of days you used the app`}
+      foot={<><span className="lgd"><i style={{ background: "var(--supp)" }} />taken</span><span className="lgd"><i style={{ background: "var(--i-line-2)" }} />not taken or not logged</span><span className="lgd"><i style={{ background: "var(--i-panel-2)" }} />nothing logged that day</span><span className="lgd"><i className="ln" style={{ background: "var(--g-now)" }} />dose changed</span></>}>
       <div ref={ref} className="gl-chart">
         <svg viewBox={`0 0 ${w} ${H}`} width={w} height={H} role="img" aria-label="Supplements taken each day">
           {active.map((s, r) => { const y = top + r * (rh + gap), rate = rates[r]; return (

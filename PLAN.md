@@ -1741,9 +1741,18 @@ D questions answered in chat. Numbered on from #112.
    e2e/inbox.cjs, e2e/ai.cjs.
 
 ### B · Better versions of what's there
-124. [ ] **Not logged = not taken** — "if i dont take a supp, like not log it, it should be taken as if i did not take it.
+124. [x] **Not logged = not taken** — "if i dont take a supp, like not log it, it should be taken as if i did not take it.
    if i click in the followup that i took it, data should be modified accordingly" (changes the rule from 13 Oct that an
-   unticked day is unknown).
+   unticked day is unknown). Done (20 Oct): lib/suppdays is
+   the one rule every engine reads — a supplement is taken (logged), not taken (said "didn't", or not logged on a day you
+   used the app), or unknown (nothing logged at all that day — the app wasn't opened — or before its first ever log, since
+   you may have taken it before it was in the app; defaults picked, say if either should change). The morning catch-up's
+   "took it" logs it on that day, which turns the day into taken. Day facts (Worth a look, on/off, Connections, the
+   chat's compare, Stack grid), the sleep/mind grids, the training sessions and After a supplement all use it; the texts
+   that said "unticked days don't count" now say the new rule. Worth knowing: forgetting to log on chaotic days will
+   look like "worse days without it" — the morning catch-up is the guard. Checked: suppdays.test (each case; the engines
+   get the unlogged days as without and find a planted lift — fail on the old day facts), chattools.test (now 29 days
+   without, not 14), e2e suppafter/stack/glance/connections/trainingb/mindpage/sleep/supplog/catchup/dose/scout/top.
 125. [ ] **Questions less generic** — "questions feel way too generic rn, like weight logged before bathroom, etc" — prompt
    (20 Oct): tie questions to their patterns and goals; no questions about how they log. To judge on real questions.
 126. [ ] **Exercise variants** — "On workouts can we have the exercises as like incline bench press and the i can choose

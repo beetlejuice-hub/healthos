@@ -200,7 +200,7 @@ export const FACTORS: Factor[] = [
 ];
 
 /**
- * One row per supplement: days you took it against days you said you didn't; days with no answer are left out (PLAN 74).
+ * One row per supplement: days you took it against days you didn't (said so, or didn't log it on a day you used the app — lib/suppdays); days with nothing logged are left out.
  * Only supplements with MIN_SIDE answered nights each way get a row, so a stack of ten doesn't fill the grid with dots.
  */
 export function suppFactors(supplements: { id: string; name: string }[], evs: Evening[]): Factor[] {

@@ -4,7 +4,7 @@
  * - the plan has it in this part of the day and it isn't answered yet → the tap is that answer;
  * - it was answered "didn't take" → it becomes "took";
  * - otherwise it's another intake (`again`), on top of the first.
- * The plan's ✓ / ✗ stay as they are: "didn't take" is what lets the app compare days with and without (PLAN 74). Pure.
+ * The plan's ✓ / ✗ stay as they are; since 20 Oct a day it isn't logged on counts as not taken too (lib/suppdays). Pure.
  */
 
 import { answerSlot, slotOf, slotsOf, type Entry, type EntryOf, type Supplement } from "./types";

@@ -82,8 +82,9 @@ describe("chat part 2: compare, nights, sessions (PLAN 67)", () => {
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
   };
   /**
-   * 60 days: mood ~6, +1 on days magnesium was taken (even days); magnesium answered "not taken" on days i%4==1, left
-   * unanswered otherwise; a beer every 3rd evening, and the next morning's resting heart rate 4 bpm higher; days 50–52 with
+   * 60 days: mood ~6, +1 on days magnesium was taken (even days); magnesium answered "not taken" on days i%4==1, not
+   * logged on the other odd days (since 20 Oct that's "not taken" too: owner, "if i dont … log it, it should be taken as if
+   * i did not take it"); a beer every 3rd evening, and the next morning's resting heart rate 4 bpm higher; days 50–52 with
    * nothing logged at all. No effect of drinks on mood is planted.
    */
   function world2() {
@@ -119,10 +120,10 @@ describe("chat part 2: compare, nights, sessions (PLAN 67)", () => {
     expect(t).toMatch(/not clear — the range crosses zero/);
     expect(t).toMatch(/with: average [\d.]+\/10 over 19 days; without: [\d.]+\/10 over 38/); // 57 logged days, not 60
   });
-  it("planted: mood about 1 point higher on magnesium days — taken against answered not taken; unanswered left out", () => {
+  it("planted: mood about 1 point higher on magnesium days — taken against not taken (said, or not logged); days with nothing logged left out", () => {
     const t = run2("compare", { measure: "mood", thing: "supplement", supplement: "magnes", when: "same_day", ...span2 }).text;
     expect(t).toContain("Mood with Magnesium vs without");
-    expect(t).toMatch(/over 2[78] days; without: [\d.]+\/10 over 1[45]\./); // taken on even days, "not taken" on i%4==1 only
+    expect(t).toMatch(/over 2[78] days; without: [\d.]+\/10 over 29\./); // taken on even days; every odd day is without, but the 51st (nothing logged)
     const diff = Number(t.match(/Difference \+([\d.]+)\/10/)?.[1]);
     expect(diff).toBeGreaterThan(0.6); expect(diff).toBeLessThan(1.4);
     expect(t).toMatch(/: clear\./);

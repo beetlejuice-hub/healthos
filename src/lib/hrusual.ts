@@ -217,7 +217,7 @@ export function afterEach(times: number[], hrMinutes: HrMinute[], workouts: Span
     const mine = rise(c.at);
     if (mine == null) continue;
     const day = localDay(c.at), cm = minuteOfDay(c.at);
-    // days compared against: with `known`, only days it was answered (taken at another time, or "didn't") — PLAN 74
+    // days compared against: with `known`, only days it's known for (lib/suppdays: taken at another time, or not taken)
     const ctl = days.filter((d) => d !== day && (!opts.known || opts.known.has(d))).map((d) => ({ day: d, t0: atMinute(d, 0) + cm * MIN }))
       .filter((x) => !isCaffeineNear(caf, x.t0) && !avoided(x.t0, 3) && clear(x.t0))
       .flatMap((x) => { const v = rise(x.t0); return v == null ? [] : [{ day: x.day, v, t0: x.t0 }]; });

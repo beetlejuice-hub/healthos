@@ -60,7 +60,7 @@ function world() {
   check(`fits the phone (${await pg.evaluate(() => document.documentElement.scrollWidth)} px)`, await pg.evaluate(() => document.documentElement.scrollWidth) <= 390);
   await card.screenshot({ path: OUT + 'suppafter.png' });
   await card.getByRole('button', { name: 'Magnesium' }).click(); await pg.waitForTimeout(300);
-  check(`no "didn't take" days for magnesium: says what counts as a day without (or that it's taken at the same time daily)`, /Days without Magnesium are the days you answer/.test(await card.innerText()) || /at the same time every day/.test(await card.innerText()));
+  check(`no "didn't take" days for magnesium: says what counts as a day without (or that it's taken at the same time daily)`, /Days without Magnesium are the days you used the app and didn't log it/.test(await card.innerText()) || /at the same time every day/.test(await card.innerText()));
   check('Magnesium, same time every night: says there\'s nothing to compare yet, no finding', /at the same time every day, so there's nothing to compare yet/.test(await card.innerText()) && await card.locator('tr[data-sure="clear"], tr[data-sure="likely"]').count() === 0);
   console.log('errors:', JSON.stringify(errs));
   await b.close();

@@ -26,7 +26,7 @@ export function feelAfter(times: number[], checks: Check[], key: FeelKey, opts: 
     const v = c[key]; if (v == null) continue;
     const since = times.filter((t) => t <= c.at && c.at - t <= 4 * H).map((t) => c.at - t);
     if (since.length && since.every((d) => d < H)) continue;
-    // a "without" check-in only on a day it was answered — an unticked day is unknown, not a day without (PLAN 74)
+    // a "without" check-in only on a day it's known — taken, said "didn't", or not logged on a day the app was used (lib/suppdays)
     if (!since.some((d) => d >= H) && opts.known && !opts.known.has(localDay(c.at))) continue;
     pts.push({ bin: Math.floor(minuteOfDay(c.at) / WINDOW_MIN), v, after: since.some((d) => d >= H) });
   }

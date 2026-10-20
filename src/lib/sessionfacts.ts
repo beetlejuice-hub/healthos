@@ -11,6 +11,7 @@ import type { Entry } from "./types";
 import type { Night, Factor, Outcome, Sure } from "./sleep";
 import type { Session } from "./liftstrength";
 import { localDay, addDays, HOUR } from "./time";
+import { suppByDay } from "./suppdays";
 
 export type SessionFacts = {
   /** g of carbs logged in the 4 h before; null when nothing was logged that day before it started. */ carbs4h: number | null;
@@ -19,7 +20,7 @@ export type SessionFacts = {
   /** That morning's HRV in your lowest quarter of the session mornings (from 8 with HRV). */ hrvLow: boolean | null;
   /** A caffeinated drink in the 2 h before. */ coffee: boolean;
   /** Started at 15:00 or later. */ evening: boolean;
-  /** Each supplement that day: taken, said "didn't take", or no answer (left out). */ supps: Record<string, boolean | null>;
+  /** Each supplement that day: taken, or not (said "didn't", or not logged on a day the app was used); unknown left out. */ supps: Record<string, boolean | null>;
   /** Energy (else mood) at the first check-in within 3 h after it ended. */ feltAfter: number | null;
 };
 
@@ -31,6 +32,7 @@ export function sessionFacts(ss: Session[], entries: Entry[], ns: Night[] = []):
   for (const f of foods) kcalByDay.set(localDay(f.at), (kcalByDay.get(localDay(f.at)) ?? 0) + f.macros.kcal);
   const hrvs = ss.map((s) => ns.find((n) => n.day === localDay(s.startedAt))?.hrv ?? null).filter((v): v is number => v != null).sort((a, b) => a - b);
   const q1 = hrvs.length >= 8 ? hrvs[Math.floor((hrvs.length - 1) * 0.25)] : null;
+  const suppsBy = suppByDay(entries); // not logged = not taken, on days you used the app (owner, 20 Oct)
   return ss.map((s) => {
     const t = s.startedAt, day = localDay(t), end = s.endedAt ?? t + HOUR;
     const dayFood = foods.filter((f) => localDay(f.at) === day && f.at < t);
@@ -42,8 +44,7 @@ export function sessionFacts(ss: Session[], entries: Entry[], ns: Night[] = []):
     const usual = base.length >= 7 ? base[Math.floor((base.length - 1) / 2)] : null;
     const under3 = usual != null && three.every((v) => v != null) ? usual - (three as number[]).reduce((a, b) => a + b, 0) / 3 : null;
     const hrv = ns.find((n) => n.day === day)?.hrv ?? null;
-    const supps: Record<string, boolean | null> = {};
-    for (const e of entries) if (e.kind === "supp" && localDay(e.at) === day) supps[e.suppId] = supps[e.suppId] === true || e.status === "taken";
+    const supps: Record<string, boolean | null> = Object.fromEntries(suppsBy.get(day) ?? []);
     const after = entries.find((e): e is Extract<Entry, { kind: "feel" }> => e.kind === "feel" && e.at >= end && e.at < end + 3 * HOUR && (e.energy != null || e.mood != null));
     return {
       carbs4h, asleep: night?.asleep ?? null, under3, hrvLow: q1 != null && hrv != null ? hrv <= q1 : null,

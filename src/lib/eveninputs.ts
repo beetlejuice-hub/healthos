@@ -8,6 +8,7 @@ import { caffeineAt } from "./caffeine";
 import { alcoholDoses, caffeineDoses } from "./insights";
 import type { evenings } from "./sleep";
 import type { Entry, Workout } from "./types";
+import { suppAnswers } from "./suppdays";
 
 export function eveningInputs(entries: Entry[], workouts: Workout[], halfLifeMin: number): Parameters<typeof evenings>[1] {
   const doses = caffeineDoses(entries);
@@ -18,6 +19,6 @@ export function eveningInputs(entries: Entry[], workouts: Workout[], halfLifeMin
     foods: entries.flatMap((e) => (e.kind === "food" ? [{ at: e.at, kcal: e.macros.kcal, c: e.macros.c }] : [])),
     sessions: workouts.map((w) => ({ start: w.startedAt, end: w.endedAt ?? w.startedAt + 3_600_000 })),
     checks: entries.flatMap((e) => (e.kind === "feel" && e.stress != null ? [{ at: e.at, stress: e.stress }] : [])),
-    supps: entries.flatMap((e) => (e.kind === "supp" ? [{ at: e.at, suppId: e.suppId, status: e.status }] : [])),
+    supps: suppAnswers(entries), // not logged = not taken (owner, 20 Oct)
   };
 }

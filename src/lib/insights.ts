@@ -13,6 +13,7 @@ import { alcoholCurve, type AlcoholDose } from "./alcohol";
 import { currentKg } from "./body";
 import { atMinute, localDay, minuteOfDay, addDays, startOfDay, DAY, MIN } from "./time";
 import { correlation, difference, mean, median, sd, type Range } from "./stats";
+import { suppByDay } from "./suppdays";
 import { volume } from "./training";
 import { macrosOf } from "./nutrition";
 
@@ -104,14 +105,15 @@ export type DayFacts = {
   stress: number | null;
   taken: Set<string>;
   /**
-   * Supplements answered "didn't take" that day and not taken. A supplement's day without it is only one of these — not a
-   * day it simply wasn't ticked (PLAN 74; owner, 13 Oct: "i dont have much data in app where i didnt take it..so how does
+   * Supplements not taken that day: answered "didn't take", or not logged on a day the app was used (lib/suppdays; owner,
+   * 20 Oct: "if i dont take a supp, like not log it, it should be taken as if i did not take it" — replacing PLAN 74's
+   * rule that an unticked day was unknown; owner, 13 Oct, then: "i dont have much data in app where i didnt take it..so how does
    * it make an assumption that it causes my off mood"). Use `suppDay` for the three-way answer.
    */
   skipped: Set<string>;
   /** Anything eaten or drunk was logged that day — so "no caffeine" means none, not unknown. */
   logged: boolean;
-  /** At least one supplement was ticked or skipped — so an unticked one was really not taken. */
+  /** Supplements are known that day (logged, or the app was used after they were first logged): "took: none" means none. */
   stackAnswered: boolean;
   lateCaffeineMg: number;
   /** Food logged at or after 21:00. */
@@ -145,6 +147,8 @@ export function dailyFacts(entries: Entry[], workouts: Workout[], settings: Sett
   const trainedDays = new Set(workouts.map((w) => localDay(w.startedAt)));
   const sleepBy = new Map<string, number>();
   for (const e of of(entries, "sleep")) if (e.rating != null && !sleepBy.has(localDay(e.at))) sleepBy.set(localDay(e.at), e.rating);
+  // not logged = not taken, on days you used the app (lib/suppdays; owner, 20 Oct)
+  const suppsBy = suppByDay(entries);
   const out: DayFacts[] = [];
   for (let day = fromDay; day <= toDay; day = addDays(day, 1)) {
     const es = byDay.get(day) ?? [];
@@ -166,10 +170,10 @@ export function dailyFacts(entries: Entry[], workouts: Workout[], settings: Sett
       kcal: foods.length ? es.reduce((a, e) => a + (macrosOf(e)?.kcal ?? 0), 0) : null,
       proteinG: foods.length ? es.reduce((a, e) => a + (macrosOf(e)?.p ?? 0), 0) : null,
       energy: avg("energy"), mood: avg("mood"), focus: avg("focus"), stress: avg("stress"),
-      taken: new Set(of(es, "supp").filter((s) => s.status === "taken").map((s) => s.suppId)),
-      skipped: new Set(of(es, "supp").filter((s) => s.status === "skipped" && !of(es, "supp").some((t) => t.suppId === s.suppId && t.status === "taken")).map((s) => s.suppId)),
+      taken: new Set([...(suppsBy.get(day) ?? [])].filter(([, took]) => took).map(([id]) => id)),
+      skipped: new Set([...(suppsBy.get(day) ?? [])].filter(([, took]) => !took).map(([id]) => id)),
       logged: foods.length > 0 || of(es, "drink").length > 0,
-      stackAnswered: of(es, "supp").length > 0,
+      stackAnswered: (suppsBy.get(day)?.size ?? 0) > 0,
       lateCaffeineMg: caf.filter((d) => minuteOfDay(d.at) >= LATE_CAFFEINE_MIN).reduce((a, d) => a + d.caffeineMg, 0),
       lateEat: foods.some((f) => minuteOfDay(f.at) >= 21 * 60),
       bigMealKcal: biggestMeal(foods),
@@ -222,7 +226,7 @@ export function pairs(facts: DayFacts[]): Pair[] {
 
 export type SuppEffect = { suppId: string; metric: "energy" | "mood" | "focus"; on: number; off: number; diff: Range | null; need: number };
 
-/** Took it (true), answered "didn't" (false), or no answer for it that day (null — unknown, never a day without). */
+/** Took it (true), not (false: said "didn't", or not logged on a day the app was used), or unknown (null: nothing logged that day, or before it was first logged). */
 export const suppDay = (d: { taken: Set<string> | string[]; skipped?: Set<string> | string[] }, id: string): boolean | null => {
   const has = (x: Set<string> | string[] | undefined) => (x instanceof Set ? x.has(id) : !!x?.includes(id));
   return has(d.taken) ? true : has(d.skipped) ? false : null;

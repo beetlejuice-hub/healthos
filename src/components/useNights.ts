@@ -6,6 +6,7 @@ import { evenings, nights, type Evening, type Night } from "../lib/sleep";
 import { stepsByDay } from "../lib/steps";
 import { DAY, localDay } from "../lib/time";
 import type { Entry } from "../lib/types";
+import { suppAnswers } from "../lib/suppdays";
 
 /** The band's nights in the last `span` days and what each evening before held, and each worn day's steps — the Sleep, Heart and Mind pages share them. */
 export function useNights(band: BandData | null, data: Lanes, entries: Entry[], halfLifeMin: number, now: number, span: number): { ns: Night[]; evs: Evening[]; steps: Map<string, number> } {
@@ -33,6 +34,6 @@ function eveningsOf(ns: Night[], data: Lanes, entries: Entry[], halfLifeMin: num
     foods: entries.flatMap((e) => (e.kind === "food" ? [{ at: e.at, kcal: e.macros.kcal, c: e.macros.c }] : [])),
     sessions: data.workouts.map((w) => ({ start: w.start, end: w.end })),
     checks: entries.flatMap((e) => (e.kind === "feel" && e.stress != null ? [{ at: e.at, stress: e.stress }] : [])),
-    supps: entries.flatMap((e) => (e.kind === "supp" ? [{ at: e.at, suppId: e.suppId, status: e.status }] : [])),
+    supps: suppAnswers(entries), // not logged = not taken (owner, 20 Oct)
   });
 }

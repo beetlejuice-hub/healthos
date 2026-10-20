@@ -35,7 +35,7 @@ export type GlanceDay = {
   checkins: number;
   /** Supplements ticked "taken" that day; `stackAnswered`: any supplement was ticked or skipped (so an untaken one was really not taken). */
   taken?: string[]; stackAnswered?: boolean;
-  /** Supplements answered "didn't take" that day (PLAN 74). */
+  /** Supplements not taken that day — said so, or not logged on a day the app was used (lib/suppdays). */
   skipped?: string[];
 };
 
