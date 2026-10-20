@@ -1982,3 +1982,19 @@ Order: A first (113 → 123), then B, then C; D in the chat. (claimed: this sess
 143. [ ] **Smart tracking and an overall strength graph** — "Can we make it so workouts are smart, rep and kg tracking is
    smart and can we add more tracking to it so possibly a graph of my overall strength computed from kgs lifted and reps
    how its evolving? Make it smart". (claimed: this session — lib/strength, Workout/Training pages)
+   Plan (20 Oct):
+   - Why: one line that says whether he's getting stronger overall, and weights that follow how the sets actually went.
+   - Overall strength (lib/strength): each lift's best estimated 1-rep max a week (kg and reps, Epley, working sets).
+     The line moves each week by the average % change of the lifts done that week, each against its own last value
+     (chain-linked like a stock index). A 16 kg lateral raise and a 100 kg squat count alike, a lift added later doesn't
+     make it jump, and a typo-sized jump (over 20 % in a week) is capped. "Stronger / dropping / holding / not clear yet"
+     comes from every lift's 8-week trend pooled, with its 90 % range — the same maths as the muscle rows (#82) — so a
+     good day isn't called progress. Kg lifted a week beside it. Shown on the Workout screen and the Training page.
+   - Smarter next weight (lib/progress): every set 3+ reps over the target → two steps up; the same weight missed two
+     sessions running with reps not climbing → about 10 % down to build back; otherwise as now (all hit → one step up,
+     else repeat). Inside a session: a set 3+ reps over the target → the next set one step up; 3+ under → one step down,
+     saying why. A plateau note when the last 3 sessions of a lift didn't beat the one before.
+   - Tested with: planted lifts (+1 % a week through ±2 % noise → found "stronger", about +1 %; flat with noise → not
+     clear; a heavy lift added halfway → no jump; a 315 kg typo → capped), and known-answer cases for each rule. E2e:
+     the chart on a phone; a 12-rep set moves the next set up.
+   - Phases: 1 = all of the above. 2 (his pick) = rep ranges per exercise (8–12) instead of one target, and RPE.
