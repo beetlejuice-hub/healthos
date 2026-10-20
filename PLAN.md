@@ -1799,6 +1799,12 @@ D questions answered in chat. Numbered on from #112.
    whatever?) looks like it has a much more advanced food logging sections so maybe if my loggings go there, it could kind
    of figure out what other nutrients that foods has and lmk? and lots of other stuff that i log here in app but not in
    that app" — needs a look at what Google's API lets an app write.
+139. [ ] **A score for each food and plate** (owner, 20 Oct) — "i think we should do a food/plate score system. like how
+   bad/good it is. idk if theres a database for this but i think there is.Like how healthy, how good it is for my goal,
+   etc, how good is the timing. like a score next to the plate, for each item and for in total too (the plate), and i can
+   click on it and observe whats up. AI can reflect on this at EOD, letting me know whati should change. i know theres a
+   website or app for checking how good is the food, how toxic etc, but thats for barcode readings only i think…anyway,
+   lets brainstorm ts". Brainstorm sent in chat (20 Oct); waiting on his three picks before building.
 
 ### D · Asked — answered in chat (20 Oct)
 - "Would a lower upper body then a full body day work better than the current 3 full body day?"
