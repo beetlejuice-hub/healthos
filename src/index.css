@@ -548,6 +548,8 @@ a { color: inherit; }
 .alts { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
 .alts small { color: var(--warn); font-size: 12px; }
 .alts .pill-btn { padding: 5px 10px; font-size: 12px; }
+.alts.notthis { justify-content: flex-end; margin-top: -6px; }
+.alts.notthis .pill-btn { padding: 2px 9px; font-size: 11px; color: var(--c-dim); }
 .row-log { display: grid; grid-template-columns: 1fr auto; gap: 10px; align-items: end; }
 .save-meal { display: grid; gap: 8px; }
 .cmp { display: grid; gap: 6px; }

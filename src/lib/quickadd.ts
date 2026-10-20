@@ -36,13 +36,16 @@ const UNIT_WORDS: Record<string, string[]> = {
   cupped: ["handful"], thumb: ["thumb"], thumbs: ["thumb"], huvelykujj: ["thumb"], huvelykujjnyi: ["thumb"],
 };
 const GRAM_WORDS = new Set(["g", "gr", "gram", "grams", "gramm", "ml"]);
+/** "1 full piece of schnitzel", "a whole schnitzel": how much, not a word of the name — unless a food has it ("whole milk"). */
+const WHOLE = new Set(["whole", "full", "egesz"]);
 const FILLER = new Set(["of", "some", "x"]);
 /** How it was made, not what it is: "1 cooked salmon" is salmon, eaten cooked. (Breaded/rántott is a different food.) */
 const PREP = new Set(["cooked", "boiled", "roasted", "grilled", "baked", "fried", "steamed", "pan", "fott", "fozott", "sult", "grillezett", "parolt"]);
 
 /** Drinks typed in the same sentence ("2 eggs, toast, coffee") are logged as drinks — caffeine and alcohol count. */
 export type DrinkLine = { drink: Drink; count: number };
-export type Parsed = { text: string; line: Line | null; drink?: DrinkLine; unsure: boolean; alternatives: Food[]; /** Words skipped because no food has them ("normal"). */ ignored?: string[] };
+export type Parsed = { text: string; line: Line | null; drink?: DrinkLine; unsure: boolean; alternatives: Food[]; /** Words skipped because no food has them ("normal"). */ ignored?: string[];
+  /** The unit you typed that the food doesn't have: your own "Schnitzel" knows a bite, not a piece. */ noUnit?: string };
 
 /** What people type for the built-in drinks, English and Hungarian (accents folded). */
 const DRINK_WORDS: Record<string, string[]> = {
@@ -99,11 +102,11 @@ function readNumber(tok: string): number | null {
 
 const singular = (w: string) => (w.length > 3 && /(ches|shes|oes)$/.test(w) ? w.slice(0, -2) : w.length > 3 && w.endsWith("s") && !w.endsWith("ss") ? w.slice(0, -1) : w);
 
-function candidates(words: string[], mine: Food[]): { food: Food; score: number }[] {
+function candidates(words: string[], mine: Food[], skip: string[] = []): { food: Food; score: number }[] {
   const pool: { food: Food; hay: string; aka: string; mine: boolean }[] = [
     ...mine.map((f) => ({ food: f, hay: fold(`${f.name} ${f.brand ?? ""} ${f.aka ?? ""}`), aka: fold(f.aka ?? ""), mine: true })),
     ...BASIC_FOODS.filter((b) => !mine.some((m) => m.id === b.id)).map((f) => ({ food: f as Food, hay: fold(`${f.name} ${f.aka ?? ""}`), aka: fold(f.aka ?? ""), mine: false })),
-  ];
+  ].filter((x) => !skip.includes(x.food.id));
   const q = words.join(" "), qs = words.map(singular).join(" ");
   const out: { food: Food; score: number }[] = [];
   for (const { food, hay, aka, mine: own } of pool) {
@@ -158,6 +161,7 @@ export function readAmount(tokens: string[]): Amount {
     const n = toks.length ? readNumber(toks[0]) : null;
     if (n != null) { count = n; toks = toks.slice(1); }
     if (toks[0] === "x") toks = toks.slice(1);
+    if (WHOLE.has(toks[0]) && UNIT_WORDS[toks[1]]) toks = toks.slice(1);
     if (count != null && toks[0] && GRAM_WORDS.has(toks[0])) { grams = count; count = null; toks = toks.slice(1); }
     else if (toks[0] && UNIT_WORDS[toks[0]]) { unitWant = UNIT_WORDS[toks[0]]; toks = toks.slice(toks[0] === "cupped" && /^hands?$/.test(toks[1] ?? "") ? 2 : 1); }
   }
@@ -168,8 +172,8 @@ export function readAmount(tokens: string[]): Amount {
   return { count, grams, unitWant, size, words: toks.filter((t) => !FILLER.has(t)) };
 }
 
-/** One piece of a meal: "2 slices of toast", "200g rice", "an apple". */
-export function parseItem(text: string, mine: Food[] = [], drinks: Drink[] = [], side = false): Parsed {
+/** One piece of a meal: "2 slices of toast", "200g rice", "an apple". `skip`: foods you said it isn't ("Not this"). */
+export function parseItem(text: string, mine: Food[] = [], drinks: Drink[] = [], side = false, skip: string[] = []): Parsed {
   let toks = fold(text).split(" ").filter(Boolean);
   // A drink whose own name has a size word in it ("small beer", "kis sör", "big coke") wins first.
   const lead = toks.length ? readNumber(toks[0]) : null;
@@ -184,12 +188,13 @@ export function parseItem(text: string, mine: Food[] = [], drinks: Drink[] = [],
   const drink = grams == null ? matchDrink(toks, drinks) : null;
   if (drink) return { text, line: null, drink: { drink, count: Math.round((count ?? 1) * size * 4) / 4 }, unsure: false, alternatives: [] };
   if (toks.every((t) => PREP.has(t))) return { text, line: null, unsure: true, alternatives: [] };
-  let found = candidates(toks, mine);
+  let found = candidates(toks, mine, skip);
+  if (!found.length && toks.length > 1 && WHOLE.has(toks[0])) { const rest = toks.slice(1), f = candidates(rest, mine, skip); if (f.length) { found = f; toks = rest; } }
   // "cooked salmon" when only "Salmon, raw" is known: find salmon, then switch it to cooked below.
   let prepared = false;
   if (!found.length) {
     const bare = toks.filter((t) => !PREP.has(t));
-    if (bare.length < toks.length) { found = candidates(bare, mine); prepared = found.length > 0; if (prepared) toks = bare; }
+    if (bare.length < toks.length) { found = candidates(bare, mine, skip); prepared = found.length > 0; if (prepared) toks = bare; }
   }
   // Words no food knows ("normal", "homemade", typos) are dropped rather than sinking the match.
   let ignored: string[] = [];
@@ -197,9 +202,15 @@ export function parseItem(text: string, mine: Food[] = [], drinks: Drink[] = [],
     const vocab = vocabulary(mine);
     const known = toks.filter((t) => vocab.some((v) => v.startsWith(t) || v.startsWith(singular(t))));
     // Only when most of it is known: "fresh homemade toast" → toast, but "mystery stew" isn't a pörkölt.
-    if (known.length && known.length < toks.length && known.length * 2 >= toks.length) { ignored = toks.filter((t) => !known.includes(t)); found = candidates(known, mine); }
+    if (known.length && known.length < toks.length && known.length * 2 >= toks.length) { ignored = toks.filter((t) => !known.includes(t)); found = candidates(known, mine, skip); }
   }
   if (!found.length) return { text, line: null, unsure: true, alternatives: [] };
+  // A unit you typed that the food doesn't have (owner, 20 Oct: "i logged 1 bite of schnitzel, now i cant put 1 full piece
+  // of schnitzel … it comes back to the schnitzel but measured in bite"). A "piece" is taken as an everyday food's usual
+  // unit, but a food the AI made was sized for the words you typed then. Another match that has the unit goes first.
+  const lacks = (f: Food) => !!unitWant && unitsOf(f).length > 0 && !unitsOf(f).some((u) => unitWant.includes(u.name)) && (f.source === "ai" || !unitWant.includes("piece"));
+  const fits = lacks(found[0].food) ? found.findIndex((x) => !lacks(x.food) && unitsOf(x.food).length > 0) : -1;
+  if (fits > 0) found = [found[fits], ...found.filter((_, i) => i !== fits)];
   const [best] = found;
   const kind = prepared ? cookKind(best.food) : null;
   const food = kind && cookState(best.food, kind) === "uncooked" ? convert(best.food, kind, "cooked") : best.food;
@@ -221,8 +232,9 @@ export function parseItem(text: string, mine: Food[] = [], drinks: Drink[] = [],
   // Unsure = a close second that would change the calories a lot (white vs wholemeal bread is fine;
   // cooked vs dry rice is not), or a unit word the food doesn't have.
   const close = found.slice(1).filter((x) => x.score >= best.score - 0.5);
-  const unsure = ignored.length > 0 || close.some((x) => Math.abs(perUnit(x.food) - perUnit(food)) > 0.25 * perUnit(food)) || (!!unitWant && !unitWant.includes("piece") && !units.some((x) => unitWant!.includes(x.name)));
-  return { text, line, unsure, alternatives: found.slice(1, 4).map((x) => x.food), ...(ignored.length ? { ignored } : {}) };
+  const noUnit = lacks(food) ? unitWant![0] : undefined;
+  const unsure = ignored.length > 0 || fits > 0 || !!noUnit || close.some((x) => Math.abs(perUnit(x.food) - perUnit(food)) > 0.25 * perUnit(food));
+  return { text, line, unsure, alternatives: found.slice(1, 4).map((x) => x.food), ...(ignored.length ? { ignored } : {}), ...(noUnit ? { noUnit } : {}) };
 }
 
 /** Every word in every food name the parser knows — what "a word no food knows" is measured against. */

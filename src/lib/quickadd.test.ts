@@ -217,3 +217,40 @@ describe("logging without weighing (owner, 7 Oct: \"i am not really measuring my
     for (const n of ["Butter", "Olive oil", "Sunflower oil", "Peanut butter", "Mayonnaise", "Cheese, Trappista / Gouda"]) expect(has(n, "thumb"), n).toBe(true);
   });
 });
+
+describe("a unit the food doesn't have, and \"Not this\" (owner, 20 Oct)", () => {
+  // "today i logged 1 bite of schnitzel, now i cant put 1 full piece of schnitzel, i try to log, it comes back to the
+  // schnitzel but measured in bite, and cant change"
+  const sch = { id: "custom:ai-1", name: "Schnitzel", per100: { kcal: 280, p: 18, c: 14, f: 17 }, units: [{ name: "bite", g: 25 }], servingG: 25, source: "ai" as const, aka: "1 bite of schnitzel" };
+  it("\"1 full piece of schnitzel\" is one schnitzel, in pieces — not full-fat yoghurt and a bite", () => {
+    const ps = parseMeal("1 full piece of schnitzel", [sch]);
+    expect(ps).toHaveLength(1);
+    expect(ps[0].line).toMatchObject({ food: { name: "Rántott hús (breaded schnitzel)" }, count: 1, unit: "piece" });
+    expect(ps[0].unsure).toBe(true); // your own Schnitzel is one tap away
+    expect(ps[0].alternatives.map((f) => f.name)).toContain("Schnitzel");
+  });
+  it("\"a piece of schnitzel\" too; \"a bite of schnitzel\" and plain \"schnitzel\" stay yours", () => {
+    expect(short("a piece of schnitzel", [sch] as never)).toBe("Rántott hús (breaded schnitzel) · 1 piece ?");
+    expect(short("1 bite of schnitzel", [sch] as never)).toBe("Schnitzel · 1 bite");
+    expect(short("schnitzel", [sch] as never)).toBe("Schnitzel · 1 bite");
+    expect(short("a whole schnitzel", [sch] as never)).toBe("Schnitzel · 1 bite");
+  });
+  it("with nothing else that has the unit, it's yours but flagged, saying which unit it lacks", () => {
+    const own = { ...sch, id: "custom:ai-2", name: "Mom's stew", aka: "a spoon of mom's stew", units: [{ name: "spoon", g: 15 }] };
+    const p = parseItem("2 plates of mom's stew", [own]);
+    expect(p.line).toMatchObject({ food: { name: "Mom's stew" } });
+    expect([p.unsure, p.noUnit]).toEqual([true, "plate"]);
+  });
+  it("everyday foods still take \"piece\" as their usual unit, unflagged", () => {
+    expect(short("2 pieces of toast")).toBe("Toast (white) · 2 slices");
+    expect(short("whole milk")).toBe("Milk 3.5% · 1 glass");
+  });
+  it("Not this: the same words again without that food", () => {
+    const first = parseItem("schnitzel", [sch]);
+    expect(first.line?.food.id).toBe("custom:ai-1");
+    const again = parseItem("schnitzel", [sch], [], false, [first.line!.food.id]);
+    expect(again.line?.food.name).toBe("Rántott hús (breaded schnitzel)");
+    const none = parseItem("schnitzel", [sch], [], false, [sch.id, again.line!.food.id]);
+    expect(none.line).toBeNull();
+  });
+});

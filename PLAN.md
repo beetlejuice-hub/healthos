@@ -1667,9 +1667,16 @@ D questions answered in chat. Numbered on from #112.
 
 ### A · Broken or wrong now — fix first
 113. [ ] **Can't remove a logged food** — "WHY CANT I REMOVE A FOOD I LOGGED…??"
-114. [ ] **Stuck on the unit, and "not this"** — "today i logged 1 bite of schnitzel, now i cant put 1 full piece of
+114. [x] **Stuck on the unit, and "not this"** — "today i logged 1 bite of schnitzel, now i cant put 1 full piece of
    schnitzel, i try to log, it comes back to the schnitzel but measured in bite, and cant change..can we add a button that
-   says not this, then the app retries the search but removing that option.."
+   says not this, then the app retries the search but removing that option.." Reproduced: "1 full piece of schnitzel" read
+   as full-fat Greek yoghurt + 1 bite of his AI-made Schnitzel, not flagged; the unit button was dead with one unit. Now
+   "full/whole" before a unit is just "one", a unit you typed counts (a food the AI made for "1 bite" doesn't take
+   "piece"; one that has it goes first — the breaded schnitzel in pieces, his own one tap away), a missing unit says so
+   ("Schnitzel is counted in bites, not pieces" · ✨ Ask the AI), every typed line has **Not this** (the same words again
+   without that food; nothing left → the AI, once, replacing the line), and a one-unit amount opens grams. "whole milk"
+   is Milk 3.5% (was an egg + milk). Checked: quickadd.test (fail on the old parser), e2e/notthis.cjs (phone: the whole
+   path to a logged 1 piece, 160 g), ai/polish/round/earlier/simple still pass.
 115. [x] **Weights step wrong** — "Weights are counted exactly wrong so its always like 36.5 instead of 36 its like
    increasing just wrong". + and − always added 2.5, and the suggestion was last + 2.5 — 34 → 36.5 on dumbbells that go
    34, 36, 38. Now the step comes from the weights you use on that exercise (training kgStep: 2 for 32/34/36, 2.5 for

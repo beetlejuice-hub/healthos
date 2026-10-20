@@ -34,7 +34,7 @@ const ROWS: Row[] = [
   ["Boiled egg", 155, 12.6, 1.1, 10.6, 50, "főtt tojás boiled"],
   // dairy
   ["Milk 1.5%", 46, 3.4, 4.8, 1.5, 250, "tej"],
-  ["Milk 3.5%", 64, 3.3, 4.7, 3.6, 250, "tej"],
+  ["Milk 3.5%", 64, 3.3, 4.7, 3.6, 250, "tej whole full-fat"],
   ["Greek yoghurt 0%", 59, 10.3, 3.6, 0.4, 150, "görög joghurt"],
   ["Greek yoghurt, full-fat", 97, 9, 3.9, 5, 150, "görög joghurt"],
   ["Natural yoghurt", 61, 3.5, 4.7, 3.3, 150, "natúr joghurt"],

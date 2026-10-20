@@ -18,8 +18,8 @@ import { readRoute, go, LOG_FOR_KEY } from "../lib/nav";
 import { bodyDays, weightTrend } from "../lib/tdee";
 import { LineChart } from "../components/Charts";
 import type { Drink, Entry, EntryOf, Food, Macros, Supplement } from "../lib/types";
-import { amountText, approx, countText, gramsOf, macrosOfLine, mealFood, step, unitsOf, type Line } from "../lib/units";
-import { extractTime, matchDrink, parseMeal, readAmount, tokens, type DrinkLine } from "../lib/quickadd";
+import { amountText, approx, countText, gramsOf, macrosOfLine, mealFood, plural, step, unitsOf, type Line } from "../lib/units";
+import { extractTime, matchDrink, parseItem, parseMeal, readAmount, tokens, type DrinkLine, type Parsed } from "../lib/quickadd";
 import { fromDatabase } from "../lib/fillin";
 import { caffeinePer100, drinkFromFood, sizesFor } from "../lib/drinkdb";
 import { bodyFat, FAT, parseFat } from "../lib/bodyfat";
@@ -154,9 +154,13 @@ function PhotoButton({ onPick, label = "📷 Photo", disabled }: { onPick: (f: F
 const BASKET_KEY = "healthos.basket";
 /**
  * `est`: how a line was estimated, shown under it ("median of 12 products", "AI estimate"). `asked`: what you typed, on a
- * line the food database guessed — so "Ask the AI instead" can ask about the same words.
+ * line the food database guessed — so "Ask the AI instead" can ask about the same words. `typed`: what you typed, on a
+ * line matched here — so "Not this" can look again without `skip` (owner, 20 Oct: "a button that says not this, then the
+ * app retries the search but removing that option"). `noUnit`: the unit you typed that the food doesn't have.
  */
-type Item = (Line & { alts?: Food[]; est?: string; asked?: string }) | DrinkLine;
+type Item = (Line & { alts?: Food[]; est?: string; asked?: string; typed?: string; skip?: string[]; noUnit?: string }) | DrinkLine;
+/** A typed piece of the meal as a basket line. */
+const lineOf = (p: Parsed, skip?: string[]): Item | null => (p.drink ? p.drink : p.line ? { ...p.line, alts: p.unsure ? p.alternatives : undefined, typed: p.text, ...(skip ? { skip } : {}), ...(p.noUnit ? { noUnit: p.noUnit } : {}) } : null);
 const isDrink = (x: Item): x is DrinkLine => "drink" in x;
 const loadBasket = (): Item[] => { try { return JSON.parse(localStorage.getItem(BASKET_KEY) ?? "[]") as Item[]; } catch { return []; } };
 /** Kept on this device (without the "did you mean" lists), and handed back. */
@@ -242,7 +246,7 @@ function FoodTab({ done }: { done: (m: string) => void }) {
     const { text, minute } = extractTime(typed);
     if (minute != null) when.setTime(hhmmOf(minute));
     const parsed = parseMeal(text, saved, drinksMine);
-    const found = parsed.flatMap((p): Item[] => (p.drink ? [p.drink] : p.line ? [{ ...p.line, alts: p.unsure ? p.alternatives : undefined }] : []));
+    const found = parsed.flatMap((p): Item[] => { const l = lineOf(p); return l ? [l] : []; });
     const missing = parsed.filter((p) => !p.line && !p.drink).map((p) => p.text);
     setBasket([...basket, ...found]);
     setTyped("");
@@ -288,6 +292,14 @@ function FoodTab({ done }: { done: (m: string) => void }) {
     setAiNote(g.message ?? (g.items.length ? null : `The AI couldn't place “${text}”.`));
   };
   const upd = (i: number, l: Item) => setBasket(basket.map((x, j) => (j === i ? l : x)));
+  /** "Not this": the same words again without that food; when nothing else here knows them, the AI (saved for next time). */
+  const notThis = (l: Item) => {
+    if (isDrink(l) || !l.typed) return;
+    const skip = [...(l.skip ?? []), l.food.id], again = lineOf(parseItem(l.typed, saved, drinksMine, false, skip), skip);
+    if (again && !isDrink(again)) return setBasket(basket.map((x) => (x === l ? again : x)));
+    if (aiOn) return void lookUp(l.typed, l);
+    setBasket(basket.filter((x) => x !== l)); setMissed([l.typed]);
+  };
   const opened = detail != null ? basket[detail] : undefined;
 
   if (detail != null && opened && !isDrink(opened)) return <Portion line={opened} onCancel={() => setDetail(null)} onDone={(l) => { upd(detail, l); setDetail(null); }} />;
@@ -310,7 +322,7 @@ function FoodTab({ done }: { done: (m: string) => void }) {
       {looking && <p className="note">Looking up {missed.map((m) => `“${m}”`).join(", ")} in the food database…</p>}
       {!looking && !asking.length && missed.length > 0 && <p className="err">Couldn't find {missed.map((m) => `“${m}”`).join(", ")} — search it below or add it yourself.</p>}
       {crafting && <p className="note">Making your own food: type what's in it, roughly — “200 g chicken, 1 bowl rice, 1 tbsp oil, salad” — then <b>Save as a meal</b> and say how many portions it makes.</p>}
-      {basket.length > 0 && <Basket lines={basket} when={when} crafting={crafting} onChange={setBasket} onDetail={setDetail} onAsk={aiOn && !asking.length ? (l) => { if (!isDrink(l) && l.asked) void lookUp(l.asked, l); } : undefined} onLogged={(m) => { setBasket([]); setMissed([]); setCrafting(false); done(m); }} />}
+      {basket.length > 0 && <Basket lines={basket} when={when} crafting={crafting} onChange={setBasket} onDetail={setDetail} onAsk={aiOn && !asking.length ? (l) => { if (!isDrink(l) && (l.asked ?? l.typed)) void lookUp((l.asked ?? l.typed)!, l); } : undefined} onNotThis={asking.length ? undefined : notThis} onLogged={(m) => { setBasket([]); setMissed([]); setCrafting(false); done(m); }} />}
     </div>
     <div className="card">
       <div className="searchrow">
@@ -359,7 +371,7 @@ function FoodTab({ done }: { done: (m: string) => void }) {
 const amountOf = (l: Line) => (l.unit ? amountText(l.count, l.unit) : `${Math.round(l.grams ?? 100)} g`);
 
 /** The meal being built: − / + per line, ≈ totals, one tap to log, or save it as a meal. */
-function Basket({ lines, when, crafting, onChange, onDetail, onAsk, onLogged }: { lines: Item[]; when: When; crafting: boolean; onChange: (l: Item[]) => void; onDetail: (i: number) => void; onAsk?: (l: Item) => void; onLogged: (m: string) => void }) {
+function Basket({ lines, when, crafting, onChange, onDetail, onAsk, onNotThis, onLogged }: { lines: Item[]; when: When; crafting: boolean; onChange: (l: Item[]) => void; onDetail: (i: number) => void; onAsk?: (l: Item) => void; onNotThis?: (l: Item) => void; onLogged: (m: string) => void }) {
   const [saving, setSaving] = useState(false);
   const [mealName, setMealName] = useState(""), [pieces, setPieces] = useState("1"), [inPlates, setInPlates] = useState(true);
   const tot = lines.reduce((a, l) => { if (isDrink(l)) return { kcal: a.kcal + l.drink.kcal * l.count, p: a.p }; const m = macrosOfLine(l); return { kcal: a.kcal + m.kcal, p: a.p + m.p }; }, { kcal: 0, p: 0 });
@@ -411,8 +423,9 @@ function Basket({ lines, when, crafting, onChange, onDetail, onAsk, onLogged }: 
             <div className="stepper">
               {l.unit ? <>
                 <button type="button" aria-label={`Less ${l.food.name}`} onClick={() => set(i, { ...l, count: step(l.count, -1) })}>−</button>
-                <button type="button" className="amt" disabled={units.length < 2} title={units.length > 1 ? "Change unit" : undefined}
-                  onClick={() => { const k = units.findIndex((u) => u.name === l.unit); set(i, { ...l, unit: units[(k + 1) % units.length].name }); }}>{amountText(l.count, l.unit)}</button>
+                {/* One unit only: the amount opens grams, so it can always be changed ("…measured in bite, and cant change"). */}
+                <button type="button" className="amt" title={units.length > 1 ? "Change unit" : "Change amount"}
+                  onClick={() => { if (units.length < 2) return onDetail(i); const k = units.findIndex((u) => u.name === l.unit); set(i, { ...l, unit: units[(k + 1) % units.length].name }); }}>{amountText(l.count, l.unit)}</button>
                 <button type="button" aria-label={`More ${l.food.name}`} onClick={() => set(i, { ...l, count: step(l.count, 1) })}>+</button>
               </> : <button type="button" className="amt" onClick={() => onDetail(i)}>{Math.round(l.grams ?? 100)} g</button>}
             </div>
@@ -428,8 +441,13 @@ function Basket({ lines, when, crafting, onChange, onDetail, onAsk, onLogged }: 
                 {(["uncooked", "cooked"] as const).map((x) => <button key={x} type="button" className="pill-btn" aria-pressed={st === x} onClick={() => pick(x)}>{WORD[k][x]}</button>)}
               </div>;
             })()}
-            {l.alts && l.alts.length > 0 && <div className="alts"><small>Did you mean</small>{l.alts.map((f) => <button type="button" key={f.id} className="pill-btn" onClick={() => { const u = unitsOf(f); set(i, u.length ? { food: f, count: l.count, unit: u[0].name } : { food: f, count: 1, unit: null, grams: 100 }); }}>{f.name}</button>)}
-              <button type="button" className="pill-btn" onClick={() => set(i, { ...l, alts: undefined })}>✓ it's right</button></div>}
+            {l.noUnit && <div className="alts"><small>{l.food.name} is counted in {plural(l.unit ?? "gram", 2)}, not {plural(l.noUnit, 2)}</small>
+              {onAsk && <button type="button" className="pill-btn" onClick={() => onAsk(l)}>✨ Ask the AI</button>}
+              {l.typed && onNotThis && <button type="button" className="pill-btn" onClick={() => onNotThis(l)}>Not this</button>}</div>}
+            {l.alts && l.alts.length > 0 ? <div className="alts"><small>Did you mean</small>{l.alts.map((f) => <button type="button" key={f.id} className="pill-btn" onClick={() => { const u = unitsOf(f); const keep = { typed: l.typed, skip: l.skip }; set(i, u.length ? { food: f, count: l.count, unit: u[0].name, ...keep } : { food: f, count: 1, unit: null, grams: 100, ...keep }); }}>{f.name}</button>)}
+              <button type="button" className="pill-btn" onClick={() => set(i, { ...l, alts: undefined, typed: undefined, noUnit: undefined })}>✓ it's right</button>
+              {l.typed && onNotThis && !l.noUnit && <button type="button" className="pill-btn" onClick={() => onNotThis(l)}>Not this</button>}</div>
+              : l.typed && onNotThis && !l.noUnit && <div className="alts notthis"><button type="button" className="pill-btn" onClick={() => onNotThis(l)}>Not this</button></div>}
             {l.asked && onAsk && <div className="alts"><small>A guess from the food database</small>
               <button type="button" className="pill-btn" onClick={() => onAsk(l)}>✨ Ask the AI instead</button></div>}
           </div>
