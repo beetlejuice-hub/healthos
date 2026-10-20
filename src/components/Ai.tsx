@@ -232,6 +232,10 @@ export function NightRead() {
       {open && <>
         {n.happened.length > 0 && <ul className="night-list">{n.happened.map((h, i) => <li key={i}>{h}</li>)}</ul>}
         {n.notes && <p className="night-notes"><small>Your notes</small>{n.notes}</p>}
+        {/* PLAN 129: on a workout day, the session against the last one — in the same call, no extra one */}
+        {n.workout && <div className="night-workout"><small>Your workout</small><p>{n.workout.summary}</p>
+          {n.workout.better.length > 0 && <ul>{n.workout.better.map((b, i) => <li key={i}>{b}</li>)}</ul>}
+          {n.workout.next && <p><b>Next time</b> {n.workout.next}</p>}</div>}
         {n.change.length > 0 && <div className="night-change"><small>Tomorrow, maybe</small>{n.change.map((c, i) => <p key={i}><b>{c.what}</b> {c.why}</p>)}</div>}
       </>}
       {newer && <button type="button" className="linkish" onClick={() => void makeNight(n.day, true)}>You logged more since — read it again</button>}

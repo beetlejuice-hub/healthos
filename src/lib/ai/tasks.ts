@@ -130,7 +130,9 @@ export type DigestNews = { title: string; text: string; source: { title: string;
 export type DigestAnswer = { greeting: string; items: DigestItem[]; news?: DigestNews | null };
 
 /** The nightly read-back of your day (owner, 2 Oct: "summarizing what happened, what i should change"). */
-export type NightAnswer = { summary: string; happened: string[]; notes: string; change: { what: string; why: string }[]; /** Lasting patterns worth remembering (kept in AI memory). */ remember: string[] };
+export type NightAnswer = { summary: string; happened: string[]; notes: string; change: { what: string; why: string }[]; /** Lasting patterns worth remembering (kept in AI memory). */ remember: string[];
+  /** On a day with a workout (PLAN 129): how it went against last time, what went up, one thing for next time. */
+  workout?: { summary: string; better: string[]; next: string } };
 /** The week or month read (PLAN 65). `measure`: the [key] of the app's measure a notice is about, so its chart can be drawn ("" for none). */
 export type ReviewAnswer = { title: string; summary: string; notices: { title: string; text: string; measure: string }[]; next: { what: string; why: string }[]; remember: string[] };
 
@@ -151,7 +153,8 @@ export const SCHEMAS: Record<Exclude<Task, "supplement" | "digest" | "chat">, un
     }, ["kind", "name", "amount", "confidence", "note"])),
   }),
   questions: obj({ questions: arr(obj({ id: str, text: str, why: str, options: arr(str), key: str, repeat: { type: "string", enum: ["daily", "once"] } })) }),
-  night: obj({ summary: str, happened: arr(str), notes: str, change: arr(obj({ what: str, why: str })), remember: arr(str) }),
+  night: obj({ summary: str, happened: arr(str), notes: str, change: arr(obj({ what: str, why: str })), remember: arr(str),
+    workout: obj({ summary: str, better: arr(str), next: str }) }, ["summary", "happened", "notes", "change", "remember"]),
   review: obj({ title: str, summary: str, notices: arr(obj({ title: str, text: str, measure: str })), next: arr(obj({ what: str, why: str })), remember: arr(str) }),
 };
 
@@ -169,6 +172,7 @@ Task: read the user's day back to them. Use "## The day being read back" and the
 - notes: the user's own notes on their check-ins say WHY they felt a way ("stressed — deadline"). Take them seriously: reflect what they said, connect it to the data only where the data supports it, never dismiss or explain it away. One or two sentences; empty string if there were no notes.
 - change: 1–2 small, concrete things to try tomorrow, each with a one-line "why" tied to today's data or notes. Options, not orders; no guilt, no "you should have". If the day went well, say what to keep doing.
 - Food (owner: "AI can reflect on this at EOD, letting me know what i should change"): when "## Plates that day" is there, one "happened" bullet may name the plate that fit his goal best, with its score; and when a plate scored under 60, one "change" may be the single swap that would lift it most, read from its parts (more protein, a better Nutri-Score, or earlier) — a real food swap, with the score's numbers. Never call a food bad; say how it fits the goal.
+- workout (owner: "ai look at the workout at eod and make a summary, suggestions, compare how i am improving etc … like a health couach"): only when "## The workout that day" is in the context; leave it out otherwise. summary: 1–2 sentences on how the session went against the last one, with its numbers. better: 0–3 short lines — lifts that went up or a new best, with kg × reps and the %. next: one concrete thing for the next session from these numbers — a weight or rep target for a lift that hit its reps, or holding a lift that dropped (sleep, food or stress that day may say why — "goes with"). Use the app's numbers only; no programme changes.
 - remember: 0–2 lasting patterns about what goes with this user's mood, energy, focus, stress or sleep, only when the mood journal shows it on several days (not just today) and it isn't already in "What you remember about me". One short line each, e.g. "Stress runs high on deadline days; it eases after time outside." Empty if nothing new.
 Use "goes with", never "causes". No medical advice; anything health-worrying → "worth asking a doctor".`;
 
@@ -304,6 +308,7 @@ export function checkNight(a: NightAnswer): NightAnswer {
     notes: line(a.notes, 500),
     change: (a.change ?? []).filter((c) => line(c?.what, 200)).slice(0, 2).map((c) => ({ what: line(c.what, 200), why: line(c.why, 240) })),
     remember: (a.remember ?? []).map((x) => line(x, 180)).filter((x) => x.length > 8).slice(0, 2),
+    ...(a.workout && line(a.workout.summary, 600) ? { workout: { summary: line(a.workout.summary, 600), better: (a.workout.better ?? []).map((x) => line(x, 200)).filter(Boolean).slice(0, 3), next: line(a.workout.next, 300) } } : {}),
   };
 }
 

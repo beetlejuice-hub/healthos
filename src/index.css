@@ -643,6 +643,9 @@ a { color: inherit; }
 .night small { display: block; font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--c-dim); margin-bottom: 2px; }
 .night-notes, .night-change p { margin: 0; font-size: 14px; line-height: 1.45; }
 .night-change { display: grid; gap: 4px; }
+.night-workout { display: grid; gap: 4px; padding-left: 10px; border-left: 2px solid var(--gym); }
+.night-workout p { margin: 0; font-size: 14px; line-height: 1.45; }
+.night-workout ul { margin: 0; padding-left: 16px; display: grid; gap: 2px; font-size: 13.5px; color: var(--c-ink-2); }
 /* the morning read, folded (owner, 15 Oct: "too big on front page … collapsable … a tiny bit nicer") */
 .morning { gap: 8px; }
 .mr-head { all: unset; cursor: pointer; display: flex; align-items: center; gap: 8px; min-height: 28px; }

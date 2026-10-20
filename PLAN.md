@@ -1749,7 +1749,8 @@ D questions answered in chat. Numbered on from #112.
    you may have taken it before it was in the app; defaults picked, say if either should change). The morning catch-up's
    "took it" logs it on that day, which turns the day into taken. Day facts (Worth a look, on/off, Connections, the
    chat's compare, Stack grid), the sleep/mind grids, the training sessions and After a supplement all use it; the texts
-   that said "unticked days don't count" now say the new rule. Worth knowing: forgetting to log on chaotic days will
+   that said "unticked days don't count" now say the new rule. Today stays unknown until it's over (the full e2e run
+   caught that "not logged yet" tonight had turned into "didn't", and Tonight's magnesium nudge had gone). Worth knowing: forgetting to log on chaotic days will
    look like "worse days without it" — the morning catch-up is the guard. Checked: suppdays.test (each case; the engines
    get the unlogged days as without and find a planted lift — fail on the old day facts), chattools.test (now 29 days
    without, not 14), e2e suppafter/stack/glance/connections/trainingb/mindpage/sleep/supplog/catchup/dose/scout/top.
@@ -1792,9 +1793,15 @@ D questions answered in chat. Numbered on from #112.
    Tap an item to change its numbers, × to delete; ‹ › through earlier days; "+ Add food to yesterday" opens Log on that
    day. Same day and sum as the card (lib/foodday, foodday.test checks it against nutrition.byDay). Ideas for phase 2, not
    built: a 7-day strip of kcal/protein vs goal, a plate's parts under it, "usual for you" per meal.
-129. [ ] **A workout read at the end of a workout day** — "Can we have ai look at the workout at eod and make a summary,
+129. [x] **A workout read at the end of a workout day** — "Can we have ai look at the workout at eod and make a summary,
    suggestions, compare how i am improving etc? Like at midnight when doing the digest, at days when i log a workout..like
    a health couach but it should not fire often, it costs api credits"
+   Done (20 Oct): no call of its own — the night read-back that already runs (from 21:00) gets "## The workout that day"
+   on a day with one: the session's working sets and kg against the last session of the same day (Push vs last Push),
+   each lift's best set as a 1-rep max against the last time it was done, and "new best" when it beats every time
+   before; warm-ups never count (lib/workoutread). Its answer has an optional workout part — how it went, 0–3 lines on
+   what went up, one thing for next time (a weight or rep target, or holding a lift that dropped) — shown inside the
+   card as "Your workout". Costs nothing extra; a day without a workout has no section and no part.
 130. [ ] **Cardio sessions** — "Feel like ts doesnt track cardio sessions properly. It should be a button that i press and
    it strts w timer, then it logs as cardio sessions, reads and understands the heart bpm and other metrics and later it
    can make it into the digest. Cardio is important for my weight loss."

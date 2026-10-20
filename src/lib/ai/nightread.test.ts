@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { dayWindow, dayWord, eveningOf, nightDue } from "./nightread";
 import { nightContext } from "./client";
+import { checkNight } from "./tasks";
 import { DEFAULT_SETTINGS, EMPTY_AI, type State } from "../store";
 import { DEFAULT_GOALS } from "../types";
 
@@ -67,5 +68,35 @@ describe("what the read-back is given", () => {
   });
   it("the next day's read-back doesn't get the 00:40 beer again", () => {
     expect(section(nightContext("2026-10-16", st, at("16", "21:30")))).not.toContain("Beer");
+  });
+});
+
+// PLAN 129 (owner, 20 Oct: "ai look at the workout at eod … compare how i am improving etc … it should not fire often, it
+// costs api credits"): no call of its own — on a workout day the read-back gets the session against the last one.
+describe("a workout day's read-back", () => {
+  const set = (id: string, d: string, hm: string, w: string, exercise: string, kg: number, reps: number, warmup = false) => ({ id, kind: "set", at: at(d, hm), workoutId: w, exercise, kg, reps, ...(warmup ? { warmup } : {}) });
+  const st = { entries: [
+    set("a", "13", "18:10", "w1", "Bench press", 60, 8), set("b", "13", "18:15", "w1", "Bench press", 60, 8),
+    set("c", "15", "18:05", "w2", "Bench press", 30, 10, true), // a warm-up: never counted
+    set("d", "15", "18:10", "w2", "Bench press", 62.5, 8), set("e", "15", "18:15", "w2", "Bench press", 62.5, 7),
+  ], workouts: [{ id: "w1", template: "Push", startedAt: at("13", "18:00"), endedAt: at("13", "19:00") }, { id: "w2", template: "Push", startedAt: at("15", "18:00"), endedAt: at("15", "19:05") }],
+  supplements: [], settings: DEFAULT_SETTINGS, profile: { conditions: [], meds: [], allergies: [], notes: "" }, goals: DEFAULT_GOALS, ai: EMPTY_AI, foods: [], drinks: [], templates: [], scout: {} } as unknown as State;
+  it("gets the session against the last Push and each lift against last time, warm-ups left out", () => {
+    const c = nightContext("2026-10-15", st, at("15", "22:00"));
+    const w = c.slice(c.indexOf("## The workout that day")).split("\n");
+    expect(w[0]).toBe("## The workout that day (each lift against the last time it was done; working sets only)");
+    expect(w[1]).toBe("- Push 18:00–19:05 (65 min): 2 working sets, 938 kg (last Push, Tue 13 Oct: 960 kg, −2.3 %)");
+    expect(w[2]).toMatch(/^ {2}- Bench press: 62\.5 × 8, 62\.5 × 7 — best 62\.5 × 8 ≈ 79 kg 1-rep max; last time Tue 13 Oct 60 × 8 ≈ 76 kg, \+4\.2 % — new best$/);
+  });
+  it("a day without a workout has no workout section", () => {
+    expect(nightContext("2026-10-14", st, at("14", "22:00"))).not.toContain("## The workout that day");
+    expect(nightContext("2026-10-13", st, at("13", "22:00"))).toMatch(/your first Push/);
+  });
+  it("the answer keeps a workout part only when it says something; trims its lists", () => {
+    const base = { summary: "s", happened: [], notes: "", change: [], remember: [] };
+    expect(checkNight(base).workout).toBeUndefined();
+    expect(checkNight({ ...base, workout: { summary: " ", better: ["x"], next: "y" } }).workout).toBeUndefined();
+    const w = checkNight({ ...base, workout: { summary: "Up on bench.", better: ["a", "", "b", "c", "d"], next: "Bench 62.5 × 8 ×2" } }).workout;
+    expect(w).toEqual({ summary: "Up on bench.", better: ["a", "b", "c"], next: "Bench 62.5 × 8 ×2" });
   });
 });
