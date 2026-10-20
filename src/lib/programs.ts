@@ -21,8 +21,17 @@ export type Program = { id: string; name: string; who: string; perWeek: string; 
 
 const day = (pid: string, name: string, exercises: Ex[], after?: string): ProgramDay => ({ id: `${pid}:${name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`, name, exercises, ...(after ? { after } : {}) });
 
-export const PROGRAMS: Program[] = [
-  // Owner, 6 Oct: his plan, as written. Reps are the top of each range — the number that says "add weight".
+/**
+ * Rep ranges under each program's numbers (owner: "go" on ranges for the premade programs; PLAN 144): the number written is
+ * the top, the range runs below it — 8 → 6–8, 10 → 8–10, 12 → 10–12, 15 → 12–15 — so the weight stays while the reps climb
+ * and goes up once every set reaches the top (his own rule: "when every set reaches them, add weight next time"). Strength
+ * sets of 6 or fewer, and holds, stay one number.
+ */
+export const rangeOf = (top: number): { reps: number; repsMax?: number } => (top <= 6 ? { reps: top } : { reps: top - (top >= 15 ? 3 : 2), repsMax: top });
+const ranged = (p: Program): Program => ({ ...p, days: p.days.map((d) => ({ ...d, exercises: d.exercises.map((e) => ({ ...e, ...rangeOf(e.reps) })) })) });
+
+const WRITTEN: Program[] = [
+  // Owner, 6 Oct: his plan, as written. Reps are the top of each range — the number that says "add weight" (ranged below).
   { id: "ppm", name: "Push · Pull · Mixed + cardio", who: "Lose fat, keep the muscle · 3 lifting days + 1 cardio day", perWeek: "4× a week, in order", days: [
     day("ppm", "Push + Quads", [ex("Squat", 3, 8, 150, "Hack squat"), ex("DB bench press", 3, 10, 120), ex("DB shoulder press", 3, 10, 90), ex("Leg extension", 3, 15, 60), ex("Lateral raise", 3, 15, 60), ex("Rope pushdown", 3, 12, 60)], "20 min stairmaster"),
     day("ppm", "Pull + Hamstrings", [ex("Romanian deadlift", 3, 10, 150), ex("Lat pulldown", 3, 10, 90), ex("Seated cable row", 3, 12, 90), ex("Leg curl", 3, 12, 60), ex("Face pull", 3, 15, 60), ex("Incline DB curl", 3, 12, 60)], "20 min incline walk"),
@@ -32,7 +41,7 @@ export const PROGRAMS: Program[] = [
     { name: "Rest days", what: "Walking, abs" },
   ], rules: [
     "3 sets per exercise, each ending 1–2 reps short of failure.",
-    "The reps shown are the top of the range: when every set reaches them, add weight next time.",
+    "Reps are a range (6–8): the weight stays while the reps climb; when every set reaches the top, add weight next time and start again at the bottom.",
     "A lighter week every 6–8 weeks.",
     "Weigh in most mornings and go by the weekly average; measure your waist weekly; photos every 2 weeks.",
     "Every 2 weeks: losing under 0.3 kg a week → 150 kcal less. Over 0.7 kg a week, or lifts dropping → 150 kcal more.",
@@ -48,7 +57,7 @@ export const PROGRAMS: Program[] = [
     { name: "Rest days", what: "Walking, abs" },
   ], rules: [
     "3 sets per exercise, each ending 1–2 reps short of failure.",
-    "The reps shown are the top of the range: when every set reaches them, add weight next time.",
+    "Reps are a range (6–8): the weight stays while the reps climb; when every set reaches the top, add weight next time and start again at the bottom.",
     "Upper and Full both train chest, back, shoulders and arms; Lower and Full both train legs — twice a week each, like Push · Pull · Mixed.",
     "A lighter week every 6–8 weeks.",
     "Every 2 weeks: losing under 0.3 kg a week → 150 kcal less. Over 0.7 kg a week, or lifts dropping → 150 kcal more.",
@@ -83,9 +92,11 @@ export const PROGRAMS: Program[] = [
   ] },
 ];
 
-/** A program day as a split day: a fresh copy with its cardio, without the program's swap notes. */
+export const PROGRAMS: Program[] = WRITTEN.map(ranged);
+
+/** A program day as a split day: a fresh copy with its cardio and rep ranges, without the program's swap notes. */
 export function asTemplate(d: ProgramDay): Template {
-  return { id: d.id, name: d.name, exercises: d.exercises.map(({ name, sets, reps, restSec }) => ({ name, sets, reps, restSec })), ...(d.after ? { cardio: d.after } : {}) };
+  return { id: d.id, name: d.name, exercises: d.exercises.map(({ name, sets, reps, restSec, repsMax }) => ({ name, sets, reps, restSec, ...(repsMax ? { repsMax } : {}) })), ...(d.after ? { cardio: d.after } : {}) };
 }
 
 /** A fresh copy of a program's days, to become your split (past workouts keep their own names). */

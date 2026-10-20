@@ -2052,4 +2052,10 @@ Order: A first (113 → 123), then B, then C; D in the chat. (claimed: this sess
    cardio lines carry the zones too ("zones Z2 20 · Z3 20 min (max 186)"). Checked: cardio.test (planted minutes in each
    zone; the max rules; the AI line), e2e/cardiotraining.cjs (no age → says so; age 31 → "about 186" offered; 142 bpm →
    Z3 40 min), e2e/cardio.cjs.
+148. [x] **Rep ranges in the premade programs** — the next step offered after #144, owner: "go". Done (20 Oct): every
+   program's written number is the top of a range below it — 8 → 6–8, 10 → 8–10, 12 → 10–12, 15 → 12–15 — which is his
+   own rule for his plan ("the reps shown are the top of the range: when every set reaches them, add weight"), now done by
+   the app (#144). Strength sets of 6 or fewer (5×5, Full body's 5s) and holds stay one number. "Make this my split" and
+   "Start" carry the ranges. His own saved days aren't changed: to get ranges there, edit a day's Reps to "6-8", or make the
+   program his split again. Checked: programs.test (the rule; his Squat 6–8; 5×5 unchanged), e2e plan/session/workout*.
 

@@ -109,7 +109,7 @@ function Premade({ templates }: { templates: Template[] }) {
             {open === p.id && <div className="prog-body">
               {p.days.map((d) => (
                 <div key={d.id} className="prog-day">
-                  <div><b>{d.name}</b><p>{d.exercises.map((e) => `${e.name}${e.or ? ` (or ${e.or.toLowerCase()})` : ""} ${e.sets}×${e.reps === 1 ? "hold" : e.reps}`).join(" · ")}{d.after && <>, <i>then {d.after}</i></>}</p></div>
+                  <div><b>{d.name}</b><p>{d.exercises.map((e) => `${e.name}${e.or ? ` (or ${e.or.toLowerCase()})` : ""} ${e.sets}×${e.reps === 1 ? "hold" : repsLabel(e)}`).join(" · ")}{d.after && <>, <i>then {d.after}</i></>}</p></div>
                   <button type="button" className="kbtn pri" onClick={() => act.startWorkout(d.name, Date.now(), asTemplate(d).exercises, d.after)}>Start</button>
                 </div>
               ))}

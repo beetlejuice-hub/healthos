@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { PROGRAMS, asSplit, restDay } from "./programs";
+import { PROGRAMS, asSplit, rangeOf, restDay } from "./programs";
 import { MUSCLES, MUSCLE_GROUPS, isBest, muscleWeek, restLeft, sessionSummary } from "./training";
 
 describe("premade workouts", () => {
@@ -29,7 +29,14 @@ describe("premade workouts", () => {
     const s = asSplit(PROGRAMS.find((x) => x.id === "ppm")!);
     expect(s.map((d) => Object.keys(d).sort())).toEqual(Array(3).fill(["cardio", "exercises", "id", "name"]));
     expect(s.map((d) => d.cardio)).toEqual(["20 min stairmaster", "20 min incline walk", "20 min stairmaster"]);
-    expect(s.flatMap((d) => d.exercises.map((e) => Object.keys(e).sort().join()))).toEqual(Array(19).fill("name,reps,restSec,sets"));
+    expect(s.flatMap((d) => d.exercises.map((e) => Object.keys(e).sort().join()))).toEqual(Array(19).fill("name,reps,repsMax,restSec,sets"));
+  });
+  // owner: "go" on rep ranges for the premade programs (his rule: "when every set reaches them, add weight next time")
+  it("ranges under the written numbers: 8 → 6–8, 10 → 8–10, 12 → 10–12, 15 → 12–15; strength 5s and holds stay one number", () => {
+    expect([8, 10, 12, 15, 5, 6, 1].map(rangeOf)).toEqual([{ reps: 6, repsMax: 8 }, { reps: 8, repsMax: 10 }, { reps: 10, repsMax: 12 }, { reps: 12, repsMax: 15 }, { reps: 5 }, { reps: 6 }, { reps: 1 }]);
+    const ppm = PROGRAMS.find((x) => x.id === "ppm")!.days[0].exercises, five = PROGRAMS.find((x) => x.id === "5x5")!.days[0].exercises;
+    expect(ppm.slice(0, 2).map((e) => [e.name, e.reps, e.repsMax])).toEqual([["Squat", 6, 8], ["DB bench press", 8, 10]]);
+    expect(five.every((e) => e.reps === 5 && e.repsMax == null)).toBe(true);
   });
 });
 

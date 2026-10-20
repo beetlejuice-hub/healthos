@@ -38,7 +38,7 @@ const STARTER = [
   await pg.getByRole('button', { name: /Push · Pull · Mixed \+ cardio/ }).click(); await pg.waitForTimeout(150);
   const card = pg.locator('.prog-card.open'), txt = await card.innerText();
   check('the plan is there: three lifting days', ['Push + Quads', 'Pull + Hamstrings', 'Mixed'].every((d) => txt.includes(d)) && await card.locator('.prog-day button', { hasText: 'Start' }).count() === 3);
-  check('with his swap and the cardio after each day', /Squat \(or hack squat\) 3×8/.test(txt) && /then 20 min stairmaster/.test(txt) && /then 20 min incline walk/.test(txt));
+  check('with his swap and the cardio after each day', /Squat \(or hack squat\) 3×6–8/.test(txt) && /then 20 min stairmaster/.test(txt) && /then 20 min incline walk/.test(txt));
   check('the cardio day and rest days', /Cardio\s*40–45 min stairmaster plus incline walk/.test(txt) && /Rest days\s*Walking, abs/.test(txt));
   check('and his rules', /1–2 reps short of failure/.test(txt) && /150 kcal less/.test(txt) && /lighter week every 6–8 weeks/.test(txt));
   check('says how to change it', /press Edit on any day/.test(txt));
