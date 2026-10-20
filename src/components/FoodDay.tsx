@@ -17,6 +17,7 @@ import type { Food } from "../lib/types";
 import { go, LOG_FOR_KEY } from "../lib/nav";
 import { addDays, atMinute, clock, dayLabel, localDay } from "../lib/time";
 import { EntryEdit } from "./EntryEdit";
+import { askAi, useAiStatus } from "../lib/ai/client";
 
 const fmt = (n: number) => Math.round(n).toLocaleString("en-GB");
 const BASIC = new Map(BASIC_FOODS.map((f) => [f.id, f as Food]));
@@ -32,10 +33,24 @@ export function FoodDay({ day: first, onClose }: { day: string; onClose: () => v
   const [edit, setEdit] = useState<string | null>(null), [sure, setSure] = useState<string | null>(null);
   const d = useMemo(() => foodDay(entries, day), [entries, day]);
   // what each item was logged from: the built-in table's nutrients win over a copy saved before they existed
-  const scores = useMemo(() => {
+  const { scores, foodOf } = useMemo(() => {
     const of = (e: FoodItem): Food | undefined => { if (e.kind !== "food" || !e.foodId) return undefined; const mine = foods.find((f) => f.id === e.foodId), b = BASIC.get(e.foodId); return mine ? { ...mine, nutri: mine.nutri ?? b?.nutri, noGrade: mine.noGrade ?? b?.noGrade } : b; };
-    return new Map(d.meals.flatMap((m) => m.items).map((e) => [e.id, itemScore(e, of(e), bedMinute)]));
+    const items = d.meals.flatMap((m) => m.items);
+    return { scores: new Map(items.map((e) => [e.id, itemScore(e, of(e), bedMinute)])), foodOf: new Map(items.map((e) => [e.id, of(e)])) };
   }, [d, foods, bedMinute]);
+  // a food saved before it had nutrients (one the AI made earlier, or your own): ask once, on a tap, and keep the answer
+  const { on: aiOn } = useAiStatus();
+  const [asking, setAsking] = useState<string | null>(null), [askErr, setAskErr] = useState<string | null>(null);
+  const canAsk = (f: Food | undefined): f is Food => !!f && aiOn === true && !f.nutri && !f.grade && !f.noGrade && !f.parts?.length && f.source !== "basic";
+  const askNutri = async (f: Food) => {
+    setAsking(f.id); setAskErr(null);
+    const m = f.per100;
+    const r = await askAi({ task: "describe", text: `${f.name} — per 100 g: ${Math.round(m.kcal)} kcal, protein ${m.p} g, carbs ${m.c} g, fat ${m.f} g. One food item, with its nutri per 100 g.` });
+    setAsking(null);
+    const n = r.ok ? r.answer.items.find((x) => x.kind === "food" && x.nutri)?.nutri : undefined;
+    if (!n) { setAskErr(r.ok ? "The AI couldn't say for this one." : r.message); return; }
+    act.rememberFood({ ...f, nutri: { sugar: n.sugar, satFat: n.satFat, salt: n.salt, fiber: n.fiber, ...(n.fvl ? { fvl: n.fvl } : {}), ...(n.redMeat ? { redMeat: true } : {}), ...(n.cheese ? { cheese: true } : {}) } });
+  };
   const today = localDay(Date.now());
   const name = day === today ? "Today" : day === addDays(today, -1) ? "Yesterday" : dayLabel(atMinute(day, 720));
   useEffect(() => { const k = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); }; window.addEventListener("keydown", k); return () => window.removeEventListener("keydown", k); }, [onClose]);
@@ -60,6 +75,10 @@ export function FoodDay({ day: first, onClose }: { day: string; onClose: () => v
         {why === e.id && s && <ul className="fd-why">
           {s.parts.map((p) => <li key={p.id}><span>{p.name}</span><b>{fmt(p.got)}/{p.max}</b><small>{p.why}</small></li>)}
           {s.missing && <li className="fd-miss"><span>Quality</span><b>—</b><small>No score yet: {s.missing}.</small></li>}
+          {s.missing && canAsk(foodOf.get(e.id)) && <li className="fd-ask">
+            <button type="button" className="pill-btn" disabled={asking != null} onClick={() => void askNutri(foodOf.get(e.id)!)}>{asking === foodOf.get(e.id)!.id ? "Asking…" : "✨ Ask the AI for its nutrients"}</button>
+            {askErr && <small className="err">{askErr}</small>}
+          </li>}
         </ul>}
         {edit === e.id && <EntryEdit e={e} onDone={() => setEdit(null)} />}
       </div>

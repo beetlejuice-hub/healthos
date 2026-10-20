@@ -25,7 +25,9 @@ export function fromDescribed(it: DescribedItem, id: string, typed?: string): { 
   }
   const unit = { name: it.unit!.name.toLowerCase(), g: Math.round(it.unit!.g) };
   const p = it.per100!;
-  const food: Food = { id, name: it.name, per100: { kcal: Math.round(p.kcal), p: p.p, c: p.c, f: p.f }, units: [unit], servingG: unit.g, source: "ai", ...(aka ? { aka } : {}), note: it.note };
+  const n = it.nutri;
+  const nutri = n ? { nutri: { sugar: n.sugar, satFat: n.satFat, salt: n.salt, fiber: n.fiber, ...(n.fvl ? { fvl: n.fvl } : {}), ...(n.redMeat ? { redMeat: true } : {}), ...(n.cheese ? { cheese: true } : {}) } } : {};
+  const food: Food = { id, name: it.name, per100: { kcal: Math.round(p.kcal), p: p.p, c: p.c, f: p.f }, units: [unit], servingG: unit.g, source: "ai", ...(aka ? { aka } : {}), note: it.note, ...nutri };
   return { food, line: { food, count: Math.round((it.count ?? 1) * 4) / 4 || 1, unit: unit.name } };
 }
 

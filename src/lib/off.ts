@@ -17,6 +17,8 @@ type OffProduct = {
   image_front_small_url?: string;
   image_small_url?: string;
   nutriments?: Record<string, number | string | undefined>;
+  /** Its Nutri-Score as Open Food Facts worked it out ("a"–"e"; "unknown", "not-applicable" otherwise). */
+  nutriscore_grade?: string;
 };
 
 const num = (v: unknown): number | null => {
@@ -46,10 +48,22 @@ export function fromOff(p: OffProduct): Food | null {
     img: img && /^https:\/\/[a-z0-9.-]*openfoodfacts\.(org|net)\//.test(img) ? img : undefined,
     caffeine100: caf != null && caf > 0 && caf <= 0.4 ? Math.round(caf * 1000 * 10) / 10 : undefined,
     alcohol100: abv != null && abv > 0 && abv <= 80 ? abv : undefined,
+    // the food score's quality (PLAN 139): the pack's own grade, and what it's made from when the label says
+    ...gradeOf(p.nutriscore_grade),
+    ...nutriOf(n),
   };
 }
 
-export const OFF_FIELDS = "code,product_name,product_name_en,product_name_hu,brands,serving_quantity,image_front_small_url,image_small_url,nutriments";
+/** Open Food Facts' Nutri-Score, when it has one. */
+const gradeOf = (g: unknown): Pick<Food, "grade"> => (typeof g === "string" && /^[a-e]$/.test(g.toLowerCase()) ? { grade: g.toLowerCase() as NonNullable<Food["grade"]> } : {});
+/** Sugar, saturated fat, salt and fibre per 100 g — all four, or none (a grade from half a label would be a guess). */
+function nutriOf(n: Record<string, number | string | undefined>): Pick<Food, "nutri"> {
+  const sugar = num(n["sugars_100g"]), satFat = num(n["saturated-fat_100g"]), fiber = num(n["fiber_100g"]);
+  const salt = num(n["salt_100g"]) ?? (num(n["sodium_100g"]) != null ? num(n["sodium_100g"])! * 2.5 : null);
+  return sugar != null && satFat != null && salt != null && fiber != null ? { nutri: { sugar, satFat, salt, fiber } } : {};
+}
+
+export const OFF_FIELDS = "code,product_name,product_name_en,product_name_hu,brands,serving_quantity,image_front_small_url,image_small_url,nutriments,nutriscore_grade";
 
 /**
  * Search Open Food Facts. Tries their newer search service first (fast, relevance-ranked), and

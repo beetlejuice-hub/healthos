@@ -59,6 +59,9 @@ export type DescribedItem = {
   per100?: Macros100;
   unit?: { name: string; g: number };
   count?: number;
+  /** Food: per 100 g, for its Nutri-Score in the food score (PLAN 139) — sugar, saturated fat, salt, fibre in g, `fvl` % that's
+   *  fruit/veg/legumes. Left out for oils, butter, nuts and seeds (their own table in the formula). */
+  nutri?: { sugar: number; satFat: number; salt: number; fiber: number; fvl: number; redMeat: boolean; cheese: boolean };
   /** Drink: one serving as described. */
   drink?: { ml: number; caffeineMg: number; alcoholG: number; kcal: number };
   confidence: "high" | "medium" | "low";
@@ -142,6 +145,7 @@ export const SCHEMAS: Record<Exclude<Task, "supplement" | "digest" | "chat">, un
     items: arr(obj({
       kind: { type: "string", enum: ["food", "drink"] }, name: str, amount: str,
       per100: obj({ kcal: num, p: num, c: num, f: num }), unit: obj({ name: str, g: num }), count: num,
+      nutri: obj({ sugar: num, satFat: num, salt: num, fiber: num, fvl: num, redMeat: { type: "boolean" }, cheese: { type: "boolean" } }),
       drink: obj({ ml: num, caffeineMg: num, alcoholG: num, kcal: num }),
       confidence: { type: "string", enum: ["high", "medium", "low"] }, note: str,
     }, ["kind", "name", "amount", "confidence", "note"])),
@@ -181,6 +185,7 @@ Use "goes with", never "causes". No medical advice; anything health-worrying →
 Task: turn a description and/or photo of food or drink into items with nutrition values. Rules:
 - Split a meal into its parts when they're logged separately (toast and butter), keep a dish whole when it's one thing (lasagne).
 - Food: give values per 100 g from typical reference data (USDA-style), the everyday unit the user would count it in (slice, piece, cup, plate…) with its weight in grams, and how many units were described. kcal must be close to 4·protein + 4·carbs + 9·fat.
+- Food: also nutri, per 100 g like per100 — sugar, saturated fat, salt and fibre in grams, fvl = % of the food that's fruit, vegetables or legumes (potatoes and nuts don't count), redMeat (beef, pork, lamb or products of them), cheese. Typical reference values; leave nutri out for oils, butter, nuts and seeds.
 - Drink: one serving as described: ml, caffeine mg, alcohol grams (ml × ABV × 0.789), kcal. Café drinks vary a lot — assume the typical café size in Hungary/Europe unless told otherwise, and say what you assumed in the note.
 - Photo: estimate portions from plate/cup size; say what you assumed. Use "low" confidence when portions are guesses.
 - The user lives in Romania and eats Romanian and Hungarian (Transylvanian) home cooking and shops at Lidl, Kaufland, Profi, Mega Image. Names may be Hungarian, Romanian or misspelled ("pityoka leves" = pityókaleves, potato soup; "ciorba de perisoare"). A dish: values per 100 g for a typical home recipe, counted in its everyday portion — a bowl of soup ≈ 350 g, a plate of a main ≈ 350 g, a piece for pastries and doughnuts — and put the other language's name in the note.
@@ -231,12 +236,18 @@ const labelOk = (m: Macros100) => {
  * 1 g–1.5 kg; a drink's caffeine must be under 600 mg and its alcohol possible for its volume.
  * What's dropped is reported back so nothing disappears silently.
  */
+/** Sugar within the carbs, saturated fat within the fat, salt and fibre and fruit/veg in sane ranges. */
+const nutriOk = (it: DescribedItem) => {
+  const n = it.nutri, m = it.per100;
+  return !!n && !!m && [n.sugar, n.satFat, n.salt, n.fiber, n.fvl].every((v) => isNum(v) && v >= 0) && n.sugar <= m.c + 1 && n.satFat <= m.f + 0.5 && n.salt <= 30 && n.fiber <= 60 && n.fvl <= 100;
+};
 export function checkDescribe(a: DescribeAnswer): { items: DescribedItem[]; dropped: string[] } {
   const items: DescribedItem[] = [], dropped: string[] = [];
   for (const it of a.items ?? []) {
     if (it.kind === "food") {
       const ok = it.per100 && labelOk(it.per100) && it.unit && isNum(it.unit.g) && it.unit.g >= 1 && it.unit.g <= 1500 && isNum(it.count) && it.count > 0 && it.count <= 50;
-      (ok ? items.push(it) : dropped.push(it.name));
+      // nutrients that don't fit the label are left off (the food stays; it just isn't graded)
+      (ok ? items.push(nutriOk(it) ? it : { ...it, nutri: undefined }) : dropped.push(it.name));
     } else {
       const d = it.drink;
       const ok = d && isNum(d.ml) && d.ml > 0 && d.ml <= 2000 && isNum(d.caffeineMg) && d.caffeineMg >= 0 && d.caffeineMg <= 600 && isNum(d.alcoholG) && d.alcoholG >= 0 && d.alcoholG <= d.ml * 0.6 * 0.789 + 0.5 && isNum(d.kcal) && d.kcal >= 0 && d.kcal <= 2000;

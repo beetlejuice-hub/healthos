@@ -1840,8 +1840,14 @@ D questions answered in chat. Numbered on from #112.
    Checked: nutriscore.test (chicken A, apple A, toast C, pizza D, chocolate E, Gouda D with the cheese rule — worked by
    hand from the thresholds), foodscore.test (chicken 100, apple 56 > pizza 43, oats 65, timing steps, beer, missing,
    plate 82), e2e/foodday.cjs (oats 65, toast 47 with its parts, pizza 41, beer 10, dinner 35 on the phone). Not
-   checked: the formula against Open Food Facts' own grades — this environment can't reach it. Next: phase 2 (pack
-   grades from Open Food Facts; the AI's nutrients for home food), phase 3 (the night read-back).
+   checked: the formula against Open Food Facts' own grades — this environment can't reach it.
+   **Phase 2 done (20 Oct):** packs keep Open Food Facts' own Nutri-Score (`nutriscore_grade`) and their label's sugar,
+   saturated fat, salt (or sodium × 2.5) and fibre — all four or none; the AI's describe returns `nutri` for each food in
+   the same call (a range check drops nonsense, the food stays ungraded); a food the AI made before this (his schnitzel)
+   shows "—" with "✨ Ask the AI for its nutrients" — one light call on the tap, kept on the food. Checked:
+   foodscore2.test (pack grade kept, worked out when missing, half a label not graded, AI nutri kept and scored 46,
+   nonsense dropped — 4 of 5 fail on the old code), e2e/foodscore.cjs (pack E scored; the schnitzel "—" → ask → 71, kept),
+   foodday/ai/scan/labelphoto/searchpass/drinks still pass. Next: phase 3 (the night read-back).
 
 ### D · Asked — answered in chat (20 Oct)
 - "Would a lower upper body then a full body day work better than the current 3 full body day?"

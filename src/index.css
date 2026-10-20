@@ -1602,3 +1602,5 @@ span.fd-score[data-band="none"] { background: none; min-width: 34px; }
 .fd-why li { display: grid; grid-template-columns: 1fr auto; gap: 0 8px; font-size: 13px; }
 .fd-why li small { grid-column: 1 / -1; color: var(--c-dim); font-size: 12px; }
 .fd-why b { font-variant-numeric: tabular-nums; }
+.fd-why li.fd-ask { grid-template-columns: 1fr; justify-items: start; }
+.fd-why .pill-btn { background: var(--c-bg); }
