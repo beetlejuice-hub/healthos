@@ -1657,3 +1657,87 @@ below, in his words, grouped; A first (broken or wrong now), then the rest. Item
    device sees it); a re-read read-back is new again. Checked: e2e/night.cjs and morningread.cjs (new → opened → folded
    and plain after a reload; the re-read new again), screenshots. Pushed on the owner's "no test, push" — the full suite
    wasn't run for this one.
+
+---
+
+## 20 Oct batch — sorted (owner, 20 Oct: "LOTS OF NEW THINGS, SORT, ADD, AND START WORKING. ASK QUESTIONS IF NEEDED")
+
+Every note below, in his words, grouped: A broken or wrong now (first), B better versions of what's there, C new parts,
+D questions answered in chat. Numbered on from #112.
+
+### A · Broken or wrong now — fix first
+113. [ ] **Can't remove a logged food** — "WHY CANT I REMOVE A FOOD I LOGGED…??"
+114. [ ] **Stuck on the unit, and "not this"** — "today i logged 1 bite of schnitzel, now i cant put 1 full piece of
+   schnitzel, i try to log, it comes back to the schnitzel but measured in bite, and cant change..can we add a button that
+   says not this, then the app retries the search but removing that option.."
+115. [ ] **Weights step wrong** — "Weights are counted exactly wrong so its always like 36.5 instead of 36 its like
+   increasing just wrong"
+116. [ ] **Warm-up first** — "By default the warmup set should be first.."
+117. [ ] **The AI can't see what's in a meal** — "Rn ai can't see whats inside my meals so if i log 3 diff food in one
+   meal it only sees the title of meal so pls fix"
+118. [ ] **A daily question with yesterday's facts** — screenshot: "Stress is at 6 this morning. What's sitting on it most
+   today?" ("asked daily") — "question posed as today but it was last day and it was answered already".
+119. [ ] **Nonsense "worth a look"** — screenshot: "On the day after a gym day, Black cumin seed oil / L-theanine /
+   Creatine tends to be higher (1.0 vs 0.8)" — "makes not much sense..?? more l theanine on gym days??" (a supplement
+   taken isn't an outcome).
+120. [ ] **A "most confident finding" the app can't defend** — screenshot of the chat: 15 days with black cumin seed oil,
+   1 without, yet its after-a-dose −2.1 was called the most confident finding — "interesting that the most confident
+   finding yet is one that even the app can't defend".
+121. [ ] **Log a supplement you're out of, or one that isn't yours** — "Also I'm technically out of vit d and dont have vit
+   b but i took from my moms stack so i should be able to tell ai i took x amount of vit d3 and it should log without
+   offering the restock option for vit d3. I mean it can offfer but also should be able to just log."
+122. [ ] **Times, not just "new"** — "should add timestamp for new messages on today screen so its not just says new"
+123. [ ] **More than one answer** — "Even at ai page i should be able to choose multiple answers for a question"
+
+### B · Better versions of what's there
+124. [ ] **Not logged = not taken** — "if i dont take a supp, like not log it, it should be taken as if i did not take it.
+   if i click in the followup that i took it, data should be modified accordingly" (changes the rule from 13 Oct that an
+   unticked day is unknown).
+125. [ ] **Questions less generic** — "questions feel way too generic rn, like weight logged before bathroom, etc"
+126. [ ] **Exercise variants** — "On workouts can we have the exercises as like incline bench press and the i can choose
+   wheter machine, bench w barbell, bemch w dumbbell etc? Idk if it changes anything tho"
+127. [ ] **What makes a night good and restorative; restlessness** — "pls dive into what makes a nights sleep a good nights
+   sleep and what makes it restorative. Fitbit app says 81 rating while app says 98… just because i slept 9h" and "App
+   doesnt have restlessness". Goes with the open sleep-score question on #110 (length is 25 of its 100).
+128. [ ] **Today's food at a glance** — "a simple window showing what i ate, the macros summary basically for the day would
+   be nice, when clicking on food on today page - brainstorm ts and make it" and "need a bit better look for macro
+   breakdwon, food, and trackking food overall, looking back to yesterday too".
+129. [ ] **A workout read at the end of a workout day** — "Can we have ai look at the workout at eod and make a summary,
+   suggestions, compare how i am improving etc? Like at midnight when doing the digest, at days when i log a workout..like
+   a health couach but it should not fire often, it costs api credits"
+130. [ ] **Cardio sessions** — "Feel like ts doesnt track cardio sessions properly. It should be a button that i press and
+   it strts w timer, then it logs as cardio sessions, reads and understands the heart bpm and other metrics and later it
+   can make it into the digest. Cardio is important for my weight loss."
+131. [ ] **Goal-based suggestions** — "can we let ai, both health and other, the main one, give me suggestions based on my
+   goals (it can ask me what my goals are) - ?"
+132. [ ] **The AI scouts new things** — "also ai should look out for studies, workout splits, and supps, foods, everything
+   and recommend me new stuff from these categories too…or perhaps look at forums too and see whats up"
+133. [ ] **More interesting morning reads** — "can we make the digest messages more intereesting? brainstorm this pls"
+134. [ ] **Body fat / muscle** — "My weight going up could be muscle too, the creatin hitting plus im back at gym..should i
+   log body fat % too?"
+
+### C · New parts
+135. [ ] **Noticings** — "a small text box where i can write things like I went downstairs to do something, something else
+   distracted me, came back up and realized i didnt do what i wanted. This happens often. So basically mental and
+   physical notices i see and realize. The app can make an understanding of this and notice it for itself, for research
+   purposes and to ask me about that, dive deep into it and see why that happens. not like being my doctor but similar
+   perhaps, and just informal" + "it should also do a checkup from time to time, like how you been, have u experienced X,
+   also ask based on my health markers that i or the band shares".
+136. [ ] **Tempo → HealthOS** — "in the soon future i want to connect tempo to healthos, or like make it send info, so
+   healthos can see what i am doing, and make connection between tasks/events to how i feel" (with #92).
+137. [ ] **Idea, to look over together: an overall check** — "from time to time the app should do an overall check of what
+   we are doing … catch things like findings that are irrelevant, nonsense, or its just simply clear that they are not
+   affecting eachother - and just name these, not delete … anomalies, maybe things like i lifted 315 kg per hand - possible
+   misstype from 31,5 … this is more of an idea that we have yet to look over".
+138. [ ] **Idea: send what's logged to the band's app** — "can we share the apps logging to the bands app (google fit or
+   whatever?) looks like it has a much more advanced food logging sections so maybe if my loggings go there, it could kind
+   of figure out what other nutrients that foods has and lmk? and lots of other stuff that i log here in app but not in
+   that app" — needs a look at what Google's API lets an app write.
+
+### D · Asked — answered in chat (20 Oct)
+- "Would a lower upper body then a full body day work better than the current 3 full body day?"
+- "also explain how is readiness calculated??"
+- "also when does ai update the log it sees, like the food i logged, etc? like how often"
+- "should i log body fat % too?" (with #134)
+
+Order: A first (113 → 123), then B, then C; D in the chat. (claimed: this session, 20 Oct — A items as they're worked.)
