@@ -1873,14 +1873,41 @@ D questions answered in chat. Numbered on from #112.
    Notices view on the Mind page.
 136. [ ] **Tempo → HealthOS** — "in the soon future i want to connect tempo to healthos, or like make it send info, so
    healthos can see what i am doing, and make connection between tasks/events to how i feel" (with #92).
+   Plan (20 Oct, not built — "soon future", and it touches Tempo too):
+   - Why: his days' tasks and events next to how he felt — "deep work blocks go with focus 7+", "days with 6+ meetings
+     go with stress up".
+   - How: Tempo posts what happened (a task done, a block started/ended, an event) to a new HealthOS worker endpoint
+     `/api/tempo` with a per-user token made in HealthOS Settings and pasted into Tempo once. HealthOS stores them as
+     entries of a new kind ("did": what, when, how long, tag). They show in the day, the AI's timeline and the find
+     tool, and become "up to" tags the mood grids already understand (PLAN 89/90).
+   - Tested with: a fake Tempo posting a planted week (focus higher after deep-work blocks) — the grid finds it, and
+     doesn't find a pattern that isn't planted.
+   - Open questions for him: which Tempo things count (tasks, calendar events, focus blocks)? Only titles, or tags only
+     (privacy)? Real time, or once a day?
 137. [ ] **Idea, to look over together: an overall check** — "from time to time the app should do an overall check of what
    we are doing … catch things like findings that are irrelevant, nonsense, or its just simply clear that they are not
    affecting eachother - and just name these, not delete … anomalies, maybe things like i lifted 315 kg per hand - possible
    misstype from 31,5 … this is more of an idea that we have yet to look over".
+   Proposal to look over (20 Oct, not built):
+   - Data sanity, as it's typed: a set, weight or food far outside his own history ("315 kg — your best is 34; did you
+     mean 31.5?"), asked once, then kept as typed. Cheap and pure; I'd start here.
+   - A monthly "overall check" riding the month read (no extra call): the app lists every finding still shown, with its
+     evidence (days with/without, effect, how sure), and the AI marks the ones that look like noise or plain sense
+     ("coffee goes with caffeine") — named, never deleted, his tap hides one.
+   - Findings the data stopped supporting: one that's gone "not clear" for 4 weeks gets a quiet "faded" label.
+   His call: which of the three, and whether the AI may hide or only label.
 138. [ ] **Idea: send what's logged to the band's app** — "can we share the apps logging to the bands app (google fit or
    whatever?) looks like it has a much more advanced food logging sections so maybe if my loggings go there, it could kind
    of figure out what other nutrients that foods has and lmk? and lots of other stuff that i log here in app but not in
    that app" — needs a look at what Google's API lets an app write.
+   Looked (20 Oct): the Google Health API (the one the band already uses) can write food logs (`nutrition-log`, create /
+   update / delete) and water (`hydration-log`) with a `googlehealth.nutrition.writeonly` scope, and read them with
+   `.readonly`. A log can point at a "food" Google has and take its nutrients from it, or carry the app's own numbers.
+   But the docs show foods as list/get only — no search of a food database — and only energy, fat and carbs in the
+   nutrient fields shown. So "send it there and let it work out the other nutrients" doesn't look possible. The app
+   already gets nutrients from Open Food Facts and the AI (#139). Sending logs there would only put them in Google's app
+   too, and needs a new permission (reconnect the band). My pick: hold, unless he wants his food in Google's app too.
+   Sources: developers.google.com/health/data-types/nutrition, developers.google.com/health/scopes.
 139. [x] **A score for each food and plate** (owner, 20 Oct) — "i think we should do a food/plate score system. like how
    bad/good it is. idk if theres a database for this but i think there is.Like how healthy, how good it is for my goal,
    etc, how good is the timing. like a score next to the plate, for each item and for in total too (the plate), and i can
