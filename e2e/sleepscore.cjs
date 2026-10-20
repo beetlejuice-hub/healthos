@@ -64,7 +64,7 @@ function world() {
   // asleep at 01:42: past the study's window — poor, about 1 of 5
   check(`fell asleep at 01:42: poor, about 1 of 5, against 22:00–23:00 (${bt})`, bt && bt[0] > 0.5 && bt[0] < 1.6 && bt[1] === '01:42' && bt[2] === 'poor' && /^ideal 22:00–23:00 · your usual 23:[34]\d$/.test(bt[3]));
   const zs = await card.locator('.sl-sp.z').evaluateAll((els) => els.map((e) => [e.dataset.part, e.dataset.zone, e.querySelectorAll('.zb .dot').length, getComputedStyle(e.querySelector('.zb .dot')).backgroundColor]));
-  check(`every part on its zones, one dot each, the zone in words and colour (${zs.map((z) => z[0] + ':' + z[1]).join(' ')})`, zs.length === 10 && zs.every((z) => z[2] === 1 && /ideal|fair|poor/.test(z[1]))
+  check(`every part on its zones, one dot each, the zone in words and colour (${zs.map((z) => z[0] + ':' + z[1]).join(' ')})`, zs.length === 11 && zs.every((z) => z[2] === 1 && /ideal|fair|poor/.test(z[1]))
     && new Set(zs.filter((z) => z[1] === 'poor').map((z) => z[3])).size === 1 && zs.find((z) => z[1] === 'poor')[3] !== zs.find((z) => z[1] === 'ideal')?.[3]);
   check('the key: this night, your usual, the three zones', /this night[\s\S]*your usual[\s\S]*ideal[\s\S]*fair[\s\S]*poor/.test(await card.locator('.sl-key').innerText().catch(() => '')));
   check(`not rated yet: said, and left out — not counted as 0 (${await card.locator('.sl-note').innerText().catch(() => '')})`, /your rating/.test(await card.locator('.sl-note').innerText().catch(() => '')) && await card.locator('.sl-sp[data-part="rating"]').count() === 0);

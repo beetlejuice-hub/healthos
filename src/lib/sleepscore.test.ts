@@ -21,6 +21,17 @@ describe("a night out of 100, on the studies' ranges (PLAN 97; owner, 15 Oct)", 
     expect(s.parts.reduce((a, x) => a + x.max, 0)).toBe(100);
     expect(s.parts.every((x) => x.zone === "ideal")).toBe(true);
   });
+  it("restless (owner, 20 Oct: \"App doesnt have restlessness\"): brief wakes an hour, on Fitbit's normal 10–30 a night", () => {
+    // 8 h asleep; `k` brief wakes of 2 min spread through it, and one 8-minute waking that isn't brief
+    const t0 = atMinute("2026-09-20", 22 * 60 + 40);
+    const st = (k: number) => [...Array.from({ length: k }, (_, i) => ({ type: "awake" as const, start: t0 + (i + 0.5) * (470 / k) * MIN, end: t0 + (i + 0.5) * (470 / k) * MIN + 2 * MIN })),
+      { type: "awake" as const, start: t0 + 200 * MIN, end: t0 + 208 * MIN }];
+    const R = (k: number) => sleepScore(night(20, { stages: st(k) }), 9, usualNights);
+    expect([p(R(16), "restless").why, p(R(16), "restless").zone, p(R(16), "restless").got]).toEqual(["2.0 an hour", "ideal", 8]);
+    expect([p(R(40), "restless").zone, p(R(56), "restless").zone]).toEqual(["fair", "poor"]);
+    // same night otherwise: the restless one scores lower
+    expect(R(56).score).toBeLessThan(R(16).score - 5);
+  });
   it("your usual being poor doesn't make a poor night good (owner: \"if my usual is pretty bad, it will still show me a good score\")", () => {
     const fives = Array.from({ length: 10 }, (_, i) => night(i + 1, { asleepMin: 300 }));
     const s = sleepScore(night(20, { asleepMin: 300 }), 7, fives);
@@ -42,21 +53,21 @@ describe("a night out of 100, on the studies' ranges (PLAN 97; owner, 15 Oct)", 
   it("continuity on the NSF's marks: asleep in bed, awake in the night, long wakings, falling asleep", () => {
     const c = (o: Partial<Night>) => sleepScore(night(20, o), 10, usualNights);
     const bed = atMinute("2026-09-20", 22 * 60 + 30);
-    expect(p(c({ up: bed + 640 * MIN }), "efficiency").got).toBe(4); // 480 of 640 min: 75 % → fair, 4 of 10
+    expect(p(c({ up: bed + 640 * MIN }), "efficiency").got).toBe(3.6); // 480 of 640 min: 75 % → fair, 3.6 of 9
     expect(p(c({ up: bed + 640 * MIN }), "efficiency").zone).toBe("fair");
-    expect([p(c({ awake: 35 }), "waso").got, p(c({ awake: 50 }), "waso").got, p(c({ awake: 90 }), "waso").got]).toEqual([4.9, 2.8, 0]);
+    expect([p(c({ awake: 35 }), "waso").got, p(c({ awake: 50 }), "waso").got, p(c({ awake: 90 }), "waso").got]).toEqual([3.5, 2, 0]);
     const aw = (h: number, min: number) => ({ type: "awake" as const, start: bed + h * H, end: bed + h * H + min * MIN });
     const three = p(c({ stages: [aw(2, 8), aw(3, 12), aw(5, 6), aw(6, 3)] }), "wakings"); // the 3-min one doesn't count
-    expect([three.got, three.why, three.zone]).toEqual([1.5, "3", "fair"]);
+    expect([three.got, three.why, three.zone]).toEqual([1, "3", "fair"]); // half of 2
     expect([p(c({ latency: 25 }), "onset").got, p(c({ latency: 45 }), "onset").got, p(c({ latency: 75 }), "onset").got]).toEqual([5, 2.5, 0]);
   });
   it("no stages: wakings, deep and REM left out and named, not counted as none", () => {
     const s = sleepScore(night(20, { deep: null, rem: null }), 10, usualNights);
-    expect(s.left.map((l) => l.id)).toEqual(["wakings", "deep", "rem"]); expect(s.score).toBe(100);
+    expect(s.left.map((l) => l.id)).toEqual(["wakings", "restless", "deep", "rem"]); expect(s.score).toBe(100);
   });
   it("deep and REM by their share: 10 % deep is fair, 64 % of its 7; 15 % REM half of its 8", () => {
     const s = sleepScore(night(20, { deep: 48, rem: 72 }), 10, usualNights);
-    expect([p(s, "deep").got, p(s, "deep").zone, p(s, "rem").got, p(s, "rem").zone]).toEqual([4.5, "fair", 4, "fair"]);
+    expect([p(s, "deep").got, p(s, "deep").zone, p(s, "rem").got, p(s, "rem").zone]).toEqual([3.2, "fair", 3, "fair"]);
   });
   it("a night after wine: HRV 25 % under your usual and heart rate 5 bpm up — both red, whatever else", () => {
     const s = sleepScore(night(20, { hrv: 37.5, meanHr: 59 }), 6, usualNights);
@@ -70,7 +81,7 @@ describe("a night out of 100, on the studies' ranges (PLAN 97; owner, 15 Oct)", 
   });
   it("not rated yet: left out and named, the rest scaled to 100", () => {
     const s = sleepScore(night(20), null, usualNights);
-    expect(s.left.map((l) => l.id)).toEqual(["wakings", "rating"]); expect(s.score).toBe(100);
+    expect(s.left.map((l) => l.id)).toEqual(["wakings", "restless", "rating"]); expect(s.score).toBe(100);
   });
   it("more sleep never lowers it up to 9 h", () => {
     const at = (m: number) => sleepScore(night(20, { asleepMin: m }), 8, usualNights).score;
@@ -84,11 +95,11 @@ describe("a night out of 100, on the studies' ranges (PLAN 97; owner, 15 Oct)", 
   });
   it("too few nights for the heart's usual: HRV and heart rate asleep left out, not guessed", () => {
     const s = sleepScore(night(20), 10, usualNights.slice(0, 3));
-    expect(s.left.map((l) => l.id)).toEqual(["wakings", "hrv", "hrsleep"]);
+    expect(s.left.map((l) => l.id)).toEqual(["wakings", "restless", "hrv", "hrsleep"]);
   });
   it("a measure missing from the band (undefined, NaN) is left out — never a NaN score", () => {
     const s = sleepScore(night(20, { awake: undefined as unknown as number, latency: Number.NaN }), 10, usualNights);
-    expect(Number.isFinite(s.score)).toBe(true); expect(s.left.map((l) => l.id)).toEqual(["waso", "wakings", "onset"]);
+    expect(Number.isFinite(s.score)).toBe(true); expect(s.left.map((l) => l.id)).toEqual(["waso", "wakings", "restless", "onset"]);
     expect(Number.isFinite(sleepScore(night(20, { asleepMin: Number.NaN }), 10, usualNights).score)).toBe(true);
   });
   it("curves: straight between points, flat past the ends; words as Fitbit's bands", () => {
