@@ -62,9 +62,10 @@ function world() {
   const late = await cell('Ate within 2 h of bed', 'Fell asleep');
   check(`dinner within 2 h of bed → longer to fall asleep, planted +20 min, found (${late})`, late && (late[0] === 'clear' || late[0] === 'likely') && late[1] === 'worse' && /^\+\d+m$/.test(late[2]));
   const mag = await cell('Magnesium that day', 'Deep'), magN = await rowN('Magnesium that day');
-  const answered = w.entries.filter((e) => e.kind === 'supp').length;
+  const answered = w.entries.filter((e) => e.kind === 'supp').length, firstK = Math.max(...w.entries.filter((e) => e.kind === 'supp').map((e) => +e.id.slice(1)));
   check(`magnesium days → more deep, found (${mag})`, mag && (mag[0] === 'clear' || mag[0] === 'likely') && mag[1] === 'better');
-  check(`magnesium: only answered days count (${magN} of 30 nights; ${answered} answered)`, magN != null && magN <= answered && magN >= answered - 2);
+  // not logged = not taken (owner, 20 Oct): every day the app was used counts from its first log — the unanswered ones as without
+  check(`magnesium: every used day from its first log counts, unlogged ones as without (${magN} of 30 nights; ${answered} logged; from night ${31 - firstK})`, magN != null && magN > answered && magN <= firstK && magN >= firstK - 2);
   const nothing = await pg.locator('.sl .sl-cell').evaluateAll((els) => els.filter((x) => /^(Magnesium that day|Ate within 2 h of bed) and Woke up:/.test(x.getAttribute('aria-label') || '') && x.dataset.sure === 'clear').length);
   check(`nothing planted on waking up: not clear (${nothing})`, nothing === 0);
   // sideways on a phone, the names fixed

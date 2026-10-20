@@ -27,6 +27,13 @@ describe("not logged = not taken", () => {
     const m = suppByDay(es);
     expect(["10", "11", "12", "13", "14", "15", "16", "17"].map((d) => m.get(`2026-10-${d}`)?.get("mag") ?? null)).toEqual([null, true, false, false, null, true, false, true]);
   });
+  it("today isn't over: not logged yet is unknown, not \"didn't\" — until tomorrow", () => {
+    const m = suppByDay(es, "2026-10-16");
+    expect(m.get("2026-10-16")?.get("mag")).toBeUndefined();
+    expect(m.get("2026-10-12")?.get("mag")).toBe(false);   // earlier days unchanged
+    expect(m.get("2026-10-17")?.get("mag")).toBe(true);    // logged today (or later) still counts
+    expect(suppAnswers(es, "2026-10-16").filter((a) => a.inferred).map((a) => new Date(a.at).getDate())).toEqual([12]);
+  });
   it("only one inferred \"didn't\" per day, at noon, marked as inferred", () => {
     const inf = suppAnswers(es).filter((a) => a.inferred);
     expect(inf.map((a) => new Date(a.at).getDate())).toEqual([12, 16]);

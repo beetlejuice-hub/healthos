@@ -23,7 +23,8 @@ export function Tonight({ now }: { now: number }) {
   // still up past the planned bedtime (00:30): bedtime is now, not a time already gone
   const eve = tonightEve(now), bed = Math.max(tonightsBed(now, bedMinute), Math.ceil(now / 60_000) * 60_000);
   const ns = useMemo(() => (band ? nights(band.sleep, band.hr, band.rhr, band.hrv).filter((n) => n.eve < eve && n.up >= now - 32 * DAY) : []), [band, eve, now]);
-  const inputs = useMemo(() => eveningInputs(entries, workouts, halfLife), [entries, workouts, halfLife]);
+  // tonight's evening isn't over: a supplement not logged yet is "not yet", not "didn't"
+  const inputs = useMemo(() => eveningInputs(entries, workouts, halfLife, eve), [entries, workouts, halfLife, eve]);
   const past = useMemo(() => evenings(ns, inputs), [ns, inputs]);
   // the grid only changes when past evenings do — not each time something is logged tonight
   const pastKey = JSON.stringify(past);

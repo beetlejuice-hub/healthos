@@ -10,7 +10,8 @@ import type { evenings } from "./sleep";
 import type { Entry, Workout } from "./types";
 import { suppAnswers } from "./suppdays";
 
-export function eveningInputs(entries: Entry[], workouts: Workout[], halfLifeMin: number): Parameters<typeof evenings>[1] {
+/** `today`: the day that isn't over yet — a supplement not logged on it is "not yet", not "didn't" (lib/suppdays). */
+export function eveningInputs(entries: Entry[], workouts: Workout[], halfLifeMin: number, today?: string): Parameters<typeof evenings>[1] {
   const doses = caffeineDoses(entries);
   return {
     drinks: alcoholDoses(entries), caffeineAt: (t) => caffeineAt(doses, t, halfLifeMin), workouts: workouts.map((w) => ({ start: w.startedAt })),
@@ -19,6 +20,6 @@ export function eveningInputs(entries: Entry[], workouts: Workout[], halfLifeMin
     foods: entries.flatMap((e) => (e.kind === "food" ? [{ at: e.at, kcal: e.macros.kcal, c: e.macros.c }] : [])),
     sessions: workouts.map((w) => ({ start: w.startedAt, end: w.endedAt ?? w.startedAt + 3_600_000 })),
     checks: entries.flatMap((e) => (e.kind === "feel" && e.stress != null ? [{ at: e.at, stress: e.stress }] : [])),
-    supps: suppAnswers(entries), // not logged = not taken (owner, 20 Oct)
+    supps: suppAnswers(entries, today), // not logged = not taken (owner, 20 Oct)
   };
 }
