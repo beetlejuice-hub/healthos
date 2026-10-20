@@ -17,6 +17,8 @@ import { CardioSession } from "../components/CardioSession";
 import { DecimalInput } from "../components/DecimalInput";
 import { adaptNext, historyOf, plateau, repsLabel, repsOf, smartNext } from "../lib/progress";
 import { RepsInput } from "../components/RepsInput";
+import { GuardBox } from "../components/GuardBox";
+import { checkSet, type Guard } from "../lib/sanity";
 import { StrengthCard } from "../components/StrengthCard";
 import { useBand } from "../lib/band-client";
 
@@ -276,13 +278,21 @@ function Session({ w }: { w: Workout }) {
   const vol = volume(sets.filter((s) => s.workoutId === w.id));
   const lastSame = (() => { const ws = [...workouts].reverse().find((x) => x.template === w.template && x.id !== w.id && x.endedAt); return ws ? volume(sets.filter((s) => s.workoutId === ws.id)) : null; })();
 
-  const log = () => {
+  // PLAN 145: a number far outside this lift's own history asks once ("315 kg — did you mean 31.5?"); kept if he says so
+  const [guard, setGuard] = useState<Guard | null>(null);
+  const okd = useRef(new Set<string>());
+  const log = (o: { kg?: number; reps?: number; keep?: boolean } = {}) => {
     if (!cur) return;
+    const k = o.kg ?? kg, r = o.reps ?? reps, key = `${cur.name}|${k}|${r}`;
+    if (!warmOn && !o.keep && !okd.current.has(key)) { const g = checkSet(k, r, [...hist].reverse().flat(), pair); if (g) { setGuard(g); return; } }
+    okd.current.add(key); setGuard(null);
+    if (o.kg != null) setKg(o.kg);
+    if (o.reps != null) setReps(o.reps);
     const at = Date.now();
     lastLog.current = at;
-    const set = { at, workoutId: w.id, exercise: cur.name, kg, reps, ...(warmOn ? { warmup: true } : {}) };
+    const set = { at, workoutId: w.id, exercise: cur.name, kg: k, reps: r, ...(warmOn ? { warmup: true } : {}) };
     if (warmOn) { act.addEntry({ kind: "set", ...set }); startWarm(false); setRest(60); return; }
-    if (isBest(sets, set)) setBest({ exercise: cur.name, kg, reps, e1rm: Math.round(e1rm(kg, reps) * 10) / 10, at });
+    if (isBest(sets, set)) setBest({ exercise: cur.name, kg: k, reps: r, e1rm: Math.round(e1rm(k, r) * 10) / 10, at });
     act.addEntry({ kind: "set", ...set });
     const after = mine.length + 1;
     // a set well over or under the target moves the next one (PLAN 143), when there is a next one
@@ -359,7 +369,8 @@ function Session({ w }: { w: Workout }) {
             accident (found in testing: 17 sets logged on a 12-set plan). An extra set is still
             one deliberate tap away. */}
         {best && best.exercise === cur.name && now - best.at < 20_000 && <p className="best" role="status">New best · {best.kg} kg × {best.reps} · est. 1RM {best.e1rm} kg</p>}
-        {(warmOn || !exDone) && <button type="button" className="go" onClick={log}>{warmOn ? "Log warm-up" : "Log set"}</button>}
+        {guard && <GuardBox g={guard} keep={`${kg} × ${reps}`} onFix={() => log({ ...guard.fix, keep: true })} onKeep={() => log({ keep: true })} onChange={() => setGuard(null)} />}
+        {(warmOn || !exDone) && !guard && <button type="button" className="go" onClick={() => log()}>{warmOn ? "Log warm-up" : "Log set"}</button>}
         {/* Planned sets done: the next exercise is suggested, never forced — another set of this one sits right beside it
             (owner, 13 Oct: "i should be able to log another set"). */}
         {!warmOn && exDone && <div className={next != null ? "go-row" : undefined}>

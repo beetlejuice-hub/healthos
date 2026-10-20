@@ -23,6 +23,8 @@ import { extractTime, matchDrink, parseItem, parseMeal, readAmount, tokens, type
 import { fromDatabase } from "../lib/fillin";
 import { caffeinePer100, drinkFromFood, sizesFor } from "../lib/drinkdb";
 import { bodyFat, FAT, parseFat } from "../lib/bodyfat";
+import { GuardBox } from "../components/GuardBox";
+import { checkWeight, type Guard } from "../lib/sanity";
 import { tasteOf } from "../lib/rank";
 import { convert, cookKind, cookState, WORD, type CookState } from "../lib/cooked";
 import { findBarcode, type Lookup } from "../lib/barcode";
@@ -901,6 +903,14 @@ function BodyTab({ done }: { done: (m: string) => void }) {
   const n = Number(kg.replace(",", "."));
   const fatPct = parseFat(fat);
   const fatBad = fat.trim() !== "" && fatPct == null;
+  // PLAN 145: far from the last weigh-in → asked once
+  const [guard, setGuard] = useState<Guard | null>(null);
+  const save = (v: number, keep = false) => {
+    const g = keep ? null : checkWeight(v, weights[0]?.kg ?? null);
+    if (g) { setGuard(g); return; }
+    setGuard(null);
+    const kg2 = Math.round(v * 100) / 100, e = act.addEntry({ kind: "weight", at: Date.now(), kg: kg2, ...(fatPct != null ? { fatPct } : {}) }); setFat(""); offerUndo([e.id], `Logged ${kg2} kg`); done(`Logged ${kg2} kg`);
+  };
   const bf = bodyFat(entries, Date.now());
   // The last 30 days with the same trend line Noticed uses (typos and one-offs left out).
   const today = localDay(Date.now());
@@ -912,13 +922,14 @@ function BodyTab({ done }: { done: (m: string) => void }) {
     <div className="card">
       <h3>Weight <span>morning, before food, is most comparable</span></h3>
       <div className="row3w">
-        <label className="field">kg<input inputMode="decimal" value={kg} onChange={(e) => setKg(e.target.value)} /></label>
+        <label className="field">kg<input inputMode="decimal" value={kg} onChange={(e) => { setKg(e.target.value); setGuard(null); }} /></label>
         <label className="field">Body fat %<input inputMode="decimal" value={fat} placeholder="optional" onChange={(e) => setFat(e.target.value)} aria-invalid={fatBad} /></label>
         <div style={{ display: "flex", alignItems: "end" }}>
-          <button type="button" className="pill-btn pri" disabled={!(n > 20 && n < 400) || fatBad} onClick={() => { const e = act.addEntry({ kind: "weight", at: Date.now(), kg: Math.round(n * 100) / 100, ...(fatPct != null ? { fatPct } : {}) }); setFat(""); offerUndo([e.id], `Logged ${n} kg`); done(`Logged ${n} kg`); }}>Log weight</button>
+          <button type="button" className="pill-btn pri" disabled={!(n > 20 && n < 400) || fatBad || !!guard} onClick={() => save(n)}>Log weight</button>
         </div>
       </div>
       {fatBad && <p className="err">Body fat should be a percentage between {FAT.lo} and {FAT.hi}, like 20.1.</p>}
+      {guard && <GuardBox g={guard} keep={`${n} kg`} onFix={() => { setKg(String(guard.fix!.kg)); save(guard.fix!.kg!, true); }} onKeep={() => save(n, true)} onChange={() => setGuard(null)} />}
       {pts.length >= 2 && <div className="wchart">
         <LineChart label="Weight, last 30 days" h={130} lo={Math.floor(Math.min(...ys) - 0.5)} hi={Math.ceil(Math.max(...ys) + 0.5)} xs={[0, 29]} yfmt={(v) => v.toFixed(1)}
           xlabels={[[0, "30 days ago"], [29, "today"]]}

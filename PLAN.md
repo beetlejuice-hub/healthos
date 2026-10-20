@@ -2017,8 +2017,16 @@ Order: A first (113 → 123), then B, then C; D in the chat. (claimed: this sess
    step and back to 8. A set at the top says "✓ top". Reps to spare past the top (15+), being stuck below 8, and the
    in-session nudge use the range. One number works exactly as before. Checked: progress.test (each rule, both shapes,
    the parser), e2e/repranges.cjs (typed in the editor, the card, the session's aim, ✓ top, the step up), phone width.
-145. [ ] **A typo guard when logging** — "315 kg — did you mean 31.5?" (#137's first part, owner: "do these"): a set far
+145. [x] **A typo guard when logging** — "315 kg — did you mean 31.5?" (#137's first part, owner: "do these"): a set far
    outside that lift's own history, or a body weight far from the last one, asks once before it's kept. (claimed: this
    session — lib/sanity, Workout.tsx, Today/Log weigh-in)
+   Done (20 Oct): a set or a weigh-in far outside his own numbers asks once, above the button, before it's kept — with the
+   likely fix when one fits, Keep (as typed), or Change it. Sets are judged against that lift's own history (3+ sets):
+   over 1.5× his best → "315 kg — far above your best on this (31 kg). Did you mean 31.5 kg?". A dropped digit (4 for
+   40) and one dumbbell typed when he logs both (20 when he usually logs 40 → "40 kg (both)") are caught too, and so are
+   reps 2× his most (80 for 8). Weigh-ins: more than 10 % off the last one ("48.6 kg — down 43 % … Is that right?"); the
+   box already refused under 20 and over 400. A new best (+10 %), a lighter week, a real cut aren't questioned, and
+   Keep is always there. Checked: sanity.test (each case, and the real changes that must not ask), e2e/guard.cjs
+   (315 → Use 31.5; 48.6 → Change it → 84.8; 70 in Log → Keep).
 146. [ ] **Cardio on the Training page** — next to strength: cardio minutes a week against the weeks before, and the
    last sessions with the band's heart rate (owner: "do these"; #130). (claimed: this session — TrainingPage, lib/cardio)

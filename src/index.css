@@ -1639,3 +1639,6 @@ span.fd-score[data-band="none"] { background: none; min-width: 34px; }
 .os-verdict.stronger { color: var(--ok); } .os-verdict.dropping { color: var(--warn); }
 .hint .plateau { color: var(--warn); }
 
+/* PLAN 145: the typo guard's question — asked once, never blocks */
+.guard { display: grid; gap: 8px; padding: 10px 12px; border-radius: 12px; background: color-mix(in srgb, var(--warn) 14%, transparent); border: 1px solid color-mix(in srgb, var(--warn) 40%, transparent); }
+.guard p { margin: 0; font-size: 14px; line-height: 1.4; }

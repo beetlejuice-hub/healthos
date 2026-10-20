@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState } from "react";
 import { CheckInCard } from "../components/CheckIn";
 import { AUTO_END } from "../lib/training";
 import { NoticeBox } from "../components/NoticeBox";
+import { GuardBox } from "../components/GuardBox";
+import { checkWeight, type Guard } from "../lib/sanity";
 import { act, offerUndo, useStore } from "../lib/store";
 import { DRINKS } from "../lib/drinks";
 import { nowItems } from "../lib/today";
@@ -431,13 +433,22 @@ function WeighIn({ lastKg }: { lastKg: number | null }) {
   const n = Number(kg.replace(",", "."));
   const fatPct = parseFat(fat);
   const ok = n > 20 && n < 400 && (fat.trim() === "" || fatPct != null);
-  return (
+  // PLAN 145: far from the last weigh-in → asked once ("8.46 kg — did you mean 84.6?")
+  const [guard, setGuard] = useState<Guard | null>(null);
+  const save = (v: number, keep = false) => {
+    const g = keep ? null : checkWeight(v, lastKg);
+    if (g) { setGuard(g); return; }
+    setGuard(null);
+    const e = act.addEntry({ kind: "weight", at: Date.now(), kg: Math.round(v * 100) / 100, ...(fatPct != null ? { fatPct } : {}) }); offerUndo([e.id], `Logged ${Math.round(v * 100) / 100} kg`);
+  };
+  return (<>
     <div className="weighin">
-      <input inputMode="decimal" aria-label="Weight in kg" value={kg} placeholder="kg" onChange={(e) => setKg(e.target.value)} />
+      <input inputMode="decimal" aria-label="Weight in kg" value={kg} placeholder="kg" onChange={(e) => { setKg(e.target.value); setGuard(null); }} />
       <input inputMode="decimal" aria-label="Body fat % (optional)" value={fat} placeholder="fat %" className="fatin" onChange={(e) => setFat(e.target.value)} />
-      <button type="button" className="pill-btn pri" disabled={!ok} onClick={() => { const e = act.addEntry({ kind: "weight", at: Date.now(), kg: Math.round(n * 100) / 100, ...(fatPct != null ? { fatPct } : {}) }); offerUndo([e.id], `Logged ${Math.round(n * 100) / 100} kg`); }}>Log kg</button>
+      <button type="button" className="pill-btn pri" disabled={!ok || !!guard} onClick={() => save(n)}>Log kg</button>
     </div>
-  );
+    {guard && <GuardBox g={guard} keep={`${n} kg`} onFix={() => { setKg(String(guard.fix!.kg)); save(guard.fix!.kg!, true); }} onKeep={() => save(n, true)} onChange={() => setGuard(null)} />}
+  </>);
 }
 
 
