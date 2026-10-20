@@ -289,8 +289,19 @@ export const act = {
   tidyWorkouts(now = Date.now(), force = false) {
     const t = tidyWorkouts(state.workouts, state.entries.filter((e) => e.kind === "set").map((e) => ({ workoutId: (e as Extract<Entry, { kind: "set" }>).workoutId, at: e.at })), now, force);
     if (!t.end.length && !t.drop.length) return;
-    const ends = new Map(t.end.map((x) => [x.id, x.at]));
-    commit({ ...state, workouts: state.workouts.filter((w) => !t.drop.includes(w.id)).map((w) => (ends.has(w.id) ? { ...w, endedAt: ends.get(w.id)! } : w)) });
+    const ends = new Map(t.end.map((x) => [x.id, x]));
+    commit({ ...state, workouts: state.workouts.filter((w) => !t.drop.includes(w.id)).map((w) => { const e = ends.get(w.id); return e ? { ...w, endedAt: e.at, ...(e.auto ? { autoEnded: true as const } : {}) } : w; }) });
+  },
+  /** A cardio session of its own (PLAN 130): one tap, the timer starts. Any open workout ends first. */
+  startCardio(what: string, at = Date.now()): Workout {
+    act.tidyWorkouts(at, true);
+    const w: Workout = { id: newId(), template: "Cardio", kind: "cardio", startedAt: at, endedAt: null, cardio: { what, startedAt: at } };
+    commit({ ...state, workouts: [...state.workouts, w] });
+    return w;
+  },
+  /** Throw away a cardio session started by mistake (it has no sets; workouts sync as one doc, so it's gone everywhere). */
+  discardCardio(id: string) {
+    commit({ ...state, workouts: state.workouts.filter((w) => !(w.id === id && w.kind === "cardio")) });
   },
   /** `exercises`: a premade day that isn't in your split (lib/programs). */
   startWorkout(template: string, at = Date.now(), exercises?: Template["exercises"], cardio?: string): Workout {

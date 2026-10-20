@@ -142,6 +142,10 @@ export type Workout = {
    * (false); unset = not yet. `startedAt`: started before the sets were all done (PLAN 94; owner, 14 Oct: "Should be
    * able to start cardio even when not done w all exercises..like starting early"). */
   cardio?: { what: string; done?: boolean; at?: number; startedAt?: number };
+  /** A cardio session of its own (PLAN 130): one tap starts it, a timer runs, it has no sets. Unset: lifting. */
+  kind?: "cardio";
+  /** Its timer was left running and it ended itself (lib/cardio CARDIO_MAX_MIN). */
+  autoEnded?: true;
 };
 
 /** A saved split day: "Upper A" → bench, row, OHP, pulldown, with the reps you aim for. */

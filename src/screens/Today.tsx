@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { CheckInCard } from "../components/CheckIn";
+import { AUTO_END } from "../lib/training";
 import { act, offerUndo, useStore } from "../lib/store";
 import { DRINKS } from "../lib/drinks";
 import { nowItems } from "../lib/today";
@@ -404,6 +405,13 @@ function WorkoutRunning({ now }: { now: number }) {
   const w = useStore((x) => x.workouts.find((v) => v.endedAt === null));
   const entries = useStore((x) => x.entries);
   if (!w) return null;
+  // a cardio session (PLAN 130): its timer, no sets — it only ends itself after 3 h
+  if (w.kind === "cardio") return (
+    <div className="noticed-line running">
+      <span><small>Cardio running</small>{w.cardio?.what || "Cardio"} · {Math.max(0, Math.floor((now - w.startedAt) / MIN))} min so far<small className="sub">started {clock(w.startedAt)} · ends by itself at {clock(w.startedAt + AUTO_END.cardioMaxMin * MIN)} if you forget</small></span>
+      <span className="acts"><button type="button" className="pill-btn" onClick={() => go("workout")}>Open</button><button type="button" className="pill-btn pri" onClick={() => { const t = Date.now(); act.updateWorkout(w.id, { endedAt: t, cardio: { what: w.cardio?.what || "Cardio", startedAt: w.startedAt, done: true, at: t } }); }}>Stop</button></span>
+    </div>
+  );
   const last = entries.reduce((m, e) => (e.kind === "set" && e.workoutId === w.id ? Math.max(m, e.at) : m), 0);
   const ends = last ? last + 60 * MIN : w.startedAt + 30 * MIN;
   return (

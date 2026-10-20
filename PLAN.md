@@ -1802,9 +1802,20 @@ D questions answered in chat. Numbered on from #112.
    before; warm-ups never count (lib/workoutread). Its answer has an optional workout part — how it went, 0–3 lines on
    what went up, one thing for next time (a weight or rep target, or holding a lift that dropped) — shown inside the
    card as "Your workout". Costs nothing extra; a day without a workout has no section and no part.
-130. [ ] **Cardio sessions** — "Feel like ts doesnt track cardio sessions properly. It should be a button that i press and
+130. [x] **Cardio sessions** — "Feel like ts doesnt track cardio sessions properly. It should be a button that i press and
    it strts w timer, then it logs as cardio sessions, reads and understands the heart bpm and other metrics and later it
    can make it into the digest. Cardio is important for my weight loss."
+   Done (20 Oct), phase 1: Workout → "Cardio · one tap starts the timer" (Stairmaster, Incline walk, Bike, Rower, Run,
+   Elliptical). A big timer that survives closing the app; the band's heart rate live when it has synced (it's a few
+   minutes behind — never made up); Stop → minutes, average and peak bpm from the band, about how many kcal and how
+   (Compendium MET × your latest weigh-in × time; nothing without a weigh-in), a note, Save or Keep going; "Started by
+   mistake?" throws it away. Recent lists it; Today says "Cardio running … ends by itself at" (3 h — the empty-workout
+   rule would have thrown a 40-min session away at 30 min). Cardio after lifting gets ▶ Start too, so its minutes are
+   known. The AI: the timeline says "cardio: Stairmaster (40 min)"; the morning read and chat get this week's cardio
+   minutes and kcal against the 3 weeks before and the last sessions; the night read-back gets the day's cardio against
+   the last of its kind and the week so far, in its "Your workout" part (lib/cardio). Defaults picked: kcal by MET, not
+   by heart rate (that needs age and sex, which the app doesn't have); 3 h auto-end. Next: heart-rate zones once a max
+   heart rate is known, and cardio on the Training page.
 131. [ ] **Goal-based suggestions** — "can we let ai, both health and other, the main one, give me suggestions based on my
    goals (it can ask me what my goals are) - ?"
 132. [ ] **The AI scouts new things** — "also ai should look out for studies, workout splits, and supps, foods, everything

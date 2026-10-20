@@ -60,7 +60,10 @@ export function timeline(state: Pick<State, "entries" | "workouts"> & { foods?: 
     else if (e.kind === "weight") push(e.at, `${t} weighed ${e.kg} kg`);
     else if (e.kind === "supp" && e.status === "skipped") push(e.at, `${t} skipped a supplement`);
   }
-  for (const w of state.workouts ?? []) if (w.startedAt >= from && w.startedAt < to) push(w.startedAt, `${clock(w.startedAt)}${mark(w.startedAt)} gym: ${w.template ?? "workout"}`);
+  for (const w of state.workouts ?? []) if (w.startedAt >= from && w.startedAt < to) push(w.startedAt, w.kind === "cardio"
+    // PLAN 130: a cardio session of its own, by name and minutes
+    ? `${clock(w.startedAt)}${mark(w.startedAt)} cardio: ${w.cardio?.what || "cardio"} (${w.endedAt ? `${Math.round((w.endedAt - w.startedAt) / 60_000)} min` : "going now"})`
+    : `${clock(w.startedAt)}${mark(w.startedAt)} gym: ${w.template ?? "workout"}${w.cardio?.done ? `, then ${w.cardio.what}` : ""}`);
   return rows.sort((a, b) => a[0] - b[0]).slice(0, 60).map(([, l]) => l);
 }
 

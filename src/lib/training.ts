@@ -268,14 +268,21 @@ export const volume = (sets: { kg: number; reps: number; exercise?: string; warm
  * that never got a set is dropped after 30 minutes. `force` closes every open one now (starting a
  * new workout closes the old one the same way).
  */
-export const AUTO_END = { afterLastSetMin: 60, emptyAfterMin: 30, coolDownMin: 2 };
-export type Tidy = { end: { id: string; at: number }[]; drop: string[] };
+export const AUTO_END = { afterLastSetMin: 60, emptyAfterMin: 30, coolDownMin: 2, cardioMaxMin: 180 };
+export type Tidy = { end: { id: string; at: number; auto?: true }[]; drop: string[] };
 
-export function tidyWorkouts(workouts: { id: string; startedAt: number; endedAt: number | null }[], sets: { workoutId: string; at: number }[], now: number, force = false): Tidy {
+export function tidyWorkouts(workouts: { id: string; startedAt: number; endedAt: number | null; kind?: "cardio" }[], sets: { workoutId: string; at: number }[], now: number, force = false): Tidy {
   const out: Tidy = { end: [], drop: [] };
   const open = workouts.filter((w) => w.endedAt === null).sort((a, b) => a.startedAt - b.startedAt);
   open.forEach((w, i) => {
     const newest = i === open.length - 1;
+    // cardio has no sets: never dropped as empty (PLAN 130). Another start ends it now; a timer left running ends at 3 h.
+    if (w.kind === "cardio") {
+      const cap = w.startedAt + AUTO_END.cardioMaxMin * 60_000;
+      if (now > cap) out.end.push({ id: w.id, at: cap, auto: true });
+      else if (force || !newest) out.end.push({ id: w.id, at: now });
+      return;
+    }
     const last = sets.filter((s) => s.workoutId === w.id).reduce((m, s) => Math.max(m, s.at), -Infinity);
     const closeAll = force || !newest; // only one workout can be open
     if (Number.isFinite(last)) {

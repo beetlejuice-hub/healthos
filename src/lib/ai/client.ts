@@ -24,6 +24,7 @@ import { buildContext, onTodayLines, timeline } from "./context";
 import { dayWindow, dayWord } from "./nightread";
 import { plateLines } from "../foodscore";
 import { workoutLines } from "../workoutread";
+import { cardioLine, cardioSpans, cardioWeekLines } from "../cardio";
 import type { AiAnswer, AiRequest, Task, UsageDoc } from "./tasks";
 import { currentKg } from "../body";
 
@@ -88,7 +89,9 @@ export function contextNow(state: State = getState(), now = Date.now(), { slim =
   const ready = band ? readiness(today, nights(band.sleep, band.hr, band.rhr, band.hrv), rating, sets, now, { hrv: band.hrv, rhr: band.rhr }) : null;
   const ss = sessions(state.workouts, sets);
   return buildContext({ state, now, days, findings: report.found, patterns, weight: t ? { kg: t.nowKg, perWeek: t.perDay * 7 } : null, nights: nightsSeen,
-    today: todayLines(ready), training: trainingLines(ss, mainLifts(sets), thisWeek(ss, now), 6, muscleStrength(sets, now)), grids: gridLines(state.ai.inbox ?? []), slim, onToday,
+    today: todayLines(ready), training: [...trainingLines(ss, mainLifts(sets), thisWeek(ss, now), 6, muscleStrength(sets, now)),
+      // cardio (PLAN 130): this week's minutes against the weeks before, the last sessions with the band's heart rate
+      ...cardioWeekLines(cardioSpans(state.workouts, now), band?.hr ?? [], currentKg(state.entries, 0, now) || null, now)], grids: gridLines(state.ai.inbox ?? []), slim, onToday,
     // today from midnight; before 04:00 it was still last night's evening, and says so (#107)
     ...(todaySoFar ? { todaySoFar: timeline(state, atMinute(today, 0), now + 1, (at) => (at < dayWindow(today)[0] ? " (last night, after midnight)" : "")) } : {}) });
 }
@@ -106,6 +109,10 @@ export function nightContext(day: string, state: State = getState(), now = Date.
   const plates = plateLines(state.entries, state.foods, day, [from, Math.min(to, now + 1)], state.settings.bedMinute);
   // a workout that day: each lift against the last time, so the read-back can coach it — no call of its own (PLAN 129)
   const lifts = workoutLines(state.workouts ?? [], state.entries.filter((e): e is EntryOf<"set"> => e.kind === "set"), [from, Math.min(to, now + 1)]);
+  // …and the day's cardio with the band's heart rate, and the week's minutes so far (PLAN 130)
+  const spans = cardioSpans(state.workouts ?? [], now), kg = currentKg(state.entries, 0, now) || null, hr = bandNow()?.hr ?? [];
+  const today = spans.filter((s) => !s.running && s.start >= from && s.start < Math.min(to, now + 1));
+  if (today.length) lifts.push(...today.map((s) => `Cardio: ${cardioLine(s, spans, hr, kg)}`), cardioWeekLines(spans, hr, kg, today[today.length - 1].end, 4, 0)[0]);
   return `${contextNow(state, now, { todaySoFar: false })}\n## The day being read back: ${w.label} (${w.when}), as it happened — it runs to 04:00 the next morning\n${tl.length ? tl.map((l) => `- ${l}`).join("\n") : "- nothing logged"}${plates.length ? `\n## Plates that day, with the app's food score (0–100: goal 45 — protein per 100 kcal; quality 35 — Nutri-Score; timing 20 — hours before bed)\n${plates.map((l) => `- ${l}`).join("\n")}` : ""}${lifts.length ? `\n## The workout that day (each lift against the last time it was done; working sets only)\n${lifts.map((l) => (l.startsWith("- ") ? `  ${l}` : `- ${l}`)).join("\n")}` : ""}`;
 }
 

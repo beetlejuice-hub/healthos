@@ -77,6 +77,15 @@ describe("workouts that end themselves", () => {
   it("leaves finished workouts alone", () => {
     expect(tidyWorkouts([w("a", T, T + 60 * M)], [], T + 500 * M)).toEqual({ end: [], drop: [] });
   });
+  // PLAN 130: a cardio session has no sets — the empty-workout rule would throw a 40-min stairmaster away at 30 min
+  it("cardio is never dropped as empty; another start ends it now; a timer left running ends itself at 3 h, marked", () => {
+    const c = { ...w("c", T), kind: "cardio" as const };
+    expect(tidyWorkouts([c], [], T + 45 * M)).toEqual({ end: [], drop: [] });
+    expect(tidyWorkouts([c], [], T + 50 * M, true)).toEqual({ end: [{ id: "c", at: T + 50 * M }], drop: [] });
+    expect(tidyWorkouts([c, w("b", T + 41 * M)], [], T + 42 * M)).toEqual({ end: [{ id: "c", at: T + 42 * M }], drop: [] });
+    expect(tidyWorkouts([c], [], T + 179 * M)).toEqual({ end: [], drop: [] });
+    expect(tidyWorkouts([c], [], T + 400 * M)).toEqual({ end: [{ id: "c", at: T + 180 * M, auto: true }], drop: [] });
+  });
 });
 
 describe("your own split", () => {

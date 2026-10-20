@@ -12,10 +12,13 @@ import { nameFor, pickFor } from "../lib/exsearch";
 import { clock, dayLabel } from "../lib/time";
 import type { EntryOf, Template, Workout } from "../lib/types";
 import { variantsOf } from "../lib/variants";
+import { CARDIO_CHIPS, cardioHr, cardioSpans, minutesOf } from "../lib/cardio";
+import { CardioSession } from "../components/CardioSession";
+import { useBand } from "../lib/band-client";
 
 type SetE = EntryOf<"set">;
 /** One tap for cardio when none was planned. */
-const CARDIO = ["Incline walk", "Stairmaster", "Bike", "Rower", "Run", "Elliptical"];
+const CARDIO = CARDIO_CHIPS;
 
 /** The last session's sets of an exercise, before a given workout. */
 function lastSets(sets: SetE[], exercise: string, notWorkout?: string): SetE[] {
@@ -28,7 +31,7 @@ function lastSets(sets: SetE[], exercise: string, notWorkout?: string): SetE[] {
 export function WorkoutScreen() {
   const workouts = useStore((s) => s.workouts);
   const active = workouts.find((w) => w.endedAt === null);
-  return active ? <Session w={active} /> : <Pick />;
+  return active ? (active.kind === "cardio" ? <CardioSession w={active} /> : <Session w={active} />) : <Pick />;
 }
 
 function Pick() {
@@ -38,6 +41,8 @@ function Pick() {
   const sets = useMemo(() => entries.filter((e): e is SetE => e.kind === "set"), [entries]);
   const [editing, setEditing] = useState<Template | "new" | null>(null);
   const recent = [...workouts].filter((w) => w.endedAt).slice(-5).reverse();
+  const band = useBand().data;
+  const spans = useMemo(() => cardioSpans(workouts, Date.now()), [workouts]);
   const next = nextTemplate(templates, workouts);
   // The day that's due comes first; the rest keep your order.
   const ordered = next ? [next, ...templates.filter((t) => t.id !== next.id)] : templates;
@@ -55,12 +60,20 @@ function Pick() {
         <button type="button" className="kbtn" onClick={() => setEditing("new")}>+ New day</button>
         <button type="button" className="kbtn" onClick={() => act.startWorkout("Quick workout")}>Quick workout</button>
       </div>
+      {/* PLAN 130 (owner, 20 Oct: "a button that i press and it strts w timer"): one tap starts it */}
+      <div className="tile cardio-start">
+        <span className="k">Cardio · one tap starts the timer</span>
+        <div className="picks" aria-label="Start cardio">{CARDIO.map((c) => <button type="button" key={c} onClick={() => act.startCardio(c)}>▶ {c}</button>)}</div>
+      </div>
       <MuscleMap sets={sets} now={Date.now()} />
       <Premade templates={templates} />
       {recent.length > 0 && (
         <div className="tile">
           <span className="k">Recent</span>
-          <div className="plan">{recent.map((w) => { const ws = sets.filter((s) => s.workoutId === w.id); return <div key={w.id}><span>{w.template} · {dayLabel(w.startedAt)}{w.note ? <small className="wnote">“{w.note}”</small> : null}</span><span>{ws.length} sets · {Math.round(volume(ws)).toLocaleString("en-GB")} kg</span></div>; })}</div>
+          <div className="plan">{recent.map((w) => {
+            if (w.kind === "cardio") { const sp = spans.find((x) => x.workoutId === w.id && x.own), h = sp && band ? cardioHr(band.hr, sp.start, sp.end) : null;
+              return <div key={w.id}><span>{sp?.what ?? "Cardio"} · {dayLabel(w.startedAt)}{w.note ? <small className="wnote">“{w.note}”</small> : null}</span><span>{sp ? minutesOf(sp) : 0} min{h ? ` · avg ${h.avg} bpm` : ""}</span></div>; }
+            const ws = sets.filter((s) => s.workoutId === w.id); return <div key={w.id}><span>{w.template} · {dayLabel(w.startedAt)}{w.note ? <small className="wnote">“{w.note}”</small> : null}</span><span>{ws.length} sets · {Math.round(volume(ws)).toLocaleString("en-GB")} kg</span></div>; })}</div>
         </div>
       )}
     </div>
@@ -366,9 +379,11 @@ function Session({ w }: { w: Workout }) {
           <span className="k">{cardio.startedAt ? `Cardio · started ${clock(cardio.startedAt)}` : "Then cardio"}</span>
           <b>{cardio.what}</b>
           {!allDone && setsLeft > 0 && <span className="s">{setsLeft} set{setsLeft === 1 ? "" : "s"} still planned — they're there after, or finish without them.</span>}
+          {/* PLAN 130: Start runs a timer, so its minutes and the band's heart rate are known; Done straight away still works */}
+          {cardio.done == null && cardio.startedAt != null && <output className="cardio-clock" aria-label="Cardio time">{fmt(Math.max(0, Math.floor((now - cardio.startedAt) / 1000)))}</output>}
           {cardio.done == null
-            ? <div className="grid2"><button type="button" className="kbtn" onClick={() => setCardio(false)}>Skip</button><button type="button" className="go" onClick={() => setCardio(true)}>Done</button></div>
-            : <p className="s">{cardio.done ? "✓ Done" : "Skipped"} · <button type="button" className="linkb" onClick={() => setCardio()}>undo</button></p>}
+            ? <div className={cardio.startedAt == null ? "grid3" : "grid2"}><button type="button" className="kbtn" onClick={() => setCardio(false)}>Skip</button>{cardio.startedAt == null && <button type="button" className="kbtn pri" onClick={() => startCardio()}>▶ Start</button>}<button type="button" className="go" onClick={() => setCardio(true)}>Done</button></div>
+            : <p className="s">{cardio.done ? `✓ Done${cardio.startedAt != null && cardio.at ? ` · ${Math.round((cardio.at - cardio.startedAt) / 60_000)} min` : ""}` : "Skipped"} · <button type="button" className="linkb" onClick={() => setCardio()}>undo</button></p>}
         </div>
       )}
       <div className={`tile rest ${rest > 0 ? "" : "idle"}`}>
