@@ -251,18 +251,23 @@ export function AiQuestions() {
   // a daily question kept from before 20 Oct with a day's numbers in it ("Stress is at 6 this morning") isn't asked again
   const list: Question[] = [...fresh, ...ai.daily.filter(timeless).filter((d) => !fresh.some((q) => q.key === d.key))].filter((q) => !answeredToday.has(q.key) && !stopped.has(q.key) && !skipped.has(q.key));
   const [q] = list;
-  // owner, 15 Oct: "for questions make sure i can write custom reply"
-  const [own, setOwn] = useState("");
-  if (!q) return null;
-  const answer = (a: string) => { if (a.trim()) act.addEntry({ kind: "answer", at: Date.now(), key: q.key, question: q.text, answer: a.trim() }); setOwn(""); };
+  return q ? <QuestionCard key={q.key} q={q} count={list.length} today={today} /> : null;
+}
+
+/** One question: pick one or more (owner, 20 Oct: "i should be able to choose multiple answers for a question"), or say it in your own words (15 Oct). */
+function QuestionCard({ q, count, today }: { q: Question; count: number; today: string }) {
+  const [own, setOwn] = useState(""), [picked, setPicked] = useState<string[]>([]);
+  const toggle = (o: string) => setPicked((p) => (p.includes(o) ? p.filter((x) => x !== o) : [...p, o]));
+  const all = [...q.options.filter((o) => picked.includes(o)), ...(own.trim() ? [own.trim()] : [])];
+  const send = () => { if (all.length) act.addEntry({ kind: "answer", at: Date.now(), key: q.key, question: q.text, answer: all.join(", ") }); };
   return (
     <section className="card question" aria-label="Quick question">
-      <h3>Quick question <span>{list.length > 1 ? `1 of ${list.length}` : "one tap"}</span></h3>
+      <h3>Quick question <span>{count > 1 ? `1 of ${count}` : "pick one or more"}</span></h3>
       <p className="q">{q.text}</p>
-      <div className="chips">{q.options.map((o) => <button key={o} type="button" className="pill-btn" onClick={() => answer(o)}>{o}</button>)}</div>
+      <div className="chips">{q.options.map((o) => <button key={o} type="button" className="pill-btn" aria-pressed={picked.includes(o)} onClick={() => toggle(o)}>{o}</button>)}</div>
       <div className="row-add q-own">
-        <input value={own} placeholder="or in your own words…" aria-label="Your answer, in your own words" onChange={(e) => setOwn(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") answer(own); }} />
-        <button type="button" className="pill-btn" disabled={!own.trim()} onClick={() => answer(own)}>Send</button>
+        <input value={own} placeholder="or in your own words…" aria-label="Your answer, in your own words" onChange={(e) => setOwn(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") send(); }} />
+        <button type="button" className="pill-btn pri" disabled={!all.length} onClick={send}>Send{all.length > 1 ? ` ${all.length}` : ""}</button>
       </div>
       <small className="why">Why: {q.why}{q.repeat === "daily" ? " · asked daily" : ""}</small>
       <div className="q-acts">

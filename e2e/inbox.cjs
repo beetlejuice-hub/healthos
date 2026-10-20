@@ -109,12 +109,14 @@ function world(wine = false) {
   const hs = await pg.locator('.msg.byapp').evaluateAll((els) => els.map((e) => Math.round(e.getBoundingClientRect().height)));
   check(`each message is its own size, not a screen tall (${hs.join(', ')} px)`, hs.length === 3 && hs.every((h) => h > 80 && h < 420));
   await pg.locator('.chat').screenshot({ path: OUT + 'inbox-thread.png' });
-  // answer the stretch with the first of your usual doings
-  const first = ask.locator('.ib-tags button').first(), label = (await first.innerText()).trim();
-  await first.click(); await pg.waitForTimeout(300);
+  // answer the stretch with the first two of your usual doings (owner, 20 Oct: more than one answer)
+  const chips = ask.locator('.ib-tags button[aria-pressed]'), label = [(await chips.nth(0).innerText()).trim(), (await chips.nth(1).innerText()).trim()].join(', ');
+  await chips.nth(0).click(); await chips.nth(1).click(); await pg.waitForTimeout(100);
+  check('two picked, nothing saved before Send', await ask.locator('.ib-tags button[aria-pressed="true"]').count() === 2 && !(await store(pg)).entries.some((e) => e.kind === 'feel' && e.doing && e.at > Date.now() - 864e5 * 40 && (e.doing || []).length === 2));
+  await ask.getByRole('button', { name: 'Send 2' }).click(); await pg.waitForTimeout(300);
   let st = await store(pg);
   const nr = st.ai.inbox.find((x) => x.kind === 'raised'), mid = Math.round((nr.span.start + nr.span.end) / 2), feel = st.entries.find((e) => e.kind === 'feel' && e.at === mid);
-  check(`answering "${label}" saves it as what you were doing, in the middle of the stretch (${feel && feel.doing})`, !!feel && feel.doing.length === 1);
+  check(`answering "${label}" saves both as what you were doing, in the middle of the stretch (${feel && feel.doing})`, !!feel && feel.doing.length === 2);
   check('…and shows as your reply, the question gone', (await pg.locator(`.ib-reply[data-reply-to^="raised:"]`).innerText()).trim() === label && await ask.locator('.ib-tags').count() === 0);
   // the finding: "something else was going on" — in your words
   await fin.getByRole('button', { name: 'Something else was going on' }).click();
@@ -158,12 +160,13 @@ function world(wine = false) {
   const card = pg.locator('.msg.byapp[data-kind="readiness"]');
   check('…with your last-night tags to tap, and a way to log what wasn\'t', await card.getByRole('button', { name: 'out with friends' }).count() === 1 && await card.getByRole('button', { name: 'with gf' }).count() === 1 && await card.locator('a[href="#log"]').count() === 1);
   await card.screenshot({ path: OUT + 'inbox-readiness.png' });
-  await card.getByRole('button', { name: 'out with friends' }).click(); await pg.waitForTimeout(300);
+  await card.getByRole('button', { name: 'out with friends' }).click(); await card.getByRole('button', { name: 'with gf' }).click();
+  await card.getByRole('button', { name: 'Send 2' }).click(); await pg.waitForTimeout(300);
   const sl = (await store(pg)).entries.filter((e) => e.kind === 'sleep');
   const h = sl[0] && new Date(sl[0].at).getHours();
-  check(`the answer joins this morning's last-night tags, in the morning window (${JSON.stringify(sl.map((e) => [e.tags, h]))})`, sl.length === 1 && JSON.stringify(sl[0].tags) === '["out"]' && h >= 4 && h < 14);
+  check(`both answers join this morning's last-night tags, in the morning window (${JSON.stringify(sl.map((e) => [e.tags, h]))})`, sl.length === 1 && sl[0].tags.length === 2 && sl[0].tags[0] === 'out' && h >= 4 && h < 14);
   await pg.goto(APP + '#today'); await pg.waitForSelector('#feel');
-  check('Today\'s check-in shows it ticked: "out with friends"', await pg.locator('#feel button[aria-pressed="true"]', { hasText: 'out with friends' }).count() === 1);
+  check('Today\'s check-in shows both ticked', await pg.locator('#feel button[aria-pressed="true"]', { hasText: 'out with friends' }).count() === 1 && await pg.locator('#feel button[aria-pressed="true"]', { hasText: 'with gf' }).count() === 1);
   await ctx.close();
 
   console.log('errors:', JSON.stringify(errs));

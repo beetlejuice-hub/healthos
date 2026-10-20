@@ -38,8 +38,15 @@ const q3 = Q('walk', 'Did you walk outside at lunch?', 'once');
   check(`"Stop asking this" takes it away now (${await text()} · ${await head()})`, (await text()) === q2.text && /1 of 2/.test(await head()));
 
   await card.getByRole('button', { name: 'Skip' }).click(); await pg.waitForTimeout(200);
-  check(`"Skip" hides it for today (${await text()})`, (await text()) === q3.text && /one tap|1 of 1/.test(await head()));
-  await card.getByRole('button', { name: 'Small' }).click(); await pg.waitForTimeout(200);
+  check(`"Skip" hides it for today (${await text()})`, (await text()) === q3.text && /pick one or more|1 of 1/.test(await head()));
+  // owner, 20 Oct: "i should be able to choose multiple answers for a question" — tap picks, tap again unpicks, Send saves
+  await card.getByRole('button', { name: 'Small' }).click(); await card.getByRole('button', { name: 'Big' }).click(); await card.getByRole('button', { name: 'Small' }).click();
+  await card.getByRole('button', { name: 'Medium' }).click(); await pg.waitForTimeout(100);
+  check('a tap picks, nothing is saved yet', await pg.locator('.question').count() === 1 && await card.locator('[aria-pressed="true"]').count() === 2);
+  await card.screenshot({ path: OUT + 'questions-multi.png' });
+  await card.getByRole('button', { name: 'Send 2' }).click(); await pg.waitForTimeout(200);
+  const ans = (await pg.evaluate(() => (JSON.parse(localStorage.getItem('healthos.v1:u-test') || '{}').entries || []).filter((e) => e.kind === 'answer'))).at(-1);
+  check(`Send saves both, in the options' order (${ans && ans.answer})`, ans && ans.key === 'walk' && ans.answer === 'Medium, Big');
   check('answering the last one still works, and the card is gone', await pg.locator('.question').count() === 0);
   await pg.reload(); await pg.waitForSelector('text=Settings'); await pg.waitForTimeout(300);
   check('after a reload: stopped and skipped stay away today', await pg.locator('.question').count() === 0);

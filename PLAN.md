@@ -1729,7 +1729,12 @@ D questions answered in chat. Numbered on from #112.
    The morning read and the read-back say when they were written: "today · 07:40", "tonight · 21:30" (the "new" tag
    stays until opened). Checked: e2e/morningread.cjs, e2e/night.cjs — which caught the time wrapping onto its own line
    (a global `.when` grid), fixed.
-123. [ ] **More than one answer** — "Even at ai page i should be able to choose multiple answers for a question"
+123. [x] **More than one answer** — "Even at ai page i should be able to choose multiple answers for a question". Today's
+   quick question and the AI tab's "what were you doing?" (a raised heart stretch) and "what happened yesterday?" (a low
+   readiness) now pick one or more: a tap picks (again unpicks), your own word joins them, **Send** saves them together —
+   both doings on the stretch's check-in, both tags on that morning, "Medium, Big" as the answer the AI reads. That's two
+   taps where one was enough before; a finding's "Makes sense / Surprising" stays one tap. Checked: e2e/questions.cjs,
+   e2e/inbox.cjs, e2e/ai.cjs.
 
 ### B · Better versions of what's there
 124. [ ] **Not logged = not taken** — "if i dont take a supp, like not log it, it should be taken as if i did not take it.

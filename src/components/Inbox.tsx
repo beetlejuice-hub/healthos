@@ -38,11 +38,16 @@ export function InboxCard({ n, now, first }: { n: Notice; now: number; first?: b
   const doings = useMemo(() => doingOrder(entries, now).slice(0, 6), [entries, now]);
   const nightTags = useMemo(() => [...new Set([...nightTagOrder(entries, now).slice(0, 5), ...LOW_MORNING])], [entries, now]);
   const [own, setOwn] = useState(""), [other, setOther] = useState(false);
+  // more than one (owner, 20 Oct: "Even at ai page i should be able to choose multiple answers for a question"): tap to
+  // pick, your own word joins them, Send saves them together
+  const [picked, setPicked] = useState<string[]>([]);
+  const pick = (t: string) => setPicked((p) => (p.includes(t) ? p.filter((x) => x !== t) : [...p, t]));
+  const tags = [...picked, ...(own.trim() && tagOf(own) && !picked.includes(tagOf(own)!) ? [tagOf(own)!] : [])];
   const when = `${localDay(n.at) === localDay(now) ? "" : `${dayLabel(n.at)} `}${clock(n.at)}`;
-  const said = (tag: string | null) => {
-    if (!tag || !n.span) return;
-    act.addEntry({ kind: "feel", at: Math.round((n.span.start + n.span.end) / 2), doing: [tag] });
-    reply(n, labelOf(tag));
+  const said = (ts: string[]) => {
+    if (!ts.length || !n.span) return;
+    act.addEntry({ kind: "feel", at: Math.round((n.span.start + n.span.end) / 2), doing: ts });
+    reply(n, ts.map(labelOf).join(", "));
   };
   const answer = (text: string) => {
     const t = text.trim();
@@ -50,7 +55,8 @@ export function InboxCard({ n, now, first }: { n: Notice; now: number; first?: b
     act.addEntry({ kind: "answer", at: Date.now(), key: n.id, question: n.text, answer: t });
     reply(n, t);
   };
-  const tagged = (tag: string | null) => { if (tag && n.day) { tagMorning(n.day, tag); reply(n, nightLabel(tag)); } };
+  const tagged = (ts: string[]) => { if (ts.length && n.day) { ts.forEach((t) => tagMorning(n.day!, t)); reply(n, ts.map(nightLabel).join(", ")); } };
+  const sendBtn = (go: (ts: string[]) => void) => <button type="button" className="pill-btn pri ib-send" disabled={!tags.length} onClick={() => go(tags)}>Send{tags.length > 1 ? ` ${tags.length}` : ""}</button>;
   const waiting = !n.reply && !n.closed;
   return (
     <>
@@ -60,14 +66,16 @@ export function InboxCard({ n, now, first }: { n: Notice; now: number; first?: b
         <p>{n.text}</p>
         {n.kind === "raised" && waiting && (
           <div className="hn-tags ib-tags">
-            {doings.map((t) => <button key={t} type="button" onClick={() => said(t)}>{labelOf(t)}</button>)}
-            <input aria-label="What you were doing, in your words" placeholder="own word" value={own} onChange={(e) => setOwn(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") said(tagOf(own)); }} />
+            {doings.map((t) => <button key={t} type="button" aria-pressed={picked.includes(t)} onClick={() => pick(t)}>{labelOf(t)}</button>)}
+            <input aria-label="What you were doing, in your words" placeholder="own word" value={own} onChange={(e) => setOwn(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") said(tags); }} />
+            {sendBtn(said)}
           </div>
         )}
         {n.kind === "readiness" && waiting && (
           <div className="hn-tags ib-tags">
-            {nightTags.map((t) => <button key={t} type="button" onClick={() => tagged(t)}>{nightLabel(t)}</button>)}
-            <input aria-label="What happened, in your words" placeholder="own word" value={own} onChange={(e) => setOwn(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") tagged(tagOf(own)); }} />
+            {nightTags.map((t) => <button key={t} type="button" aria-pressed={picked.includes(t)} onClick={() => pick(t)}>{nightLabel(t)}</button>)}
+            <input aria-label="What happened, in your words" placeholder="own word" value={own} onChange={(e) => setOwn(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") tagged(tags); }} />
+            {sendBtn(tagged)}
             <a className="linkish ib-log" href="#log">Drinks or food not logged? Log them →</a>
           </div>
         )}
