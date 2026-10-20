@@ -107,9 +107,11 @@ export type MuscleStrength = {
   lifts: { exercise: string; perWeek: number; sessions: number }[]; sessions: number;
 };
 
-export function muscleStrength(sets: LoggedSet[], now: number, days = MUSCLE_DAYS): MuscleStrength[] {
+export type LiftRate = { perWeek: number; se: number; sessions: number };
+/** Each lift's trend over the last `days` as % a week of its own level, with its standard error (the lines' scatter). */
+export function liftRates(sets: LoggedSet[], now: number, days = MUSCLE_DAYS): Map<string, LiftRate> {
   const recent = sets.filter((s) => s.at <= now && s.at > now - days * DAY);
-  const rates = new Map<string, { perWeek: number; se: number; sessions: number }>();
+  const rates = new Map<string, LiftRate>();
   for (const ex of new Set(working(recent).map((s) => s.exercise))) {
     const t = liftTrend(recent, ex);
     if (!t) continue;
@@ -119,14 +121,26 @@ export function muscleStrength(sets: LoggedSet[], now: number, days = MUSCLE_DAY
     const pct = (perDay: number) => ((perDay * 7) / level) * 100;
     rates.set(ex, { perWeek: pct(t.slopePerDay), se: sxx > 0 ? pct(Math.sqrt(rss / (n - 2) / sxx)) : Infinity, sessions: n });
   }
+  return rates;
+}
+
+/** Lifts' rates pooled, each weighted by its sessions, with a 90 % range and what it says. */
+export function pooled(rs: LiftRate[]): { perWeek: number; lo: number; hi: number; state: MuscleState; sessions: number } | null {
+  if (!rs.length) return null;
+  const n = rs.reduce((a, r) => a + r.sessions, 0);
+  const perWeek = rs.reduce((a, r) => a + r.perWeek * r.sessions, 0) / n;
+  const se = Math.sqrt(rs.reduce((a, r) => a + (r.se * r.sessions) ** 2, 0)) / n;
+  const lo = perWeek - 1.645 * se, hi = perWeek + 1.645 * se;
+  const state: MuscleState = lo > 0 ? "stronger" : hi < 0 ? "dropping" : lo >= -HOLDING && hi <= HOLDING ? "holding" : "unclear";
+  return { perWeek, lo, hi, state, sessions: n };
+}
+
+export function muscleStrength(sets: LoggedSet[], now: number, days = MUSCLE_DAYS): MuscleStrength[] {
+  const rates = liftRates(sets, now, days);
   return MUSCLE_GROUPS.flatMap((m) => {
     const mine = [...rates].filter(([ex]) => (MUSCLES[ex]?.[m] ?? 0) >= 1).sort((a, b) => b[1].sessions - a[1].sessions);
-    if (!mine.length) return [];
-    const n = mine.reduce((a, [, r]) => a + r.sessions, 0);
-    const perWeek = mine.reduce((a, [, r]) => a + r.perWeek * r.sessions, 0) / n;
-    const se = Math.sqrt(mine.reduce((a, [, r]) => a + (r.se * r.sessions) ** 2, 0)) / n;
-    const lo = perWeek - 1.645 * se, hi = perWeek + 1.645 * se;
-    const state: MuscleState = lo > 0 ? "stronger" : hi < 0 ? "dropping" : lo >= -HOLDING && hi <= HOLDING ? "holding" : "unclear";
-    return [{ muscle: m, perWeek, lo, hi, state, lifts: mine.map(([exercise, r]) => ({ exercise, perWeek: r.perWeek, sessions: r.sessions })), sessions: n }];
+    const p = pooled(mine.map(([, r]) => r));
+    if (!p) return [];
+    return [{ muscle: m, perWeek: p.perWeek, lo: p.lo, hi: p.hi, state: p.state, lifts: mine.map(([exercise, r]) => ({ exercise, perWeek: r.perWeek, sessions: r.sessions })), sessions: p.sessions }];
   });
 }

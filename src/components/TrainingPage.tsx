@@ -12,7 +12,10 @@ import { goesWith, nights, type Factor, type Outcome } from "../lib/sleep";
 import { CARBS_G, sessionFacts, sessionFactors, SESSION_OUTCOMES, SHORT_MIN, slopeTest, UNDER_KCAL, type SessionFacts } from "../lib/sessionfacts";
 import { GoesWith, type GridCopy } from "./Sleep";
 import { mainLifts, muscleStrength, sessions, setsPerMuscleWeek, thisWeek, type LiftTrend, type MuscleStrength, type Session } from "../lib/liftstrength";
-import { nextTemplate, suggestNext, type LoggedSet } from "../lib/training";
+import { kgStep, nextTemplate, type LoggedSet } from "../lib/training";
+import { historyOf, smartNext } from "../lib/progress";
+import { equipOf } from "../lib/exsearch";
+import { StrengthCard } from "./StrengthCard";
 import { clock, dayLabel } from "../lib/time";
 import type { EntryOf } from "../lib/types";
 import type { HrMinute } from "../lib/band";
@@ -48,7 +51,7 @@ export function TrainingPage({ now }: { now: number }) {
   // what's next: the template after the last one done, its first lift as last time said (double progression)
   const next = nextTemplate(templates, workouts), first = next?.exercises[0];
   const lastOf = first ? [...ss].reverse().find((s) => s.sets.some((x) => x.exercise === first.name && !x.warmup)) : undefined;
-  const sug = first && lastOf ? suggestNext(lastOf.sets.filter((x) => x.exercise === first.name && !x.warmup), first.reps) : null;
+  const sug = first && lastOf ? smartNext(historyOf(sets, first.name), first.reps, kgStep(first.name, sets.filter((x) => x.exercise === first.name && !x.warmup).map((x) => x.kg), equipOf(first.name) === "dumbbell")) : null;
   const tiles: [string, string, string][] = [
     ["Sessions", String(week.sessions), week.usualSessions != null ? `usual ${fmtN(week.usualSessions)} a week` : "this week"],
     ["Working sets", String(week.workingSets), week.usualSets != null ? `usual ${fmtN(week.usualSets)} a week` : "this week"],
@@ -61,6 +64,8 @@ export function TrainingPage({ now }: { now: number }) {
         <span className="cmp-k">This week · from {dayLabel(week.from)}</span>
         <div className="tp-tiles">{tiles.map(([k, v, sub]) => <div key={k} className="tp-tile" data-k={k}><span className="k">{k}</span><b>{v}</b><small>{sub}</small></div>)}</div>
       </section>
+      {/* PLAN 143: one line for overall strength — every lift against itself */}
+      <StrengthCard sets={sets} now={now} className="sl-p tp-strength" />
       {lifts.length > 0 && (() => {
         // each card's chart drawn to its own width (a phone card is ~170 px; drawn wider and shrunk, its labels were 7 px)
         const cols = wide ? Math.min(4, lifts.length) : 2, cardW = (w - 12 * (cols - 1)) / cols;

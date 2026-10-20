@@ -1979,7 +1979,7 @@ Order: A first (113 → 123), then B, then C; D in the chat. (claimed: this sess
    Done (20 Oct): while cardio runs inside a lifting session, the set tracker, rest and volume step aside and the
    cardio clock fills the screen. Done (or Skip) brings back any sets left. You can still start cardio early (#94);
    the sets just wait.
-143. [ ] **Smart tracking and an overall strength graph** — "Can we make it so workouts are smart, rep and kg tracking is
+143. [x] **Smart tracking and an overall strength graph** — "Can we make it so workouts are smart, rep and kg tracking is
    smart and can we add more tracking to it so possibly a graph of my overall strength computed from kgs lifted and reps
    how its evolving? Make it smart". (claimed: this session — lib/strength, Workout/Training pages)
    Plan (20 Oct):
@@ -1998,3 +1998,13 @@ Order: A first (113 → 123), then B, then C; D in the chat. (claimed: this sess
      clear; a heavy lift added halfway → no jump; a 315 kg typo → capped), and known-answer cases for each rule. E2e:
      the chart on a phone; a 12-rep set moves the next set up.
    - Phases: 1 = all of the above. 2 (his pick) = rep ranges per exercise (8–12) instead of one target, and RPE.
+   Done (20 Oct), phase 1: the Workout screen and the Training page have "Overall strength" — the line since his first
+   week, "+9.1 % since 10 Aug", the verdict ("Getting stronger: about +1.0 % a week across 3 lifts, clear beyond
+   day-to-day ups and downs" / "Not clear yet …"), and kg lifted a week. The day cards, the session and the Training
+   page's "Next" use the smarter weights: reps to spare → two steps; stuck two sessions → about 10 % back; a set 3+ reps
+   over or under → the next set moves a step, saying why in the hint; a plateau note under it. Checked: strength.test
+   (planted +1 %/week found at about 1.0; flat with noise on 4 seeds never "stronger"; −1 % "dropping"; a deadlift added
+   halfway moves the line 0; a 315-for-31.5 typo capped at +10 % and back; kg a week with the warm-up left out). Two
+   mutations (no cap; a new lift without its own baseline) each fail those tests. progress.test (each rule with known
+   answers), e2e/strength.cjs (the card on a phone with planted progress; 12/12/11 last time → 44 today; a 12-rep set →
+   46 next). Not checked: his real history, which is read-only from here.

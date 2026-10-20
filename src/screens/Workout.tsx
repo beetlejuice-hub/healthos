@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { act, newId, useStore } from "../lib/store";
-import { e1rm, exerciseHistory, isBest, isDumbbell, oneDumbbell, kgStep, stepKg, warmKg, warmsUp, mainMuscle, nextTemplate, restLeft, sessionPlan, sessionSummary, suggestNext, templateProblems, volume, type Suggestion } from "../lib/training";
+import { e1rm, exerciseHistory, isBest, isDumbbell, oneDumbbell, kgStep, stepKg, warmKg, warmsUp, mainMuscle, nextTemplate, restLeft, sessionPlan, sessionSummary, templateProblems, volume, type Suggestion } from "../lib/training";
 import { PROGRAMS, asSplit, asTemplate } from "../lib/programs";
 import { MuscleMap } from "../components/MuscleMap";
 import { DayCard } from "../components/DayCard";
@@ -15,6 +15,8 @@ import { variantsOf } from "../lib/variants";
 import { CARDIO_CHIPS, cardioHr, cardioSpans, minutesOf } from "../lib/cardio";
 import { CardioSession } from "../components/CardioSession";
 import { DecimalInput } from "../components/DecimalInput";
+import { adaptNext, historyOf, plateau, smartNext } from "../lib/progress";
+import { StrengthCard } from "../components/StrengthCard";
 import { useBand } from "../lib/band-client";
 
 type SetE = EntryOf<"set">;
@@ -41,7 +43,7 @@ function Pick() {
   const entries = useStore((s) => s.entries);
   const sets = useMemo(() => entries.filter((e): e is SetE => e.kind === "set"), [entries]);
   const [editing, setEditing] = useState<Template | "new" | null>(null);
-  const recent = [...workouts].filter((w) => w.endedAt).slice(-5).reverse();
+  const recent = [...workouts].filter((w) => w.endedAt).slice(-5).reverse(), now = Date.now();
   const band = useBand().data;
   const spans = useMemo(() => cardioSpans(workouts, Date.now()), [workouts]);
   const next = nextTemplate(templates, workouts);
@@ -53,7 +55,7 @@ function Pick() {
       <div className="top"><h1>Workout</h1><div className="meta">{templates.length}-day split</div></div>
       {ordered.map((t) => {
         const last = [...workouts].reverse().find((w) => w.template === t.name && w.endedAt);
-        const first = t.exercises[0], sug = first ? suggestNext(lastSets(sets, first.name), first.reps, kgStep(first.name, sets.filter((s) => s.exercise === first.name && !s.warmup).map((s) => s.kg), equipOf(first.name) === "dumbbell")) : null;
+        const first = t.exercises[0], sug = first ? smartNext(historyOf(sets, first.name), first.reps, kgStep(first.name, sets.filter((s) => s.exercise === first.name && !s.warmup).map((s) => s.kg), equipOf(first.name) === "dumbbell")) : null;
         return <DayCard key={t.id} t={t} dayNo={templates.indexOf(t) + 1} next={t === next} lastAt={last?.startedAt ?? null}
           sug={sug ? { exercise: first.name, kg: sug.kg, reps: sug.reps } : null} onEdit={() => setEditing(t)} onStart={() => act.startWorkout(t.name)} />;
       })}
@@ -66,7 +68,8 @@ function Pick() {
         <span className="k">Cardio · one tap starts the timer</span>
         <div className="picks" aria-label="Start cardio">{CARDIO.map((c) => <button type="button" key={c} onClick={() => act.startCardio(c)}>▶ {c}</button>)}</div>
       </div>
-      <MuscleMap sets={sets} now={Date.now()} />
+      <StrengthCard sets={sets} now={now} className="tile strength" />
+      <MuscleMap sets={sets} now={now} />
       <Premade templates={templates} />
       {recent.length > 0 && (
         <div className="tile">
@@ -218,7 +221,12 @@ function Session({ w }: { w: Workout }) {
   const prev = cur ? lastSets(sets, cur.name, w.id) : [];
   // the weight step from your own weights on it: dumbbells that go 34, 36, 38 step by 2 (owner, 20 Oct: "36.5 instead of 36")
   const step = cur ? kgStep(cur.name, sets.filter((s) => s.exercise === cur.name && !s.warmup).map((s) => s.kg), equipOf(cur.name) === "dumbbell") : 2.5;
-  const sug: Suggestion | null = cur ? suggestNext(prev, cur.reps, step) : null;
+  // PLAN 143: smarter than "all hit → up": reps to spare jump two steps, a stall steps back, a plateau is named
+  const hist = useMemo(() => (cur ? historyOf(sets, cur.name, w.id) : []), [sets, cur, w.id]);
+  const sug: Suggestion | null = cur ? smartNext(hist, cur.reps, step) : null;
+  const flat = useMemo(() => plateau(hist), [hist]);
+  // the next set inside today's session, from how the last one went ("12 reps — that was light")
+  const [adapt, setAdapt] = useState<string | null>(null);
   const [kg, setKg] = useState<number>(sug?.kg ?? 20);
   const [reps, setReps] = useState<number>(cur?.reps ?? 8);
   // Owner, 13 Oct: "warm up plus 2-3 sets"; 20 Oct: "By default the warmup set should be first". The first set of each
@@ -240,6 +248,7 @@ function Session({ w }: { w: Workout }) {
     workRef.current = warm ? sug?.kg ?? 20 : null;
     setKg(warm && cur ? warmKg(sug?.kg ?? 20, cur.name, step) : last?.kg ?? sug?.kg ?? 20);
     setReps(warm ? 10 : cur?.reps ?? 8);
+    setAdapt(null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [i, cur?.name]);
 
@@ -273,6 +282,10 @@ function Session({ w }: { w: Workout }) {
     if (isBest(sets, set)) setBest({ exercise: cur.name, kg, reps, e1rm: Math.round(e1rm(kg, reps) * 10) / 10, at });
     act.addEntry({ kind: "set", ...set });
     const after = mine.length + 1;
+    // a set well over or under the target moves the next one (PLAN 143), when there is a next one
+    const a = after < cur.sets ? adaptNext([...mine, set], cur.reps, step) : null;
+    setAdapt(a ? `Next set ${a.kg} kg: ${a.reason}` : null);
+    if (a) setKg(a.kg);
     if (after < cur.sets || i < plan.length - 1) setRest(cur.restSec);
   };
   const exDone = cur && mine.length >= cur.sets;
@@ -336,7 +349,8 @@ function Session({ w }: { w: Workout }) {
         </div>
         <div className="hint">
           <span>Last time: {prev.length ? <b style={{ color: "var(--k-ink)" }}>{prev[0].kg} × {prev.map((s) => s.reps).join("/")}</b> : "first time"}</span>
-          {sug && <span><b>{sug.kg} kg × {sug.reps}</b>: {sug.reason}</span>}
+          {adapt ? <span className="adapt"><b>{adapt}</b></span> : sug && <span><b>{sug.kg} kg × {sug.reps}</b>: {sug.reason}</span>}
+          {flat && mine.length === 0 && <span className="plateau">{flat}</span>}
         </div>
         {/* After the planned sets, the big button moves you on — it never keeps adding sets by
             accident (found in testing: 17 sets logged on a 12-set plan). An extra set is still
