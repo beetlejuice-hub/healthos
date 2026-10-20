@@ -41,11 +41,12 @@ function night(k, fallMin) { // the night ending k mornings ago, 23:30 → 07:00
   await pg.goto(APP + '#settings'); await pg.reload(); await pg.waitForSelector('text=Sleep and body');
   check('Settings: no weigh-in yet → the field is there to fill in', await pg.getByRole('textbox', { name: /Body weight/ }).count() === 1);
   await ctx.close();
-  // 76: a dumbbell exercise says "kg per dumbbell"; a barbell one just "kg"
+  // 76: a dumbbell exercise says how its kg is counted; a barbell one just "kg"
   ({ ctx, pg } = await open({ band: null, seed: { entries: [], workouts: [{ id: 'w1', template: 'Push', startedAt: NOW - 10 * MIN, endedAt: null, plan: [{ name: 'Incline DB press', sets: 3, reps: 10, restSec: 90 }, { name: 'Bench press', sets: 3, reps: 8, restSec: 120 }] }] } }));
   await pg.goto(APP + '#workout'); await pg.reload(); await pg.waitForSelector('.tile.cur');
   const lbl = await pg.locator('.steppers .lbl').first().innerText();
-  check(`Workout: Incline DB press → "${lbl}"`, /kg per dumbbell/i.test(lbl));
+  // PLAN 140 (20 Oct) replaced this: he types the total in his hands — "kg total", with the pair to pick up
+  check(`Workout: Incline DB press → "${lbl}"`, /^kg total/i.test(lbl) && !/per dumbbell/i.test(lbl));
   await pg.locator('.tile.cur').screenshot({ path: OUT + 'fixes13-db.png' });
   await ctx.close();
   // 77: the band has last night → "Fell asleep in 40 min — from your band, longer than your usual 12"; no tag to tap

@@ -256,11 +256,15 @@ export function setsPerMuscle(sets: { exercise: string; warmup?: boolean }[]): R
 }
 
 /**
- * Dumbbell exercises are logged per dumbbell — the number printed on it (PLAN 76; owner, 13 Oct: "not sure if for exp on db
- * press its one hand kg or both hand kg in total"). Their kg lifted counts both hands.
+ * The kg you type is the total in your hands — both dumbbells together (PLAN 140; owner, 20 Oct: "db bench press was logged
+ * w all kgs, not kg per dumbbel … it makes sense that it counts it overall but then dont put kg per dumbbell … So just fix
+ * all pls to make it matching"). From 13 Oct (PLAN 76) the box said "kg per dumbbell" and kg lifted counted dumbbells
+ * twice, while he typed totals — so his dumbbell kg lifted read double. His sets stay as he typed them; nothing doubles.
  */
 export const isDumbbell = (exercise: string) => /\b(db|dumbbells?)\b/i.test(exercise);
-export const volume = (sets: { kg: number; reps: number; exercise?: string; warmup?: boolean }[]) => working(sets).reduce((a, s) => a + s.kg * s.reps * (s.exercise && isDumbbell(s.exercise) ? 2 : 1), 0);
+/** One dumbbell, not a pair: no "2 ×" for these. */
+export const oneDumbbell = (exercise: string) => /goblet|concentration|single|one[- ]arm|1[- ]arm|kettlebell|farmer/i.test(exercise);
+export const volume = (sets: { kg: number; reps: number; exercise?: string; warmup?: boolean }[]) => working(sets).reduce((a, s) => a + s.kg * s.reps, 0);
 
 /**
  * Workouts that end themselves (owner: "sessions could easily get forgotten to end"). An open

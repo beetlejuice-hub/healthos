@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { act, newId, useStore } from "../lib/store";
-import { e1rm, exerciseHistory, isBest, isDumbbell, kgStep, stepKg, warmKg, warmsUp, mainMuscle, nextTemplate, restLeft, sessionPlan, sessionSummary, suggestNext, templateProblems, volume, type Suggestion } from "../lib/training";
+import { e1rm, exerciseHistory, isBest, isDumbbell, oneDumbbell, kgStep, stepKg, warmKg, warmsUp, mainMuscle, nextTemplate, restLeft, sessionPlan, sessionSummary, suggestNext, templateProblems, volume, type Suggestion } from "../lib/training";
 import { PROGRAMS, asSplit, asTemplate } from "../lib/programs";
 import { MuscleMap } from "../components/MuscleMap";
 import { DayCard } from "../components/DayCard";
@@ -14,6 +14,7 @@ import type { EntryOf, Template, Workout } from "../lib/types";
 import { variantsOf } from "../lib/variants";
 import { CARDIO_CHIPS, cardioHr, cardioSpans, minutesOf } from "../lib/cardio";
 import { CardioSession } from "../components/CardioSession";
+import { DecimalInput } from "../components/DecimalInput";
 import { useBand } from "../lib/band-client";
 
 type SetE = EntryOf<"set">;
@@ -211,6 +212,7 @@ function Session({ w }: { w: Workout }) {
     </div>
   );
   const mine = cur ? done(cur.name) : [];
+  const dumb = !!cur && (equipOf(cur.name) === "dumbbell" || isDumbbell(cur.name)), pair = dumb && !oneDumbbell(cur!.name);
   const vars = cur ? variantsOf(cur.name) : null;
   const warmToday = cur ? doneAll(cur.name).filter((s) => s.warmup) : [];
   const prev = cur ? lastSets(sets, cur.name, w.id) : [];
@@ -286,6 +288,7 @@ function Session({ w }: { w: Workout }) {
   const [addingCardio, setAddingCardio] = useState(false);
   const [cardioWhat, setCardioWhat] = useState("");
   const cardioOn = !!cardio && (allDone || cardio.startedAt != null || cardio.done != null);
+  const cardioRunning = !!cardio && cardio.startedAt != null && cardio.done == null;
   const setsLeft = plan.reduce((a, e) => a + Math.max(0, e.sets - done(e.name).length), 0);
   const fmt = (s: number) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
 
@@ -304,7 +307,9 @@ function Session({ w }: { w: Workout }) {
       <div className="top"><h1>{w.template}</h1><div className="meta"><b>{fmt(el)}</b>elapsed</div></div>
       <div className="prog">{Array.from({ length: total }, (_, k) => <i key={k} className={k < doneN ? "on" : ""} />)}</div>
 
-      <div className="tile cur">
+      {/* PLAN 142 (owner, 20 Oct: "When starting cardio kg tracker for strength workout should disappear"): while cardio
+          runs, the sets, rest and volume step aside; Done brings back any sets left */}
+      {!cardioRunning && <div className="tile cur">
         <div className="ex"><b>{cur.name}</b><span>{warmOn ? "Warm-up" : exDone ? `${mine.length} of ${cur.sets} done` : `Set ${mine.length + 1} of ${cur.sets}`}</span></div>
         <div className="exacts">
           <button type="button" className="kbtn sm" aria-expanded={showHist} onClick={() => setShowHist(!showHist)}>History</button>
@@ -318,10 +323,11 @@ function Session({ w }: { w: Workout }) {
         </div>}
         {showHist && <History sets={sets.filter((x) => x.workoutId !== w.id)} exercise={cur.name} />}
         <div className="steppers">
-          <div className="step"><span className="lbl">{isDumbbell(cur.name) ? "kg per dumbbell" : "kg"}</span><div className="row">
+          {/* PLAN 140: the total in your hands — what he types; "2 × 20" to read off the rack */}
+          <div className="step"><span className="lbl">{dumb ? <>kg total{pair && kg > 0 ? <em className="perhand"> · 2 × {+(kg / 2).toFixed(2)}</em> : null}</> : "kg"}</span><div className="row">
             <button type="button" aria-label="Less weight" onClick={() => setKg((v) => stepKg(v, step, -1))}>−</button>
             {/* a long number gets a smaller size: at 44 px "32.5" was cut to "32" on a phone */}
-            <input inputMode="decimal" aria-label="Weight in kg" value={kg} data-len={Math.min(6, String(kg).length)} onChange={(e) => setKg(Number(e.target.value.replace(",", ".")) || 0)} />
+            <DecimalInput aria-label="Weight in kg" value={kg} onValue={setKg} />
             <button type="button" aria-label="More weight" onClick={() => setKg((v) => stepKg(v, step, 1))}>+</button></div></div>
           <div className="step"><span className="lbl">reps</span><div className="row">
             <button type="button" aria-label="Fewer reps" onClick={() => setReps((v) => Math.max(1, v - 1))}>−</button>
@@ -371,11 +377,11 @@ function Session({ w }: { w: Workout }) {
             );
           })}
         </div>
-      </div>
+      </div>}
 
       {addBox}
       {cardio && cardioOn && (
-        <div className="tile cardio">
+        <div className={`tile cardio${cardioRunning ? " running" : ""}`}>
           <span className="k">{cardio.startedAt ? `Cardio · started ${clock(cardio.startedAt)}` : "Then cardio"}</span>
           <b>{cardio.what}</b>
           {!allDone && setsLeft > 0 && <span className="s">{setsLeft} set{setsLeft === 1 ? "" : "s"} still planned — they're there after, or finish without them.</span>}
@@ -386,17 +392,17 @@ function Session({ w }: { w: Workout }) {
             : <p className="s">{cardio.done ? `✓ Done${cardio.startedAt != null && cardio.at ? ` · ${Math.round((cardio.at - cardio.startedAt) / 60_000)} min` : ""}` : "Skipped"} · <button type="button" className="linkb" onClick={() => setCardio()}>undo</button></p>}
         </div>
       )}
-      <div className={`tile rest ${rest > 0 ? "" : "idle"}`}>
+      {!cardioRunning && <div className={`tile rest ${rest > 0 ? "" : "idle"}`}>
         <div><span className="k">Rest</span><output>{rest > 0 ? fmt(rest) : "Go"}</output></div>
         <div className="bt">
           <button type="button" onClick={() => setRest(Math.max(0, rest - 30))}>−30s</button>
           <button type="button" onClick={() => setRest(rest + 30)}>+30s</button>
           <button type="button" onClick={() => setRest(0)}>Skip</button>
         </div>
-      </div>
+      </div>}
 
       {/* the heart-rate tile is gone (owner, 14 Oct: "Can take out heartrate btw from workout screen") */}
-      <div className="tile" style={{ gap: 2 }}><span className="k">Volume</span><span className="big">{Math.round(vol).toLocaleString("en-GB")}<small>kg</small></span><span className="s">{lastSame ? `${Math.round((vol / lastSame) * 100)}% of last ${w.template}` : "first time on this split"}</span></div>
+      {!cardioRunning && <div className="tile" style={{ gap: 2 }}><span className="k">Volume</span><span className="big">{Math.round(vol).toLocaleString("en-GB")}<small>kg</small></span><span className="s">{lastSame ? `${Math.round((vol / lastSame) * 100)}% of last ${w.template}` : "first time on this split"}</span></div>}
 
       <div className="tile plan">
         <span className="k">Session</span>

@@ -1960,14 +1960,25 @@ D questions answered in chat. Numbered on from #112.
 Order: A first (113 → 123), then B, then C; D in the chat. (claimed: this session, 20 Oct — A items as they're worked.)
 
 ## 20 Oct, later — workout notes (owner, his words)
-140. [ ] **Dumbbell kg: one convention** — "In workout, some exercises like db bench press was logged w all kgs, not kg per
+140. [x] **Dumbbell kg: one convention** — "In workout, some exercises like db bench press was logged w all kgs, not kg per
    dumbbel and now data is lessed up … All sets on that example is logged as overall kg not per hand so far. I mean it
    makes sense that it counts it overall but then dont put kg per dumbbell … lat raise was overall not per hand. So just
    fix all pls to make it matching so wont get cofusinf". (claimed: this session, 20 Oct — training.ts volume/isDumbbell,
    Workout.tsx label)
-141. [ ] **"Cant put things like 40,5 kg duh…pls fix"** — the workout weight box. (claimed: this session — Workout.tsx kg input)
-142. [ ] **Cardio hides the lifting** — "When starting cardio kg tracker for strength workout should disappear". (claimed:
+   Done (20 Oct): his way is the rule — the kg typed is the total in his hands. Dumbbell exercises (lateral raise too) say
+   "kg total", with the pair to pick up beside it ("· 2 × 20"; not on one-dumbbell moves like goblet squat), and kg
+   lifted counts it once. Since 13 Oct (#76) the box said "per dumbbell" and kg lifted doubled dumbbell sets, so his
+   dumbbell volume read double. His sets were already totals, so none of his data changes. The + and − step stays
+   learned from his own weights.
+141. [x] **"Cant put things like 40,5 kg duh…pls fix"** — the workout weight box. (claimed: this session — Workout.tsx kg input)
+   Done (20 Oct): the box turned each keystroke into a number and showed it back, so "40," became 40 and the comma was gone
+   before the 5 (and "40." the same). It now keeps the text as typed, comma or dot, and logs the number it means
+   (components/DecimalInput). Checked by typing "40,5" key by key on a phone screen: it stays, and logs 40.5.
+142. [x] **Cardio hides the lifting** — "When starting cardio kg tracker for strength workout should disappear". (claimed:
    this session — Workout.tsx Session)
+   Done (20 Oct): while cardio runs inside a lifting session, the set tracker, rest and volume step aside and the
+   cardio clock fills the screen. Done (or Skip) brings back any sets left. You can still start cardio early (#94);
+   the sets just wait.
 143. [ ] **Smart tracking and an overall strength graph** — "Can we make it so workouts are smart, rep and kg tracking is
    smart and can we add more tracking to it so possibly a graph of my overall strength computed from kgs lifted and reps
    how its evolving? Make it smart". (claimed: this session — lib/strength, Workout/Training pages)

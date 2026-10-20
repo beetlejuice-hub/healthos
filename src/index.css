@@ -864,6 +864,11 @@ a { color: inherit; }
 /* cardio with a timer (PLAN 130) */
 .grid3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
 .cardio-clock { font-family: var(--f-cond); font-size: 34px; font-weight: 700; font-variant-numeric: tabular-nums; line-height: 1; }
+/* PLAN 142: cardio running inside a lifting session takes the screen: its clock big, the sets aside */
+.tile.cardio.running { padding: 18px 14px; }
+.tile.cardio.running .cardio-clock { font-size: 64px; color: var(--gym); text-align: center; }
+/* PLAN 140: dumbbells are the total in your hands; "2 × 20" to read off the rack */
+.steppers .lbl .perhand { font-style: normal; color: var(--gym); }
 .cardio-timer { justify-items: center; text-align: center; padding: 22px 14px; }
 .cardio-timer output { font-family: var(--f-cond); font-size: 72px; font-weight: 700; font-variant-numeric: tabular-nums; line-height: 1; color: var(--gym); }
 .cardio-timer .s b { font-family: var(--f-cond); font-size: 22px; color: var(--hr); }

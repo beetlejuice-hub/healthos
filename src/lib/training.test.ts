@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { dayStats, kgStep, stepKg, exerciseHistory, mainMuscle, nextTemplate, sameMuscle, sessionPlan, templateProblems, tidyWorkouts, e1rm, e1rmHistory, setsPerMuscle, suggestNext, volume, isDumbbell, warmsUp, warmKg, working, isBest, MUSCLES } from "./training";
+import { dayStats, kgStep, stepKg, exerciseHistory, mainMuscle, nextTemplate, sameMuscle, sessionPlan, templateProblems, tidyWorkouts, e1rm, e1rmHistory, setsPerMuscle, suggestNext, volume, isDumbbell, oneDumbbell, warmsUp, warmKg, working, isBest, MUSCLES } from "./training";
 
 describe("e1rm — Epley", () => {
   it("estimates a one-rep max", () => {
@@ -144,12 +144,17 @@ describe("a split day at a glance", () => {
   });
 });
 
-describe("dumbbells (PLAN 76)", () => {
-  it("logged per dumbbell; kg lifted counts both hands", () => {
+describe("dumbbells (PLAN 140; owner, 20 Oct: \"it makes sense that it counts it overall but then dont put kg per dumbbell\")", () => {
+  it("the kg typed is the total in his hands: kg lifted counts it once, like a bar", () => {
     expect(["DB bench press", "Incline DB curl", "Dumbbell lateral raise"].every(isDumbbell)).toBe(true);
     expect(["Bench press", "Deadlift", "Lat pulldown"].some(isDumbbell)).toBe(false);
-    expect(volume([{ exercise: "DB bench press", kg: 20, reps: 10 }, { exercise: "Bench press", kg: 60, reps: 5 }])).toBe(20 * 10 * 2 + 300);
-    expect(volume([{ kg: 20, reps: 10 }])).toBe(200);
+    // 40 kg total (two 20s) × 10 = 400, not 800 as when the box said "per dumbbell" and doubled it
+    expect(volume([{ exercise: "DB bench press", kg: 40, reps: 10 }, { exercise: "Bench press", kg: 60, reps: 5 }])).toBe(400 + 300);
+    expect(volume([{ exercise: "Lateral raise", kg: 16, reps: 12 }])).toBe(192);
+  });
+  it("one dumbbell or a pair, for the \"2 ×\" hint", () => {
+    expect(["Goblet squat", "Concentration curl", "Single-arm DB row", "One-arm DB row", "Farmer's carry"].every(oneDumbbell)).toBe(true);
+    expect(["DB bench press", "Lateral raise", "Hammer curl"].some(oneDumbbell)).toBe(false);
   });
 });
 
