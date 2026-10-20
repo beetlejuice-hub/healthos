@@ -21,10 +21,11 @@ import { NightWords } from "./NightWords";
 import { nightLabel, tagFactors, tagsComing } from "../lib/lastnight";
 import { useStore } from "../lib/store";
 
-const ST = { awake: "#eef1f2", rem: "#7fadf0", light: "#4f86dc", deep: "#2f5cc0" } as const;
+const ST = { awake: "#eef1f2", restless: "#b9c4cf", rem: "#7fadf0", light: "#4f86dc", deep: "#2f5cc0" } as const;
 /** The same stages as text: the dark blues are fills, too dark to read as words on the panel. */
 const ST_TEXT = { awake: "#eef1f2", rem: "#a9c8f5", light: "#8db4f0", deep: "#7c9fe6" } as const;
-const ROW = { awake: 0, rem: 1, light: 2, deep: 3 } as const;
+// restless shares the awake row, lighter — as the timeline draws it
+const ROW = { awake: 0, restless: 0, rem: 1, light: 2, deep: 3 } as const;
 const pad = (n: number) => String(n).padStart(2, "0");
 const dur = (min: number) => { const t = Math.round(min); return `${Math.floor(t / 60)} h ${pad(t % 60)}`; };
 const hmm = (min: number) => { const t = Math.round(min); return `${Math.floor(t / 60)}:${pad(t % 60)}`; };
@@ -237,7 +238,7 @@ function NightLog({ ns, evs, sel, onSel, wide, w, workouts, meals }: { ns: Night
   ] : [["Asleep", "", (n) => n.asleep, U.asleep, hmm, "up"]];
   const CW = wide ? 62 : 54, tx = w - 6 - cols.length * CW, sx0 = wide ? 104 : 50, sx1 = tx - 14, c0 = 18, c1 = 35;
   const X = (h: number) => sx0 + ((h - c0) / (c1 - c0)) * (sx1 - sx0), top = 50, RH = wide ? 22 : 25, list = [...ns].reverse(), H = top + list.length * RH + 8;
-  const D = { awake: 3, rem: 7, light: 11, deep: 15 } as const;
+  const D = { awake: 3, restless: 3, rem: 7, light: 11, deep: 15 } as const;
   const ticks: number[] = []; for (let h = 18; h <= 35; h += wide ? 3 : 4) ticks.push(h);
   return (
     <section className="sl-a" aria-label="Your nights, one per row">

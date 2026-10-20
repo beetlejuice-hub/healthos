@@ -13,7 +13,8 @@ import { addDays, atMinute, localDay, minuteOfDay, startOfDay, MIN, HOUR } from 
 import { usualSteps } from "./steps";
 import { CAF_SLEEP } from "./caffeine-sleep";
 
-export type StageType = "awake" | "rem" | "light" | "deep";
+/** "restless": the band's own restless stretches (owner, 20 Oct: "WE HAVE THIS IN THE APP, THE APP COUNTS THIS") — asleep, not light sleep. */
+export type StageType = "awake" | "restless" | "rem" | "light" | "deep";
 export type Night = {
   id: string;
   /** The morning you woke (local day) — daily HRV and resting heart rate are filed under it. */
@@ -28,13 +29,15 @@ export type Night = {
   latency: number;
   stages: { type: StageType; start: number; end: number }[];
   low: number | null; lowAt: number | null;
+  /** Minutes the band marked restless between falling asleep and waking (null without stages). */
+  restless?: number | null;
   /** Average heart rate while asleep (from falling asleep to waking), when the band had most of the night (sleep score). */
   meanHr?: number | null;
   hrv: number | null; rhr: number | null;
   nap: { start: number; end: number; min: number } | null;
 };
 
-const stageOf = (t: string): StageType => (t === "awake" || t === "wake" ? "awake" : t === "rem" ? "rem" : t === "deep" ? "deep" : "light");
+const stageOf = (t: string): StageType => (t === "awake" || t === "wake" ? "awake" : t === "restless" ? "restless" : t === "rem" ? "rem" : t === "deep" ? "deep" : "light");
 const isNap = (s: SleepSession) => s.nap || (s.end - s.start < 3 * HOUR && minuteOfDay(s.start) >= 9 * 60 && minuteOfDay(s.start) < 19 * 60);
 /** The evening a night belongs to: bed at 00:30 is still the evening before. */
 const eveOf = (t: number) => localDay(t - 8 * HOUR);
@@ -79,7 +82,7 @@ export function nights(sessions: SleepSession[], hr: HrMinute[], rhr: Record<str
     out.push({
       id: s.id, day, eve, bed: s.start, up: s.end, onset, wake, asleep,
       deep: s.stageMin.deep ?? sum("deep"), rem: s.stageMin.rem ?? sum("rem"), light: s.stageMin.light ?? sum("light"),
-      awake, wakes: inNight.length, latency: Math.max(0, (onset - s.start) / MIN), stages,
+      awake, wakes: inNight.length, latency: Math.max(0, (onset - s.start) / MIN), stages, restless: sum("restless"),
       low: lo?.low ?? null, lowAt: lo?.at ?? null, meanHr: hn >= 60 ? hs / hn : null, hrv: hrv[day] ?? null, rhr: rhr[day] ?? null,
       nap: nap ? { start: nap.start, end: nap.end, min: nap.asleepMin ?? (nap.end - nap.start) / MIN } : null,
     });

@@ -31,6 +31,10 @@ describe("a night out of 100, on the studies' ranges (PLAN 97; owner, 15 Oct)", 
     expect([p(R(40), "restless").zone, p(R(56), "restless").zone]).toEqual(["fair", "poor"]);
     // same night otherwise: the restless one scores lower
     expect(R(56).score).toBeLessThan(R(16).score - 5);
+    // the band's own restless stretches count too (owner: "WE HAVE THIS IN THE APP, THE APP COUNTS THIS")
+    const band = (k: number) => Array.from({ length: k }, (_, i) => ({ type: "restless" as const, start: t0 + (i + 0.5) * (470 / k) * MIN + MIN, end: t0 + (i + 0.5) * (470 / k) * MIN + 4 * MIN }));
+    const both = sleepScore(night(20, { stages: [...st(16), ...band(24)].sort((a, b) => a.start - b.start) }), 9, usualNights);
+    expect([p(both, "restless").why, p(both, "restless").zone]).toEqual(["5.0 an hour", "fair"]);
   });
   it("your usual being poor doesn't make a poor night good (owner: \"if my usual is pretty bad, it will still show me a good score\")", () => {
     const fives = Array.from({ length: 10 }, (_, i) => night(i + 1, { asleepMin: 300 }));

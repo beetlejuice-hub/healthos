@@ -352,3 +352,21 @@ describe("phone before sleep, asked in the morning (PLAN 88)", () => {
     expect(clear).toBeLessThanOrEqual(1);
   }, 30_000);
 });
+
+describe("the band's restless stretches (owner, 20 Oct: \"WE HAVE THIS IN THE APP, THE APP COUNTS THIS\")", () => {
+  // the band sends "restless" stretches (the timeline drew them); they were read as light sleep everywhere else
+  const base = session(EVE0, 23, 31);
+  const T = (h: number) => atMinute(EVE0, 0) + h * HOUR;
+  const rs = [25, 26, 28, 29.5].map((h) => ({ type: "restless", start: T(h), end: T(h) + 4 * MIN }));
+  const cut: SleepSession["stages"] = [];
+  for (const s of base.stages) { const hit = rs.find((r) => s.start < r.end && s.end > r.start); if (!hit) { cut.push(s); continue; } if (s.start < hit.start) cut.push({ ...s, end: hit.start }); if (s.end > hit.end) cut.push({ ...s, start: hit.end }); }
+  const withR = { ...base, stages: [...cut, ...rs].sort((a, b) => a.start - b.start) };
+  it("kept as restless: 4 stretches, 16 minutes — not light sleep, not awake", () => {
+    const [n] = nights([withR], [], {}, {}), [b] = nights([base], [], {}, {});
+    expect(n.stages.filter((s) => s.type === "restless").length).toBe(4);
+    expect(n.restless).toBe(16);
+    const staged = (x: Night) => x.light! + x.deep! + x.rem!;
+    expect(Math.round(staged(b) - staged(n))).toBe(16); // out of the sleep stages they were cut from
+    expect([n.awake, n.wakes]).toEqual([b.awake, b.wakes]);
+  });
+});

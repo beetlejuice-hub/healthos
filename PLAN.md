@@ -1760,15 +1760,19 @@ D questions answered in chat. Numbered on from #112.
 127. [x] **What makes a night good and restorative; restlessness** — "pls dive into what makes a nights sleep a good nights
    sleep and what makes it restorative. Fitbit app says 81 rating while app says 98… just because i slept 9h" and "App
    doesnt have restlessness". Goes with the open sleep-score question on #110 (length is 25 of its 100). Done (20 Oct), phase 1: the score has
-   **Restless (brief wakes)** — awake stretches of 5 min or less per hour asleep (the band sends no movement; its stages'
-   short awake stretches are what there is). Fitbit's guide counts 10–30 brief wakes a night as normal: up to 4 an hour
+   **Restless** — awake stretches of 5 min or less per hour asleep. Owner, 20 Oct, on that: "WE HAVE THIS IN THE APP, THE
+   APP COUNTS THIS" — right: the band sends "restless" stretches (the timeline drew them since the band was connected),
+   but lib/sleep read them as light sleep, so nothing else saw them. Now they're kept as their own stage (Night.restless
+   minutes; the Sleep page draws them on the awake row, lighter, as the timeline does) and the Restless part counts the
+   band's restless stretches plus brief wakes per hour. Fitbit's guide counts 10–30 brief wakes a night as normal: up to 4 an hour
    ideal, 4–6 fair, past 6 poor, 8 points. The points still add to 100: taken from the parts it overlaps (awake in the
    night 7→5, wakings 3→2, asleep in bed 10→9) and the wrist's rough stages (deep 7→5, REM 8→6); length and his rating
    unchanged. What good and restorative mean was answered in chat. Not done: why Fitbit said 81 for that 9 h night — I
    can't see that night (the database link is down), so the gap isn't explained yet; Fitbit's "restoration" also uses
    sleeping heart rate against daytime resting, which this score measures against his usual sleeping heart rate
-   instead. Checked: sleepscore.test (brief wakes counted, ideal/fair/poor, a restless night scores 5+ lower — fails
-   without it; weights add to 100), nights.test, e2e sleepscore (11 parts on the phone), readiness.
+   instead. Checked: sleepscore.test (brief wakes and the band's restless stretches counted, ideal/fair/poor, a restless
+   night scores 5+ lower — fails without it; weights add to 100), sleep.test (restless kept as restless, not light — fails
+   on the old mapping), nights.test, e2e sleepscore (11 parts on the phone), sleep, readiness, mindpage, graph, band.
 128. [x] **Today's food at a glance** — "a simple window showing what i ate, the macros summary basically for the day would
    be nice, when clicking on food on today page - brainstorm ts and make it" and "need a bit better look for macro
    breakdwon, food, and trackking food overall, looking back to yesterday too". Phase 1: Today's Food card → **What I ate ·

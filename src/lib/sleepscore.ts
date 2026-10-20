@@ -10,10 +10,10 @@
  *   Asleep in bed 9    of the time in bed, asleep: 85 %+ ideal (NSF 2017), 75–85 fair, under 75 poor.
  *   Awake in night 5   20 min or less ideal (NSF), 20–50 fair, past 50 poor.
  *   Wakings 2          over 5 min: 0–1 ideal (NSF), 2–3 fair, 4+ poor.
- *   Restless 8         brief wakes — awake 5 min or less — per hour asleep (owner, 20 Oct: "App doesnt have restlessness").
- *                      The band sends no movement, so the stages' short awake stretches stand in for it. Fitbit's own
- *                      guide counts 10–30 brief wakes a night as normal, so up to 4 an hour is ideal, 4–6 fair, past 6
- *                      poor. With HRV and heart rate asleep it's the "restoration" half Fitbit's score gives 25 points to.
+ *   Restless 8         the band's restless stretches and brief wakes (awake 5 min or less), per hour asleep (owner, 20 Oct:
+ *                      "App doesnt have restlessness", then "WE HAVE THIS IN THE APP, THE APP COUNTS THIS" — the band
+ *                      sends restless stretches; they were read as light sleep). Fitbit's own guide counts 10–30 brief
+ *                      wakes a night as normal, so up to 4 an hour is ideal, 4–6 fair, past 6 poor. With HRV and heart rate asleep it's the "restoration" half Fitbit's score gives 25 points to.
  *                      Its 8 points came from the parts it overlaps (awake in the night 7→5, wakings 3→2, asleep in bed
  *                      10→9) and the wrist's rough stages (deep 7→5, REM 8→6); length and your rating kept theirs.
  *   Fell asleep in 5   within 30 min ideal (NSF), 30–45 fair, past 45 poor.
@@ -75,10 +75,11 @@ export function longWakings(n: Pick<Night, "stages" | "onset" | "wake">): number
   return n.stages.filter((s) => s.type === "awake" && s.start >= n.onset && s.end <= n.wake && s.end - s.start > 5 * 60_000).length;
 }
 
-/** Brief wakes (awake 5 minutes or less) per hour asleep, between falling asleep and waking for good (null without stages). */
+/** The band's restless stretches and brief wakes (awake 5 minutes or less) per hour asleep, from falling asleep to waking for good (null without stages). */
 export function restless(n: Pick<Night, "stages" | "onset" | "wake" | "asleep">): number | null {
   if (!n.stages?.length || !ok(n.asleep) || n.asleep <= 0) return null;
-  return n.stages.filter((s) => s.type === "awake" && s.start >= n.onset && s.end <= n.wake && s.end - s.start <= 5 * 60_000).length / (n.asleep / 60);
+  const inNight = n.stages.filter((s) => s.start >= n.onset && s.end <= n.wake);
+  return inNight.filter((s) => s.type === "restless" || (s.type === "awake" && s.end - s.start <= 5 * 60_000)).length / (n.asleep / 60);
 }
 
 type Spec = { name: string; max: number; scale: [number, number]; zones: [number, number, Zone][]; curve: [number, number][]; ideal: string; text: (v: number) => string };
@@ -87,7 +88,7 @@ export const SPECS: Record<PartId, Spec> = {
   efficiency: { name: "Asleep in bed", max: 9, scale: [60, 100], zones: [[60, 75, "poor"], [75, 85, "fair"], [85, 100, "ideal"]], curve: [[60, 0], [75, 0.4], [85, 1], [100, 1]], ideal: "85 %+", text: (v) => `${Math.round(v)} %` },
   waso: { name: "Awake in the night", max: 5, scale: [0, 90], zones: [[0, 20, "ideal"], [20, 50, "fair"], [50, 90, "poor"]], curve: [[0, 1], [20, 1], [50, 0.4], [90, 0]], ideal: "20 min or less", text: (v) => `${Math.round(v)} min` },
   wakings: { name: "Wakings over 5 min", max: 2, scale: [0, 6], zones: [[0, 1.5, "ideal"], [1.5, 3.5, "fair"], [3.5, 6, "poor"]], curve: [[0, 1], [1, 1], [3, 0.5], [5, 0]], ideal: "0–1", text: (v) => String(Math.round(v)) },
-  restless: { name: "Restless (brief wakes)", max: 8, scale: [0, 9], zones: [[0, 4, "ideal"], [4, 6, "fair"], [6, 9, "poor"]], curve: [[0, 1], [4, 1], [6, 0.4], [9, 0]], ideal: "4 an hour or fewer", text: (v) => `${v.toFixed(1)} an hour` },
+  restless: { name: "Restless", max: 8, scale: [0, 9], zones: [[0, 4, "ideal"], [4, 6, "fair"], [6, 9, "poor"]], curve: [[0, 1], [4, 1], [6, 0.4], [9, 0]], ideal: "4 an hour or fewer", text: (v) => `${v.toFixed(1)} an hour` },
   onset: { name: "Fell asleep in", max: 5, scale: [0, 75], zones: [[0, 30, "ideal"], [30, 45, "fair"], [45, 75, "poor"]], curve: [[0, 1], [30, 1], [45, 0.5], [60, 0.1], [75, 0]], ideal: "30 min or less", text: (v) => `${Math.round(v)} min` },
   deep: { name: "Deep", max: 5, scale: [0, 30], zones: [[0, 8, "poor"], [8, 13, "fair"], [13, 30, "ideal"]], curve: [[0, 0], [8, 0.4], [13, 1], [30, 1]], ideal: "13 %+ of sleep", text: (v) => `${Math.round(v)} %` },
   rem: { name: "REM", max: 6, scale: [0, 35], zones: [[0, 15, "poor"], [15, 20, "fair"], [20, 35, "ideal"]], curve: [[0, 0], [15, 0.5], [20, 1], [35, 1]], ideal: "20 %+ of sleep", text: (v) => `${Math.round(v)} %` },
