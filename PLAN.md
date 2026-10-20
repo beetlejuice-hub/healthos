@@ -2045,3 +2045,11 @@ Order: A first (113 → 123), then B, then C; D in the chat. (claimed: this sess
    heart rate and kcal ("after lifting" when it was). With only cardio logged the Training page shows too, with just
    this card. Checked: cardio.test (weeks, Monday-first, a running session not counted), e2e/cardiotraining.cjs (75 min
    · 2 sessions · about 817 kcal · usual 35, worked out by hand; the newest at avg 142 bpm; cardio-only shows).
+147. [x] **Heart-rate zones for cardio** — the next step offered after #146, owner: "go". Done (20 Oct): Settings → Sleep and
+   body has Age and Max heart rate (his own number wins; else 208 − 0.7 × age, Tanaka 2001). Every cardio stretch shows
+   minutes in Z1–Z5 by % of max (50/60/70/80/90) as one bar, easy to hard, on the Stop screen and on the Training page's
+   last sessions, with where the max came from. With neither set it says what it needs rather than guess. The AI's
+   cardio lines carry the zones too ("zones Z2 20 · Z3 20 min (max 186)"). Checked: cardio.test (planted minutes in each
+   zone; the max rules; the AI line), e2e/cardiotraining.cjs (no age → says so; age 31 → "about 186" offered; 142 bpm →
+   Z3 40 min), e2e/cardio.cjs.
+

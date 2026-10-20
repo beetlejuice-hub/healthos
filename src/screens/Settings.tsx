@@ -60,6 +60,11 @@ export function Settings({ tester, email }: { tester: boolean; email: string }) 
             ? <div className="field" data-weight="logged">Body weight<b>{weighIn.kg} kg</b><small>your weigh-in, {dayLabel(weighIn.at)} — the app uses your latest one</small></div>
             : <label className="field">Body weight (kg)<input inputMode="decimal" value={st.bodyKg} onChange={(e) => act.setSettings({ bodyKg: num(e.target.value) })} /><small>until your first weigh-in</small></label>}
         </div>
+        {/* heart-rate zones for cardio: his age, or a max heart rate he knows (lib/cardio maxHrOf) */}
+        <div className="row2">
+          <label className="field">Age<input inputMode="numeric" aria-label="Age" value={st.age ?? ""} placeholder="for heart-rate zones" onChange={(e) => act.setSettings({ age: num(e.target.value) || undefined })} /></label>
+          <label className="field">Max heart rate<input inputMode="numeric" aria-label="Max heart rate" value={st.maxHr ?? ""} placeholder={st.age ? `about ${Math.round(208 - 0.7 * st.age)} from your age` : "if you know it"} onChange={(e) => act.setSettings({ maxHr: num(e.target.value) || undefined })} /></label>
+        </div>
         <p className="note">Planned bedtime is what caffeine is measured against for now; your real bedtime will come from the wearable. Body weight (your latest weigh-in) sets how fast alcohol clears. How fast you clear caffeine and how much bothers your sleep aren't settings: they'll be learned from your own data.</p>
       </div>
 

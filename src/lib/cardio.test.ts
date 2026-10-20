@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { cardioHr, cardioKcal, cardioLine, cardioSpans, cardioWeekLines, cardioWeeks, kindOf, lastLike } from "./cardio";
+import { cardioHr, cardioKcal, cardioLine, cardioSpans, cardioWeekLines, cardioWeeks, kindOf, lastLike, maxHrOf, zoneMinutes, zoneWords } from "./cardio";
 import { nightContext } from "./ai/client";
 import { DEFAULT_SETTINGS, EMPTY_AI, type State } from "./store";
 import { DEFAULT_GOALS } from "./types";
@@ -113,3 +113,33 @@ describe("cardio a week, for the Training page (PLAN 146)", () => {
     expect(w.map((x) => [new Date(x.week).getDate(), x.min, x.sessions, x.kcal])).toEqual([[28, 0, 0, 0], [5, 0, 0, 0], [12, 45, 1, 540], [19, 70, 2, 760]]);
   });
 });
+
+describe("heart-rate zones (owner: \"go\" on zones for cardio)", () => {
+  it("max heart rate: his own number wins; else from his age (208 − 0.7 × age); else none", () => {
+    expect(maxHrOf({ maxHr: 191, age: 31 })).toEqual({ bpm: 191, from: "set" });
+    expect(maxHrOf({ age: 31 })).toEqual({ bpm: 186, from: "age" }); // 208 − 21.7 = 186.3
+    expect(maxHrOf({})).toBeNull();
+    expect(maxHrOf({ maxHr: 40, age: 300 })).toBeNull(); // nonsense isn't used
+  });
+  it("planted minutes land in their zones by % of max (186): 100 below Z1, 120 Z2, 140 Z3, 160 Z4, 175 Z5", () => {
+    const s = at("20", "18:00"), m = (k: number) => s + k * M;
+    const hr: HrMinute[] = [];
+    [[100, 5], [120, 10], [140, 15], [160, 4], [175, 2]].reduce((k, [bpm, n]) => { for (let i = 0; i < n; i++) hr.push([m(k + i), bpm, bpm - 2, bpm + 3]); return k + n; }, 0);
+    // 100/186 = .54 → Z1; 120 = .645 → Z2; 140 = .753 → Z3; 160 = .86 → Z4; 175 = .94 → Z5
+    expect(zoneMinutes(hr, s, m(36), 186)).toEqual([5, 10, 15, 4, 2]);
+    expect(zoneMinutes(hr, s, m(15), 186)).toEqual([5, 10, 0, 0, 0]); // only inside the stretch
+    expect(zoneWords([0, 18, 15, 4, 0])).toBe("Z2 18 · Z3 15 · Z4 4 min");
+  });
+});
+
+describe("the AI's cardio line with zones", () => {
+  it("names the zones and the max they came from, when a max is known; not otherwise", () => {
+    const s0 = at("20", "18:00"), s1 = at("20", "18:40");
+    const hr: HrMinute[] = []; for (let t = s0; t < s1; t += M) hr.push([t, t < s0 + 20 * M ? 125 : 142, 120, 150]);
+    const sp = cardioSpans([own("z", "Stairmaster", s0, s1)], s1);
+    // 125/186 = .67 → Z2 (20 min); 142/186 = .76 → Z3 (20 min)
+    expect(cardioLine(sp[0], sp, hr, 80, 186)).toMatch(/heart rate avg 134, peak 150 bpm \(band, 40 of 40 min\), zones Z2 20 · Z3 20 min \(max 186\);/);
+    expect(cardioLine(sp[0], sp, hr, 80)).not.toMatch(/zones/);
+  });
+});
+

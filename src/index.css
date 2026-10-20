@@ -1650,4 +1650,11 @@ span.fd-score[data-band="none"] { background: none; min-width: 34px; }
 .aicheck { display: grid; gap: 6px; margin-top: 8px; padding: 8px 10px; border-radius: 10px; background: color-mix(in srgb, var(--warn) 12%, transparent); }
 .aicheck p { margin: 0; font-size: 13px; line-height: 1.4; }
 .hidden-by-you li { display: flex; flex-wrap: wrap; gap: 6px; align-items: baseline; }
+/* heart-rate zones: one bar, easy to hard, with minutes */
+.zones { display: grid; gap: 4px; }
+.zbar { display: flex; height: 10px; border-radius: 5px; overflow: hidden; gap: 2px; }
+.zbar i { display: block; min-width: 4px; }
+.zlegend { display: flex; flex-wrap: wrap; gap: 4px 10px; font-size: 12.5px; }
+.zones small, .zones-need { font-size: 12px; color: var(--c-dim, var(--k-ink-2)); margin: 0; }
+.tp-cardio-list li { display: grid; gap: 4px; }
 

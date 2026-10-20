@@ -72,6 +72,8 @@ export type Settings = {
   /** Fallback caffeine for "a coffee" when no usual drink is chosen. */
   coffeeMg: number;
   bodyKg: number;
+  /** For heart-rate zones (lib/cardio maxHrOf): his age, or a max heart rate he knows — this one wins. */
+  age?: number; maxHr?: number;
   /** The drink the one-tap button logs. Chosen on Today; ✕ clears it. */
   usualDrink: Drink | null;
   /** Which reminders to send, once notifications are on (Settings → Notifications). */

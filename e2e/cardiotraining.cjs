@@ -44,10 +44,21 @@ for (let t = last - 30 * MIN; t < last + 70 * MIN; t += MIN) { const v = t >= la
   // the 3 weeks before: 30 (wk of 28 Sep: none… ) — weeks of 28 Sep, 5 Oct, 12 Oct: 30 (4 Oct is Sun → wk 28 Sep), 45, 30 → usual 35
   check(`…against his usual (${(txt.match(/usual \d+ min a week/) || [''])[0]})`, /usual 35 min a week/.test(txt));
   check('8 weeks drawn', await card.getByRole('img', { name: 'Cardio minutes a week, the last 8 weeks' }).count() === 1);
-  check(`the last sessions, the newest with the band's heart rate (${(await card.locator('li').first().innerText().catch(() => '')).replace(/\s+/g, ' ')})`, /^Stairmaster Tue 20 Oct · 40 min · avg 142 bpm · ~486 kcal$/.test((await card.locator('li').first().innerText().catch(() => '')).replace(/\s+/g, ' ')) && await card.locator('li').count() === 3);
+  check(`the last sessions, the newest with the band's heart rate (${(await card.locator('li').first().innerText().catch(() => '')).replace(/\s+/g, ' ')})`, /^Stairmaster Tue 20 Oct · 40 min · avg 142 bpm · ~486 kcal( |$)/.test((await card.locator('li').first().innerText().catch(() => '')).replace(/\s+/g, ' ')) && await card.locator('li').count() === 3);
   await card.evaluate((el) => el.scrollIntoView({ block: 'center' })).catch(() => {}); await pg.waitForTimeout(150); await card.screenshot({ path: OUT + 'cardio-training.png' }).catch(() => {});
   const wide = await pg.evaluate(() => document.documentElement.scrollWidth);
   check(`phone: nothing wider than the screen (${wide} px)`, wide <= 390);
+
+  // heart-rate zones (owner: "go"): no age yet → it says what it needs; age 31 in Settings → max 186; the planted 142 bpm
+  // is 76 % of max → all 40 min in Z3
+  check(`no age yet: the zones say what they need (${(await card.locator('.zones-need').first().innerText().catch(() => '')).trim()})`, /add your age \(or max heart rate\) in Settings/.test(await card.locator('.zones-need').first().innerText().catch(() => '')));
+  await pg.goto(APP + '#settings'); await pg.getByLabel('Age', { exact: true }).fill('31'); await pg.waitForTimeout(300);
+  check(`Settings: max heart rate offered from the age (${await pg.getByLabel('Max heart rate').getAttribute('placeholder')})`, /about 186 from your age/.test(await pg.getByLabel('Max heart rate').getAttribute('placeholder')));
+  await pg.goto(APP + '#insights/training'); await pg.waitForSelector('.tp-cardio');
+  await pg.waitForFunction(() => /Z3/.test(document.querySelector('.tp-cardio li')?.textContent || ''), null, { timeout: 8000 }).catch(() => {});
+  const z = (await pg.locator('.tp-cardio li').first().locator('.zones').innerText().catch(() => '')).replace(/\s+/g, ' ');
+  check(`the newest session's zones: Z3 40 min, max 186 from his age (${z})`, /^Z3 40 min max 186 bpm, from your age$/.test(z));
+  await pg.locator('.tp-cardio').screenshot({ path: OUT + 'cardio-zones.png' }).catch(() => {});
 
   // only cardio logged, no lifting yet: the page still shows it
   await seed(false); await pg.reload(); await pg.waitForSelector('.tp', { timeout: 15000 }).catch(() => {});

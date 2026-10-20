@@ -13,6 +13,7 @@ import { cardioHr, cardioKcal, CARDIO_CHIPS } from "../lib/cardio";
 import { currentKg } from "../lib/body";
 import { clock } from "../lib/time";
 import type { Workout } from "../lib/types";
+import { ZoneBar } from "./ZoneBar";
 
 const hms = (ms: number) => { const s = Math.max(0, Math.floor(ms / 1000)), h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), ss = String(s % 60).padStart(2, "0"); return h ? `${h}:${String(m).padStart(2, "0")}:${ss}` : `${m}:${ss}`; };
 
@@ -28,6 +29,7 @@ export function CardioNumbers({ what, start, end }: { what: string; start: numbe
       <div><b>{hr ? hr.avg : "—"}</b><span>{hr ? `avg bpm · peak ${hr.peak}` : "avg bpm"}</span></div>
       <div><b>{kc ? `~${kc.kcal}` : "—"}</b><span>kcal</span></div>
     </div>
+    {hr && band && <ZoneBar hr={band.hr} start={start} end={end} />}
     <p className="s cardio-how">
       {hr ? `Heart rate from the band: ${hr.n} of ${min} minutes. ` : band ? "No heart rate from the band for it yet — it syncs a few minutes behind and fills in by itself. " : "Connect the band (Settings) for heart rate. "}
       {kc ? `Calories: ${kc.is}, ${kc.met} MET × ${kg} kg × ${min} min — an estimate, resting included.` : !kg ? "Calories need your weight — log a weigh-in." : "Calories: not estimated for this kind."}

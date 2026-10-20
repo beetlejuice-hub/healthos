@@ -75,11 +75,12 @@ export function lastLike(spans: CardioSpan[], s: CardioSpan): CardioSpan | null 
  * One line for the AI (the night read-back, PLAN 130): "Stairmaster 18:00–18:40 (40 min): heart rate avg 142, peak 165 bpm
  * (band, 38 of 40 min); about 480 kcal (MET 9 × 80 kg) — last Stairmaster, Tue 13 Oct: 35 min, avg 138 bpm".
  */
-export function cardioLine(s: CardioSpan, spans: CardioSpan[], hr: HrMinute[], kg: number | null): string {
+export function cardioLine(s: CardioSpan, spans: CardioSpan[], hr: HrMinute[], kg: number | null, max?: number | null): string {
   const min = minutesOf(s), h = cardioHr(hr, s.start, s.end), kc = cardioKcal(s.what, min, kg), last = lastLike(spans, s);
+  const zones = h && max ? zoneMinutes(hr, s.start, s.end, max) : null;
   const lh = last ? cardioHr(hr, last.start, last.end) : null;
   return `${s.what} ${clock(s.start)}–${clock(s.end)} (${min} min${s.auto ? ", the timer was left running — ended by itself" : ""})${s.own ? "" : ", after lifting"}: `
-    + (h ? `heart rate avg ${h.avg}, peak ${h.peak} bpm (band, ${h.n} of ${min} min)` : "no heart rate from the band for it")
+    + (h ? `heart rate avg ${h.avg}, peak ${h.peak} bpm (band, ${h.n} of ${min} min)${zones && zones.some(Boolean) ? `, zones ${zoneWords(zones)} (max ${max})` : ""}` : "no heart rate from the band for it")
     + (kc ? `; about ${kc.kcal} kcal (MET ${kc.met} × ${kg} kg)` : "")
     + (last ? ` — last ${kindOf(last.what)?.name ?? last.what}, ${dayLabel(last.start)}: ${minutesOf(last)} min${lh ? `, avg ${lh.avg} bpm` : ""}` : " — the first of its kind");
 }
@@ -89,7 +90,7 @@ export function cardioLine(s: CardioSpan, spans: CardioSpan[], hr: HrMinute[], k
  * important for my weight loss"): this week's cardio against the weeks before, then the last few sessions. Weeks start
  * Monday. Nothing when there's no cardio yet.
  */
-export function cardioWeekLines(spans: CardioSpan[], hr: HrMinute[], kg: number | null, now: number, weeks = 4, last = 3): string[] {
+export function cardioWeekLines(spans: CardioSpan[], hr: HrMinute[], kg: number | null, now: number, weeks = 4, last = 3, max?: number | null): string[] {
   const done = spans.filter((s) => !s.running && s.start <= now);
   if (!done.length) return [];
   const starts = [weekStart(now)];
@@ -99,7 +100,7 @@ export function cardioWeekLines(spans: CardioSpan[], hr: HrMinute[], kg: number 
   const now0 = inWeek(0), kcal = now0.reduce((a, s) => a + (cardioKcal(s.what, minutesOf(s), kg)?.kcal ?? 0), 0);
   return [
     `Cardio this week (from ${dayLabel(starts[0])}): ${now0.length} session${now0.length === 1 ? "" : "s"}, ${mins(now0)} min${kcal ? `, about ${kcal} kcal` : ""}; the ${weeks - 1} weeks before, newest first: ${starts.slice(1).map((_, k) => `${mins(inWeek(k + 1))} min`).join(", ")}`,
-    ...(last > 0 ? done.slice(-last).reverse() : []).map((s) => `Cardio: ${cardioLine(s, done, hr, kg)}`),
+    ...(last > 0 ? done.slice(-last).reverse() : []).map((s) => `Cardio: ${cardioLine(s, done, hr, kg, max)}`),
   ];
 }
 
@@ -113,3 +114,29 @@ export function cardioWeeks(spans: CardioSpan[], kg: number | null, now: number,
     return { week: w, min: mine.reduce((a, s) => a + minutesOf(s), 0), sessions: mine.length, kcal: mine.reduce((a, s) => a + (cardioKcal(s.what, minutesOf(s), kg)?.kcal ?? 0), 0) };
   });
 }
+
+/**
+ * Heart-rate zones (owner: "go" on zones for cardio, after #146). Max heart rate: his own number when he set one, else
+ * from his age (Tanaka 2001: 208 − 0.7 × age — closer than 220 − age for adults), else none — and the zones say what they
+ * need instead of guessing. The five zones by % of max: Z1 50–60, Z2 60–70, Z3 70–80, Z4 80–90, Z5 90+ (minutes under 50 %
+ * aren't a zone). Pure.
+ */
+export const ZONES = [0.5, 0.6, 0.7, 0.8, 0.9] as const;
+export function maxHrOf(s: { maxHr?: number; age?: number }): { bpm: number; from: "set" | "age" } | null {
+  if (s.maxHr && s.maxHr >= 120 && s.maxHr <= 230) return { bpm: Math.round(s.maxHr), from: "set" };
+  if (s.age && s.age >= 12 && s.age <= 100) return { bpm: Math.round(208 - 0.7 * s.age), from: "age" };
+  return null;
+}
+/** Minutes in Z1–Z5 inside a stretch, from the band's minute averages. */
+export function zoneMinutes(hr: HrMinute[], start: number, end: number, max: number): number[] {
+  const out = [0, 0, 0, 0, 0];
+  for (const [t, avg] of hr) {
+    if (t < start || t >= end) continue;
+    const f = avg / max;
+    for (let z = ZONES.length - 1; z >= 0; z--) if (f >= ZONES[z]) { out[z]++; break; }
+  }
+  return out;
+}
+/** "Z2 18 · Z3 15 · Z4 4 min" — the zones with minutes in them. */
+export const zoneWords = (mins: number[]) => mins.map((m, z) => (m ? `Z${z + 1} ${m}` : "")).filter(Boolean).join(" · ") + " min";
+

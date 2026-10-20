@@ -11,6 +11,7 @@ import { currentKg } from "../lib/body";
 import { useStore } from "../lib/store";
 import { dayLabel } from "../lib/time";
 import type { HrMinute } from "../lib/band";
+import { ZoneBar } from "./ZoneBar";
 
 export function CardioCard({ now, hr }: { now: number; hr: HrMinute[] }) {
   const workouts = useStore((s) => s.workouts), entries = useStore((s) => s.entries);
@@ -27,7 +28,7 @@ export function CardioCard({ now, hr }: { now: number; hr: HrMinute[] }) {
         yfmt={(v) => String(Math.round(v))} xlabels={[[0, dayLabel(weeks[0].week).replace(/^\w+ /, "")], [weeks.length - 1, "this week"]]} />
       <ul className="tp-cardio-list">{spans.slice(-3).reverse().map((s) => {
         const h = cardioHr(hr, s.start, s.end), kc = cardioKcal(s.what, minutesOf(s), kg);
-        return <li key={s.workoutId + s.start}><b>{s.what}</b> <span>{dayLabel(s.start)} · {minutesOf(s)} min{h ? ` · avg ${h.avg} bpm` : ""}{kc ? ` · ~${kc.kcal} kcal` : ""}{s.own ? "" : " · after lifting"}</span></li>;
+        return <li key={s.workoutId + s.start}><b>{s.what}</b> <span>{dayLabel(s.start)} · {minutesOf(s)} min{h ? ` · avg ${h.avg} bpm` : ""}{kc ? ` · ~${kc.kcal} kcal` : ""}{s.own ? "" : " · after lifting"}</span>{h && <ZoneBar hr={hr} start={s.start} end={s.end} />}</li>;
       })}</ul>
     </section>
   );
