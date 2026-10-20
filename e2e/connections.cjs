@@ -1,5 +1,5 @@
 // Insights → Connections (phase 4): one forest plot for every with/without comparison + the explorer.
-const { chromium, APP, OUT, handle } = require('./harness.cjs');
+const { chromium, APP, OUT, handle, tables } = require('./harness.cjs');
 
 (async () => {
   const b = await chromium.launch(); const errs = [];
@@ -19,6 +19,10 @@ const { chromium, APP, OUT, handle } = require('./harness.cjs');
       await pg.goto(APP + '#settings'); await pg.getByRole('button', { name: /Load sample/ }).click(); await pg.waitForTimeout(300);
     }
     await pg.goto(APP + '#insights/connections'); await pg.waitForTimeout(700);
+    // the laptop gets the sample from the server: wait for it to land there before the phone closes (under load the phone
+    // closed first and the laptop waited for data that never came — 20 Oct); then wait for the forest, not a fixed time
+    if (name === 'phone') for (let i = 0; i < 100 && ![...tables.entries.keys()].some((k) => k.includes('sample:')); i++) await pg.waitForTimeout(100);
+    await pg.waitForSelector('.gl-forest', { timeout: 15000 }).catch(() => {});
     const forest = await pg.locator('.gl-forest').innerText();
     check(name + ': forest says how many comparisons are clear', /\d+ of \d+ comparisons are clear/.test(forest));
     const squares = await pg.locator('.gl-forest rect.sq').count();
