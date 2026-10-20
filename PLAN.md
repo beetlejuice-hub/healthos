@@ -2028,5 +2028,10 @@ Order: A first (113 → 123), then B, then C; D in the chat. (claimed: this sess
    box already refused under 20 and over 400. A new best (+10 %), a lighter week, a real cut aren't questioned, and
    Keep is always there. Checked: sanity.test (each case, and the real changes that must not ask), e2e/guard.cjs
    (315 → Use 31.5; 48.6 → Change it → 84.8; 70 in Log → Keep).
-146. [ ] **Cardio on the Training page** — next to strength: cardio minutes a week against the weeks before, and the
+146. [x] **Cardio on the Training page** — next to strength: cardio minutes a week against the weeks before, and the
    last sessions with the band's heart rate (owner: "do these"; #130). (claimed: this session — TrainingPage, lib/cardio)
+   Done (20 Oct): a "Cardio" card under Overall strength on the Training page: this week's minutes, sessions and about
+   kcal, against his usual (the 3 weeks before); minutes a week for 8 weeks; the last 3 sessions with the band's average
+   heart rate and kcal ("after lifting" when it was). With only cardio logged the Training page shows too, with just
+   this card. Checked: cardio.test (weeks, Monday-first, a running session not counted), e2e/cardiotraining.cjs (75 min
+   · 2 sessions · about 817 kcal · usual 35, worked out by hand; the newest at avg 142 bpm; cardio-only shows).

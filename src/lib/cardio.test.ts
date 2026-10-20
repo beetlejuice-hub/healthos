@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { cardioHr, cardioKcal, cardioLine, cardioSpans, cardioWeekLines, kindOf, lastLike } from "./cardio";
+import { cardioHr, cardioKcal, cardioLine, cardioSpans, cardioWeekLines, cardioWeeks, kindOf, lastLike } from "./cardio";
 import { nightContext } from "./ai/client";
 import { DEFAULT_SETTINGS, EMPTY_AI, type State } from "./store";
 import { DEFAULT_GOALS } from "./types";
@@ -101,5 +101,15 @@ describe("the night read-back on a cardio day (PLAN 130: \"later it can make it 
     expect(w[1]).toBe("- Cardio: Stairmaster 18:00–18:40 (40 min): no heart rate from the band for it; about 486 kcal (MET 9 × 81 kg) — last Stairmaster, Tue 13 Oct: 45 min");
     expect(w[2]).toBe("- Cardio this week (from Mon 19 Oct): 1 session, 40 min, about 486 kcal; the 3 weeks before, newest first: 45 min, 0 min, 0 min");
     expect(c).toMatch(/18:00 cardio: Stairmaster \(40 min\)/);
+  });
+});
+
+describe("cardio a week, for the Training page (PLAN 146)", () => {
+  // Tue 20 Oct 2026; weeks start Monday
+  const ws = [own("a", "Stairmaster", at("20", "07:00"), at("20", "07:40")), own("b", "Bike", at("19", "18:00"), at("19", "18:30")),
+    own("c", "Stairmaster", at("13", "18:00"), at("13", "18:45")), own("e", "Run", at("20", "19:00"), null)];
+  it("each week's minutes, sessions and about-kcal, oldest first; this week last; a running one not yet", () => {
+    const w = cardioWeeks(cardioSpans(ws, at("20", "19:10")), 80, at("20", "19:10"), 4);
+    expect(w.map((x) => [new Date(x.week).getDate(), x.min, x.sessions, x.kcal])).toEqual([[28, 0, 0, 0], [5, 0, 0, 0], [12, 45, 1, 540], [19, 70, 2, 760]]);
   });
 });

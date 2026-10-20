@@ -1642,3 +1642,8 @@ span.fd-score[data-band="none"] { background: none; min-width: 34px; }
 /* PLAN 145: the typo guard's question — asked once, never blocks */
 .guard { display: grid; gap: 8px; padding: 10px 12px; border-radius: 12px; background: color-mix(in srgb, var(--warn) 14%, transparent); border: 1px solid color-mix(in srgb, var(--warn) 40%, transparent); }
 .guard p { margin: 0; font-size: 14px; line-height: 1.4; }
+/* PLAN 146: cardio on the Training page */
+.tp-cardio { display: grid; gap: 6px; }
+.tp-cardio-list { margin: 0; padding: 0; list-style: none; display: grid; gap: 4px; font-size: 13.5px; }
+.tp-cardio-list span { color: var(--i-ink-2, var(--c-ink-2)); }
+

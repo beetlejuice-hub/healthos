@@ -102,3 +102,14 @@ export function cardioWeekLines(spans: CardioSpan[], hr: HrMinute[], kg: number 
     ...(last > 0 ? done.slice(-last).reverse() : []).map((s) => `Cardio: ${cardioLine(s, done, hr, kg)}`),
   ];
 }
+
+export type CardioWeek = { week: number; min: number; sessions: number; kcal: number };
+/** The last `weeks` weeks (Monday-first, oldest first), each with its cardio minutes, sessions and about-kcal (PLAN 146). */
+export function cardioWeeks(spans: CardioSpan[], kg: number | null, now: number, weeks = 8): CardioWeek[] {
+  const starts = [weekStart(now)];
+  while (starts.length < weeks) starts.push(weekStart(starts[starts.length - 1] - 1));
+  return starts.reverse().map((w, k, all) => {
+    const mine = spans.filter((s) => !s.running && s.start >= w && (k === all.length - 1 || s.start < all[k + 1]) && s.start <= now);
+    return { week: w, min: mine.reduce((a, s) => a + minutesOf(s), 0), sessions: mine.length, kcal: mine.reduce((a, s) => a + (cardioKcal(s.what, minutesOf(s), kg)?.kcal ?? 0), 0) };
+  });
+}

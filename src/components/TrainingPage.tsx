@@ -16,6 +16,7 @@ import { kgStep, nextTemplate, type LoggedSet } from "../lib/training";
 import { historyOf, repsOf, smartNext } from "../lib/progress";
 import { equipOf } from "../lib/exsearch";
 import { StrengthCard } from "./StrengthCard";
+import { CardioCard } from "./CardioCard";
 import { clock, dayLabel } from "../lib/time";
 import type { EntryOf } from "../lib/types";
 import type { HrMinute } from "../lib/band";
@@ -47,7 +48,8 @@ export function TrainingPage({ now }: { now: number }) {
   const facts = useMemo(() => sessionFacts(ss, entries, ns), [ss, entries, ns]);
   // C: every workout (cardio too) is left out of your usual heart rate, and the hour after it
   const spans = useMemo(() => workouts.flatMap((x) => (x.endedAt ? [{ start: x.startedAt, end: x.endedAt }] : [])), [workouts]);
-  if (!ss.length) return null;
+  // cardio only so far (PLAN 146): its card alone
+  if (!ss.length) return <div className="tp" ref={ref} data-sec="training"><CardioCard now={now} hr={band?.hr ?? NO_HR} /></div>;
   // what's next: the template after the last one done, its first lift as last time said (double progression)
   const next = nextTemplate(templates, workouts), first = next?.exercises[0];
   const lastOf = first ? [...ss].reverse().find((s) => s.sets.some((x) => x.exercise === first.name && !x.warmup)) : undefined;
@@ -66,6 +68,7 @@ export function TrainingPage({ now }: { now: number }) {
       </section>
       {/* PLAN 143: one line for overall strength — every lift against itself */}
       <StrengthCard sets={sets} now={now} className="sl-p tp-strength" />
+      <CardioCard now={now} hr={band?.hr ?? NO_HR} />
       {lifts.length > 0 && (() => {
         // each card's chart drawn to its own width (a phone card is ~170 px; drawn wider and shrunk, its labels were 7 px)
         const cols = wide ? Math.min(4, lifts.length) : 2, cardW = (w - 12 * (cols - 1)) / cols;

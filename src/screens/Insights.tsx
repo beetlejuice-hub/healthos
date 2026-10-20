@@ -129,8 +129,10 @@ export function Insights() {
       strength: [...workoutsPerExercise.values()].some((w) => w.size >= 2),
       sets: kinds.has("set"),
       supps: kinds.has("supp"),
+      // PLAN 146: cardio on its own is training too
+      cardio: s.workouts.some((w) => w.kind === "cardio" && w.endedAt != null),
     };
-  }, [s.entries, facts]);
+  }, [s.entries, s.workouts, facts]);
   const locked: [string, string][] = [
     !has.strength && ["Your lifts", "log the same exercise in three workouts"],
     !has.sets && ["Training load", "log a workout"],
@@ -188,7 +190,7 @@ export function Insights() {
       {!nothing && <div data-sec="connections" className="sec-wrap"><Noticed report={report} /><WorthALook items={scouted} onShow={showOnGraph} /></div>}
       {!nothing && <SleepNights data={data} band={band} now={now} entries={s.entries} halfLifeMin={s.settings.halfLifeMin} />}
       {!nothing && <Body days={gdays} period={period} now={now} bandNights={bandNights} />}
-      {!nothing && has.sets && <TrainingPage now={now} />}
+      {!nothing && (has.sets || has.cardio) && <TrainingPage now={now} />}
       {!nothing && (has.sets || has.supps) && <>
         <div className="gl-group" id="ins-training" data-sec="training"><h2>Training &amp; stack</h2><span>what you trained, what you took</span></div>
         <div className="gl" data-sec="training"><TrainingLoad now={now} period={period} /><SuppMatrix days={gdays} period={period} /></div>
