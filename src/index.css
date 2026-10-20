@@ -1568,3 +1568,23 @@ a { color: inherit; }
 .propose .err { font-size: 12.5px; }
 .question .q-acts { display: flex; gap: 18px; }
 .msg .ts { display: block; margin-top: 4px; font: 400 10.5px var(--f-mono); color: var(--c-dim); text-align: right; }
+
+/* What I ate — one day's food in a sheet over Today (PLAN 128, #113) */
+.sheet-bg { position: fixed; inset: 0; z-index: 30; background: #0009; }
+.sheet { position: fixed; left: 0; right: 0; bottom: 0; z-index: 31; max-height: 88dvh; overflow: auto; overscroll-behavior: contain; margin: 0 auto; max-width: 560px; background: var(--c-bg); border-radius: 18px 18px 0 0; padding: 6px 16px calc(18px + env(safe-area-inset-bottom, 0px)); display: grid; gap: 14px; align-content: start; box-shadow: 0 -12px 40px -16px #000; }
+.fd-head { position: sticky; top: -6px; z-index: 1; display: grid; grid-template-columns: 40px 1fr 40px 40px; align-items: center; gap: 4px; padding: 10px 0 8px; background: var(--c-bg); border-bottom: 1px solid #ffffff0d; }
+.fd-head b { text-align: center; font-size: 16px; }
+.fd-nav { background: var(--c-card-2); border: 0; border-radius: 999px; color: var(--c-ink); width: 36px; height: 36px; font-size: 20px; line-height: 1; }
+.fd-nav:disabled { opacity: .3; }
+.fd-head .fd-close { background: none; border: 0; color: var(--c-dim); font-size: 18px; justify-self: end; padding: 6px 8px; }
+.fd-sum { display: grid; gap: 10px; }
+.fd-kcal { margin: 0; font-size: 13px; color: var(--c-ink-2); }
+.fd-kcal b { font-size: 26px; color: var(--c-ink); font-variant-numeric: tabular-nums; margin-right: 2px; }
+.fd-kcal span { color: var(--c-dim); margin-left: 6px; }
+.fd-meal h4 { display: flex; justify-content: space-between; margin: 0 0 2px; font-size: 12px; letter-spacing: .06em; text-transform: uppercase; color: var(--c-ink-2); }
+.fd-meal h4 span { text-transform: none; letter-spacing: 0; color: var(--c-dim); font-weight: 500; font-variant-numeric: tabular-nums; }
+.fd-li { grid-template-columns: minmax(0, 1fr) auto auto; }
+.fd-li .entry-edit { grid-column: 1 / -1; }
+.fd-del { padding: 4px 10px; font-size: 12px; background: color-mix(in srgb, var(--warn) 22%, transparent); color: var(--c-ink); }
+.fd-add { justify-self: start; }
+#fuel .fuel-open { margin-top: 12px; }

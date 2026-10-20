@@ -1666,7 +1666,11 @@ Every note below, in his words, grouped: A broken or wrong now (first), B better
 D questions answered in chat. Numbered on from #112.
 
 ### A · Broken or wrong now — fix first
-113. [ ] **Can't remove a logged food** — "WHY CANT I REMOVE A FOOD I LOGGED…??"
+113. [x] **Can't remove a logged food** — "WHY CANT I REMOVE A FOOD I LOGGED…??" Only today's food could be deleted, in
+   "Logged today" at the bottom of Log; nothing from an earlier day, and nothing from Today. Now from Today's Food card →
+   **What I ate** (#128): × then "Delete?" on any item, any day. Checked the delete really sticks: e2e/foodday.cjs deletes
+   one of today's and one of yesterday's (both pulled from the server, as logged on another phone), reloads — still gone
+   — the server has them deleted, and a second phone signing in fresh doesn't get them back.
 114. [x] **Stuck on the unit, and "not this"** — "today i logged 1 bite of schnitzel, now i cant put 1 full piece of
    schnitzel, i try to log, it comes back to the schnitzel but measured in bite, and cant change..can we add a button that
    says not this, then the app retries the search but removing that option.." Reproduced: "1 full piece of schnitzel" read
@@ -1747,9 +1751,14 @@ D questions answered in chat. Numbered on from #112.
 127. [ ] **What makes a night good and restorative; restlessness** — "pls dive into what makes a nights sleep a good nights
    sleep and what makes it restorative. Fitbit app says 81 rating while app says 98… just because i slept 9h" and "App
    doesnt have restlessness". Goes with the open sleep-score question on #110 (length is 25 of its 100).
-128. [ ] **Today's food at a glance** — "a simple window showing what i ate, the macros summary basically for the day would
+128. [x] **Today's food at a glance** — "a simple window showing what i ate, the macros summary basically for the day would
    be nice, when clicking on food on today page - brainstorm ts and make it" and "need a bit better look for macro
-   breakdwon, food, and trackking food overall, looking back to yesterday too".
+   breakdwon, food, and trackking food overall, looking back to yesterday too". Phase 1: Today's Food card → **What I ate ·
+   N items** opens a sheet: the day's kcal (under/over your goal) and protein/carbs/fat bars, then each meal (night,
+   breakfast, lunch, afternoon, dinner, late) with its calories and what was in it — time, amount as logged, protein.
+   Tap an item to change its numbers, × to delete; ‹ › through earlier days; "+ Add food to yesterday" opens Log on that
+   day. Same day and sum as the card (lib/foodday, foodday.test checks it against nutrition.byDay). Ideas for phase 2, not
+   built: a 7-day strip of kcal/protein vs goal, a plate's parts under it, "usual for you" per meal.
 129. [ ] **A workout read at the end of a workout day** — "Can we have ai look at the workout at eod and make a summary,
    suggestions, compare how i am improving etc? Like at midnight when doing the digest, at days when i log a workout..like
    a health couach but it should not fire often, it costs api credits"

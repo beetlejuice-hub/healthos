@@ -24,6 +24,7 @@ import { Readiness } from "../components/Readiness";
 import { extrasOn } from "../lib/supplog";
 import { CatchUp } from "../components/CatchUp";
 import { DataCard, EveningRead, NowCard, Pad, Status, UsualPicker, useStackCount } from "../components/TodayParts";
+import { FoodDay } from "../components/FoodDay";
 import { dayNumbers, momentOf } from "../lib/moment";
 import { restDay } from "../lib/programs";
 import { currentKg } from "../lib/body";
@@ -54,6 +55,7 @@ export function Today() {
   const day = localDay(now);
   const [dismissed, setDismissed] = useState<string[]>([]);
   const [pickUsual, setPickUsual] = useState(false);
+  const [foodDay, setFoodDay] = useState<string | null>(null);
   const [allDue, setAllDue] = useState(false);
   const moment = momentOf(now);
   const stack = useStackCount(now);
@@ -149,7 +151,8 @@ export function Today() {
 
       <Stack now={now} />
       <CaffeineCard doses={doses} now={now} bed={bed} halfLife={s.settings.halfLifeMin} cafNow={cafNow} cafComing={cafComing} cafBed={cafBed} personal={personal} coffeeMg={coffeeMg} />
-      <Fuel totals={totals} goals={s.goals} usual={usual} burned={burned} yday={yday} />
+      <Fuel totals={totals} goals={s.goals} usual={usual} burned={burned} yday={yday} items={todays.filter((e) => macrosOf(e)).length} onOpen={() => setFoodDay(day)} />
+      {foodDay && <FoodDay day={foodDay} onClose={() => setFoodDay(null)} />}
       <DataCard>
         <NoticedLine />
         <ScoutLine />
@@ -159,7 +162,7 @@ export function Today() {
   );
 }
 
-function Fuel({ totals, goals, usual, burned, yday }: { totals: { kcal: number; p: number; c: number; f: number }; goals: { kcal: number; p: number; c: number; f: number }; usual: number | null; burned: number | null; yday: { ate: number; burned: number } | null }) {
+function Fuel({ totals, goals, usual, burned, yday, items, onOpen }: { totals: { kcal: number; p: number; c: number; f: number }; goals: { kcal: number; p: number; c: number; f: number }; usual: number | null; burned: number | null; yday: { ate: number; burned: number } | null; items: number; onOpen: () => void }) {
   const pct = Math.min(1, totals.kcal / goals.kcal);
   return (
     <div className="card" id="fuel">
@@ -187,6 +190,8 @@ function Fuel({ totals, goals, usual, burned, yday }: { totals: { kcal: number; 
         <span>Eaten {fmt(totals.kcal)} — {balance(totals.kcal, burned).words} so far</span>
         {yday && <span className="dimt">Yesterday: ate {fmt(yday.ate)} · burned {fmt(yday.burned)} — {balance(yday.ate, yday.burned).words}</span>}
       </div>}
+      {/* what you ate, meal by meal — change or delete any of it, and yesterday's too (PLAN 128, #113) */}
+      <button type="button" className="pill-btn fuel-open" onClick={onOpen}>What I ate{items ? ` · ${items} item${items === 1 ? "" : "s"}` : ""} ›</button>
     </div>
   );
 }
