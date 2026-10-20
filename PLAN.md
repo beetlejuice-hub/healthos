@@ -1698,9 +1698,16 @@ D questions answered in chat. Numbered on from #112.
    day, your mood…"), the next day or next to another supplement there's nothing said. Also reaches the AI's "early
    patterns". Checked: scout.test (saffron taken on and after gym days: never the outcome in 20 fake months, still found
    as the cause of a planted mood lift — fails with the old pairing).
-120. [ ] **A "most confident finding" the app can't defend** — screenshot of the chat: 15 days with black cumin seed oil,
+120. [x] **A "most confident finding" the app can't defend** — screenshot of the chat: 15 days with black cumin seed oil,
    1 without, yet its after-a-dose −2.1 was called the most confident finding — "interesting that the most confident
-   finding yet is one that even the app can't defend".
+   finding yet is one that even the app can't defend". The −2.1 came from "between check-ins" (detectors/between): the
+   oil, taken at 20:00, sat in nearly every evening gap, and the engine didn't know the time of day — so the usual
+   evening dip was put on the oil. Now each gap's time of day (morning / midday / afternoon / evening) is in the model,
+   and "without" means gaps without it at the times it's taken: 4+ needed, so 15 evenings with and 1 without says
+   nothing. The AI is told what each finding rests on ("6 gaps with, 5 without at the same time of day · …") instead
+   of "trust these numbers". Checked: between.test (an evening supplement that does nothing, with a 1.5-point evening
+   dip: blamed in 26 of 30 fake months before, ≤ 1 now; at half the evenings 13 → ≤ 3; the gym's planted lift still
+   found), ai.test (the line), e2e/between.cjs.
 121. [ ] **Log a supplement you're out of, or one that isn't yours** — "Also I'm technically out of vit d and dont have vit
    b but i took from my moms stack so i should be able to tell ai i took x amount of vit d3 and it should log without
    offering the restock option for vit d3. I mean it can offfer but also should be able to just log."

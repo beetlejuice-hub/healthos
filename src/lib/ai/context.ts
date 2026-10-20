@@ -113,7 +113,7 @@ export function moodEngines(state: Pick<State, "entries" | "workouts" | "supplem
   const w = weekly(state.entries, state.workouts ?? [], names, now);
   if (w.ready) {
     const k = w.week;
-    out.push(`Week vs the week before: ${k.avgs.map((a) => `${a.k} ${a.now != null ? a.now.toFixed(1) : "–"} (${a.dir ?? "n/a"})`).join(", ")}${k.best && k.worst ? `; best ${k.best.name}, lowest ${k.worst.name}` : ""}${k.top ? `; top connection between check-ins: ${k.top.r.label} → ${k.top.r.metric} ${k.top.r.effect >= 0 ? "+" : ""}${k.top.r.effect.toFixed(1)} [${k.top.r.lo.toFixed(1)}, ${k.top.r.hi.toFixed(1)}] ${k.top.sure ? "(found)" : "(early sign, may be chance)"}` : ""}.`);
+    out.push(`Week vs the week before: ${k.avgs.map((a) => `${a.k} ${a.now != null ? a.now.toFixed(1) : "–"} (${a.dir ?? "n/a"})`).join(", ")}${k.best && k.worst ? `; best ${k.best.name}, lowest ${k.worst.name}` : ""}${k.top ? `; top connection between check-ins: ${k.top.r.label} → ${k.top.r.metric} ${k.top.r.effect >= 0 ? "+" : ""}${k.top.r.effect.toFixed(1)} [${k.top.r.lo.toFixed(1)}, ${k.top.r.hi.toFixed(1)}] ${k.top.sure ? "(found" : "(early sign, may be chance"}; ${k.top.r.withN} gaps with, ${k.top.r.withoutN} without at the same time of day)` : ""}.`);
   }
   const p = personalSleep(ratedNights(state.entries, state.settings?.halfLifeMin ?? 300, state.settings?.bedMinute ?? 23 * 60));
   if (p.withN + p.withoutN > 0) out.push(`Caffeine at bedtime vs sleep rating: ${p.state}${p.diff != null ? ` (30+ mg nights ${p.diff >= 0 ? "+" : ""}${p.diff.toFixed(1)} vs under, 95% ${p.lo!.toFixed(1)} to ${p.hi!.toFixed(1)})` : ""}, ${p.withN} vs ${p.withoutN} nights.`);
@@ -223,7 +223,8 @@ function baseContext({ state, now, days, findings, patterns, weight, today = [],
     ...(training.length ? ["## Training", ...training.map((l) => `- ${l}`)] : []),
     "## How I feel by time of day (last 30 days)",
     ...(feelByTime(state, now).map((l) => `- ${l}`) || []),
-    ...(findings.length ? ["## What the app's statistics found (tested, trust these numbers)", ...findings.slice(0, 8).map((f) => `- ${f.title} (${f.value}${f.unit ? ` ${f.unit}` : ""}; ${f.sure})`)] : []),
+    // With what each rests on, so it can say how much — owner, 20 Oct: "the most confident finding yet is one that even the app can't defend".
+    ...(findings.length ? ["## What the app's statistics found (tested; each with what it rests on — weigh that before calling one strong)", ...findings.slice(0, 8).map((f) => `- ${f.title} (${f.value}${f.unit ? ` ${f.unit}` : ""}; ${f.sure}) — ${f.evidence}`)] : []),
     ...(grids.length ? ["## What the Sleep / Heart / Mind / Training grids found (clear, tested), and what I said", ...grids.map((l) => `- ${l}`)] : []),
     ...(patterns.length ? ["## Early patterns (could be chance, still being checked)", ...patterns.slice(0, 5).map((p) => `- ${p.text} — held ${p.held} of ${p.of}`)] : []),
     ...(feelNotes(state, now).length ? ["## Why I felt that way (my own notes on check-ins — take these seriously)", ...feelNotes(state, now).map((l) => `- ${l}`)] : []),

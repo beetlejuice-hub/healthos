@@ -1,3 +1,4 @@
+import type { Finding } from "../findings";
 import { describe, expect, it } from "vitest";
 import { fromDescribed, judge } from "./apply";
 import { ASK_MORE, CONTEXT_MAX, buildContext, onTodayLines, dayTimeline, feelByTime, moodJournal } from "./context";
@@ -86,6 +87,13 @@ describe("what the AI sees", () => {
     expect(c).toContain("Saffron 30 mg (evening) — running low");
     expect(c).toContain("Usual coffee is a long coffee");
     expect(c).not.toContain("f1");
+  });
+  it("a finding comes with what it rests on, so the AI can say how much (owner, 20 Oct: \"…one that even the app can't defend\")", () => {
+    const f = { id: "between:supp:oil:mood", area: "feel", title: "After Black cumin seed oil, your mood drops about 2.1 points more than it otherwise does", value: "−2.1", unit: "mood points",
+      detail: "", evidence: "6 gaps with Black cumin seed oil, 5 without at the same time of day · 5 of 6 beat what was expected", sure: "likely", weight: 0.85 } as Finding;
+    const c = buildContext({ state, now: new Date(2026, 9, 1).getTime(), days: [], findings: [f], patterns: [] });
+    expect(c).toContain("- After Black cumin seed oil, your mood drops about 2.1 points more than it otherwise does (−2.1 mood points; likely) — 6 gaps with Black cumin seed oil, 5 without at the same time of day");
+    expect(c).not.toContain("trust these numbers");
   });
   it("says when the calorie goal follows the burn, at what pace (PLAN 95)", () => {
     const now = new Date(2026, 9, 1).getTime();

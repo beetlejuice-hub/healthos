@@ -27,7 +27,7 @@ const month = require('./fixtures/between-month.json');
   await pg.goto(APP + '#insights/connections'); await pg.waitForTimeout(600);
   const body = await pg.locator('body').innerText();
   check('Insights: the gym lifts mood, in words', /After the gym, your mood rises about \d\.\d points more than it otherwise does/.test(body));
-  check('with its evidence: how often it held and the range', /gaps with the gym · \d+ of \d+ beat what was expected · 95% range/.test(body));
+  check('with its evidence: how often it held and the range', /gaps with the gym, \d+ without at the same time of day · \d+ of \d+ beat what was expected · 95% range/.test(body));
   check('and nothing else is claimed from this month', (body.match(/After (a meal|caffeine|a drink with alcohol)/g) || []).length === 0);
   check('says it allows for the rebound', /allowing for a low mood lifting by itself/.test(body));
   const card = pg.locator('text=After the gym').first();

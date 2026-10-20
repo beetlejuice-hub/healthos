@@ -12,9 +12,14 @@
  *   change = a + b·(how far below/above your usual you started) + c·(hours between)
  *            + one term per activity in between (gym, a real meal, caffeine, alcohol, each supplement)
  *
- * An activity's term is its effect after the rebound and after the other activities in the same
- * gap. Every activity × feeling is tested; Benjamini–Hochberg at 10% across all of them; a finding
- * needs ≥ 1 point and 4+ gaps with the activity. Bench: detectors/between.test.ts.
+ *            + one term per time of day the gap ends in (morning, midday, afternoon, evening)
+ *
+ * An activity's term is its effect after the rebound, the time of day and the other activities in
+ * the same gap. Every activity × feeling is tested; Benjamini–Hochberg at 10% across all of them; a
+ * finding needs ≥ 1 point, 4+ gaps with the activity and 4+ without it at the times of day it
+ * happens. Owner, 20 Oct, on black cumin seed oil (taken at 20:00 on 15 of 16 days) called the most
+ * confident finding: "even the app can't defend" it — the oil sat in nearly every evening gap, so it
+ * took the blame for mood dipping in the evening anyway. Bench: detectors/between.test.ts.
  */
 
 import type { Entry, Workout } from "../types";
@@ -51,6 +56,9 @@ export function activities(entries: Entry[], workouts: Workout[], suppNames: Map
   return out;
 }
 
+/** The time of day a gap ends in: before 12, 12–16, 16–20, from 20. */
+export const partOfDay = (g: Pick<Gap, "to">) => { const h = new Date(g.to).getHours(); return h < 12 ? 0 : h < 16 ? 1 : h < 20 ? 2 : 3; };
+
 export type Gap = { from: number; to: number; day: string; before: Partial<Record<FeelKey, number>>; after: Partial<Record<FeelKey, number>>; /** Ticked at the later check-in: "since the last one I was…". */ doing: string[] };
 
 /** Consecutive check-ins on the same day, 20 min to 10 h apart. */
@@ -70,7 +78,7 @@ export type BetweenResult = {
   activity: string; label: string; metric: FeelKey;
   /** Extra change in points when the activity happened in the gap, after the rebound and the rest. */
   effect: number; lo: number; hi: number; p: number;
-  /** Gaps with / without it, and with it: how many moved the way the effect says (vs what was expected). */
+  /** Gaps with it / without it at the same times of day, and with it: how many moved the way the effect says (vs what was expected). */
   withN: number; withoutN: number; agree: number;
   /** What a naive before→after average says (shown so the difference is visible). */
   naive: number;
@@ -92,23 +100,27 @@ export function between(entries: Entry[], workouts: Workout[], suppNames: Map<st
     if (gs.length < BETWEEN.minWith + BETWEEN.minWithout) continue;
     const usual = mean(recent.flatMap((e) => (e.kind === "feel" && e[m] != null ? [e[m]!] : [])));
     const did = acts.map((a) => gs.map((g) => a.did(g)));
+    const part = gs.map(partOfDay), parts = [...new Set(part)].sort();
+    // "Without" = gaps without it at the times of day it happens: an evening supplement against other evenings.
+    const without = acts.map((_, i) => { const at = new Set(part.filter((_, r) => did[i][r])); return gs.filter((_, r) => !did[i][r] && at.has(part[r])).length; });
     // Only activities with enough gaps on both sides go in; the rest would only add noise.
-    const keep = acts.map((_, i) => { const w = did[i].filter(Boolean).length; return w >= BETWEEN.minWith && gs.length - w >= BETWEEN.minWithout; });
+    const keep = acts.map((_, i) => did[i].filter(Boolean).length >= BETWEEN.minWith && without[i] >= BETWEEN.minWithout);
     const used = acts.map((a, i) => ({ a, i })).filter(({ i }) => keep[i]);
     if (!used.length) continue;
-    const X = gs.map((g, r) => [1, g.before[m]! - usual, (g.to - g.from) / 3_600_000, ...used.map(({ i }) => (did[i][r] ? 1 : 0))]);
+    const base = 3 + parts.length - 1;
+    const X = gs.map((g, r) => [1, g.before[m]! - usual, (g.to - g.from) / 3_600_000, ...parts.slice(1).map((q) => (part[r] === q ? 1 : 0)), ...used.map(({ i }) => (did[i][r] ? 1 : 0))]);
     const y = gs.map((g) => g.after[m]! - g.before[m]!);
     const fit = ols(X, y);
     if (!fit) continue;
     const t = tCrit(fit.df);
     used.forEach(({ a, i }, j) => {
-      const k = 3 + j, eff = fit.coef[k];
+      const k = base + j, eff = fit.coef[k];
       // Expected change for each gap from everything except this activity: did it beat that?
       const rows = gs.map((_, r) => r).filter((r) => did[i][r]);
       const agree = rows.filter((r) => { const pred = X[r].reduce((s, v, c) => s + (c === k ? 0 : v * fit.coef[c]), 0); return Math.sign(y[r] - pred) === Math.sign(eff); }).length;
       results.push({
         activity: a.id, label: a.label, metric: m, effect: eff, lo: eff - t * fit.se[k], hi: eff + t * fit.se[k], p: fit.p[k],
-        withN: rows.length, withoutN: gs.length - rows.length, agree,
+        withN: rows.length, withoutN: without[i], agree,
         naive: mean(rows.map((r) => y[r])) - mean(gs.map((_, r) => r).filter((r) => !did[i][r]).map((r) => y[r])),
         found: false,
       });
@@ -137,8 +149,8 @@ export function betweenFindings(entries: Entry[], workouts: Workout[], suppNames
       id: `between:${r.activity}:${r.metric}`, area: "feel",
       title: `After ${r.label}, ${phrase(r)} about ${pts(r.effect)} more than it otherwise does`,
       value: `${r.effect > 0 ? "+" : "−"}${Math.abs(r.effect).toFixed(1)}`, unit: `${r.metric} points`,
-      detail: `Compared with the gaps between check-ins without ${r.label}, and allowing for a low ${r.metric} lifting by itself (and a high one settling).${naiveNote} It goes with it; it doesn't prove it causes it.`,
-      evidence: `${r.withN} gaps with ${r.label} · ${r.agree} of ${r.withN} beat what was expected · 95% range ${r.lo >= 0 ? "+" : "−"}${Math.abs(r.lo).toFixed(1)} to ${r.hi >= 0 ? "+" : "−"}${Math.abs(r.hi).toFixed(1)} · ${r.withN + r.withoutN} gaps in ${BETWEEN.days} days`,
+      detail: `Compared with the gaps between check-ins without ${r.label} at the same time of day, and allowing for a low ${r.metric} lifting by itself (and a high one settling).${naiveNote} It goes with it; it doesn't prove it causes it.`,
+      evidence: `${r.withN} gaps with ${r.label}, ${r.withoutN} without at the same time of day · ${r.agree} of ${r.withN} beat what was expected · 95% range ${r.lo >= 0 ? "+" : "−"}${Math.abs(r.lo).toFixed(1)} to ${r.hi >= 0 ? "+" : "−"}${Math.abs(r.hi).toFixed(1)} · last ${BETWEEN.days} days`,
       sure: "likely", weight: 0.85,
     };
   });

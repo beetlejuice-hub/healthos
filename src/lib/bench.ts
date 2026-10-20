@@ -108,6 +108,10 @@ export type BetweenWorld = {
   outsideMood?: number;
   /** Tick "phone" at random check-ins (half of them) — it does nothing. */
   phoneNoise?: boolean;
+  /** Mood is this much lower at the 21:00 check-in, whatever you did: the evening dip. */
+  eveningDip?: number;
+  /** Share of days an evening supplement ("oil") is taken at 20:00 — it does nothing (owner's black cumin seed oil). */
+  eveningSupp?: number;
 };
 
 /**
@@ -135,7 +139,8 @@ export function betweenWorld(w: BetweenWorld): { entries: Entry[]; workouts: Wor
       moment = 0.3 * moment + g() * 1.2;
       const walked = slot === 3 && w.outsideMood != null && r() < 0.4;
       if (walked) lift += w.outsideMood!;
-      const mood = clamp(level + moment + lift);
+      if (slot === 3 && w.eveningSupp != null && r() < w.eveningSupp) entries.push({ id: `bo${i}`, kind: "supp", at: atMinute(day, 20 * 60), suppId: "oil", status: "taken" });
+      const mood = clamp(level + moment + lift - (slot === 3 ? w.eveningDip ?? 0 : 0));
       lift *= 0.4;
       if (slot === 1) prev13 = mood;
       const doing = [...(walked ? ["outside"] : []), ...(w.phoneNoise && r() < 0.5 ? ["phone"] : [])];

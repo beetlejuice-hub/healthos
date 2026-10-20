@@ -42,6 +42,28 @@ describe("between check-ins (bench)", () => {
   });
 });
 
+describe("time of day (owner, 20 Oct: \"the most confident finding yet is one that even the app can't defend\")", () => {
+  // Black cumin seed oil at 20:00 on 15 of 16 days, and mood a point and a half lower at 21:00 whatever you did. The
+  // oil was in nearly every evening gap, so it took the blame for the evening.
+  const OIL = new Map([["oil", "Black cumin seed oil"]]);
+  const oil = (seed: number, eveningSupp: number, days = 28) => { const { entries, workouts } = betweenWorld({ seed, days, eveningDip: 1.5, eveningSupp }); return between(entries, workouts, OIL, NOW).filter((r) => r.activity === "supp:oil"); };
+  it("an evening supplement taken nearly every day isn't blamed for the evening dip", () => {
+    const blamed = seeds(30).filter((seed) => oil(seed, 0.94).some((r) => r.found)).length;
+    expect(blamed).toBeLessThanOrEqual(1);
+  });
+  it("…nor one taken half the evenings", () => {
+    const blamed = seeds(30).filter((seed) => oil(seed, 0.5, 42).some((r) => r.found)).length;
+    expect(blamed).toBeLessThanOrEqual(3);
+  });
+  it("its 'without' is gaps at the same time of day, so 15 evenings with and 1 without isn't a comparison at all", () => {
+    expect(seeds(10).filter((seed) => oil(seed, 0.94).length).length).toBeLessThanOrEqual(2);
+  });
+  it("the gym at 15:00 still shows its planted lift with the evening dip in the data", () => {
+    const found = seeds(30).map((seed) => { const { entries, workouts } = betweenWorld({ seed, gymMood: 2, eveningDip: 1.5 }); return gymMood(between(entries, workouts, new Map(), NOW)); }).filter((h) => h?.found);
+    expect(found.length).toBeGreaterThanOrEqual(21);
+  });
+});
+
 describe("what you ticked at a check-in (bench)", () => {
   it("finds a planted lift from evening walks ticked 'outside', and never credits a 'phone' tick that does nothing", () => {
     let outside = 0, phone = 0;
