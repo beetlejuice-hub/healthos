@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parseDecimal } from "./DecimalInput";
+import { parseDecimal } from "./decimal";
 
 // Owner, 20 Oct: "Cant put things like 40,5 kg duh…pls fix"
 describe("a typed weight", () => {

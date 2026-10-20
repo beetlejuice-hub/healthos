@@ -6,14 +6,7 @@
  */
 
 import { useState, type InputHTMLAttributes } from "react";
-
-/** "40,5" → 40.5, "40," → 40, "" → 0; null for anything that isn't a number. */
-export function parseDecimal(t: string): number | null {
-  const s = t.trim().replace(",", ".");
-  if (s === "" || s === ".") return 0; // on the way to ".5"
-  if (!/^\d*\.?\d*$/.test(s)) return null;
-  return Number(s);
-}
+import { parseDecimal } from "../lib/decimal";
 
 export function DecimalInput({ value, onValue, ...rest }: { value: number; onValue: (n: number) => void } & Omit<InputHTMLAttributes<HTMLInputElement>, "value" | "onChange">) {
   const [txt, setTxt] = useState(String(value));
