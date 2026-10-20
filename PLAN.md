@@ -1824,9 +1824,25 @@ D questions answered in chat. Numbered on from #112.
    rules say to tie each suggestion to one and name it, never pushing a goal not named; the chat's first starter becomes
    "Suggestions for my goals". Also fixed: the AI's shared rules still said an unticked supplement day was unknown —
    now #124's rule. Tempo's AI ("other") isn't in this repo — with #136.
-132. [ ] **The AI scouts new things** — "also ai should look out for studies, workout splits, and supps, foods, everything
+132. [x] **The AI scouts new things** — "also ai should look out for studies, workout splits, and supps, foods, everything
    and recommend me new stuff from these categories too…or perhaps look at forums too and see whats up"
-133. [ ] **More interesting morning reads** — "can we make the digest messages more intereesting? brainstorm this pls"
+   Done (20 Oct), phase 1, no extra call: each morning read brings one "New to try" item, its kind picked by the app in
+   turn — a study from the last 12 months · a training method or split detail · a supplement with good evidence that's
+   NOT in his stack · a food or swap · a high-protein recipe · what a forum (Reddit r/Fitness, r/Supplements, r/sleep)
+   says, labelled as anecdotes. The read already searches the web; the item needs a real link or it's dropped (lib/ai/
+   brief, checkDigest). Never something already shown or in the stack. Later, if wanted: a weekly "scout" with more
+   depth (one research call a week), and a "save for later" on a try item.
+133. [x] **More interesting morning reads** — "can we make the digest messages more intereesting? brainstorm this pls"
+   Brainstorm (20 Oct): the reads felt samey because each morning asked for the same mix. Ideas: (1) a different angle
+   each morning; (2) titles that hook instead of topic labels; (3) something new to try (#132); (4) on a training day,
+   a tip for that session; (5) "this day last month" — the same measure then and now; (6) a tiny chart of the number
+   that moved; (7) a guess-first question ("your average deep sleep this week — guess?") with the answer folded;
+   (8) "you vs the study" — his numbers next to a study's participants; (9) a weekly theme the reads follow (a
+   protein week, a sleep week); (10) a greeting with a bit of wit about last night.
+   Built (20 Oct): 1–4. The app picks the morning's angle in turn: last night decoded · one number that moved · myth or
+   evidence · his best days · a food he eats often · a small win · today's session (only when one is due) · sleep
+   timing. Two mornings in a row never share an angle or a kind of new thing, and the prompt asks for hook titles.
+   5–10 are his pick (I'd do 6, the chart, next — the app already draws the measures).
 134. [x] **Body fat / muscle** — "My weight going up could be muscle too, the creatin hitting plus im back at gym..should i
    log body fat % too?"
    Done (20 Oct): the "Body fat %" box was already on every weigh-in (Today and Log, #20), read as 2-week averages split

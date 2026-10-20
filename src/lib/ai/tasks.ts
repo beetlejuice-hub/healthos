@@ -121,7 +121,7 @@ export const CHAT_ROUNDS = 6;
 export type Question = { id: string; text: string; why: string; options: string[]; /** Short key for a repeated question whose answers become a daily signal ("lunch_size"). */ key: string; repeat: "daily" | "once" };
 export type QuestionsAnswer = { questions: Question[] };
 
-export type DigestItem = { type: "fact" | "study" | "pattern" | "protocol"; title: string; text: string; source?: { title: string; url: string }; protocol?: { name: string; how: string; days: number; measure: string } };
+export type DigestItem = { type: "fact" | "study" | "pattern" | "protocol" | "try"; title: string; text: string; source?: { title: string; url: string }; protocol?: { name: string; how: string; days: number; measure: string } };
 /**
  * Something new enough to message about (owner, 16 Oct: "it should only send message when it has a new finding, a new
  * sttudy or whatever but if its displayed on today page then nonsensee"): sent to the chat, not shown on Today. Most days none.
@@ -210,10 +210,16 @@ Formatting: reply in plain Markdown (never JSON) — **bold** for the one thing 
 Task: ask 1–3 genuinely useful questions that help the app find patterns faster. Base each on something specific in the context: a dip at a time of day, a pattern that might be explained by something not logged, a gap in what's tracked, their goals (losing fat while keeping and building muscle, sleep, focus). Good: "Your energy is often low in the afternoon — did you have a big lunch today?" with options. Bad (owner, 20 Oct: "questions feel way too generic rn, like weight logged before bathroom"): generic wellness questions and questions about how they log ("before the bathroom?", "did you weigh after eating?") — ask about their life and body, not the app.
 Each question: tappable options (2–5, short), a one-line "why" that says what it would help find, a short snake_case key, and repeat="daily" if asking it every day would build a useful signal, else "once". A daily question is shown again every day word for word, so its text must hold on any day: no numbers or facts from today ("Stress is at 6 this morning" is once, never daily); put today's fact in "why" if it matters. Don't repeat questions listed as already asked.`,
   digest: `${VOICE}
-Task: write the user's morning read — it's written this morning, after last night, and it's what they see when they wake up. Search the web for 1–2 recent studies or findings relevant to THIS user (their stack, goals, conditions, patterns). Mix: an interesting pattern from their data (from the context, don't invent), a study or fun fact with its source, and optionally one protocol to try as an experiment (concrete: what to do, for how many days, what the app will measure).
+Task: write the user's morning read — it's written this morning, after last night, and it's what they see when they wake up. Owner, 20 Oct: "make the digest messages more interesting" — so no generic wellness content: every item is about THIS user, specific, with a number or a source, and something they didn't know.
+Items, 3–4 of them:
+- one "pattern" from their own data through this morning's angle ("## This morning" at the end of the context names it; from the context, never invented);
+- one "try" (owner: "recommend me new stuff … studies, workout splits, and supps, foods, everything … or perhaps look at forums too"): search the web for the kind of thing "## This morning" names; something new to them — not in their stack, not already shown — with why it fits their goals and their data, and its source. A forum find is anecdotes: say so;
+- one study or fun fact with its source, or one protocol to try as an experiment (concrete: what to do, for how many days, what the app will measure);
+- on a training day ("Today's plan"), one may be for that session.
+Titles hook: specific and curious ("Your 3 pm dip has a suspect", "Deep sleep came early — that's normal"), never a topic label ("Sleep tips").
 Answer with ONLY a JSON object, no prose:
-{"greeting":"one short line","items":[{"type":"fact|study|pattern|protocol","title":"","text":"2–3 sentences","source":{"title":"","url":""},"protocol":{"name":"","how":"","days":14,"measure":"energy|mood|focus|stress|sleep|weight"}}],"news":null}
-3–5 items. "source" is required for facts and studies. "protocol" only on protocol items. Don't repeat titles listed as already shown.
+{"greeting":"one short line","items":[{"type":"fact|study|pattern|protocol|try","title":"","text":"2–3 sentences","source":{"title":"","url":""},"protocol":{"name":"","how":"","days":14,"measure":"energy|mood|focus|stress|sleep|weight"}}],"news":null}
+"source" is required for facts, studies and tries. "protocol" only on protocol items. Don't repeat titles listed as already shown.
 news (owner: "it should only send message when it has a new finding, a new sttudy or whatever"): null on most days. Only when your search turned up something genuinely new and worth a message for THIS user — a study or review from the last 12 months on something in their stack, their training or their conditions, or a safety note on something they take — give {"title":"","text":"2–3 sentences: what it found and what it means for them","source":{"title":"","url":"https://…"}}. It's sent to their chat, not shown with the items, so it must not repeat an item or anything already shown. No news is better than filler.`,
 };
 
@@ -279,7 +285,7 @@ export function checkSupplement(a: SupplementAnswer): SupplementAnswer {
 export function checkDigest(a: DigestAnswer): DigestAnswer {
   const items = (a.items ?? []).filter((i) => typeof i?.title === "string" && typeof i?.text === "string")
     // A fact or study without a real link isn't shown: no source, no claim.
-    .filter((i) => !(i.type === "fact" || i.type === "study") || (i.source && /^https?:\/\//.test(i.source.url)))
+    .filter((i) => !(i.type === "fact" || i.type === "study" || i.type === "try") || (i.source && /^https?:\/\//.test(i.source.url)))
     .map((i) => (i.type === "protocol" && i.protocol ? { ...i, protocol: { ...i.protocol, days: Math.min(42, Math.max(7, Math.round(i.protocol.days || 14))) } } : i));
   // news: a real link, short, and not one of the items (it's a message, not a repeat of Today)
   const n = a.news, ok = n && typeof n.title === "string" && n.title.trim() && typeof n.text === "string" && n.text.trim() && n.source && /^https:\/\//.test(n.source.url ?? "")

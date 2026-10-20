@@ -653,7 +653,7 @@ a { color: inherit; }
 .mr-head .when { display: inline; font-size: 12px; color: var(--c-dim); }
 .mr-head .chev, .mr-row .chev { margin-left: auto; color: var(--c-dim); font-size: 12px; }
 .mr-dots { display: inline-flex; gap: 4px; margin-left: 4px; } .mr-dots i { width: 6px; height: 6px; border-radius: 50%; background: var(--c-ink-2); }
-.mr-dots i.mr-pattern { background: var(--mood); } .mr-dots i.mr-study { background: var(--supp); } .mr-dots i.mr-fact { background: var(--caf); } .mr-dots i.mr-protocol { background: var(--gym); }
+.mr-dots i.mr-pattern { background: var(--mood); } .mr-dots i.mr-study { background: var(--supp); } .mr-dots i.mr-fact { background: var(--caf); } .mr-dots i.mr-protocol { background: var(--gym); } .mr-dots i.mr-try { background: var(--ok); }
 .morning .greet { font-size: 17px; }
 .mr-more { justify-self: start; text-align: left; font-size: 13px; color: var(--c-ink-2); text-decoration: none; }
 .mr-list { list-style: none; margin: 2px 0 0; padding: 0; display: grid; }
@@ -665,6 +665,7 @@ a { color: inherit; }
 .mr-study .mr-kind { color: var(--supp); background: color-mix(in srgb, var(--supp) 14%, transparent); }
 .mr-fact .mr-kind { color: var(--caf); background: color-mix(in srgb, var(--caf) 14%, transparent); }
 .mr-protocol .mr-kind { color: var(--gym); background: color-mix(in srgb, var(--gym) 14%, transparent); }
+.mr-try .mr-kind { color: var(--ok); background: color-mix(in srgb, var(--ok) 14%, transparent); }
 .mr-body { display: grid; gap: 6px; padding: 0 0 12px; }
 .mr-body p { margin: 0; color: var(--c-ink-2); font-size: 14px; line-height: 1.45; }
 .mr-body a { font-size: 12.5px; color: var(--c-ink-2); } .mr-body .pill-btn { justify-self: start; margin-top: 2px; }

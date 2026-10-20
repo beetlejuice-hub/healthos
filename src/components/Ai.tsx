@@ -11,6 +11,7 @@ import { runChatTool, type ChartSpec } from "../lib/ai/chattools";
 import { bandNow, onNights } from "../lib/band-client";
 import { ChatChart } from "./ChatChart";
 import { GoalsAsk } from "./GoalsAsk";
+import { morningBrief } from "../lib/ai/brief";
 import { Proposals } from "./Proposal";
 import type { Proposal } from "../lib/ai/propose";
 import { CHAT_ROUNDS, MODELS, estimateMonthUsd, timeless, type ChatTurn, type DigestItem, type ModelChoice, type Question, type Tier } from "../lib/ai/tasks";
@@ -41,7 +42,9 @@ async function makeDigest(day: string) {
   if (tried.has(key)) return;
   tried.add(key);
   const ai = getState().ai;
-  const r = await askAi({ task: "digest", context: contextNow(), shown: ai.shown.slice(-40) });
+  // this morning's angle and kind of new thing, in turn (PLAN 132–133)
+  const st = getState(), brief = morningBrief(day, st.templates, st.workouts, Date.now());
+  const r = await askAi({ task: "digest", context: `${contextNow()}\n${brief.join("\n")}`, shown: ai.shown.slice(-40) });
   if (!r.ok) return;
   const n = r.answer.news, at = Date.now();
   act.setAi((a) => ({
@@ -153,7 +156,7 @@ export function useAiUnread() {
 /** Not opened yet since it was (re)written: highlighted on Today (16 Oct). */
 const unseen = (x: { at?: number; seen?: number }) => !x.seen || (x.at != null && x.seen < x.at);
 
-const KIND: Record<DigestItem["type"], string> = { fact: "Fun fact", study: "New study", pattern: "Your data", protocol: "Try this" };
+const KIND: Record<DigestItem["type"], string> = { fact: "Fun fact", study: "New study", pattern: "Your data", protocol: "Try this", try: "New to try" };
 
 export function startExperiment(p: NonNullable<DigestItem["protocol"]>) {
   const x: Experiment = { id: newId(), name: p.name, how: p.how, days: p.days, measure: p.measure, start: localDay(Date.now()) };

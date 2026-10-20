@@ -10,6 +10,8 @@ const READ = { greeting: 'Morning! 7 h last night — a better start.', items: [
   { type: 'pattern', title: 'Yesterday was foggy', text: 'Focus 3 at 11:36 yesterday, after 5 h of sleep.' },
   { type: 'study', title: 'Sleep and focus', text: 'A short night costs focus the next day.', source: { title: 'Sleep 2025', url: 'https://example.org/s' } },
   { type: 'fact', title: 'Caffeine half-life', text: 'About five hours.', source: { title: 'NIH', url: 'https://example.org/c' } },
+  // PLAN 132: one new thing to try, from the kind the app picked this morning
+  { type: 'try', title: 'Cluster sets for your bench', text: 'Rest 20 s inside a set to keep the bar speed up.', source: { title: 'J Strength Cond Res 2025', url: 'https://example.org/cl' } },
 ], // something new (#109): a message in the chat, not on Today
   news: { title: 'Creatine and sleep loss', text: 'A 2026 trial: creatine kept reaction time up after a sleepless night.', source: { title: 'Sci Rep 2026', url: 'https://example.org/cr' } } };
 
@@ -62,7 +64,11 @@ const READ = { greeting: 'Morning! 7 h last night — a better start.', items: [
   // owner, 20 Oct: "should add timestamp for new messages on today screen so its not just says new"
   const when = await mr.locator('.mr-head .when').innerText().catch(() => '');
   check(`…and says when it was written (${when})`, /^today · 07:4\d$/.test(when));
+  // PLAN 132–133 (owner, 20 Oct: "make the digest messages more intereesting"; "recommend me new stuff"): the app's picks
+  const picks = c.slice(c.indexOf('## This morning (the app'));
+  check(`it's given this morning's angle and the kind of new thing to bring (${picks.split('\n').slice(1, 3).map((l) => l.slice(0, 50)).join(' | ')})`, /^## This morning \(the app's picks, so mornings differ\)\n- Angle for the "pattern" item: .+\n- "try" item today: .+/.test(picks));
   await mr.locator('.mr-head').click(); await pg.waitForTimeout(150);
+  check(`the new thing shows as "New to try" (${(await mr.innerText()).replace(/\s+/g, ' ').match(/NEW TO TRY[^.]*|New to try[^.]*/i)?.[0]})`, /New to try\s*Cluster sets for your bench/i.test(await mr.innerText()));
   check('opened once: not new any more, and that sticks', await mr.getAttribute('data-new') === null && (await pg.evaluate((k) => JSON.parse(localStorage.getItem(k)).ai.digest.seen, KEY)) > 0);
   check('the news isn\'t on Today — it\'s a message', !/Creatine and sleep loss/.test(card));
   const badge = async () => (await pg.locator('nav.tabs a[href="#ai"] .tabbadge').textContent().catch(() => '')) || '0';
