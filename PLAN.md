@@ -2008,3 +2008,11 @@ Order: A first (113 → 123), then B, then C; D in the chat. (claimed: this sess
    mutations (no cap; a new lift without its own baseline) each fail those tests. progress.test (each rule with known
    answers), e2e/strength.cjs (the card on a phone with planted progress; 12/12/11 last time → 44 today; a 12-rep set →
    46 next). Not checked: his real history, which is read-only from here.
+144. [ ] **Rep ranges per exercise** — the next step offered after #143, owner: "do these". An exercise can aim for a range
+   (8–12) instead of one number: reps climb inside it at the same weight, and weight goes up once every set reaches the
+   top, back to the bottom. (claimed: this session, 20 Oct — lib/progress, Workout.tsx editor and session)
+145. [ ] **A typo guard when logging** — "315 kg — did you mean 31.5?" (#137's first part, owner: "do these"): a set far
+   outside that lift's own history, or a body weight far from the last one, asks once before it's kept. (claimed: this
+   session — lib/sanity, Workout.tsx, Today/Log weigh-in)
+146. [ ] **Cardio on the Training page** — next to strength: cardio minutes a week against the weeks before, and the
+   last sessions with the band's heart rate (owner: "do these"; #130). (claimed: this session — TrainingPage, lib/cardio)
