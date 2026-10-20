@@ -73,6 +73,8 @@ const { chromium, APP, OUT, handle, rate } = require('./harness.cjs');
 
   // Workouts end themselves.
   await pg.goto(APP + '#workout'); await pg.getByRole('button', { name: 'Start' }).first().click(); await pg.waitForTimeout(200);
+  const noWarm = async () => { const b = pg.getByRole('button', { name: 'Skip warm-up' }); if (await b.count()) { await b.click(); await pg.waitForTimeout(80); } }; // each exercise starts on a warm-up (20 Oct); these flows log working sets
+  await noWarm();
   await pg.getByRole('button', { name: /Log set/ }).first().click(); await pg.waitForTimeout(200);
   await pg.goto(APP + '#today'); await pg.waitForTimeout(200);
   check('Today shows the running workout', /Workout running[\s\S]*last set 12:0\d[\s\S]*ends by itself at 13:0\d/i.test(await pg.locator('.noticed-line.running').innerText()));

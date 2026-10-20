@@ -1670,9 +1670,16 @@ D questions answered in chat. Numbered on from #112.
 114. [ ] **Stuck on the unit, and "not this"** — "today i logged 1 bite of schnitzel, now i cant put 1 full piece of
    schnitzel, i try to log, it comes back to the schnitzel but measured in bite, and cant change..can we add a button that
    says not this, then the app retries the search but removing that option.."
-115. [ ] **Weights step wrong** — "Weights are counted exactly wrong so its always like 36.5 instead of 36 its like
-   increasing just wrong"
-116. [ ] **Warm-up first** — "By default the warmup set should be first.."
+115. [x] **Weights step wrong** — "Weights are counted exactly wrong so its always like 36.5 instead of 36 its like
+   increasing just wrong". + and − always added 2.5, and the suggestion was last + 2.5 — 34 → 36.5 on dumbbells that go
+   34, 36, 38. Now the step comes from the weights you use on that exercise (training kgStep: 2 for 32/34/36, 2.5 for
+   plates, 1.25 for small-plate cables; nothing logged: 2 for dumbbells, else 2.5) and + / − / the suggestion land on
+   that grid (stepKg: an off-grid 36.5 goes to 38 up, 36 down). Warm-up weights too (22 kg → 12, not 11). Checked:
+   training.test (the steps, the grid, 34 → 36 not 36.5 — fails with the old top + step).
+116. [x] **Warm-up first** — "By default the warmup set should be first..". Every exercise's first set is a warm-up
+   now (it followed your last 3 sessions); "Skip warm-up" is one tap. Checked: training.test, e2e/workoutsets.cjs (a new
+   exercise starts on a warm-up, skip → working set with "Warm-up first" offered); session, simple and workoutpick skip
+   it where they log working sets.
 117. [ ] **The AI can't see what's in a meal** — "Rn ai can't see whats inside my meals so if i log 3 diff food in one
    meal it only sees the title of meal so pls fix"
 118. [ ] **A daily question with yesterday's facts** — screenshot: "Stress is at 6 this morning. What's sitting on it most

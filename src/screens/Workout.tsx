@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { act, newId, useStore } from "../lib/store";
-import { e1rm, exerciseHistory, isBest, isDumbbell, warmKg, warmsUp, mainMuscle, nextTemplate, restLeft, sessionPlan, sessionSummary, suggestNext, templateProblems, volume, type Suggestion } from "../lib/training";
+import { e1rm, exerciseHistory, isBest, isDumbbell, kgStep, stepKg, warmKg, warmsUp, mainMuscle, nextTemplate, restLeft, sessionPlan, sessionSummary, suggestNext, templateProblems, volume, type Suggestion } from "../lib/training";
 import { PROGRAMS, asSplit, asTemplate } from "../lib/programs";
 import { MuscleMap } from "../components/MuscleMap";
 import { DayCard } from "../components/DayCard";
 import { ExercisePicker } from "../components/ExercisePicker";
 import { MuscleBrowse } from "../components/MuscleBrowse";
+import { equipOf } from "../lib/exsearch";
 import { useMyExercises } from "../components/useMyExercises";
 import { nameFor, pickFor } from "../lib/exsearch";
 import { clock, dayLabel } from "../lib/time";
@@ -45,7 +46,7 @@ function Pick() {
       <div className="top"><h1>Workout</h1><div className="meta">{templates.length}-day split</div></div>
       {ordered.map((t) => {
         const last = [...workouts].reverse().find((w) => w.template === t.name && w.endedAt);
-        const first = t.exercises[0], sug = first ? suggestNext(lastSets(sets, first.name), first.reps) : null;
+        const first = t.exercises[0], sug = first ? suggestNext(lastSets(sets, first.name), first.reps, kgStep(first.name, sets.filter((s) => s.exercise === first.name && !s.warmup).map((s) => s.kg), equipOf(first.name) === "dumbbell")) : null;
         return <DayCard key={t.id} t={t} dayNo={templates.indexOf(t) + 1} next={t === next} lastAt={last?.startedAt ?? null}
           sug={sug ? { exercise: first.name, kg: sug.kg, reps: sug.reps } : null} onEdit={() => setEditing(t)} onStart={() => act.startWorkout(t.name)} />;
       })}
@@ -198,17 +199,19 @@ function Session({ w }: { w: Workout }) {
   const mine = cur ? done(cur.name) : [];
   const warmToday = cur ? doneAll(cur.name).filter((s) => s.warmup) : [];
   const prev = cur ? lastSets(sets, cur.name, w.id) : [];
-  const sug: Suggestion | null = cur ? suggestNext(prev, cur.reps) : null;
+  // the weight step from your own weights on it: dumbbells that go 34, 36, 38 step by 2 (owner, 20 Oct: "36.5 instead of 36")
+  const step = cur ? kgStep(cur.name, sets.filter((s) => s.exercise === cur.name && !s.warmup).map((s) => s.kg), equipOf(cur.name) === "dumbbell") : 2.5;
+  const sug: Suggestion | null = cur ? suggestNext(prev, cur.reps, step) : null;
   const [kg, setKg] = useState<number>(sug?.kg ?? 20);
   const [reps, setReps] = useState<number>(cur?.reps ?? 8);
-  // Owner, 13 Oct: "warm up plus 2-3 sets". The first set is a warm-up when this exercise usually starts with one
-  // (training `warmsUp`); otherwise "Warm-up first" is offered. Lighter, ~10 reps, never counted.
+  // Owner, 13 Oct: "warm up plus 2-3 sets"; 20 Oct: "By default the warmup set should be first". The first set of each
+  // exercise is a warm-up (training `warmsUp`), "Skip warm-up" skips it. Lighter, ~10 reps, never counted.
   const [warmOn, setWarmOn] = useState(false);
   // the working weight set aside while warming up — what you typed, or the suggestion — and put back after
   const workRef = useRef<number | null>(null);
   const startWarm = (on: boolean) => {
     setWarmOn(on); if (!cur) return;
-    if (on) { workRef.current = kg; setKg(warmKg(kg, cur.name)); setReps(10); }
+    if (on) { workRef.current = kg; setKg(warmKg(kg, cur.name, step)); setReps(10); }
     else { setKg(workRef.current ?? mine[mine.length - 1]?.kg ?? sug?.kg ?? 20); workRef.current = null; setReps(cur.reps); }
   };
   // When moving to another exercise, start from its suggestion (or what you just did on it).
@@ -217,7 +220,7 @@ function Session({ w }: { w: Workout }) {
     const warm = !!cur && !last && warmToday.length === 0 && warmsUp(sets, cur.name, w.id);
     setWarmOn(warm);
     workRef.current = warm ? sug?.kg ?? 20 : null;
-    setKg(warm && cur ? warmKg(sug?.kg ?? 20, cur.name) : last?.kg ?? sug?.kg ?? 20);
+    setKg(warm && cur ? warmKg(sug?.kg ?? 20, cur.name, step) : last?.kg ?? sug?.kg ?? 20);
     setReps(warm ? 10 : cur?.reps ?? 8);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [i]);
@@ -295,9 +298,9 @@ function Session({ w }: { w: Workout }) {
         {showHist && <History sets={sets.filter((x) => x.workoutId !== w.id)} exercise={cur.name} />}
         <div className="steppers">
           <div className="step"><span className="lbl">{isDumbbell(cur.name) ? "kg per dumbbell" : "kg"}</span><div className="row">
-            <button type="button" aria-label="Less weight" onClick={() => setKg((v) => Math.max(0, +(v - 2.5).toFixed(2)))}>−</button>
+            <button type="button" aria-label="Less weight" onClick={() => setKg((v) => stepKg(v, step, -1))}>−</button>
             <input inputMode="decimal" aria-label="Weight in kg" value={kg} onChange={(e) => setKg(Number(e.target.value.replace(",", ".")) || 0)} />
-            <button type="button" aria-label="More weight" onClick={() => setKg((v) => +(v + 2.5).toFixed(2))}>+</button></div></div>
+            <button type="button" aria-label="More weight" onClick={() => setKg((v) => stepKg(v, step, 1))}>+</button></div></div>
           <div className="step"><span className="lbl">reps</span><div className="row">
             <button type="button" aria-label="Fewer reps" onClick={() => setReps((v) => Math.max(1, v - 1))}>−</button>
             <input inputMode="numeric" aria-label="Reps" value={reps} onChange={(e) => setReps(Math.max(0, Math.round(Number(e.target.value) || 0)))} />

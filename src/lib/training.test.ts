@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { dayStats, exerciseHistory, mainMuscle, nextTemplate, sameMuscle, sessionPlan, templateProblems, tidyWorkouts, e1rm, e1rmHistory, setsPerMuscle, suggestNext, volume, isDumbbell, warmsUp, warmKg, working, isBest, MUSCLES } from "./training";
+import { dayStats, kgStep, stepKg, exerciseHistory, mainMuscle, nextTemplate, sameMuscle, sessionPlan, templateProblems, tidyWorkouts, e1rm, e1rmHistory, setsPerMuscle, suggestNext, volume, isDumbbell, warmsUp, warmKg, working, isBest, MUSCLES } from "./training";
 
 describe("e1rm — Epley", () => {
   it("estimates a one-rep max", () => {
@@ -154,19 +154,14 @@ describe("warm-ups (PLAN 80)", () => {
     expect(isBest([set("a", 1, 80, 5)], set("b", 9, 100, 3, true))).toBe(false);
     expect(setsPerMuscle([{ exercise: "Bench press", warmup: true }, { exercise: "Bench press" }]).Chest).toBe(1);
   });
-  it("learned per exercise: on when at least half of the last 3 sessions had one; never done → off", () => {
-    expect(warmsUp([], "Bench press", "now")).toBe(false);
-    expect(warmsUp([set("a", 1, 40, 10, true), set("a", 2, 80, 5)], "Bench press", "now")).toBe(true);
-    const three = [set("a", 1, 40, 10, true), set("a", 2, 80, 5), set("b", 10, 80, 5), set("c", 20, 80, 5)];
-    expect(warmsUp(three, "Bench press", "now")).toBe(false); // 1 of the last 3: "sometimes just 3"
-    expect(warmsUp([...three, set("d", 30, 40, 10, true)], "Bench press", "now")).toBe(false); // last 3: b, c, d — 1 of 3
-    expect(warmsUp([...three, set("d", 30, 40, 10, true), set("e", 40, 40, 10, true)], "Bench press", "now")).toBe(true); // c, d, e — 2 of 3
-    expect(warmsUp([set("now", 1, 40, 10, true)], "Bench press", "now")).toBe(false); // today's doesn't count
+  it("on by default for every exercise, history or not (owner, 20 Oct: \"By default the warmup set should be first..\")", () => {
+    expect(warmsUp([], "Bench press", "now")).toBe(true);
+    expect(warmsUp([set("b", 10, 80, 5), set("c", 20, 80, 5), set("d", 30, 80, 5)], "Bench press", "now")).toBe(true);
   });
   it("its weight: about half, rounded to the plates", () => {
     expect(warmKg(80, "Bench press")).toBe(40);
     expect(warmKg(62.5, "Bench press")).toBe(32.5);
-    expect(warmKg(22, "Incline DB press")).toBe(11);
+    expect(warmKg(22, "Incline DB press")).toBe(12); // on the 2 kg dumbbell grid (11 isn't a dumbbell)
     expect(warmKg(2.5, "Bench press")).toBe(2.5);
   });
 });
@@ -196,5 +191,24 @@ describe("the figure's muscles (PLAN 94, phase 2)", () => {
     const now = Date.UTC(2026, 9, 14, 18), sets = [...Array(9)].map((_, i) => ({ at: now - (i + 1) * 3600_000, exercise: "Overhead press" })).concat([...Array(3)].map((_, i) => ({ at: now - (i + 1) * 60_000, exercise: "Lateral raise" })));
     const w = fineWeek(sets, now);
     expect([w["Front delts"], w["Side delts"], w["Rear delts"], w.Triceps]).toEqual([9, 7.5, 0, 4.5]);
+  });
+});
+
+describe("weight steps (owner, 20 Oct: \"its always like 36.5 instead of 36\")", () => {
+  it("the step from the weights you use: 2 for 32/34/36 dumbbells, 2.5 for plates, nothing logged by kind", () => {
+    expect(kgStep("Incline DB press", [32, 34, 36])).toBe(2);
+    expect(kgStep("Bench press", [60, 62.5, 65])).toBe(2.5);
+    expect(kgStep("Lateral raise", [], true)).toBe(2);
+    expect(kgStep("Bench press", [])).toBe(2.5);
+    expect(kgStep("Cable curl", [20, 22.5, 23.75])).toBe(1.25);
+  });
+  it("+ and − land on the grid: 36 → 38, an off-grid 36.5 → 38 up and 36 down; never below 0", () => {
+    expect([stepKg(36, 2, 1), stepKg(36.5, 2, 1), stepKg(36.5, 2, -1), stepKg(36, 2, -1), stepKg(1, 2, -1)]).toEqual([38, 38, 36, 34, 0]);
+    expect([stepKg(60, 2.5, 1), stepKg(61, 2.5, 1), stepKg(61, 2.5, -1)]).toEqual([62.5, 62.5, 60]);
+  });
+  it("the next weight suggested is the next on the grid — 34 → 36 on 2 kg dumbbells, not 36.5", () => {
+    expect(suggestNext([{ kg: 34, reps: 10 }, { kg: 34, reps: 10 }], 10, 2)!.kg).toBe(36);
+    expect(suggestNext([{ kg: 35, reps: 10 }, { kg: 35, reps: 10 }], 10, 2)!.kg).toBe(36); // an off-grid last weight snaps
+    expect(suggestNext([{ kg: 80, reps: 6 }, { kg: 80, reps: 6 }], 6)!.kg).toBe(82.5);
   });
 });

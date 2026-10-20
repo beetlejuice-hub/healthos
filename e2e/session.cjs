@@ -15,7 +15,8 @@ const { chromium, APP, OUT, handle } = require('./harness.cjs');
   await pg.getByRole('button', { name: 'Sign in' }).click(); await pg.waitForSelector('text=Settings');
   const st = () => pg.evaluate(() => JSON.parse(localStorage.getItem('healthos.v1:u-test') || '{}'));
   const curName = async () => (await pg.locator('.tile.cur .ex b').innerText()).trim();
-  const logSets = async (n) => { for (let k = 0; k < n; k++) { await pg.getByRole('button', { name: 'Log set' }).click(); await pg.waitForTimeout(60); } await pg.waitForTimeout(950); }; // the big button waits a beat before "Next"
+  const noWarm = async () => { const b = pg.getByRole('button', { name: 'Skip warm-up' }); if (await b.count()) { await b.click(); await pg.waitForTimeout(80); } }; // each exercise starts on a warm-up (20 Oct); these flows log working sets
+  const logSets = async (n) => { for (let k = 0; k < n; k++) { await noWarm(); await pg.getByRole('button', { name: 'Log set' }).click(); await pg.waitForTimeout(60); } await pg.waitForTimeout(950); }; // the big button waits a beat before "Next"
   await pg.goto(APP + '#workout'); await pg.waitForSelector('text=Premade workouts');
   check('a new account starts on the plan, cardio shown after each day', /20 min stairmaster/.test(await pg.locator('.dcard', { hasText: 'Push + Quads' }).innerText()) && /20 min incline walk/.test(await pg.locator('.dcard', { hasText: 'Pull + Hamstrings' }).innerText()));
   await pg.locator('.dcard', { hasText: 'Push + Quads' }).getByRole('button', { name: 'Start' }).click(); await pg.waitForTimeout(200);
@@ -44,6 +45,7 @@ const { chromium, APP, OUT, handle } = require('./harness.cjs');
   check('tap → swapped', await curName() === 'Hack squat');
 
   // Owner, 6 Oct: "set the kg, and reps w the + - and it saves so i can just hit log … or keep same and hit again".
+  await noWarm();
   await pg.getByRole('button', { name: 'More weight' }).click(); await pg.getByRole('button', { name: 'More weight' }).click();
   await pg.getByRole('button', { name: 'Log set' }).click(); await pg.waitForTimeout(80);
   const kgNow = await pg.getByRole('textbox', { name: 'Weight in kg' }).inputValue(), repsNow = +(await pg.getByRole('textbox', { name: 'Reps', exact: true }).inputValue());

@@ -31,14 +31,33 @@ export function e1rmHistory(sets: LoggedSet[], exercise: string): { at: number; 
 
 export type Suggestion = { kg: number; reps: number; reason: string };
 
+/**
+ * The weight step for an exercise, from the weights you've used on it (owner, 20 Oct: "Weights are counted exactly wrong
+ * so its always like 36.5 instead of 36"): + and − always added 2.5, so 34 → 36.5 on dumbbells that go 34, 36, 38. The
+ * largest of 2.5, 2, 1.25, 1, 0.5 that every logged weight is a multiple of; none logged: 2 for dumbbells, else 2.5.
+ */
+export function kgStep(exercise: string, kgs: number[], dumbbell = isDumbbell(exercise)): number {
+  const used = kgs.filter((k) => k > 0);
+  if (!used.length) return dumbbell ? 2 : 2.5;
+  const fits = (step: number) => used.every((k) => Math.abs(k / step - Math.round(k / step)) < 1e-6);
+  return [2.5, 2, 1.25, 1, 0.5].find(fits) ?? 0.5;
+}
+/** The next weight on that step's grid, up or down: 36 → 38 and 36.5 → 38 up (step 2); 36.5 → 36 down. */
+export function stepKg(kg: number, step: number, dir: 1 | -1): number {
+  const at = kg / step, next = dir > 0 ? Math.floor(at + 1e-9) + 1 : Math.ceil(at - 1e-9) - 1;
+  return Math.max(0, +(next * step).toFixed(2));
+}
+
 /** What to lift next time, from the last session's sets of this exercise. */
 export function suggestNext(last: { kg: number; reps: number }[], targetReps: number, incrementKg = 2.5): Suggestion | null {
+  // the next weight is the next one on the step's grid (kgStep), never top + step from an off-grid weight
   if (!last.length) return null;
   const top = Math.max(...last.map((s) => s.kg));
   const work = last.filter((s) => s.kg === top);
   const reps = work.map((s) => s.reps).join("/");
   if (work.every((s) => s.reps >= targetReps)) {
-    return { kg: top + incrementKg, reps: targetReps, reason: `all sets hit ${targetReps} last time (${reps}), so +${incrementKg} kg` };
+    const kg = stepKg(top, incrementKg, 1);
+    return { kg, reps: targetReps, reason: `all sets hit ${targetReps} last time (${reps}), so +${+(kg - top).toFixed(2)} kg` };
   }
   return { kg: top, reps: targetReps, reason: `last time ${reps}, so repeat ${top} kg until every set hits ${targetReps}` };
 }
@@ -402,20 +421,12 @@ export function fineWeek(sets: { at: number; exercise: string }[], now: number, 
 }
 
 /**
- * Does this exercise usually start with a warm-up? (PLAN 80; owner, 13 Oct: "1 warmup 3 w normal weight but sometimes just
- * 3"). Yes when at least half of its last 3 sessions before this workout had one; never done before: no — the first set
- * offers "Warm-up first" instead, and the habit is learned from there.
+ * Whether the first set of an exercise starts as a warm-up: always, by default (owner, 20 Oct: "By default the warmup set
+ * should be first.."); "Skip warm-up" turns it off for that exercise today. (It used to follow your last 3 sessions.)
  */
-export function warmsUp(sets: LoggedSet[], exercise: string, notWorkout: string): boolean {
-  const by = new Map<string, { at: number; warm: boolean }>();
-  for (const s of sets) {
-    if (s.exercise !== exercise || s.workoutId === notWorkout) continue;
-    const cur = by.get(s.workoutId) ?? { at: s.at, warm: false };
-    by.set(s.workoutId, { at: Math.min(cur.at, s.at), warm: cur.warm || !!s.warmup });
-  }
-  const last = [...by.values()].sort((a, b) => b.at - a.at).slice(0, 3);
-  return last.length > 0 && last.filter((x) => x.warm).length * 2 >= last.length;
+export function warmsUp(_sets: LoggedSet[], _exercise: string, _notWorkout: string): boolean {
+  return true;
 }
 
 /** A warm-up's weight: about half the working weight, to the 2.5 kg (1 kg for dumbbells), never below one step. */
-export const warmKg = (workKg: number, exercise: string) => { const step = isDumbbell(exercise) ? 1 : 2.5; return Math.max(step, Math.round((workKg * 0.5) / step) * step); };
+export const warmKg = (workKg: number, exercise: string, step = isDumbbell(exercise) ? 2 : 2.5) => Math.max(step, +(Math.round((workKg * 0.5) / step) * step).toFixed(2));

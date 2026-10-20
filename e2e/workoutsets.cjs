@@ -1,5 +1,5 @@
 // Sets the way the owner does them (PLAN 80; 13 Oct: "warm up plus 2-3 sets but i should be able to log another set").
-// A new exercise offers "Warm-up first"; a warm-up is lighter, shown as W, never counted; after the planned sets the next
+// A new exercise starts on a warm-up (20 Oct), "Skip warm-up" one tap away; a warm-up is lighter, shown as W, never counted; after the planned sets the next
 // exercise is suggested but "+ Set 4" sits beside it; once warming up is the habit on an exercise, it starts as a warm-up,
 // and "Skip warm-up" is one tap.
 const { chromium, APP, OUT, handle } = require('./harness.cjs');
@@ -22,10 +22,13 @@ const { chromium, APP, OUT, handle } = require('./harness.cjs');
   const cur = () => pg.locator('.tile.cur');
   const kgNow = () => pg.getByLabel('Weight in kg', { exact: true }).inputValue();
 
-  // 1 · a new exercise: "Warm-up first" offered; a warm-up, then the working sets
+  // 1 · a new exercise starts on a warm-up (owner, 20 Oct: "By default the warmup set should be first.."); skip it, and
+  // "Warm-up first" brings it back; a warm-up, then the working sets
   await seed({ entries: [], workouts: [{ id: 'w1', template: 'Push', startedAt: t - 60e3, endedAt: null, plan: [{ name: 'Bench press', sets: 3, reps: 8, restSec: 90 }, { name: 'Overhead press', sets: 3, reps: 8, restSec: 90 }] }] });
   await pg.goto(APP + '#workout'); await pg.reload(); await pg.waitForSelector('.tile.cur');
-  check('a new exercise starts on a working set, with "Warm-up first" offered', await pg.getByRole('button', { name: 'Log set' }).count() === 1 && await pg.getByRole('button', { name: 'Warm-up first' }).count() === 1);
+  check('a new exercise starts on a warm-up, with "Skip warm-up" offered', await pg.getByRole('button', { name: 'Log warm-up' }).count() === 1 && await pg.getByRole('button', { name: 'Skip warm-up' }).count() === 1);
+  await pg.getByRole('button', { name: 'Skip warm-up' }).click();
+  check('skipped: a working set, "Warm-up first" offered', await pg.getByRole('button', { name: 'Log set' }).count() === 1 && await pg.getByRole('button', { name: 'Warm-up first' }).count() === 1);
   await pg.getByLabel('Weight in kg', { exact: true }).fill('60');
   await pg.getByRole('button', { name: 'Warm-up first' }).click();
   check(`"Warm-up first": the button says so and the weight halves (${await kgNow()} kg)`, await pg.getByRole('button', { name: 'Log warm-up' }).count() === 1 && await kgNow() === '30' && /Warm-up/.test(await cur().locator('.ex').innerText()));
