@@ -197,6 +197,8 @@ describe("the figure's muscles (PLAN 94, phase 2)", () => {
 describe("weight steps (owner, 20 Oct: \"its always like 36.5 instead of 36\")", () => {
   it("the step from the weights you use: 2 for 32/34/36 dumbbells, 2.5 for plates, nothing logged by kind", () => {
     expect(kgStep("Incline DB press", [32, 34, 36])).toBe(2);
+    // only 30 kg logged: 2 and 2.5 both fit — dumbbells assume 2 (34, 36, 38 at his gym), a bar 2.5; 32.5 says 2.5
+    expect([kgStep("Incline DB press", [30], true), kgStep("Incline DB press", [30, 32.5], true), kgStep("Bench press", [60], false)]).toEqual([2, 2.5, 2.5]);
     expect(kgStep("Bench press", [60, 62.5, 65])).toBe(2.5);
     expect(kgStep("Lateral raise", [], true)).toBe(2);
     expect(kgStep("Bench press", [])).toBe(2.5);

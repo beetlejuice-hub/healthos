@@ -37,6 +37,22 @@ export const PROGRAMS: Program[] = [
     "Weigh in most mornings and go by the weekly average; measure your waist weekly; photos every 2 weeks.",
     "Every 2 weeks: losing under 0.3 kg a week → 150 kcal less. Over 0.7 kg a week, or lifts dropping → 150 kcal more.",
   ] },
+  // Owner, 20 Oct: "Would a lower upper body then a full body day work better than the current 3 full body day?" — his
+  // Push · Pull · Mixed, regrouped from the same exercises: each muscle still twice a week, the legs get a day of their own.
+  { id: "ulf", name: "Upper · Lower · Full + cardio", who: "Lose fat, keep the muscle · same exercises as Push · Pull · Mixed, regrouped", perWeek: "4× a week, in order", days: [
+    day("ulf", "Upper", [ex("Incline DB press", 3, 10, 120), ex("Lat pulldown", 3, 10, 90), ex("DB shoulder press", 3, 10, 90), ex("Seated cable row", 3, 12, 90), ex("Lateral raise", 3, 15, 60), ex("Rope pushdown", 3, 12, 60), ex("Hammer curl", 3, 12, 60)], "20 min incline walk"),
+    day("ulf", "Lower", [ex("Squat", 3, 8, 150, "Hack squat"), ex("Romanian deadlift", 3, 10, 150), ex("Leg press", 3, 12, 120), ex("Leg curl", 3, 12, 60), ex("Calf raise", 3, 15, 60), ex("Hanging leg raise", 3, 12, 60)], "20 min stairmaster"),
+    day("ulf", "Full", [ex("DB bench press", 3, 10, 120), ex("Chest-supported row", 3, 12, 90), ex("Bulgarian split squat", 3, 10, 90), ex("Hip thrust", 3, 10, 90), ex("Face pull", 3, 15, 60), ex("Lateral raise", 3, 15, 60), ex("Incline DB curl", 3, 12, 60), ex("Overhead tricep extension", 3, 12, 60)], "20 min stairmaster"),
+  ], other: [
+    { name: "Cardio", what: "40–45 min stairmaster plus incline walk — or intervals, at most once a week" },
+    { name: "Rest days", what: "Walking, abs" },
+  ], rules: [
+    "3 sets per exercise, each ending 1–2 reps short of failure.",
+    "The reps shown are the top of the range: when every set reaches them, add weight next time.",
+    "Upper and Full both train chest, back, shoulders and arms; Lower and Full both train legs — twice a week each, like Push · Pull · Mixed.",
+    "A lighter week every 6–8 weeks.",
+    "Every 2 weeks: losing under 0.3 kg a week → 150 kcal less. Over 0.7 kg a week, or lifts dropping → 150 kcal more.",
+  ] },
   { id: "fullbody", name: "Full body A/B", who: "Beginner · simplest to stick to", perWeek: "3× a week, alternating", days: [
     day("fullbody", "Full body A", [ex("Squat", 3, 5, 180), ex("Bench press", 3, 5, 150), ex("Barbell row", 3, 8, 120), ex("Plank", 3, 1, 60)]),
     day("fullbody", "Full body B", [ex("Deadlift", 2, 5, 180), ex("Overhead press", 3, 6, 150), ex("Lat pulldown", 3, 10, 90), ex("Lunges", 3, 10, 90)]),

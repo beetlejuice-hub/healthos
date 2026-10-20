@@ -11,6 +11,7 @@ import { useMyExercises } from "../components/useMyExercises";
 import { nameFor, pickFor } from "../lib/exsearch";
 import { clock, dayLabel } from "../lib/time";
 import type { EntryOf, Template, Workout } from "../lib/types";
+import { variantsOf } from "../lib/variants";
 
 type SetE = EntryOf<"set">;
 /** One tap for cardio when none was planned. */
@@ -197,6 +198,7 @@ function Session({ w }: { w: Workout }) {
     </div>
   );
   const mine = cur ? done(cur.name) : [];
+  const vars = cur ? variantsOf(cur.name) : null;
   const warmToday = cur ? doneAll(cur.name).filter((s) => s.warmup) : [];
   const prev = cur ? lastSets(sets, cur.name, w.id) : [];
   // the weight step from your own weights on it: dumbbells that go 34, 36, 38 step by 2 (owner, 20 Oct: "36.5 instead of 36")
@@ -214,7 +216,8 @@ function Session({ w }: { w: Workout }) {
     if (on) { workRef.current = kg; setKg(warmKg(kg, cur.name, step)); setReps(10); }
     else { setKg(workRef.current ?? mine[mine.length - 1]?.kg ?? sug?.kg ?? 20); workRef.current = null; setReps(cur.reps); }
   };
-  // When moving to another exercise, start from its suggestion (or what you just did on it).
+  // When moving to another exercise — or switching this one to another variant, or swapping it — start from its
+  // suggestion (or what you just did on it): a dumbbell's weight isn't the bar's.
   useEffect(() => {
     const last = mine[mine.length - 1];
     const warm = !!cur && !last && warmToday.length === 0 && warmsUp(sets, cur.name, w.id);
@@ -223,7 +226,7 @@ function Session({ w }: { w: Workout }) {
     setKg(warm && cur ? warmKg(sug?.kg ?? 20, cur.name, step) : last?.kg ?? sug?.kg ?? 20);
     setReps(warm ? 10 : cur?.reps ?? 8);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [i]);
+  }, [i, cur?.name]);
 
   const [now, setNow] = useState(Date.now());
   useEffect(() => { const t = setInterval(() => setNow(Date.now()), 1000); return () => clearInterval(t); }, []);
@@ -295,11 +298,17 @@ function Session({ w }: { w: Workout }) {
           {mine.length === 0 && <button type="button" className="kbtn sm" onClick={() => { setAdding("swap"); setNewEx(""); }}>Swap</button>}
           {mine.length === 0 && warmToday.length === 0 && <button type="button" className="kbtn sm" aria-pressed={warmOn} onClick={() => startWarm(!warmOn)}>{warmOn ? "Skip warm-up" : "Warm-up first"}</button>}
         </div>
+        {/* the same movement on other equipment, one tap, before the first working set — today only, like Swap (owner,
+            20 Oct: "incline bench press and the i can choose wheter machine, bench w barbell, bemch w dumbbell") */}
+        {vars && mine.length === 0 && <div className="variants" role="group" aria-label={`${vars.move}, on`}>
+          {vars.options.map((o) => <button key={o.name} type="button" className="kbtn sm" aria-pressed={o.name === cur.name} aria-label={o.name} onClick={() => { if (o.name !== cur.name) act.updateWorkout(w.id, { plan: plan.map((e, k) => (k === i ? { ...e, name: o.name } : e)) }); }}>{o.label}</button>)}
+        </div>}
         {showHist && <History sets={sets.filter((x) => x.workoutId !== w.id)} exercise={cur.name} />}
         <div className="steppers">
           <div className="step"><span className="lbl">{isDumbbell(cur.name) ? "kg per dumbbell" : "kg"}</span><div className="row">
             <button type="button" aria-label="Less weight" onClick={() => setKg((v) => stepKg(v, step, -1))}>−</button>
-            <input inputMode="decimal" aria-label="Weight in kg" value={kg} onChange={(e) => setKg(Number(e.target.value.replace(",", ".")) || 0)} />
+            {/* a long number gets a smaller size: at 44 px "32.5" was cut to "32" on a phone */}
+            <input inputMode="decimal" aria-label="Weight in kg" value={kg} data-len={Math.min(6, String(kg).length)} onChange={(e) => setKg(Number(e.target.value.replace(",", ".")) || 0)} />
             <button type="button" aria-label="More weight" onClick={() => setKg((v) => stepKg(v, step, 1))}>+</button></div></div>
           <div className="step"><span className="lbl">reps</span><div className="row">
             <button type="button" aria-label="Fewer reps" onClick={() => setReps((v) => Math.max(1, v - 1))}>−</button>

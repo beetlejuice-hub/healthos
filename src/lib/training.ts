@@ -40,7 +40,8 @@ export function kgStep(exercise: string, kgs: number[], dumbbell = isDumbbell(ex
   const used = kgs.filter((k) => k > 0);
   if (!used.length) return dumbbell ? 2 : 2.5;
   const fits = (step: number) => used.every((k) => Math.abs(k / step - Math.round(k / step)) < 1e-6);
-  return [2.5, 2, 1.25, 1, 0.5].find(fits) ?? 0.5;
+  // when both fit (30, 40 kg), dumbbells go up in 2s (his gym: 34, 36, 38), plates in 2.5s
+  return (dumbbell ? [2, 2.5, 1.25, 1, 0.5] : [2.5, 2, 1.25, 1, 0.5]).find(fits) ?? 0.5;
 }
 /** The next weight on that step's grid, up or down: 36 → 38 and 36.5 → 38 up (step 2); 36.5 → 36 down. */
 export function stepKg(kg: number, step: number, dir: 1 | -1): number {

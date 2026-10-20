@@ -6,6 +6,8 @@ const { chromium, APP, OUT, handle } = require('./harness.cjs');
   const ctx = await b.newContext({ viewport: { width: 390, height: 844 } });
   await ctx.route('https://ubfvaewfdbmecowoeuni.supabase.co/**', handle);
   const pg = await ctx.newPage();
+  // every exercise starts on a warm-up (owner, 20 Oct): skip it where these tests log working sets
+  const logSet = async () => { const w = pg.getByRole('button', { name: 'Skip warm-up' }); if (await w.count()) { await w.click(); await pg.waitForTimeout(80); } await pg.getByRole('button', { name: 'Log set' }).click(); };
   pg.on('dialog', (d) => d.accept());
   pg.on('pageerror', e => errs.push('pageerror: ' + e.message));
   pg.on('console', m => { if (m.type() === 'error' && !/ERR_CERT|fonts|Failed to load resource/.test(m.text())) errs.push('console: ' + m.text()); });
@@ -43,13 +45,13 @@ const { chromium, APP, OUT, handle } = require('./harness.cjs');
   await pg.locator('.dcard').filter({ hasText: 'Push' }).getByRole('button', { name: 'Start' }).click(); await pg.waitForTimeout(200);
   await pg.getByRole('button', { name: 'Swap' }).click(); await pg.getByLabel('Exercise to add').fill('Hack squat'); await pg.locator('.addex').getByRole('button', { name: 'Swap → Hack squat' }).click();
   check('swap renames today\'s exercise', /Hack squat/.test(await pg.locator('.tile.cur .ex').innerText()));
-  await pg.getByRole('button', { name: 'Log set' }).click(); await pg.waitForTimeout(100);
+  await logSet(); await pg.waitForTimeout(100);
   check('no swap once a set is logged', await pg.locator('.exacts').getByRole('button', { name: 'Swap' }).count() === 0);
   await pg.locator('.tile.plan').getByRole('button', { name: '+ Add exercise' }).click();
   await pg.getByLabel('Exercise to add').fill('Face pull'); await pg.locator('.addex').getByRole('button', { name: 'Add' }).click();
   check('added exercise becomes current', /Face pull/.test(await pg.locator('.tile.cur .ex').innerText()));
   await pg.getByLabel('How did it feel?').fill('Strong today');
-  await pg.getByRole('button', { name: 'Log set' }).click();
+  await logSet();
   await pg.getByRole('button', { name: 'Finish early…' }).click(); await pg.getByRole('button', { name: 'Finish', exact: true }).click(); await pg.waitForTimeout(200);
   const pick = await pg.locator('.cockpit').innerText();
   check('saved split is unchanged by today\'s swap/add', await listOf('Push') === 'Squat · DB bench press · DB shoulder press · Lateral raise · Dips · Rope pushdown' && !/Face pull/.test(await listOf('Push')));
@@ -68,7 +70,7 @@ const { chromium, APP, OUT, handle } = require('./harness.cjs');
   await pg.getByRole('button', { name: 'Quick workout' }).click(); await pg.waitForTimeout(150);
   await pg.getByRole('button', { name: '+ Add exercise' }).click(); await pg.getByLabel('Exercise to add').fill('Pull-ups'); await pg.locator('.addex').getByRole('button', { name: 'Add' }).click();
   check('quick workout: first exercise added and ready', /Pull-ups/.test(await pg.locator('.tile.cur .ex').innerText()));
-  await pg.getByRole('button', { name: 'Log set' }).click(); await pg.getByRole('button', { name: 'Finish early…' }).click(); await pg.getByRole('button', { name: 'Finish', exact: true }).click(); await pg.waitForTimeout(150);
+  await logSet(); await pg.getByRole('button', { name: 'Finish early…' }).click(); await pg.getByRole('button', { name: 'Finish', exact: true }).click(); await pg.waitForTimeout(150);
   check('a quick workout doesn\'t break the rotation', (await tiles())[0] === 'Pull + Hamstrings');
 
   // Delete a day.

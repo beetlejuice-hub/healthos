@@ -1755,8 +1755,19 @@ D questions answered in chat. Numbered on from #112.
    without, not 14), e2e suppafter/stack/glance/connections/trainingb/mindpage/sleep/supplog/catchup/dose/scout/top.
 125. [ ] **Questions less generic** — "questions feel way too generic rn, like weight logged before bathroom, etc" — prompt
    (20 Oct): tie questions to their patterns and goals; no questions about how they log. To judge on real questions.
-126. [ ] **Exercise variants** — "On workouts can we have the exercises as like incline bench press and the i can choose
-   wheter machine, bench w barbell, bemch w dumbbell etc? Idk if it changes anything tho"
+126. [x] **Exercise variants** — "On workouts can we have the exercises as like incline bench press and the i can choose
+   wheter machine, bench w barbell, bemch w dumbbell etc? Idk if it changes anything tho" Done (20 Oct): a variant is its own exercise (its own history
+   and weights — a 30 kg dumbbell isn't a 60 kg bar), and lib/variants groups them by movement (18: flat/incline/shoulder
+   press, rows, squats, curls, pushdowns, leg curls, calf raises…; only names the catalog has, so no duplicates). The
+   workout screen shows the movement's options under the exercise — Barbell · Dumbbell · Machine · Smith — until the
+   first working set; a tap switches today's exercise (like Swap; the saved day stays) and its weight to that variant's
+   own. Found on the way: a switch or Swap kept the old exercise's weight (the weight now follows the exercise's name);
+   on a phone "32.5" showed as "32" — the weight box cut it (smaller type for longer numbers, narrower − / +); with only
+   30 kg logged dumbbells guessed 2.5 kg steps (now 2, his rack, unless 32.5 is logged); e2e workout/workoutplus had
+   been failing since warm-up-first (#116) — CI doesn't run e2e — fixed. Also: "Upper · Lower · Full + cardio", his
+   Push · Pull · Mixed regrouped from the same exercises (chest, back, shoulders, quads twice a week), one tap to make it
+   his split (D: his call). Checked: variants.test, training.test (fail on the old step), e2e/variants.cjs (row, switch,
+   weight 32 → 60, logged as the bar lift, row gone, day unchanged, 8/32.5/100/102.5 fit the box), workout suites.
 127. [x] **What makes a night good and restorative; restlessness** — "pls dive into what makes a nights sleep a good nights
    sleep and what makes it restorative. Fitbit app says 81 rating while app says 98… just because i slept 9h" and "App
    doesnt have restlessness". Goes with the open sleep-score question on #110 (length is 25 of its 100). Done (20 Oct), phase 1: the score has
