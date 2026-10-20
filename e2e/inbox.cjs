@@ -9,7 +9,7 @@
 // answer; a reload keeps them and adds nothing; the next day the Mind page's finding comes (the cap held it back).
 // Then another month, a wine morning (HRV 33, resting 62) at 09:30: readiness asks what happened, and the answer joins
 // that morning's last-night tags, as on Today.
-const { chromium, APP, OUT, handle } = require('./harness.cjs');
+const { chromium, APP, OUT, handle, tables } = require('./harness.cjs');
 
 const MIN = 60_000, HOUR = 3_600_000, D = 86_400_000, NOW = new Date('2026-10-15T17:00:00').getTime(), MORNING = new Date('2026-10-15T09:30:00').getTime();
 const ymd = (t) => { const d = new Date(t); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
@@ -59,6 +59,9 @@ function world(wine = false) {
   const KEY = 'healthos.v1:u-test';
   const store = (pg) => pg.evaluate((k) => JSON.parse(localStorage.getItem(k) || '{}'), KEY);
   async function open(w, now) {
+    // a world is its own account: the last one's synced rows (its inbox above all) are cleared from the fake server — kept,
+    // they came back or not by which sync landed first, and under load the old inbox won (two full runs, 20 Oct)
+    for (const t of [tables.docs, tables.entries]) for (const k of [...t.keys()]) if (String(k).startsWith('u-test')) t.delete(k);
     const ctx = await b.newContext({ viewport: { width: 390, height: 900 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true });
     await ctx.route('https://ubfvaewfdbmecowoeuni.supabase.co/**', handle);
     await ctx.route(/\/api\/band\//, (rt) => {
