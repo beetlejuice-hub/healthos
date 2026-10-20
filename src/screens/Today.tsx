@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { CheckInCard } from "../components/CheckIn";
 import { AUTO_END } from "../lib/training";
+import { NoticeBox } from "../components/NoticeBox";
 import { act, offerUndo, useStore } from "../lib/store";
 import { DRINKS } from "../lib/drinks";
 import { nowItems } from "../lib/today";
@@ -148,6 +149,7 @@ export function Today() {
       </NowCard>
 
       <Pad now={now} stack={stack} onPickUsual={() => setPickUsual(true)} />
+      <NoticeBox />
       {pickUsual && <UsualPicker onDone={() => setPickUsual(false)} />}
 
       <Stack now={now} />

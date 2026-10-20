@@ -122,7 +122,9 @@ export type Entry =
    *  `phoneMin`: about how long on the phone before sleep, 0–60 (60 = "1 h+"; PLAN 88). */
   | { id: string; kind: "sleep"; at: number; rating?: number; slow?: boolean; tags?: string[]; phoneMin?: number }
   /** An answer to one of the AI's questions; repeated ones (same key) become a daily signal. */
-  | { id: string; kind: "answer"; at: number; key: string; question: string; answer: string };
+  | { id: string; kind: "answer"; at: number; key: string; question: string; answer: string }
+  /** Something you noticed about yourself, in your words (PLAN 135): "went downstairs, forgot why". The AI looks for what goes with them. */
+  | { id: string; kind: "notice"; at: number; text: string };
 
 export type EntryKind = Entry["kind"];
 export type EntryOf<K extends EntryKind> = Extract<Entry, { kind: K }>;

@@ -1856,12 +1856,21 @@ D questions answered in chat. Numbered on from #112.
    wanted).
 
 ### C · New parts
-135. [ ] **Noticings** — "a small text box where i can write things like I went downstairs to do something, something else
+135. [x] **Noticings** — "a small text box where i can write things like I went downstairs to do something, something else
    distracted me, came back up and realized i didnt do what i wanted. This happens often. So basically mental and
    physical notices i see and realize. The app can make an understanding of this and notice it for itself, for research
    purposes and to ask me about that, dive deep into it and see why that happens. not like being my doctor but similar
    perhaps, and just informal" + "it should also do a checkup from time to time, like how you been, have u experienced X,
    also ask based on my health markers that i or the band shares".
+   Done (20 Oct), phase 1: "Noticed something?" on Today — one line in his words, Save, Undo; it's in the day's log
+   (and deletable there) and in the AI's day ("noticed about myself: …"). The AI gets the last 30 days of them, each
+   with what that day held up to that moment — last night's rating, caffeine so far, the last check-in (lib/notices) —
+   so it can see what they have in common. The night read-back reflects on that day's ones; a daily question may dig
+   into one that keeps coming up; the chat's find tool finds them. Curious and informal, never a diagnosis. Check-ups:
+   a week after the last one was answered, the daily questions lead with one — "how have you been", or about a marker
+   that moved: the band's resting heart rate and HRV and the sleep rating, the last 7 days against the 4 weeks before
+   (lib/ai/checkup). No extra AI calls. Next, if wanted: the band's night and steps next to each notice, and a
+   Notices view on the Mind page.
 136. [ ] **Tempo → HealthOS** — "in the soon future i want to connect tempo to healthos, or like make it send info, so
    healthos can see what i am doing, and make connection between tasks/events to how i feel" (with #92).
 137. [ ] **Idea, to look over together: an overall check** — "from time to time the app should do an overall check of what

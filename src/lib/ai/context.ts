@@ -6,6 +6,7 @@
  */
 
 import { fatLines } from "../bodyfat";
+import { noticeLines } from "../notices";
 import { creatineFrom } from "../checkin";
 import type { State } from "../store";
 import type { DayFacts } from "../insights";
@@ -61,6 +62,7 @@ export function timeline(state: Pick<State, "entries" | "workouts"> & { foods?: 
     else if (e.kind === "sleep" && (e.rating != null || e.tags?.length || e.phoneMin != null)) push(e.at, `${t} ${e.rating != null ? `rated last night's sleep ${e.rating}/10` : "about last night"}${e.slow ? ", slow to fall asleep" : ""}${e.tags?.length ? ` · last night: ${e.tags.map(nightLabel).join(", ")}` : ""}${e.phoneMin != null ? ` · ${phoneLabel(e.phoneMin)} before sleep` : ""}`);
     else if (e.kind === "weight") push(e.at, `${t} weighed ${e.kg} kg`);
     else if (e.kind === "supp" && e.status === "skipped") push(e.at, `${t} skipped a supplement`);
+    else if (e.kind === "notice") push(e.at, `${t} noticed about myself: "${e.text}"`);
   }
   for (const w of state.workouts ?? []) if (w.startedAt >= from && w.startedAt < to) push(w.startedAt, w.kind === "cardio"
     // PLAN 130: a cardio session of its own, by name and minutes
@@ -208,6 +210,7 @@ function baseContext({ state, now, days, findings, patterns, weight, today = [],
   const en = state.settings?.energy;
   const names = new Map(supplements.map((s) => [s.id, s.name]));
   const answers = state.entries.filter((e) => e.kind === "answer" && e.at > now - 14 * 86_400_000).slice(-20);
+  const notices = noticeLines(state.entries, now).slice(slim ? -8 : -20);
   const lines = [
     // owner, 15 Oct: "make sure app sees all data, organized" — what's here, in order
     nowLine(now, slim ? 7 : 14, !!todaySoFar),
@@ -237,6 +240,8 @@ function baseContext({ state, now, days, findings, patterns, weight, today = [],
     ...(grids.length ? ["## What the Sleep / Heart / Mind / Training grids found (clear, tested), and what I said", ...grids.map((l) => `- ${l}`)] : []),
     ...(patterns.length ? ["## Early patterns (could be chance, still being checked)", ...patterns.slice(0, 5).map((p) => `- ${p.text} — held ${p.held} of ${p.of}`)] : []),
     ...(feelNotes(state, now).length ? ["## Why I felt that way (my own notes on check-ins — take these seriously)", ...feelNotes(state, now).map((l) => `- ${l}`)] : []),
+    // PLAN 135: what I noticed about myself, each with what that day held up to then
+    ...(notices.length ? ["## Things I noticed about myself (my words, last 30 days — informal, for looking into together; not a diagnosis)", ...notices.map((l) => `- ${l}`)] : []),
     ...(answers.length ? ["## My recent answers to your questions", ...answers.map((a) => (a.kind === "answer" ? `- ${new Date(a.at).toISOString().slice(0, 10)} ${a.question} → ${a.answer}` : ""))] : []),
   ];
   return lines.join("\n");

@@ -127,6 +127,7 @@ function find(input: Record<string, unknown>, d: ToolData): ToolOut {
     else if (e.kind === "supp") hit(e.at, `supplement ${e.status}: ${sup.get(e.suppId) ?? e.suppId}`, sup.get(e.suppId), e.suppId);
     else if (e.kind === "feel") hit(e.at, `check-in${e.doing?.length ? ` · up to: ${e.doing.join(", ")}` : ""}${e.note ? ` · note: "${e.note}"` : ""}`, e.note, ...(e.doing ?? []));
     else if (e.kind === "answer") hit(e.at, `answered "${e.question}": ${e.answer}`, e.question, e.answer);
+    else if (e.kind === "notice") hit(e.at, `noticed: "${e.text}"`, e.text);
     else if (e.kind === "sleep") hit(e.at, `about last night: ${(e.tags ?? []).join(", ")}`, ...(e.tags ?? []));
   }
   for (const w of d.state.workouts) if (w.startedAt >= since) hit(w.startedAt, `workout: ${w.template ?? "workout"}`, w.template);

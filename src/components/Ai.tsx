@@ -12,6 +12,7 @@ import { bandNow, onNights } from "../lib/band-client";
 import { ChatChart } from "./ChatChart";
 import { GoalsAsk } from "./GoalsAsk";
 import { morningBrief } from "../lib/ai/brief";
+import { checkupLines } from "../lib/ai/checkup";
 import { Proposals } from "./Proposal";
 import type { Proposal } from "../lib/ai/propose";
 import { CHAT_ROUNDS, MODELS, estimateMonthUsd, timeless, type ChatTurn, type DigestItem, type ModelChoice, type Question, type Tier } from "../lib/ai/tasks";
@@ -100,7 +101,9 @@ async function makeQuestions(day: string) {
   tried.add(key);
   const ai = getState().ai;
   const stopped = new Set(ai.stopped ?? []);
-  const r = await askAi({ task: "questions", context: contextNow(), asked: [...ai.asked.slice(-30), ...ai.daily.map((q) => q.text), ...[...stopped].map((k) => `(never ask again) ${k}`)] });
+  // a check-up now and then, from the markers that moved (PLAN 135)
+  const check = checkupLines(getState().entries, bandNow(), Date.now());
+  const r = await askAi({ task: "questions", context: [contextNow(), ...check].join("\n"), asked: [...ai.asked.slice(-30), ...ai.daily.map((q) => q.text), ...[...stopped].map((k) => `(never ask again) ${k}`)] });
   if (!r.ok) return;
   // one you said to stop asking never comes back, even if the AI writes it again
   const list = r.answer.questions.filter((q) => !stopped.has(q.key)).map((q) => ({ ...q, id: `${day}:${q.key}` }));

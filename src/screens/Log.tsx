@@ -964,6 +964,7 @@ const describe = (e: Entry, supps: Supplement[]): [string, string] => {
     case "feel": { const r = [...(["energy", "mood", "focus", "stress", "anxiety"] as const).filter((k) => e[k] != null).map((k) => `${k} ${e[k]}`), ...(e.doing?.length ? [e.doing.map(labelOf).join(", ")] : [])].join(" · ");
       return ["Feeling", [r, e.note ? `“${e.note}”` : ""].filter(Boolean).join(" — ") || "nothing rated"]; }
     case "answer": return [e.question, e.answer];
+    case "notice": return ["Noticed", `“${e.text}”`];
     case "sleep": return ["Last night's sleep", `${e.rating != null ? `${e.rating} / 10` : "not rated"}${e.slow ? " · slow to fall asleep" : ""}${e.tags?.length ? ` · ${e.tags.map(nightLabel).join(", ")}` : ""}${e.phoneMin != null ? ` · ${phoneLabel(e.phoneMin)}` : ""}`];
   }
 };
