@@ -15,7 +15,8 @@ import { variantsOf } from "../lib/variants";
 import { CARDIO_CHIPS, cardioHr, cardioSpans, minutesOf } from "../lib/cardio";
 import { CardioSession } from "../components/CardioSession";
 import { DecimalInput } from "../components/DecimalInput";
-import { adaptNext, historyOf, plateau, smartNext } from "../lib/progress";
+import { adaptNext, historyOf, plateau, repsLabel, repsOf, smartNext } from "../lib/progress";
+import { RepsInput } from "../components/RepsInput";
 import { StrengthCard } from "../components/StrengthCard";
 import { useBand } from "../lib/band-client";
 
@@ -55,7 +56,7 @@ function Pick() {
       <div className="top"><h1>Workout</h1><div className="meta">{templates.length}-day split</div></div>
       {ordered.map((t) => {
         const last = [...workouts].reverse().find((w) => w.template === t.name && w.endedAt);
-        const first = t.exercises[0], sug = first ? smartNext(historyOf(sets, first.name), first.reps, kgStep(first.name, sets.filter((s) => s.exercise === first.name && !s.warmup).map((s) => s.kg), equipOf(first.name) === "dumbbell")) : null;
+        const first = t.exercises[0], sug = first ? smartNext(historyOf(sets, first.name), repsOf(first), kgStep(first.name, sets.filter((s) => s.exercise === first.name && !s.warmup).map((s) => s.kg), equipOf(first.name) === "dumbbell")) : null;
         return <DayCard key={t.id} t={t} dayNo={templates.indexOf(t) + 1} next={t === next} lastAt={last?.startedAt ?? null}
           sug={sug ? { exercise: first.name, kg: sug.kg, reps: sug.reps } : null} onEdit={() => setEditing(t)} onStart={() => act.startWorkout(t.name)} />;
       })}
@@ -156,7 +157,8 @@ function TemplateEditor({ t, onClose }: { t: Template | null; onClose: () => voi
           </div>
           <div className="row3">
             <label className="kfield">Sets<input inputMode="numeric" value={e.sets} onChange={(v) => upd(i, { sets: num(v.target.value) })} /></label>
-            <label className="kfield">Reps<input inputMode="numeric" value={e.reps} onChange={(v) => upd(i, { reps: num(v.target.value) })} /></label>
+            {/* PLAN 144: a range, 8-12, or one number */}
+            <label className="kfield">Reps<RepsInput label={`Reps for ${e.name || `new row ${i + 1}`}`} value={e} onValue={(v) => upd(i, { reps: v.reps, repsMax: v.repsMax })} /></label>
             <label className="kfield">Rest (s)<input inputMode="numeric" value={e.restSec} onChange={(v) => upd(i, { restSec: num(v.target.value) })} /></label>
           </div>
         </div>
@@ -223,12 +225,13 @@ function Session({ w }: { w: Workout }) {
   const step = cur ? kgStep(cur.name, sets.filter((s) => s.exercise === cur.name && !s.warmup).map((s) => s.kg), equipOf(cur.name) === "dumbbell") : 2.5;
   // PLAN 143: smarter than "all hit → up": reps to spare jump two steps, a stall steps back, a plateau is named
   const hist = useMemo(() => (cur ? historyOf(sets, cur.name, w.id) : []), [sets, cur, w.id]);
-  const sug: Suggestion | null = cur ? smartNext(hist, cur.reps, step) : null;
+  const rr = cur ? repsOf(cur) : { lo: 8, hi: 8 }, ranged = rr.hi > rr.lo;
+  const sug: Suggestion | null = cur ? smartNext(hist, rr, step) : null;
   const flat = useMemo(() => plateau(hist), [hist]);
   // the next set inside today's session, from how the last one went ("12 reps — that was light")
   const [adapt, setAdapt] = useState<string | null>(null);
   const [kg, setKg] = useState<number>(sug?.kg ?? 20);
-  const [reps, setReps] = useState<number>(cur?.reps ?? 8);
+  const [reps, setReps] = useState<number>(sug?.reps ?? cur?.reps ?? 8);
   // Owner, 13 Oct: "warm up plus 2-3 sets"; 20 Oct: "By default the warmup set should be first". The first set of each
   // exercise is a warm-up (training `warmsUp`), "Skip warm-up" skips it. Lighter, ~10 reps, never counted.
   const [warmOn, setWarmOn] = useState(false);
@@ -237,7 +240,7 @@ function Session({ w }: { w: Workout }) {
   const startWarm = (on: boolean) => {
     setWarmOn(on); if (!cur) return;
     if (on) { workRef.current = kg; setKg(warmKg(kg, cur.name, step)); setReps(10); }
-    else { setKg(workRef.current ?? mine[mine.length - 1]?.kg ?? sug?.kg ?? 20); workRef.current = null; setReps(cur.reps); }
+    else { setKg(workRef.current ?? mine[mine.length - 1]?.kg ?? sug?.kg ?? 20); workRef.current = null; setReps(sug?.reps ?? cur.reps); }
   };
   // When moving to another exercise — or switching this one to another variant, or swapping it — start from its
   // suggestion (or what you just did on it): a dumbbell's weight isn't the bar's.
@@ -247,7 +250,7 @@ function Session({ w }: { w: Workout }) {
     setWarmOn(warm);
     workRef.current = warm ? sug?.kg ?? 20 : null;
     setKg(warm && cur ? warmKg(sug?.kg ?? 20, cur.name, step) : last?.kg ?? sug?.kg ?? 20);
-    setReps(warm ? 10 : cur?.reps ?? 8);
+    setReps(warm ? 10 : sug?.reps ?? cur?.reps ?? 8);
     setAdapt(null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [i, cur?.name]);
@@ -283,7 +286,7 @@ function Session({ w }: { w: Workout }) {
     act.addEntry({ kind: "set", ...set });
     const after = mine.length + 1;
     // a set well over or under the target moves the next one (PLAN 143), when there is a next one
-    const a = after < cur.sets ? adaptNext([...mine, set], cur.reps, step) : null;
+    const a = after < cur.sets ? adaptNext([...mine, set], rr, step) : null;
     setAdapt(a ? `Next set ${a.kg} kg: ${a.reason}` : null);
     if (a) setKg(a.kg);
     if (after < cur.sets || i < plan.length - 1) setRest(cur.restSec);
@@ -384,8 +387,8 @@ function Session({ w }: { w: Workout }) {
             return (
               <div key={k} className={`set ${s ? "" : "todo"}`}>
                 <i>{k + 1}</i>
-                <b>{s ? `${s.kg} × ${s.reps}` : `${kg} × ${cur.reps}`}</b>
-                <span>{s ? (s.reps >= cur.reps ? "✓ hit" : `${cur.reps - s.reps} short`) : "planned"}</span>
+                <b>{s ? `${s.kg} × ${s.reps}` : `${kg} × ${ranged ? `${reps} (${rr.lo}–${rr.hi})` : cur.reps}`}</b>
+                <span>{s ? (ranged && s.reps >= rr.hi ? "✓ top" : s.reps >= rr.lo ? "✓ hit" : `${rr.lo - s.reps} short`) : "planned"}</span>
                 {s ? <button type="button" aria-label="Delete set" onClick={() => act.removeEntry(s.id)}>×</button> : <span />}
               </div>
             );
@@ -423,7 +426,7 @@ function Session({ w }: { w: Workout }) {
         {plan.map((e, k) => (
           <div key={k} className={k === i ? "cur-ex" : ""}>
             <button type="button" onClick={() => setI(k)}>{e.name}</button>
-            <span>{done(e.name).length}/{e.sets} · {e.reps} reps</span>
+            <span>{done(e.name).length}/{e.sets} · {repsLabel(e)} reps</span>
           </div>
         ))}
         {cardio && <div className="cardio-row"><span>Then: {cardio.what}</span>{cardio.done == null && !cardioOn

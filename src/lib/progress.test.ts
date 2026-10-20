@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { adaptNext, plateau, smartNext } from "./progress";
+import { adaptNext, parseReps, plateau, repsLabel, repsOf, smartNext } from "./progress";
 
 // Owner, 20 Oct: "Can we make it so workouts are smart, rep and kg tracking is smart … Make it smart"
 const ss = (kg: number, ...reps: number[]) => reps.map((r) => ({ kg, reps: r }));
@@ -44,5 +44,38 @@ describe("a plateau", () => {
     expect(plateau([ss(60, 7), ss(60, 7), ss(60, 6), ss(60, 8)])).toMatch(/^3 sessions without beating your best \(≈ 76 kg 1-rep max\)/);
     expect(plateau([ss(62.5, 8), ss(60, 7), ss(60, 6), ss(60, 8)])).toBeNull();
     expect(plateau([ss(60, 7), ss(60, 7), ss(60, 8)])).toBeNull(); // too few to say
+  });
+});
+
+// PLAN 144 (owner: "do these" — rep ranges per exercise)
+describe("a rep range (8–12)", () => {
+  const r = { lo: 8, hi: 12 };
+  it("reps climb at the same weight: aim one more than the weakest set, up to the top", () => {
+    expect(smartNext([ss(40, 10, 9, 9)], r, 2)).toEqual({ kg: 40, reps: 10, reason: "10/9/9 last time, inside 8–12: same 40 kg, aim for 10 a set" });
+    expect(smartNext([ss(40, 12, 12, 11)], r, 2)).toMatchObject({ kg: 40, reps: 12 });
+  });
+  it("every set at the top → a step up and back to the bottom", () => {
+    expect(smartNext([ss(40, 12, 12, 12)], r, 2)).toEqual({ kg: 42, reps: 8, reason: "every set reached 12, the top of 8–12 (12/12/12), so +2 kg and back to 8" });
+  });
+  it("far past the top (15+) → two steps", () => {
+    expect(smartNext([ss(40, 15, 15, 16)], r, 2)).toMatchObject({ kg: 44, reps: 8 });
+  });
+  it("under the bottom two sessions running, reps not climbing → about 10 % back", () => {
+    expect(smartNext([ss(50, 7, 6, 6), ss(50, 7, 7, 6)], r, 2)).toMatchObject({ kg: 44, reps: 8 });
+  });
+  it("inside a session: 3+ over the top or under the bottom moves the next set", () => {
+    expect(adaptNext(ss(40, 15), r, 2)?.kg).toBe(42);
+    expect(adaptNext(ss(40, 11), r, 2)).toBeNull();
+    expect(adaptNext(ss(40, 5), r, 2)).toEqual({ kg: 38, reason: "5 of 8–12 reps at 40 kg — a step down to keep the reps" });
+  });
+  it("one number behaves as before", () => {
+    expect(smartNext([ss(60, 8, 8, 8)], 8, 2.5)).toEqual(smartNext([ss(60, 8, 8, 8)], { lo: 8, hi: 8 }, 2.5));
+  });
+  it("typed in the editor: 8-12, 8–12, 8 to 12, 10; nonsense waits", () => {
+    expect(["8-12", "8–12", "8 to 12", " 8 - 12 ", "10", "12-8", "8-"].map(parseReps)).toEqual([
+      { reps: 8, repsMax: 12 }, { reps: 8, repsMax: 12 }, { reps: 8, repsMax: 12 }, { reps: 8, repsMax: 12 }, { reps: 10 }, { reps: 12 }, { reps: 8 }]);
+    expect(["", "x", "8-12-15"].map(parseReps)).toEqual([null, null, null]);
+    expect([repsLabel({ reps: 8, repsMax: 12 }), repsLabel({ reps: 10 }), repsLabel({ reps: 10, repsMax: 10 })]).toEqual(["8–12", "10", "10"]);
+    expect(repsOf({ reps: 8, repsMax: 12 })).toEqual({ lo: 8, hi: 12 });
   });
 });

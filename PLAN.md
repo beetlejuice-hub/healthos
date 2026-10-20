@@ -2008,9 +2008,15 @@ Order: A first (113 → 123), then B, then C; D in the chat. (claimed: this sess
    mutations (no cap; a new lift without its own baseline) each fail those tests. progress.test (each rule with known
    answers), e2e/strength.cjs (the card on a phone with planted progress; 12/12/11 last time → 44 today; a 12-rep set →
    46 next). Not checked: his real history, which is read-only from here.
-144. [ ] **Rep ranges per exercise** — the next step offered after #143, owner: "do these". An exercise can aim for a range
+144. [x] **Rep ranges per exercise** — the next step offered after #143, owner: "do these". An exercise can aim for a range
    (8–12) instead of one number: reps climb inside it at the same weight, and weight goes up once every set reaches the
    top, back to the bottom. (claimed: this session, 20 Oct — lib/progress, Workout.tsx editor and session)
+   Done (20 Oct): in a day's editor, Reps takes "8-12" (or "8–12", "8 to 12"), or one number as before. The day card and
+   the session say 8–12. Inside the range the weight stays and the aim is one rep more than the weakest set last time
+   ("10/9/9 last time, inside 8–12: same 40 kg, aim for 10 a set"). Once every set reaches the top, the weight goes up a
+   step and back to 8. A set at the top says "✓ top". Reps to spare past the top (15+), being stuck below 8, and the
+   in-session nudge use the range. One number works exactly as before. Checked: progress.test (each rule, both shapes,
+   the parser), e2e/repranges.cjs (typed in the editor, the card, the session's aim, ✓ top, the step up), phone width.
 145. [ ] **A typo guard when logging** — "315 kg — did you mean 31.5?" (#137's first part, owner: "do these"): a set far
    outside that lift's own history, or a body weight far from the last one, asks once before it's kept. (claimed: this
    session — lib/sanity, Workout.tsx, Today/Log weigh-in)

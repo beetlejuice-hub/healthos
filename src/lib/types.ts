@@ -154,7 +154,8 @@ export type Workout = {
 export type Template = {
   id: string;
   name: string;
-  exercises: { name: string; sets: number; reps: number; restSec: number }[];
+  /** `reps` alone is the target; with `repsMax` it's a range, reps to repsMax (8–12; PLAN 144). */
+  exercises: { name: string; sets: number; reps: number; restSec: number; repsMax?: number }[];
   /** Cardio after the lifting, in your words: "20 min stairmaster". */
   cardio?: string;
 };

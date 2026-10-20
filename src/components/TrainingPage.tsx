@@ -13,7 +13,7 @@ import { CARBS_G, sessionFacts, sessionFactors, SESSION_OUTCOMES, SHORT_MIN, slo
 import { GoesWith, type GridCopy } from "./Sleep";
 import { mainLifts, muscleStrength, sessions, setsPerMuscleWeek, thisWeek, type LiftTrend, type MuscleStrength, type Session } from "../lib/liftstrength";
 import { kgStep, nextTemplate, type LoggedSet } from "../lib/training";
-import { historyOf, smartNext } from "../lib/progress";
+import { historyOf, repsOf, smartNext } from "../lib/progress";
 import { equipOf } from "../lib/exsearch";
 import { StrengthCard } from "./StrengthCard";
 import { clock, dayLabel } from "../lib/time";
@@ -51,7 +51,7 @@ export function TrainingPage({ now }: { now: number }) {
   // what's next: the template after the last one done, its first lift as last time said (double progression)
   const next = nextTemplate(templates, workouts), first = next?.exercises[0];
   const lastOf = first ? [...ss].reverse().find((s) => s.sets.some((x) => x.exercise === first.name && !x.warmup)) : undefined;
-  const sug = first && lastOf ? smartNext(historyOf(sets, first.name), first.reps, kgStep(first.name, sets.filter((x) => x.exercise === first.name && !x.warmup).map((x) => x.kg), equipOf(first.name) === "dumbbell")) : null;
+  const sug = first && lastOf ? smartNext(historyOf(sets, first.name), repsOf(first), kgStep(first.name, sets.filter((x) => x.exercise === first.name && !x.warmup).map((x) => x.kg), equipOf(first.name) === "dumbbell")) : null;
   const tiles: [string, string, string][] = [
     ["Sessions", String(week.sessions), week.usualSessions != null ? `usual ${fmtN(week.usualSessions)} a week` : "this week"],
     ["Working sets", String(week.workingSets), week.usualSets != null ? `usual ${fmtN(week.usualSets)} a week` : "this week"],

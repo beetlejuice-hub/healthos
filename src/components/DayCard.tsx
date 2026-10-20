@@ -4,6 +4,7 @@
  * the first lift, and one wide Start. The other days are compact: name, the same summary, Start.
  */
 
+import { repsLabel } from "../lib/progress";
 import { dayStats } from "../lib/training";
 import { dayLabel } from "../lib/time";
 import type { Template } from "../lib/types";
@@ -31,7 +32,7 @@ export function DayCard({ t, dayNo, next, lastAt, sug, onEdit, onStart }: Props)
       {!next && t.exercises.length > 0 && <p className="dex">{t.exercises.map((e) => e.name).join(" · ")}</p>}
       {next && t.exercises.length > 0 && (
         <ol className="dlist">
-          {t.exercises.map((e, k) => <li key={k}><span>{e.name}</span><b>{e.sets} × {e.reps === 1 ? "hold" : e.reps}</b></li>)}
+          {t.exercises.map((e, k) => <li key={k}><span>{e.name}</span><b>{e.sets} × {e.reps === 1 ? "hold" : repsLabel(e)}</b></li>)}
         </ol>
       )}
       <footer>

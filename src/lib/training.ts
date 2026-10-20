@@ -296,7 +296,7 @@ export function tidyWorkouts(workouts: { id: string; startedAt: number; endedAt:
   return out;
 }
 
-type Ex = { name: string; sets: number; reps: number; restSec: number };
+type Ex = { name: string; sets: number; reps: number; restSec: number; repsMax?: number };
 
 /** The day that's due: the one after the last day you finished, in your split's order. */
 export function nextTemplate<T extends { name: string }>(templates: T[], workouts: { template: string; startedAt: number; endedAt: number | null }[]): T | undefined {
@@ -322,6 +322,7 @@ export function templateProblems(t: { name: string; exercises: Ex[] }, others: {
     if (!e.name.trim()) out.push(`Exercise ${i + 1} needs a name.`);
     if (!(e.sets >= 1 && e.sets <= 10)) out.push(`${e.name || `Exercise ${i + 1}`}: sets must be 1–10.`);
     if (!(e.reps >= 1 && e.reps <= 50)) out.push(`${e.name || `Exercise ${i + 1}`}: reps must be 1–50.`);
+    else if (e.repsMax != null && !(e.repsMax > e.reps && e.repsMax <= 50)) out.push(`${e.name || `Exercise ${i + 1}`}: a rep range goes low to high, like 8–12.`);
   });
   return out;
 }
