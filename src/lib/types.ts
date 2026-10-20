@@ -24,6 +24,12 @@ export type Food = {
   parts?: { name: string; g: number }[];
   /** For an AI estimate: what it assumed ("a 300 ml cup, double shot"). */
   note?: string;
+  /** Per 100 g, for its Nutri-Score (PLAN 139): sugar, saturated fat, salt, fibre in g; `fvl` fruit/veg/legumes %. */
+  nutri?: { sugar: number; satFat: number; salt: number; fiber: number; fvl?: number; redMeat?: boolean; cheese?: boolean };
+  /** Its Nutri-Score as Open Food Facts gives it (packaged products). */
+  grade?: "a" | "b" | "c" | "d" | "e";
+  /** Why it has no Nutri-Score here: drinks and fats/oils/nuts have their own tables in the formula. */
+  noGrade?: "drink" | "fats";
   barcode?: string;
   /** Small product photo (Open Food Facts), https only. */
   img?: string;

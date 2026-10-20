@@ -10,10 +10,10 @@ const KEY = 'healthos.v1:u-test', NOW = new Date('2026-10-16T14:00:00').getTime(
 const t = (d, hm) => new Date(`2026-10-${d}T${hm}:00`).getTime();
 const food = (id, at, name, kcal, p, more = {}) => ({ id, kind: 'food', at, name, grams: 100, macros: { kcal, p, c: 20, f: 8 }, ...more });
 const ENTRIES = [
-  food('oats', t('16', '07:40'), 'Oats', 380, 13, { count: 1, unit: 'bowl', grams: 80 }),
+  food('oats', t('16', '07:40'), 'Oats', 380, 13, { count: 1, unit: 'bowl', grams: 80, foodId: 'basic:oats-zabpehely' }),
   { id: 'cof', kind: 'drink', at: t('16', '07:45'), name: 'Long coffee', ml: 300, caffeineMg: 150, alcoholG: 0, kcal: 4 },
-  food('toast', t('16', '12:30'), 'Toast', 180, 6, { count: 2, unit: 'slice', grams: 70 }),
-  food('pizza', t('15', '20:10'), 'Pizza', 900, 35),
+  food('toast', t('16', '12:30'), 'Toast', 180, 6, { count: 2, unit: 'slice', grams: 70, foodId: 'basic:toast-white' }),
+  food('pizza', t('15', '20:10'), 'Pizza', 900, 35, { foodId: 'basic:pizza-margherita' }),
   { id: 'beer', kind: 'drink', at: t('15', '21:00'), name: 'Beer', ml: 500, caffeineMg: 0, alcoholG: 20, kcal: 210 },
 ];
 
@@ -47,7 +47,13 @@ const ENTRIES = [
   const kc = async () => (await sheet.locator('.fd-kcal b').innerText()).replace(/,/g, '');
   check(`opens on today: 564 kcal, the card's total (${await kc()})`, await kc() === '564' && (await sheet.locator('.fd-head b').innerText()) === 'Today');
   const m0 = await meals();
-  check(`by meal, what was in each (${m0.join(' | ')})`, m0.length === 2 && /^BREAKFAST 384 kcal Oats 07:40 · 1 bowl · 80 g · P 13 g 380 × Long coffee 07:45 · 300 ml 4 ×/i.test(m0[0]) && /^LUNCH 180 kcal Toast 12:30 · 2 slices · 70 g · P 6 g 180 ×/i.test(m0[1]));
+  check(`by meal, what was in each, with its score (${m0.join(' | ')})`, m0.length === 2 && /^BREAKFAST 384 kcal · 65 Oats 07:40 · 1 bowl · 80 g · P 13 g 65 380 × Long coffee 07:45 · 300 ml 4 ×/i.test(m0[0]) && /^LUNCH 180 kcal · 47 Toast 12:30 · 2 slices · 70 g · P 6 g 47 180 ×/i.test(m0[1]));
+  // PLAN 139 (owner, 20 Oct: "a score next to the plate, for each item and for in total too … i can click on it and observe whats up")
+  await sheet.getByRole('button', { name: 'Toast: score 47 — why' }).click();
+  const why = (await sheet.locator('.fd-why').innerText()).replace(/\s+/g, ' ');
+  check(`tap a score: its three parts, and why (${why})`, /For your goal 9\/45 3\.3 g protein per 100 kcal Quality 18\/35 Nutri-Score C Timing 20\/20 3 h or more before bed/.test(why));
+  await sheet.screenshot({ path: OUT + 'foodday-scores.png' });
+  await sheet.getByRole('button', { name: 'Toast: score 47 — why' }).click();
   check('no day after today', await sheet.getByRole('button', { name: 'Day after' }).isDisabled());
   await sheet.screenshot({ path: OUT + 'foodday-today.png' });
 
@@ -60,6 +66,7 @@ const ENTRIES = [
   // yesterday: the #113 case — food from an earlier day
   await sheet.getByRole('button', { name: 'Day before' }).click(); await pg.waitForTimeout(100);
   check(`‹ → yesterday's food (${(await meals()).join(' | ')})`, (await sheet.locator('.fd-head b').innerText()) === 'Yesterday' && await kc() === '1110' && /Pizza/.test((await meals()).join()) && /Beer/.test((await meals()).join()));
+  check(`yesterday's dinner: pizza 41, beer 10 (alcohol, 2 h before bed), the plate by calories 35 (${(await meals()).join(' | ')})`, /^DINNER 1,110 kcal · 35 Pizza .* 41 900 × Beer .* 10 210 ×/i.test((await meals())[0] ?? ''));
   await sheet.getByRole('button', { name: 'Delete Pizza' }).click(); await sheet.getByRole('button', { name: 'Delete?' }).click(); await pg.waitForTimeout(150);
   check('yesterday\'s pizza deleted', !(await ids()).includes('pizza') && await kc() === '210');
   await sheet.getByRole('button', { name: 'Change Beer' }).click();

@@ -1583,8 +1583,22 @@ a { color: inherit; }
 .fd-kcal span { color: var(--c-dim); margin-left: 6px; }
 .fd-meal h4 { display: flex; justify-content: space-between; margin: 0 0 2px; font-size: 12px; letter-spacing: .06em; text-transform: uppercase; color: var(--c-ink-2); }
 .fd-meal h4 span { text-transform: none; letter-spacing: 0; color: var(--c-dim); font-weight: 500; font-variant-numeric: tabular-nums; }
-.fd-li { grid-template-columns: minmax(0, 1fr) auto auto; }
 .fd-li .entry-edit { grid-column: 1 / -1; }
 .fd-del { padding: 4px 10px; font-size: 12px; background: color-mix(in srgb, var(--warn) 22%, transparent); color: var(--c-ink); }
 .fd-add { justify-self: start; }
 #fuel .fuel-open { margin-top: 12px; }
+/* the food score (PLAN 139): a number per item and per meal; tap an item's for its three parts */
+.fd-li { grid-template-columns: minmax(0, 1fr) auto auto auto; }
+.fd-score { min-width: 34px; height: 24px; padding: 0 7px; border-radius: 999px; border: 0; font: 600 12.5px var(--f-sans); font-variant-numeric: tabular-nums; background: var(--c-card-2); color: var(--c-ink); }
+.fd-score[data-band="ideal"] { background: color-mix(in srgb, var(--z-ideal) 26%, var(--c-card-2)); }
+.fd-score[data-band="fair"] { background: color-mix(in srgb, var(--z-fair) 22%, var(--c-card-2)); }
+.fd-score[data-band="poor"] { background: color-mix(in srgb, var(--z-poor) 20%, var(--c-card-2)); }
+span.fd-score[data-band="none"] { background: none; min-width: 34px; }
+.fd-plate { font-weight: 700; color: var(--c-ink); }
+.fd-plate[data-band="ideal"] { color: var(--z-ideal); }
+.fd-plate[data-band="fair"] { color: var(--z-fair); }
+.fd-plate[data-band="poor"] { color: var(--z-poor); }
+.fd-why { grid-column: 1 / -1; list-style: none; margin: 2px 0 4px; padding: 8px 10px; border-radius: 10px; background: var(--c-card-2); display: grid; gap: 6px; }
+.fd-why li { display: grid; grid-template-columns: 1fr auto; gap: 0 8px; font-size: 13px; }
+.fd-why li small { grid-column: 1 / -1; color: var(--c-dim); font-size: 12px; }
+.fd-why b { font-variant-numeric: tabular-nums; }

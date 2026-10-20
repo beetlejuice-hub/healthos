@@ -1833,6 +1833,15 @@ D questions answered in chat. Numbered on from #112.
    nutrients for home food; 3 the read-back at night says which plate fit best and the one swap that would help most
    (no extra AI call). Checked by: the formulas on known cases (the published thresholds, worked examples), plates
    against hand sums, e2e on the phone.
+   **Phase 1 done (20 Oct):** lib/nutriscore (2023 general-food formula, cheese and red-meat rules; drinks and
+   fats/oils/nuts left ungraded), lib/foodscore (goal 45 / quality 35 / timing 20, plates by calories, no score without
+   quality), the 112 built-in foods carry sugar, saturated fat, fibre, salt and fruit/veg share (typical, rounded — the
+   same precision as their macros); What I ate shows each item's score and each meal's, tap → the three parts and why.
+   Checked: nutriscore.test (chicken A, apple A, toast C, pizza D, chocolate E, Gouda D with the cheese rule — worked by
+   hand from the thresholds), foodscore.test (chicken 100, apple 56 > pizza 43, oats 65, timing steps, beer, missing,
+   plate 82), e2e/foodday.cjs (oats 65, toast 47 with its parts, pizza 41, beer 10, dinner 35 on the phone). Not
+   checked: the formula against Open Food Facts' own grades — this environment can't reach it. Next: phase 2 (pack
+   grades from Open Food Facts; the AI's nutrients for home food), phase 3 (the night read-back).
 
 ### D · Asked — answered in chat (20 Oct)
 - "Would a lower upper body then a full body day work better than the current 3 full body day?"

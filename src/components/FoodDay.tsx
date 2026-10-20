@@ -3,42 +3,64 @@
  * basically for the day would be nice, when clicking on food on today page", "looking back to yesterday too"). Opened
  * from Today's Food card: the day's calories and macros against your goals, then each meal with what was in it. Tap an
  * item to change its numbers; × then "Delete?" removes it — any day, not just today (#113: "WHY CANT I REMOVE A FOOD I
- * LOGGED…??"). ‹ › walk back through the days.
+ * LOGGED…??"). ‹ › walk back through the days. Each item and each meal has its score (lib/foodscore, PLAN 139); tap an
+ * item's to see its three parts.
  */
 
 import { useEffect, useMemo, useState } from "react";
 import { act, useStore } from "../lib/store";
 import { amountOf, foodDay, type FoodItem } from "../lib/foodday";
 import { macrosOf } from "../lib/nutrition";
+import { itemScore, plateScore, type ItemScore } from "../lib/foodscore";
+import { BASIC_FOODS } from "../lib/foods-basic";
+import type { Food } from "../lib/types";
 import { go, LOG_FOR_KEY } from "../lib/nav";
 import { addDays, atMinute, clock, dayLabel, localDay } from "../lib/time";
 import { EntryEdit } from "./EntryEdit";
 
 const fmt = (n: number) => Math.round(n).toLocaleString("en-GB");
+const BASIC = new Map(BASIC_FOODS.map((f) => [f.id, f as Food]));
+/** 70+ fits well, 40+ in between, under 40 fits the goal less — never "bad". */
+const band = (s: number | null) => (s == null ? "none" : s >= 70 ? "ideal" : s >= 40 ? "fair" : "poor");
 
 export function FoodDay({ day: first, onClose }: { day: string; onClose: () => void }) {
   const entries = useStore((s) => s.entries);
   const goals = useStore((s) => s.goals);
+  const foods = useStore((s) => s.foods), bedMinute = useStore((s) => s.settings.bedMinute);
+  const [why, setWhy] = useState<string | null>(null);
   const [day, setDay] = useState(first);
   const [edit, setEdit] = useState<string | null>(null), [sure, setSure] = useState<string | null>(null);
   const d = useMemo(() => foodDay(entries, day), [entries, day]);
+  // what each item was logged from: the built-in table's nutrients win over a copy saved before they existed
+  const scores = useMemo(() => {
+    const of = (e: FoodItem): Food | undefined => { if (e.kind !== "food" || !e.foodId) return undefined; const mine = foods.find((f) => f.id === e.foodId), b = BASIC.get(e.foodId); return mine ? { ...mine, nutri: mine.nutri ?? b?.nutri, noGrade: mine.noGrade ?? b?.noGrade } : b; };
+    return new Map(d.meals.flatMap((m) => m.items).map((e) => [e.id, itemScore(e, of(e), bedMinute)]));
+  }, [d, foods, bedMinute]);
   const today = localDay(Date.now());
   const name = day === today ? "Today" : day === addDays(today, -1) ? "Yesterday" : dayLabel(atMinute(day, 720));
   useEffect(() => { const k = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); }; window.addEventListener("keydown", k); return () => window.removeEventListener("keydown", k); }, [onClose]);
-  const move = (n: number) => { setDay(addDays(day, n)); setEdit(null); setSure(null); };
+  const move = (n: number) => { setDay(addDays(day, n)); setEdit(null); setSure(null); setWhy(null); };
   // another day: Log opens on that day, at lunch time (as Today's catch-up hands it over)
   const addFood = () => { if (day !== today) { try { sessionStorage.setItem(LOG_FOR_KEY, JSON.stringify({ day, time: "12:30" })); } catch { /* Log opens on today */ } } onClose(); go("log", "food"); };
+  const chip = (e: FoodItem, s: ItemScore | null | undefined) => s
+    ? <button type="button" className="fd-score" data-band={band(s.score)} aria-expanded={why === e.id} aria-label={`${e.name}: score ${s.score ?? "not known yet"} — why`} onClick={() => setWhy(why === e.id ? null : e.id)}>{s.score ?? "—"}</button>
+    : <span className="fd-score" data-band="none" aria-hidden="true" />;
   const row = (e: FoodItem) => {
-    const m = macrosOf(e)!;
+    const m = macrosOf(e)!, s = scores.get(e.id);
     return (
       <div className={`li fd-li${edit === e.id ? " editing" : ""}`} key={e.id}>
         <button type="button" className="li-open" aria-expanded={edit === e.id} aria-label={`Change ${e.name}`} onClick={() => { setEdit(edit === e.id ? null : e.id); setSure(null); }}>
           <span>{e.name}<small>{clock(e.at)} · {amountOf(e)}{m.p >= 1 ? ` · P ${fmt(m.p)} g` : ""}</small></span>
         </button>
+        {chip(e, s)}
         <span className="r">{fmt(m.kcal)}</span>
         {sure === e.id
           ? <button type="button" className="pill-btn fd-del" onClick={() => { act.removeEntry(e.id); setSure(null); }}>Delete?</button>
           : <button type="button" className="x" aria-label={`Delete ${e.name}`} onClick={() => setSure(e.id)}>×</button>}
+        {why === e.id && s && <ul className="fd-why">
+          {s.parts.map((p) => <li key={p.id}><span>{p.name}</span><b>{fmt(p.got)}/{p.max}</b><small>{p.why}</small></li>)}
+          {s.missing && <li className="fd-miss"><span>Quality</span><b>—</b><small>No score yet: {s.missing}.</small></li>}
+        </ul>}
         {edit === e.id && <EntryEdit e={e} onDone={() => setEdit(null)} />}
       </div>
     );
@@ -66,7 +88,8 @@ export function FoodDay({ day: first, onClose }: { day: string; onClose: () => v
         </div>
         {d.meals.map((m) => (
           <div className="fd-meal" key={m.name}>
-            <h4>{m.name}<span>{fmt(m.kcal)} kcal</span></h4>
+            {(() => { const p = plateScore(m.items.map((e) => ({ kcal: macrosOf(e)!.kcal, s: scores.get(e.id) ?? null })));
+              return <h4>{m.name}<span>{fmt(m.kcal)} kcal{p.score != null && <> · <b className="fd-plate" data-band={band(p.score)} aria-label={`${m.name} scores ${p.score}`}>{p.score}</b></>}</span></h4>; })()}
             <div className="list">{m.items.map(row)}</div>
           </div>
         ))}
