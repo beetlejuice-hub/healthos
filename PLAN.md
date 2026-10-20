@@ -1884,7 +1884,7 @@ D questions answered in chat. Numbered on from #112.
      doesn't find a pattern that isn't planted.
    - Open questions for him: which Tempo things count (tasks, calendar events, focus blocks)? Only titles, or tags only
      (privacy)? Real time, or once a day?
-137. [ ] **Idea, to look over together: an overall check** — "from time to time the app should do an overall check of what
+137. [x] **Idea, to look over together: an overall check** — "from time to time the app should do an overall check of what
    we are doing … catch things like findings that are irrelevant, nonsense, or its just simply clear that they are not
    affecting eachother - and just name these, not delete … anomalies, maybe things like i lifted 315 kg per hand - possible
    misstype from 31,5 … this is more of an idea that we have yet to look over".
@@ -1896,6 +1896,16 @@ D questions answered in chat. Numbered on from #112.
      ("coffee goes with caffeine") — named, never deleted, his tap hides one.
    - Findings the data stopped supporting: one that's gone "not clear" for 4 weeks gets a quiet "faded" label.
    His call: which of the three, and whether the AI may hide or only label.
+   Owner: "go" (20 Oct, on my pick: the AI labels, his tap hides). Data sanity is done as #145. Done (20 Oct), the
+   monthly check: the month read (no extra call) is sent every finding on show — Noticed and Worth a look — each with
+   its evidence and an id. It may name up to 5 as "looks like noise" (thin evidence, one odd stretch, chance-sized) or
+   "plain sense" (two measures of the same thing), each with a one-line why, and is told never to call one noise just
+   because it's surprising. Only ids it was sent are kept (lib/overall). On Insights the finding gets a label: "The AI's
+   check: looks like noise — only 9 days, mostly from one week", with Hide it / Keep it. Hidden ones are listed under
+   "Hidden by you" with Bring back; Worth a look's hide is its "Not interesting". Kept or hidden, his answer stands next
+   month. Nothing is deleted. Checked: overall.test, e2e/review.cjs (the list sent, a made-up id dropped, the label,
+   Hide, Bring back, phone). The "faded" part was already there: Worth a look drops a pattern new days stopped backing
+   (scout verdict).
 138. [ ] **Idea: send what's logged to the band's app** — "can we share the apps logging to the bands app (google fit or
    whatever?) looks like it has a much more advanced food logging sections so maybe if my loggings go there, it could kind
    of figure out what other nutrients that foods has and lmk? and lots of other stuff that i log here in app but not in

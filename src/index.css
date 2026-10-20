@@ -1646,4 +1646,8 @@ span.fd-score[data-band="none"] { background: none; min-width: 34px; }
 .tp-cardio { display: grid; gap: 6px; }
 .tp-cardio-list { margin: 0; padding: 0; list-style: none; display: grid; gap: 4px; font-size: 13.5px; }
 .tp-cardio-list span { color: var(--i-ink-2, var(--c-ink-2)); }
+/* PLAN 137: the overall check on a finding — named, never deleted */
+.aicheck { display: grid; gap: 6px; margin-top: 8px; padding: 8px 10px; border-radius: 10px; background: color-mix(in srgb, var(--warn) 12%, transparent); }
+.aicheck p { margin: 0; font-size: 13px; line-height: 1.4; }
+.hidden-by-you li { display: flex; flex-wrap: wrap; gap: 6px; align-items: baseline; }
 

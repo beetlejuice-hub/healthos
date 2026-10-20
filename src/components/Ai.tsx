@@ -13,6 +13,10 @@ import { ChatChart } from "./ChatChart";
 import { GoalsAsk } from "./GoalsAsk";
 import { morningBrief } from "../lib/ai/brief";
 import { checkupLines } from "../lib/ai/checkup";
+import { checkList, mergeChecks } from "../lib/overall";
+import { notice } from "../lib/findings";
+import { scout } from "../lib/scout";
+import { currentKg } from "../lib/body";
 import { Proposals } from "./Proposal";
 import type { Proposal } from "../lib/ai/propose";
 import { CHAT_ROUNDS, MODELS, estimateMonthUsd, timeless, type ChatTurn, type DigestItem, type ModelChoice, type Question, type Tier } from "../lib/ai/tasks";
@@ -86,10 +90,17 @@ async function makeReview(d: Due) {
   // a week or month with nothing in it gets no read (a new account, time away)
   if (!f.rows.some((x) => x.value != null) && !f.training.sessions) return;
   const lines = "cols" in f ? monthLines(f) : weekLines(f), cols = "cols" in f ? f.cols : undefined;
-  const r = await askAi({ task: "review", kind: d.kind, from: d.from, to: d.to, context: `${contextNow()}\n${lines.join("\n")}` });
+  // the overall check rides the month read (PLAN 137): the findings on show, with their evidence, by id
+  const now = Date.now(), today = localDay(now);
+  const found = d.kind === "month" ? notice(s.entries, s.goals, now, currentKg(s.entries, s.settings.bodyKg, now), { workouts: s.workouts, supplements: s.supplements, settings: s.settings }).found.filter((x) => !(s.ai.checks ?? []).some((c) => c.id === `n:${x.id}` && c.hidden)) : [];
+  const pats = d.kind === "month" ? scout(dailyFacts(s.entries, s.workouts, s.settings, addDays(today, -90), addDays(today, -1)), s.supplements, (id) => !!s.scout[id]?.dismissed) : [];
+  const list = checkList(found, pats), offered = new Map([...found.map((x): [string, string] => [`n:${x.id}`, x.title]), ...pats.map((p): [string, string] => [`s:${p.id}`, p.text])]);
+  const check = list.length ? `\n## Findings on show — the overall check (name the ones that look like noise or plain sense, by [id])\n${list.join("\n")}` : "";
+  const r = await askAi({ task: "review", kind: d.kind, from: d.from, to: d.to, context: `${contextNow()}\n${lines.join("\n")}${check}` });
   if (!r.ok) return;
   const at = Date.now();
   act.setAi((a) => ({
+    ...(d.kind === "month" ? { checks: mergeChecks(a.checks ?? [], r.answer.checks, offered, at) } : {}),
     reviews: [...(a.reviews ?? []).filter((x) => !(x.kind === d.kind && x.key === d.key)), { ...d, ...r.answer, at, rows: f.rows, ...(cols ? { cols } : {}) }].slice(-12),
     memory: [...a.memory, ...r.answer.remember.filter((x) => !a.memory.some((m) => m.text.toLowerCase() === x.toLowerCase())).map((x) => ({ id: newId(), text: x, at }))].slice(-60),
   }));

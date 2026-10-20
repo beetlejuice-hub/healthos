@@ -9,6 +9,7 @@ import { dailyFacts } from "../lib/insights";
 import { scout, since, verdict, type Pattern, type ScoutMemo } from "../lib/scout";
 import { addDays, dayLabel, atMinute, localDay } from "../lib/time";
 import type { GraphFocus } from "./MasterGraph";
+import { AiCheckLabel, HiddenByYou } from "./AiCheck";
 
 export type Scouted = { p: Pattern; memo?: ScoutMemo; since: { held: number; of: number } | null; verdict: ReturnType<typeof verdict> };
 
@@ -39,7 +40,9 @@ export function WorthALook({ items, onShow }: { items: Scouted[]; onShow: (f: Gr
     if (!fresh.length) return;
     act.setScout({ ...memo, ...Object.fromEntries(fresh.map((x) => [x.p.id, { first: x.memo?.first ?? today, sign: x.p.sign, seen: true }])) });
   }, [items, memo, today]);
-  if (!items.length) return null;
+  // hidden after the overall check: still listed here, so the section stays while any are (PLAN 137)
+  const checks = useStore((s) => s.ai.checks), anyHidden = (checks ?? []).some((c) => c.hidden && c.id.startsWith("s:"));
+  if (!items.length && !anyHidden) return null;
   return (
     <section className="scout" id="scout" aria-label="Worth a look">
       <h2>Worth a look <span>things that move together in your days · early, could be chance · re-checked on every new day</span></h2>
@@ -55,9 +58,12 @@ export function WorthALook({ items, onShow }: { items: Scouted[]; onShow: (f: Gr
               <button type="button" className="ibtn" onClick={() => onShow({ key: `${p.id}:${Date.now()}`, lanes: lanesOf(p), days: p.days })}>Show on graph</button>
               <button type="button" className="ibtn" onClick={() => act.setScout({ ...memo, [p.id]: { first: m?.first ?? today, sign: p.sign, seen: true, dismissed: true } })}>Not interesting</button>
             </div>
+            {/* PLAN 137: hiding it after the check is "Not interesting" too */}
+            <AiCheckLabel id={`s:${p.id}`} onHide={() => act.setScout({ ...memo, [p.id]: { first: m?.first ?? today, sign: p.sign, seen: true, dismissed: true } })} />
           </article>
         ))}
       </div>
+      <HiddenByYou prefix="s:" onBack={(id) => { const k = id.slice(2); if (memo[k]) act.setScout({ ...memo, [k]: { ...memo[k], dismissed: false } }); }} />
       <p className="note-i">Flagged early on purpose. In tests with made-up people and nothing real to find, about one pattern at a time is chance — so each one keeps being checked on days it hasn't seen: real ones hold up, flukes fade away. The AI will explain them once it's on.</p>
     </section>
   );

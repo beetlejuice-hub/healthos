@@ -134,7 +134,9 @@ export type NightAnswer = { summary: string; happened: string[]; notes: string; 
   /** On a day with a workout (PLAN 129): how it went against last time, what went up, one thing for next time. */
   workout?: { summary: string; better: string[]; next: string } };
 /** The week or month read (PLAN 65). `measure`: the [key] of the app's measure a notice is about, so its chart can be drawn ("" for none). */
-export type ReviewAnswer = { title: string; summary: string; notices: { title: string; text: string; measure: string }[]; next: { what: string; why: string }[]; remember: string[] };
+export type ReviewAnswer = { title: string; summary: string; notices: { title: string; text: string; measure: string }[]; next: { what: string; why: string }[]; remember: string[];
+  /** The month read's overall check (PLAN 137): findings on show that look like noise or plain sense, by their [id]. */
+  checks?: { id: string; verdict: "noise" | "obvious"; why: string }[] };
 
 /* ------------------------------------------------------------------ schemas (JSON Schema for structured output) */
 
@@ -155,7 +157,8 @@ export const SCHEMAS: Record<Exclude<Task, "supplement" | "digest" | "chat">, un
   questions: obj({ questions: arr(obj({ id: str, text: str, why: str, options: arr(str), key: str, repeat: { type: "string", enum: ["daily", "once"] } })) }),
   night: obj({ summary: str, happened: arr(str), notes: str, change: arr(obj({ what: str, why: str })), remember: arr(str),
     workout: obj({ summary: str, better: arr(str), next: str }) }, ["summary", "happened", "notes", "change", "remember"]),
-  review: obj({ title: str, summary: str, notices: arr(obj({ title: str, text: str, measure: str })), next: arr(obj({ what: str, why: str })), remember: arr(str) }),
+  review: obj({ title: str, summary: str, notices: arr(obj({ title: str, text: str, measure: str })), next: arr(obj({ what: str, why: str })), remember: arr(str),
+    checks: arr(obj({ id: str, verdict: { type: "string", enum: ["noise", "obvious"] }, why: str })) }, ["title", "summary", "notices", "next", "remember"]),
 };
 
 /* ------------------------------------------------------------------ prompts */
@@ -187,6 +190,7 @@ Task: the user's week read or month read — the step back from the days (owner:
 - notices: 2–4 interesting things — a change, a streak, two things that moved together (say "went with", never "caused"), something going well. Each: a short title, one or two sentences with numbers, and measure: the [key] of the measure it's about so the app can draw its chart, or "" when none fits.
 - next: 1–2 small things to try next week (or month), each with a one-line why tied to these numbers. Options, not orders.
 - remember: 0–2 lasting patterns, only when the data shows them over several weeks and they aren't in "What you remember about me". Empty otherwise.
+- checks (month reads only — owner: "an overall check … catch things like findings that are irrelevant, nonsense, or its just simply clear that they are not affecting eachother - and just name these, not delete"): when "## Findings on show — the overall check" is in the context, name 0–5 of them that look like noise (thin evidence, one odd stretch of days, an effect the size chance gives) or plain sense (two measures of the same thing, e.g. coffee and caffeine; something true by definition). Each: its [id] exactly as given, verdict "noise" or "obvious", and why in one line with the numbers. Leave out the ones that look fine, and never call one noise just because it's surprising. Leave the field out when there's no such section.
 Use "goes with", never "causes". No medical advice; anything health-worrying → "worth asking a doctor".`,
   describe: `${VOICE}
 Task: turn a description and/or photo of food or drink into items with nutrition values. Rules:
@@ -306,6 +310,7 @@ export function checkReview(a: ReviewAnswer): ReviewAnswer {
     notices: (a.notices ?? []).filter((n) => line(n?.title, 90) && line(n?.text, 400)).slice(0, 4).map((n) => ({ title: line(n.title, 90), text: line(n.text, 400), measure: line(n.measure, 20) })),
     next: (a.next ?? []).filter((c) => line(c?.what, 200)).slice(0, 2).map((c) => ({ what: line(c.what, 200), why: line(c.why, 240) })),
     remember: (a.remember ?? []).map((x) => line(x, 180)).filter((x) => x.length > 8).slice(0, 2),
+    ...(a.checks?.length ? { checks: a.checks.filter((c) => line(c?.id, 80) && (c.verdict === "noise" || c.verdict === "obvious") && line(c.why, 200)).slice(0, 5).map((c) => ({ id: line(c.id, 80), verdict: c.verdict, why: line(c.why, 200) })) } : {}),
   };
 }
 

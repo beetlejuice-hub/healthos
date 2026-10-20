@@ -18,6 +18,7 @@ import type { Due, ReviewRow } from "./review";
 import type { ChartSpec } from "./ai/chattools";
 import type { Proposal } from "./ai/propose";
 import type { Notice } from "./inbox";
+import type { Check } from "./overall";
 
 /** Everything the in-app AI keeps for you, synced like the rest (doc "ai"). */
 export type AiState = {
@@ -50,6 +51,8 @@ export type AiState = {
   seenAt: number;
   /** What the app wrote to you (PLAN 102), and every id it ever wrote, so none comes twice (optional: older synced docs). */
   inbox?: Notice[];
+  /** The month read's overall check (PLAN 137): findings it named as noise or plain sense, and his Hide / Keep. */
+  checks?: Check[];
   sent?: string[];
   /** The day the grids were last read for new findings. */
   findingsDay?: string;

@@ -20,6 +20,7 @@ import { Tip } from "../components/Tip";
 import { Top } from "../components/Top";
 import { Coverage, Methods, SuppMatrix, TrainingLoad } from "../components/Stack";
 import { TrainingPage } from "../components/TrainingPage";
+import { AiCheckLabel, HiddenByYou } from "../components/AiCheck";
 import { glanceDays } from "../lib/glance";
 import { LineChart } from "../components/Charts";
 import type { Range } from "../lib/stats";
@@ -219,8 +220,12 @@ export function Insights() {
 /* ------------------------------------------------------------------ Noticed */
 
 /** What the findings engine has to say: cards with their evidence, then what it's still checking. */
-function Noticed({ report }: { report: Report }) {
-  if (!report.found.length && !report.checking.length && !report.none.length) return null;
+function Noticed({ report: all }: { report: Report }) {
+  // PLAN 137: a finding he hid after the month's overall check stays out, listed under the rest
+  const checks = useStore((s) => s.ai.checks);
+  const hidden = new Set((checks ?? []).filter((c) => c.hidden).map((c) => c.id));
+  const report = { ...all, found: all.found.filter((f) => !hidden.has(`n:${f.id}`)) };
+  if (!all.found.length && !report.checking.length && !report.none.length) return null;
   return (
     <section className="noticed" id="noticed" aria-label="Noticed">
       <h2>Noticed <span>computed from your own days · compared fairly · silent until sure</span></h2>
@@ -241,9 +246,11 @@ function Noticed({ report }: { report: Report }) {
             })()}
             {f.chart?.kind === "compare" && <CompareBars c={f.chart} />}
             <p className="ev">{f.evidence}</p>
+            <AiCheckLabel id={`n:${f.id}`} />
           </article>
         ))}
       </div>}
+      <HiddenByYou prefix="n:" />
       {report.checking.length > 0 && <div className="checking">
         <h3>Still checking</h3>
         {report.checking.map((c) => (

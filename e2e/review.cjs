@@ -16,7 +16,8 @@ const MONTH = { title: 'October: a lift in the second half', summary: 'Mood clim
   { title: 'Weight on pace', text: 'About 0.5 kg a week.', measure: 'weight' },
 ], next: [{ what: 'Keep the Friday drinks to one', why: 'two a week every week' }], remember: [] };
 const ANSWERS = {
-  review: (b) => (b.kind === 'month' ? MONTH : REVIEW),
+  // PLAN 137: the month read's overall check names the first finding on the list it was sent, as noise
+  review: (b) => { if (b.kind !== 'month') return REVIEW; const id = ((b.context || '').match(/\n- \[([ns]:[^\]]+)\]/) || [])[1]; return { ...MONTH, ...(id ? { checks: [{ id, verdict: 'noise', why: 'only 9 days, mostly from one week' }, { id: 'n:not-on-the-list', verdict: 'noise', why: 'made up' }] } : {}) }; },
   digest: () => ({ greeting: 'Morning!', items: [] }),
   questions: () => ({ questions: [] }),
   night: () => ({ summary: 'A day.', happened: [], notes: '', change: [], remember: [] }),
@@ -98,6 +99,27 @@ const ANSWERS = {
   check(`a notice's chart has a dot per week of the month (${wdots})`, wdots === 4);
   check(`fits the phone (${await pg.evaluate(() => document.documentElement.scrollWidth)} px)`, await pg.evaluate(() => document.documentElement.scrollWidth) <= 390);
   await mc.screenshot({ path: OUT + 'review-month.png' });
+
+  // PLAN 137 (owner: "an overall check … catch things like findings that are irrelevant, nonsense … just name these, not
+  // delete"): the month read was sent the findings on show, by id; what it named is labelled there; Hide, then Bring back
+  const mctx = calls.find((c) => c.kind === 'month')?.context ?? '';
+  const list = mctx.slice(mctx.indexOf('## Findings on show')).split('\n').filter((l) => /^- \[[ns]:/.test(l));
+  check(`the month read was sent the findings on show, each with its evidence (${list.length}: ${(list[0] || '').slice(0, 90)})`, list.length >= 1);
+  const ai = (await pg.evaluate(() => JSON.parse(localStorage.getItem('healthos.v1:u-test') || '{}'))).ai;
+  const named = (list[0].match(/^- \[([^\]]+)\]/) || [])[1];
+  check(`what it named is kept — only ids it was sent (${JSON.stringify((ai.checks || []).map((c) => c.id))})`, (ai.checks || []).length === 1 && ai.checks[0].id === named && ai.checks[0].verdict === 'noise');
+  await pg.goto(APP + '#insights/connections'); await pg.waitForSelector('.aicheck', { timeout: 8000 }).catch(() => {});
+  const lab = pg.locator('.aicheck').first();
+  check(`labelled where it's shown (${(await lab.innerText().catch(() => '')).replace(/\s+/g, ' ')})`, /The AI's check: looks like noise — only 9 days, mostly from one week/.test(await lab.innerText().catch(() => '')));
+  await lab.evaluate((el) => el.scrollIntoView({ block: 'center' })).catch(() => {}); await pg.waitForTimeout(150);
+  await lab.locator('xpath=..').screenshot({ path: OUT + 'overall-check.png' }).catch(() => {});
+  await lab.getByRole('button', { name: 'Hide it' }).click(); await pg.waitForTimeout(200);
+  const hid = pg.locator('.hidden-by-you');
+  check(`Hide it: gone from the list, listed under "Hidden by you" (${(await hid.innerText().catch(() => '')).replace(/\s+/g, ' ')})`, await pg.locator('.aicheck').count() === 0 && /Hidden by you\s*1/.test(await hid.innerText().catch(() => '')));
+  await hid.locator('summary').click(); await hid.getByRole('button', { name: 'Bring back' }).click(); await pg.waitForTimeout(200);
+  const after = (await pg.evaluate(() => JSON.parse(localStorage.getItem('healthos.v1:u-test') || '{}'))).ai.checks;
+  check(`Bring back: shown again, and kept — not asked about again (${JSON.stringify(after)})`, await pg.locator('.hidden-by-you').count() === 0 && after[0].kept === true && !after[0].hidden);
+  check(`fits the phone (${await pg.evaluate(() => document.documentElement.scrollWidth)} px)`, await pg.evaluate(() => document.documentElement.scrollWidth) <= 390);
   await ctx.close();
 
   ({ ctx, pg } = await open(false));
