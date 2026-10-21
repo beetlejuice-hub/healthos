@@ -5,13 +5,13 @@
  */
 
 import { Fragment, useEffect, useMemo, useRef, useState } from "react";
-import { act, getState, newId, useStore, type Experiment } from "../lib/store";
+import { act, getState, newId, useStore } from "../lib/store";
 import { askAi, chatContext, contextNow, nightContext, refreshAiStatus, useAiStatus } from "../lib/ai/client";
 import { runChatTool, type ChartSpec } from "../lib/ai/chattools";
 import { bandNow, onNights } from "../lib/band-client";
 import { ChatChart } from "./ChatChart";
 import { GoalsAsk } from "./GoalsAsk";
-import { morningBrief } from "../lib/ai/brief";
+import { eveningBrief, morningBrief } from "../lib/ai/brief";
 import { checkupLines } from "../lib/ai/checkup";
 import { checkList, mergeChecks } from "../lib/overall";
 import { notice } from "../lib/findings";
@@ -19,7 +19,7 @@ import { scout } from "../lib/scout";
 import { currentKg } from "../lib/body";
 import { Proposals } from "./Proposal";
 import type { Proposal } from "../lib/ai/propose";
-import { CHAT_ROUNDS, MODELS, estimateMonthUsd, type ChatTurn, type DigestItem, type DigestMeasure, type ModelChoice, type Question, type Tier } from "../lib/ai/tasks";
+import { CHAT_ROUNDS, MODELS, estimateMonthUsd, type ChatTurn, type ModelChoice, type Question, type Tier } from "../lib/ai/tasks";
 import { askLines, KIND_LABEL, questionKinds, tracking, type Tracked } from "../lib/ai/asking";
 import { judge } from "../lib/ai/apply";
 import { dailyFacts } from "../lib/insights";
@@ -29,8 +29,7 @@ import { InboxCard } from "./Inbox";
 import { ReviewCard } from "./Review";
 import { dueReviews, monthFacts, monthLines, weekFacts, weekLines, type Due } from "../lib/review";
 import { Md } from "./Md";
-import { DigestChart, MiniChart } from "./DigestChart";
-import { measureDays } from "../lib/ai/digestchart";
+import { ReadItems } from "./ReadItems";
 import { digestDue, morningShown, nightIn, nightShown } from "../lib/ai/morning";
 import { dayWindow, eveningOf, nightDue } from "../lib/ai/nightread";
 import { byDay, foldLine } from "../lib/ai/thread";
@@ -77,11 +76,16 @@ async function makeNight(day: string, force = false) {
   const key = `night:${day}:${force ? Date.now() : ""}`;
   if (tried.has(key)) return;
   tried.add(key);
-  const r = await askAi({ task: "night", day, context: nightContext(day) });
+  // its three and its questions (PLAN 156–157): tonight's "try" kind, the question kinds, what this morning suggested
+  const ai = getState().ai;
+  const follow = ai.digest && ai.digest.day === day ? ai.digest.items.filter((i) => i.type === "try" || i.type === "protocol").map((i) => `this morning's read: ${i.title}${i.tip ? ` — "${i.tip}"` : ""}`) : [];
+  const r = await askAi({ task: "night", day, context: [nightContext(day), ...eveningBrief(day, ai.shown), ...askFor(day, "evening", follow)].join("\n") });
   if (!r.ok) return;
-  const at = Date.now();
+  const at = Date.now(), qs = keepNew(r.answer.questions ?? [], `${day}:e`);
   act.setAi((a) => ({
     night: { ...r.answer, day, at },
+    shown: [...a.shown, ...(r.answer.items ?? []).map((i) => i.title)].slice(-80),
+    ...(qs.length ? { questions: { day, list: qs, from: "evening" as const, at }, asked: [...a.asked, ...qs.map((q) => q.text)].slice(-60), daily: tracked(a.daily, qs) } : {}),
     // What it learned that lasts: into memory (shown in Settings → AI, deletable), no duplicates.
     memory: [...a.memory, ...r.answer.remember.filter((x) => !a.memory.some((m) => m.text.toLowerCase() === x.toLowerCase())).map((x) => ({ id: newId(), text: x, at }))].slice(-60),
   }));
@@ -196,12 +200,6 @@ export function useAiUnread() {
 /** Not opened yet since it was (re)written: highlighted on Today (16 Oct). */
 const unseen = (x: { at?: number; seen?: number }) => !x.seen || (x.at != null && x.seen < x.at);
 
-const KIND: Record<DigestItem["type"], string> = { fact: "Fun fact", study: "New study", pattern: "Your data", protocol: "Try this", try: "New to try" };
-
-export function startExperiment(p: NonNullable<DigestItem["protocol"]>) {
-  const x: Experiment = { id: newId(), name: p.name, how: p.how, days: p.days, measure: p.measure, start: localDay(Date.now()) };
-  act.setAi((a) => ({ experiments: [...a.experiments, x] }));
-}
 
 /**
  * Today's morning read (owner, 15 Oct: "the morning read looks a bit too big on front page, its at least should be
@@ -212,51 +210,23 @@ export function startExperiment(p: NonNullable<DigestItem["protocol"]>) {
  */
 export function MorningRead() {
   const d = useStore((s) => s.ai.digest), night = useStore((s) => s.ai.night);
-  const experiments = useStore((s) => s.ai.experiments);
-  const entries = useStore((s) => s.entries), workouts = useStore((s) => s.workouts), settings = useStore((s) => s.settings), goals = useStore((s) => s.goals);
-  const running = experiments.filter((x) => !x.ended).map((x) => x.name);
   const today = localDay(Date.now());
   // folded every time Today opens; highlighted until you've opened it once (owner, 16 Oct: "collapsed at default … a
   // subtle highlight … when it wasnt opened … after opening its just sits tehre collapsed not highlighted")
   const [open, setOpenState] = useState(false);
-  const [row, setRow] = useState<number | null>(null);
-  const charted = d?.items.some((i) => i.measure);
-  const facts = useMemo(() => (charted ? dailyFacts(entries, workouts, settings, addDays(today, -13), today) : []), [charted, entries, workouts, settings, today]);
-  const series = useMemo(() => (d?.items ?? []).map((i) => (i.measure ? measureDays(i.measure, facts, entries, today) : null)), [d, facts, entries, today]);
   // only a read written that morning (16 Oct), and only until the evening read replaces it — never the next morning
   // (owner, 21 Oct: "if i get them at yesterday morning, it should not be there"; lib/ai/morning morningShown)
   if (!d || !morningShown(d, night, Date.now())) return null;
   const fresh = unseen(d);
   const setOpen = (v: boolean) => { setOpenState(v); if (v && fresh) act.setAi((a) => ({ digest: a.digest ? { ...a.digest, seen: Date.now() } : a.digest })); };
-  const goalOf = (k: DigestMeasure) => (k === "protein" ? goals.p : k === "kcal" ? goals.kcal : undefined);
   return (
     <section className={`card morning${open ? " open" : ""}`} aria-label="Morning read" data-new={fresh || undefined}>
-      <button type="button" className="mr-head" aria-expanded={open} onClick={() => { setOpen(!open); setRow(null); }}>
+      <button type="button" className="mr-head" aria-expanded={open} onClick={() => setOpen(!open)}>
         <span className="k">Morning read</span><span className="when">{d.day === today ? "today" : "yesterday"}{d.at != null && <> · <time>{clock(d.at)}</time></>}</span>{fresh && <span className="rd-new">new</span>}
         <span className="chev" aria-hidden="true">{open ? "▴" : "▾"}</span>
       </button>
       <p className="greet">{d.greeting}</p>
-      <ul className="mr-list">{d.items.map((i, k) => {
-        const on = open && row === k, vals = series[k];
-        return (
-          <li key={k} className={`mr mr-${i.type}`} data-open={on || undefined}>
-            <button type="button" className="mr-row" aria-expanded={on} onClick={() => { if (!open) setOpen(true); setRow(on ? null : k); }}>
-              <span className="mr-kind">{KIND[i.type]}</span><b>{i.title}</b>
-              {!open && i.measure && vals && <MiniChart k={i.measure} vals={vals} />}
-              <span className="chev" aria-hidden="true">{on ? "▴" : "▾"}</span>
-            </button>
-            {on && <div className="mr-body">
-              <p>{i.text}</p>
-              {i.tip && <p className="mr-tip"><small>Today</small>{i.tip}</p>}
-              {i.measure && vals && <DigestChart k={i.measure} vals={vals} today={today} goal={goalOf(i.measure)} />}
-              {i.source && <a href={i.source.url} target="_blank" rel="noreferrer">{i.source.title} ↗</a>}
-              {i.protocol && (running.includes(i.protocol.name)
-                ? <p className="note">Running — see Insights → Experiments.</p>
-                : <button type="button" className="pill-btn pri" onClick={() => startExperiment(i.protocol!)}>Try it for {i.protocol.days} days</button>)}
-            </div>}
-          </li>
-        );
-      })}</ul>
+      <ReadItems key={String(open)} items={d.items} open={open} onOpen={() => setOpen(true)} tip="Today" />
     </section>
   );
 }
@@ -296,6 +266,8 @@ export function NightRead() {
           {n.workout.next && <p><b>Next time</b> {n.workout.next}</p>}</div>}
         {n.change.length > 0 && <div className="night-change"><small>Tomorrow, maybe</small>{n.change.map((c, i) => <p key={i}><b>{c.what}</b> {c.why}</p>)}</div>}
       </>}
+      {/* the evening's study, thing to try and noticed (PLAN 157; owner, 21 Oct: "the same studt, try, and notiiced session at Eod") */}
+      {(n.items?.length ?? 0) > 0 && <ReadItems key={String(open)} items={n.items!} open={open} onOpen={() => setOpen(true)} tip="Tomorrow" />}
       {newer && <button type="button" className="linkish" onClick={() => void makeNight(n.day, true)}>You logged more since — read it again</button>}
     </section>
   );

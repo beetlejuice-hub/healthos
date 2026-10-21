@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { ANGLES, morningBrief, TRY } from "./brief";
+import { ANGLES, eveningBrief, morningBrief, TRY } from "./brief";
 import { checkDigest, SYSTEM } from "./tasks";
 import { addDays } from "../time";
 
@@ -40,5 +40,19 @@ describe("a \"New to try\" item", () => {
   it("the morning read is told to bring one, from the kind named, never already in the stack; forums as anecdotes", () => {
     expect(SYSTEM.digest).toMatch(/one "try" .* not in their stack, not already shown .* A forum find is anecdotes: say so/s);
     expect(SYSTEM.digest).toMatch(/Titles hook/);
+  });
+});
+
+// PLAN 157 — owner, 21 Oct: "we should have the same studt, try, and notiiced session at Eod"
+describe("the evening's picks", () => {
+  it("tonight's \"try\" is never the same kind as this morning's", () => {
+    for (let i = 0; i < 12; i++) {
+      const d = addDays("2026-10-01", i), m = morningBrief(d, [], [], 0).find((l) => l.includes('"try" item today'))!, e = eveningBrief(d, [])[1];
+      expect(e.slice(e.indexOf(":") + 2)).not.toBe(m.slice(m.indexOf(":") + 2));
+    }
+  });
+  it("it's told what's been shown, so it never repeats a title", () => {
+    expect(eveningBrief("2026-10-21", ["Glycine and deep sleep"])).toContain("## Already shown — never repeat these titles: Glycine and deep sleep");
+    expect(eveningBrief("2026-10-21", []).some((l) => l.startsWith("## Already shown"))).toBe(false);
   });
 });

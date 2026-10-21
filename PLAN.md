@@ -15,7 +15,7 @@ Started 29 Sept 2026. Owner: Arnold. Answers behind this: the "HealthOS — Disc
 mood course removed from Mind, with weekday × time and best / worst days kept under the new page; Sleep needed nothing
 (with the band its old panels already don't show).
 
-**Building now:** #157 the evening read with items · #158 the morning read, better.
+**Building now:** #158 the morning read, better.
 
 **Your asks from the latest batch, not finished:**
 - #152 RPE — how hard a set felt (later — your call, 21 Oct).
@@ -2260,10 +2260,21 @@ is written, so the next morning still shows the night before last; the read-back
    https, fallback never asks a study, both prompts share the rules), e2e morningread (kinds asked, the study card with
    its source, the tracking one, remembered by key, next morning nothing from yesterday), questions (tomorrow nothing
    word for word; the fallback told the kinds, what's tracked and what not to repeat), ai.
-157. [ ] **The evening read gets items too**: a study, a thing to try, and a "noticed" (an investigation of something in
+157. [x] **The evening read gets items too**: a study, a thing to try, and a "noticed" (an investigation of something in
    the day or a note), the morning read's look (a tip, a 14-day chart, the source), never repeating the morning's.
    The read-back gets web search for it: about one more searching call a day (the 10:00 questions call goes, so
    roughly +€2–4 a month on the strong model; inside the €20).
+   Done (21 Oct): the read-back's answer carries "items" (study, try, noticed — checked like the morning's: 3 at most, a
+   study or try without an https source dropped, the morning's other kinds dropped) and its questions (#156: evening
+   kinds — investigating, tracking, check, study — and a follow-up on this morning's "try"). It's told tonight's "try"
+   kind (a step on from the morning's, so a day never brings two of a kind) and every title already shown; its titles
+   join the shown list. It now searches the web, so it answers in text like the morning read (the strict schema is
+   gone for it). The card: the read-back, then the three as rows (folded: titles with their small chart), each opening
+   with "Tomorrow" and its source — one shared component with the morning read (components/ReadItems). Checked:
+   worker ai.test (web search on, items and questions checked, a source-less try and a morning kind dropped),
+   brief.test (tonight's try never this morning's, shown titles passed), e2e night (folded three, kinds, open one →
+   Tomorrow + source, told its picks, its question on Today), the full e2e run (93; trainingc timed out once under
+   load and passes alone — with heart, two load-sensitive suites to firm up). Not checked: a real evening read.
 158. [ ] **The morning read, better**: the next read follows up what it suggested ("tried the protein coffee before 10?"),
    and #133's ideas when they fit (this day last month; guess first).
 Tested with: pure rules for what's shown when (a read from yesterday morning is gone this morning — fails on today's

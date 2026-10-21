@@ -2,7 +2,14 @@
 // Fake /api/ai: no credits spent; we check what the AI was sent, and what the app shows.
 const { chromium, APP, OUT, handle, rate } = require('./harness.cjs');
 const calls = [];
-const NIGHT = { summary: 'A steady day with one spike: stress hit 8 at 14:00, right when the deadline you wrote about landed.', happened: ['Coffee at 08:10, nothing after', 'Check-in at 14:00: mood 4, stress 8'], notes: 'You said the stress was the deadline at work — the 8 fits that, and nothing else in your log points elsewhere.', change: [{ what: 'A 10-minute walk before the next deadline block.', why: 'Your stress tends to ease after time outside.' }], remember: ['Stress runs high on deadline days; it eases after time outside.'] };
+const NIGHT = { summary: 'A steady day with one spike: stress hit 8 at 14:00, right when the deadline you wrote about landed.', happened: ['Coffee at 08:10, nothing after', 'Check-in at 14:00: mood 4, stress 8'], notes: 'You said the stress was the deadline at work — the 8 fits that, and nothing else in your log points elsewhere.', change: [{ what: 'A 10-minute walk before the next deadline block.', why: 'Your stress tends to ease after time outside.' }], remember: ['Stress runs high on deadline days; it eases after time outside.'],
+  // PLAN 157 (owner, 21 Oct: "the same studt, try, and notiiced session at Eod"): the evening's three, and its questions
+  items: [
+    { type: 'noticed', title: 'Stress 8 came with the deadline, not the coffee', text: 'Your one coffee was at 08:10 — six hours before the spike.', tip: 'Block 10 minutes outside before the next deadline', measure: 'stress' },
+    { type: 'study', title: 'Deadlines push bedtime back', text: 'A 2025 study: evening work stress delayed sleep by ~20 minutes.', tip: 'Write tomorrow\'s list before 20:00', measure: 'sleep', source: { title: 'Sleep 2025', url: 'https://example.org/dl' } },
+    { type: 'try', title: 'Box breathing before a hard block', text: '4-4-4-4 breathing lowered stress ratings in a small trial.', tip: 'Try 2 minutes at 13:50', source: { title: 'Front Psych 2025', url: 'https://example.org/bb' } },
+  ],
+  questions: [{ kind: 'investigate', text: 'Was today\'s 14:00 spike the deadline itself, or the meeting about it?', options: ['Deadline', 'Meeting', 'Both'], why: 'stress 8 at 14:00 — your highest this week', key: 'stress_cause' }] };
 const ANSWERS = { night: () => NIGHT, digest: () => ({ greeting: 'Hi', items: [] }), questions: () => ({ questions: [] }) };
 
 (async () => {
@@ -51,7 +58,9 @@ const ANSWERS = { night: () => NIGHT, digest: () => ({ greeting: 'Hi', items: []
   const card = pg.getByLabel('Your day, read back'), isNew = async () => (await card.getAttribute('data-new')) === 'true';
   let txt = await card.innerText();
   const foldedH = await card.evaluate((e) => Math.round(e.getBoundingClientRect().height));
-  check(`arrives folded — the summary, not the rest — and highlighted as new (${foldedH} px)`, /stress hit 8 at 14:00/.test(txt) && !/YOUR NOTES|Your notes|A 10-minute walk/i.test(txt) && await isNew() && /new/i.test(await card.locator('.mr-head').innerText()) && foldedH < 170);
+  check(`arrives folded — the summary, not the rest — and highlighted as new (${foldedH} px)`, /stress hit 8 at 14:00/.test(txt) && !/YOUR NOTES|Your notes|A 10-minute walk/i.test(txt) && await isNew() && /new/i.test(await card.locator('.mr-head').innerText()) && foldedH < 240);
+  // folded, the evening's three show as titles (PLAN 157), like the morning read
+  check(`…with the evening's three as titles (${await card.locator('.mr-row').count()} rows)`, await card.locator('.mr-row').count() === 3 && await card.locator('.mr-body').count() === 0);
   const when = await card.locator('.mr-head .when').innerText().catch(() => '');
   check(`…saying when it was written, not just "new" (${when})`, /^tonight · 21:30$/.test(when));
   await card.scrollIntoViewIfNeeded();
@@ -61,6 +70,15 @@ const ANSWERS = { night: () => NIGHT, digest: () => ({ greeting: 'Hi', items: []
   await card.locator('.mr-head').click(); await pg.waitForTimeout(150);
   txt = await card.innerText();
   check('opened: notes and tomorrow; the highlight goes', /YOUR NOTES|Your notes/i.test(txt) && /A 10-minute walk/.test(txt) && !(await isNew()));
+  // the evening's three, the morning read's look: kinds, open one → its "Tomorrow" tip, the source (PLAN 157)
+  const kinds = (await card.locator('.mr-kind').allInnerTexts()).map((k) => k.toLowerCase());
+  check(`the evening's three: noticed, a study, something to try (${kinds.join(', ')})`, kinds.join() === 'noticed,new study,new to try');
+  await card.locator('.mr-row', { hasText: 'Deadlines push bedtime back' }).click(); await pg.waitForTimeout(150);
+  const body = await card.locator('.mr-body').innerText();
+  check(`…one opens with what to do tomorrow and its source (${body.replace(/\s+/g, ' ').slice(0, 90)})`, /Tomorrow\s*Write tomorrow's list before 20:00/i.test(body) && await card.locator('.mr-body a').getAttribute('href') === 'https://example.org/dl');
+  check(`the read was told tonight's "try" kind, its question kinds, and what's been shown`, /## Tonight \(the app's picks\)\n- "try" item tonight: /.test(sent[0].context) && /## Questions this time/.test(sent[0].context));
+  const q = pg.locator('.question');
+  check(`its question about the day is on Today (${await q.locator('.q').innerText().catch(() => 'none')})`, /^Investigating/i.test(await q.locator('h3').innerText().catch(() => '')) && /14:00 spike/.test(await q.innerText()));
   await card.screenshot({ path: OUT + 'night-card.png' });
   await pg.reload(); await pg.waitForSelector('text=Settings'); await pg.waitForTimeout(200);
   check('back on Today: folded again, not highlighted', !/YOUR NOTES|Your notes/i.test(await card.innerText()) && !(await isNew()));

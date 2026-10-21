@@ -187,17 +187,23 @@ describe("/api/ai", () => {
     expect(body.costUsd).toBeCloseTo((2000 * 4 + 1000 * 20) / 1e6 + 0.03, 6);
   });
 
-  it("night: the day is read back with a schema, no web search, and checked", async () => {
-    const night = { summary: "A steady day; stress peaked at 14:00 with the deadline you noted.", happened: ["2 coffees, last 13:00", "gym 18:00", "x", "y", "dropped"], notes: "You wrote 'deadline' at 14:00 — the stress 8 fits that.", change: [{ what: "Walk after lunch", why: "your 15:00 dip" }, { what: "b", why: "" }, { what: "dropped", why: "" }], remember: ["Stress runs high on deadline days."] };
-    const w = world([{ text: JSON.stringify(night) }]);
+  it("night: the day is read back with web search (its study and thing to try need sources), from text, and checked", async () => {
+    const night = { summary: "A steady day; stress peaked at 14:00 with the deadline you noted.", happened: ["2 coffees, last 13:00", "gym 18:00", "x", "y", "dropped"], notes: "You wrote 'deadline' at 14:00 — the stress 8 fits that.", change: [{ what: "Walk after lunch", why: "your 15:00 dip" }, { what: "b", why: "" }, { what: "dropped", why: "" }], remember: ["Stress runs high on deadline days."],
+      // PLAN 157: the evening's three — a study and a try need a real link; the morning's other kinds aren't the evening's
+      items: [{ type: "study", title: "Deadlines and sleep", text: "Work stress late in the day pushed sleep onset back in a 2025 study.", tip: "Write tomorrow's list before 20:00", measure: "stress", source: { title: "Sleep 2025", url: "https://example.org/s" } },
+        { type: "try", title: "No source", text: "dropped" }, { type: "noticed", title: "Your 15:00 dip came after lunch again", text: "Third time this week.", measure: "energy" }, { type: "pattern", title: "a morning kind", text: "dropped" }],
+      questions: [{ kind: "investigate", text: "Was the 15:00 dip food, or the deadline?", options: ["Food", "Deadline", "Both"], why: "dips on 3 of 5 days", key: "dip_cause" }] };
+    const w = world([{ text: `Here it is: ${JSON.stringify(night)}`, searches: 2 }]);
     const res = await handleAi(post({ task: "night", day: "2026-10-01", context: "## Today, as it happened\n- 14:00 check-in: stress 8 · my note: \"deadline\"" }), env, w.deps);
     const body = (await res.json()) as { answer: typeof night };
     expect(res.status).toBe(200);
     expect(body.answer.happened).toHaveLength(4);
     expect(body.answer.change).toHaveLength(2);
+    expect(body.answer.items.map((i) => i.title)).toEqual(["Deadlines and sleep", "Your 15:00 dip came after lunch again"]);
+    expect(body.answer.questions.map((q) => q.key)).toEqual(["dip_cause"]);
     const sent = w.sent[0].body;
-    expect(sent.tools).toBeUndefined();
-    expect((sent.output_config as { format: { type: string } }).format.type).toBe("json_schema");
+    expect(JSON.stringify(sent.tools)).toContain("web_search");
+    expect((sent.output_config as { format?: unknown }).format).toBeUndefined();
     expect(JSON.stringify(sent.messages)).toContain("my note: \\\"deadline\\\"");
     expect(JSON.stringify(sent.system)).toContain("Take them seriously");
   });

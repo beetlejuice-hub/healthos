@@ -9,7 +9,7 @@ import { useStore } from "../lib/store";
 import type { GlanceDay } from "../lib/glance";
 import { comparisons } from "../lib/connections";
 import { topCards } from "../lib/top";
-import { startExperiment } from "./Ai";
+import { startExperiment } from "../lib/ai/experiment";
 import { addDays } from "../lib/time";
 
 const sg = (v: number) => `${v >= 0 ? "+" : "−"}${Math.abs(v).toFixed(1)}`;

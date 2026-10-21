@@ -47,3 +47,15 @@ export function morningBrief(day: string, templates: { name: string }[], workout
     ...(due ? [`- Today's plan: ${due.name} is the workout that's due next`] : []),
   ];
 }
+
+/**
+ * The evening read's picks (PLAN 157; owner, 21 Oct: "the same studt, try, and notiiced session at Eod"): its "try" kind,
+ * a step on from the morning's so one day never brings two of a kind, and what's been shown already.
+ */
+export function eveningBrief(day: string, shown: string[]): string[] {
+  return [
+    "## Tonight (the app's picks)",
+    `- "try" item tonight: ${TRY[(dayNo(day) + 3) % TRY.length]}`,
+    ...(shown.length ? [`## Already shown — never repeat these titles: ${shown.slice(-40).join(" | ")}`] : []),
+  ];
+}

@@ -93,7 +93,8 @@ export async function callModel(b: AiRequest, choice: ModelChoice, apiKey: strin
   // A typed name the food lists didn't know may be looked up on the web (two searches at most); search and
   // structured output don't mix, so that answer is parsed from text like the research tasks'.
   const lookup = b.task === "describe" && !!b.lookup && !!b.text && !b.image, chat = b.task === "chat";
-  const web = task === "supplement" || task === "digest" || lookup || chat;
+  // the evening read searches too (PLAN 157: its study and its thing to try need real sources)
+  const web = task === "supplement" || task === "digest" || task === "night" || lookup || chat;
   const schema = web ? undefined : (SCHEMAS as Record<string, unknown>)[task];
   const client = new Anthropic({ apiKey, fetch: deps.fetch, maxRetries: 1 });
   const effort = TIER[task] === "research" ? "medium" : "low";

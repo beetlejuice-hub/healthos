@@ -130,7 +130,7 @@ export type QuestionsAnswer = { questions: Question[] };
 export const DIGEST_MEASURES = ["sleep", "protein", "kcal", "mood", "energy", "focus", "stress", "caffeine", "alcohol", "weight", "lifting"] as const;
 export type DigestMeasure = (typeof DIGEST_MEASURES)[number];
 export const isDigestMeasure = (k: unknown): k is DigestMeasure => (DIGEST_MEASURES as readonly unknown[]).includes(k);
-export type DigestItem = { type: "fact" | "study" | "pattern" | "protocol" | "try"; title: string; text: string; source?: { title: string; url: string }; protocol?: { name: string; how: string; days: number; measure: string };
+export type DigestItem = { type: "fact" | "study" | "pattern" | "protocol" | "try" | /** the evening's investigation (PLAN 157) */ "noticed"; title: string; text: string; source?: { title: string; url: string }; protocol?: { name: string; how: string; days: number; measure: string };
   /** One thing to do today (owner, 21 Oct: "I like that its adding tips and advices"). */ tip?: string; measure?: DigestMeasure };
 /**
  * Something new enough to message about (owner, 16 Oct: "it should only send message when it has a new finding, a new
@@ -142,7 +142,9 @@ export type DigestAnswer = { greeting: string; items: DigestItem[]; news?: Diges
 /** The nightly read-back of your day (owner, 2 Oct: "summarizing what happened, what i should change"). */
 export type NightAnswer = { summary: string; happened: string[]; notes: string; change: { what: string; why: string }[]; /** Lasting patterns worth remembering (kept in AI memory). */ remember: string[];
   /** On a day with a workout (PLAN 129): how it went against last time, what went up, one thing for next time. */
-  workout?: { summary: string; better: string[]; next: string } };
+  workout?: { summary: string; better: string[]; next: string };
+  /** The evening's three (PLAN 157; owner, 21 Oct: "the same studt, try, and notiiced session at Eod"), and its questions (PLAN 156). */
+  items?: DigestItem[]; questions?: Question[] };
 /** The week or month read (PLAN 65). `measure`: the [key] of the app's measure a notice is about, so its chart can be drawn ("" for none). */
 export type ReviewAnswer = { title: string; summary: string; notices: { title: string; text: string; measure: string }[]; next: { what: string; why: string }[]; remember: string[];
   /** The month read's overall check (PLAN 137): findings on show that look like noise or plain sense, by their [id]. */
@@ -154,7 +156,7 @@ const str = { type: "string" } as const, num = { type: "number" } as const;
 const obj = (properties: Record<string, unknown>, required = Object.keys(properties)) => ({ type: "object", properties, required, additionalProperties: false });
 const arr = (items: unknown) => ({ type: "array", items });
 
-export const SCHEMAS: Record<Exclude<Task, "supplement" | "digest" | "chat">, unknown> = {
+export const SCHEMAS: Record<Exclude<Task, "supplement" | "digest" | "chat" | "night">, unknown> = {
   describe: obj({
     items: arr(obj({
       kind: { type: "string", enum: ["food", "drink"] }, name: str, amount: str,
@@ -165,8 +167,6 @@ export const SCHEMAS: Record<Exclude<Task, "supplement" | "digest" | "chat">, un
     }, ["kind", "name", "amount", "confidence", "note"])),
   }),
   questions: obj({ questions: arr(obj({ id: str, text: str, why: str, options: arr(str), key: str, repeat: { type: "string", enum: ["daily", "once"] }, kind: { type: "string", enum: [...Q_KINDS] } })) }),
-  night: obj({ summary: str, happened: arr(str), notes: str, change: arr(obj({ what: str, why: str })), remember: arr(str),
-    workout: obj({ summary: str, better: arr(str), next: str }) }, ["summary", "happened", "notes", "change", "remember"]),
   review: obj({ title: str, summary: str, notices: arr(obj({ title: str, text: str, measure: str })), next: arr(obj({ what: str, why: str })), remember: arr(str),
     checks: arr(obj({ id: str, verdict: { type: "string", enum: ["noise", "obvious"] }, why: str })) }, ["title", "summary", "notices", "next", "remember"]),
 };
@@ -194,7 +194,17 @@ Task: read the user's day back to them. Use "## The day being read back" and the
 - Food (owner: "AI can reflect on this at EOD, letting me know what i should change"): when "## Plates that day" is there, one "happened" bullet may name the plate that fit his goal best, with its score; and when a plate scored under 60, one "change" may be the single swap that would lift it most, read from its parts (more protein, a better Nutri-Score, or earlier) — a real food swap, with the score's numbers. Never call a food bad; say how it fits the goal.
 - workout (owner: "ai look at the workout at eod and make a summary, suggestions, compare how i am improving etc … like a health couach"): only when "## The workout that day" is in the context; leave it out otherwise. summary: 1–2 sentences on how the session went against the last one, with its numbers. better: 0–3 short lines — lifts that went up or a new best, with kg × reps and the %. next: one concrete thing for the next session from these numbers — a weight or rep target for a lift that hit its reps, or holding a lift that dropped (sleep, food or stress that day may say why — "goes with"). For cardio (its "Cardio:" lines — owner: "Cardio is important for my weight loss"): its minutes and the band's heart rate against the last of its kind, and the week's cardio minutes against the weeks before; next may be a minutes target. The kcal is an estimate (MET × weight) — say "about". Use the app's numbers only; no programme changes.
 - remember: 0–2 lasting patterns about what goes with this user's mood, energy, focus, stress or sleep, only when the mood journal shows it on several days (not just today) and it isn't already in "What you remember about me". One short line each, e.g. "Stress runs high on deadline days; it eases after time outside." Empty if nothing new.
-Use "goes with", never "causes". No medical advice; anything health-worrying → "worth asking a doctor".`;
+- items (owner, 21 Oct: "we should have the same studt, try, and notiiced session at Eod, not just in the morning, its interesting and cool"): exactly 3, the morning read's look and rules, never repeating it or anything already shown ("## Already shown"):
+  - one "study": search the web for a recent study (last 12 months when you can) on something in THIS day — a food they ate, their caffeine or alcohol, their session, a supplement they took, how they slept — with its source;
+  - one "try": the kind "## Tonight" names, for tomorrow, searched, with its source; never in their stack or already shown;
+  - one "noticed": an investigation of something in the day — a "noticed about myself" line, or two things in the day that went together (a dip after a big lunch, a calm evening after training) — from the context, never invented; no source needed.
+  Each: "title" (hooks, under 60 characters), "text" (at most 2 short sentences, under 200 characters), "tip" (one line for tomorrow, starting with a verb), "measure" (the one number it's about: ${DIGEST_MEASURES.join(", ")}; the app draws its 14 days), "source" for study and try.
+- questions: 1–2 about this day, the kinds "## Questions this time" names; for a study, its "source" (searched, https).
+${ASK_RULES}
+Use "goes with", never "causes". No medical advice; anything health-worrying → "worth asking a doctor".
+Answer with ONLY a JSON object, no prose:
+{"summary":"","happened":[""],"notes":"","change":[{"what":"","why":""}],"remember":[],"workout":{"summary":"","better":[""],"next":""},"items":[{"type":"study|try|noticed","title":"","text":"","tip":"","measure":"","source":{"title":"","url":""}}],"questions":[{"kind":"${Q_KINDS.join("|")}","text":"","options":["",""],"why":"","key":"","source":{"title":"","url":""}}]}
+Leave "workout" out on a day without one.`;
 
 export const SYSTEM: Record<Task, string> = {
   night: NIGHT,
@@ -329,9 +339,9 @@ export function checkAsk(qs: unknown, max = 2): Question[] {
   }).slice(0, max);
 }
 
-/** Three short items at most (PLAN 150: "too long, too much info"), each with its tip and chart when given. */
-export function checkDigest(a: DigestAnswer): DigestAnswer {
-  const items = (a.items ?? []).filter((i) => typeof i?.title === "string" && i.title.trim() && typeof i?.text === "string" && i.text.trim())
+/** Three short items at most (PLAN 150: "too long, too much info"), each with its tip and chart when given — both reads. */
+export function checkItems(raw: unknown): DigestItem[] {
+  return (Array.isArray(raw) ? (raw as DigestItem[]) : []).filter((i) => typeof i?.title === "string" && i.title.trim() && typeof i?.text === "string" && i.text.trim())
     // A fact or study without a real link isn't shown: no source, no claim.
     .filter((i) => !(i.type === "fact" || i.type === "study" || i.type === "try") || (i.source && /^https?:\/\//.test(i.source.url)))
     .slice(0, 3)
@@ -341,6 +351,10 @@ export function checkDigest(a: DigestAnswer): DigestAnswer {
         ...(i.type === "protocol" && i.protocol ? { protocol: { ...i.protocol, days: Math.min(42, Math.max(7, Math.round(i.protocol.days || 14))) } } : {}),
         ...(t ? { tip: t } : {}), ...(isDigestMeasure(measure) ? { measure } : {}) };
     });
+}
+
+export function checkDigest(a: DigestAnswer): DigestAnswer {
+  const items = checkItems(a.items);
   // news: a real link, short, and not one of the items (it's a message, not a repeat of Today)
   const n = a.news, ok = n && typeof n.title === "string" && n.title.trim() && typeof n.text === "string" && n.text.trim() && n.source && /^https:\/\//.test(n.source.url ?? "")
     && !items.some((i) => i.title.trim().toLowerCase() === n.title.trim().toLowerCase());
@@ -372,6 +386,8 @@ export function checkNight(a: NightAnswer): NightAnswer {
     change: (a.change ?? []).filter((c) => line(c?.what, 200)).slice(0, 2).map((c) => ({ what: line(c.what, 200), why: line(c.why, 240) })),
     remember: (a.remember ?? []).map((x) => line(x, 180)).filter((x) => x.length > 8).slice(0, 2),
     ...(a.workout && line(a.workout.summary, 600) ? { workout: { summary: line(a.workout.summary, 600), better: (a.workout.better ?? []).map((x) => line(x, 200)).filter(Boolean).slice(0, 3), next: line(a.workout.next, 300) } } : {}),
+    ...(() => { const items = checkItems(a.items).filter((i) => ["study", "try", "noticed"].includes(i.type)), questions = checkAsk(a.questions);
+      return { ...(items.length ? { items } : {}), ...(questions.length ? { questions } : {}) }; })(),
   };
 }
 
@@ -435,7 +451,7 @@ export const TYPICAL: Record<Task, { perDay: number; in: number; out: number; se
   questions: { perDay: 1, in: 13000, out: 900, searches: 0 },
   chat: { perDay: 5, in: 14000, out: 1200, searches: 0 },
   digest: { perDay: 1, in: 25000, out: 2500, searches: 3 },
-  night: { perDay: 1, in: 13000, out: 1500, searches: 0 },
+  night: { perDay: 1, in: 15000, out: 2500, searches: 3 },
   review: { perDay: 5 / 30, in: 16000, out: 2200, searches: 0 },
   supplement: { perDay: 0.2, in: 9000, out: 2000, searches: 3 },
 };

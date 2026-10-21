@@ -666,6 +666,7 @@ a { color: inherit; }
 .mr-fact .mr-kind { color: var(--caf); background: color-mix(in srgb, var(--caf) 14%, transparent); }
 .mr-protocol .mr-kind { color: var(--gym); background: color-mix(in srgb, var(--gym) 14%, transparent); }
 .mr-try .mr-kind { color: var(--ok); background: color-mix(in srgb, var(--ok) 14%, transparent); }
+.mr-noticed .mr-kind { color: var(--kcal); background: color-mix(in srgb, var(--kcal) 14%, transparent); } /* PLAN 157: the evening's investigation */
 .mr-body { display: grid; gap: 6px; padding: 0 0 12px; }
 .mr-body p { margin: 0; color: var(--c-ink-2); font-size: 14px; line-height: 1.45; }
 .mr-body a { font-size: 12.5px; color: var(--c-ink-2); } .mr-body .pill-btn { justify-self: start; margin-top: 2px; }
@@ -673,10 +674,10 @@ a { color: inherit; }
 .mr-row .dc-mini { flex: none; margin-left: auto; } .mr-row .dc-mini + .chev { margin-left: 0; }
 /* folded: a line per item — its kind as a dot, the title on one line, its little chart */
 .mr-row b { flex: 1 1 auto; min-width: 0; }
-.morning:not(.open) .mr-row { padding: 7px 0; gap: 9px; }
-.morning:not(.open) .mr-row b { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 14px; font-weight: 500; }
-.morning:not(.open) .mr-kind { width: 6px; height: 6px; padding: 0; font-size: 0; border-radius: 50%; background: currentColor; }
-.morning:not(.open) .mr-row .chev { display: none; }
+:is(.morning, .night):not(.open) .mr-row { padding: 7px 0; gap: 9px; }
+:is(.morning, .night):not(.open) .mr-row b { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 14px; font-weight: 500; }
+:is(.morning, .night):not(.open) .mr-kind { width: 6px; height: 6px; padding: 0; font-size: 0; border-radius: 50%; background: currentColor; }
+:is(.morning, .night):not(.open) .mr-row .chev { display: none; }
 .dc-mini rect { fill: var(--dc); } .dc-mini polyline { fill: none; stroke: var(--dc); stroke-width: 1.6; stroke-linejoin: round; stroke-linecap: round; }
 .mr-body .mr-tip { display: grid; gap: 2px; padding: 8px 10px; border-radius: 10px; background: #ffffff0a; color: var(--c-ink); }
 .mr-tip small { font: 600 9.5px var(--f-sans); letter-spacing: .1em; text-transform: uppercase; color: var(--ok); }
