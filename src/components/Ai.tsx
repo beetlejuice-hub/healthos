@@ -6,7 +6,7 @@
 
 import { SourceLink } from "./SourceLink";
 import { Fragment, useEffect, useMemo, useRef, useState } from "react";
-import { act, getState, newId, useStore } from "../lib/store";
+import { act, getState, newId, useStore, type Experiment } from "../lib/store";
 import { askAi, askRead, bandForRead, chatContext, contextNow, nightContext, refreshAiStatus, useAiStatus } from "../lib/ai/client";
 import { runChatTool, type ChartSpec } from "../lib/ai/chattools";
 import { bandNow, bandSettled, onBandSettled, onNights } from "../lib/band-client";
@@ -27,6 +27,7 @@ import { SavedCard } from "./Saved";
 import { DeepDive } from "./DeepDive";
 import { Looked } from "./Looked";
 import { DIVE, diveBrief, diveDue } from "../lib/ai/dive";
+import { RESULT_WORDS, verdictLines, verdictsDue } from "../lib/ai/experiment";
 import { judge } from "../lib/ai/apply";
 import { dailyFacts } from "../lib/insights";
 import { addDays, atMinute, clock, dayLabel, localDay, stamp } from "../lib/time";
@@ -94,6 +95,23 @@ export async function makeDive(key: string, skip: string[] = []): Promise<string
     dives: [...(a.dives ?? []), { key, topic: answer.topic }].slice(-DIVE.keep),
   }));
   return null;
+}
+
+/**
+ * An experiment's verdict (PLAN 160; owner: "do … 4"): the app's result, the AI's words on it with what studies say, and
+ * what to do next — on the experiment, and as a message in the AI tab so you see it.
+ */
+async function makeVerdict(x: Experiment, v: Parameters<typeof verdictLines>[1]) {
+  const id = `verdict:${x.id}`;
+  if (tried.has(id)) return;
+  tried.add(id);
+  const r = await askAi({ task: "verdict", context: `${chatContext()}\n${verdictLines(x, v).join("\n")}` });
+  if (!r.ok) return;
+  const at = Date.now(), verdict = { at, state: v.state, ...r.answer };
+  act.setAi((a) => ({
+    experiments: a.experiments.map((y) => (y.id === x.id ? { ...y, verdict } : y)),
+    chat: [...a.chat, { role: "assistant" as const, text: `🧪 **${x.name}** — ${RESULT_WORDS[v.state]}.\n\n${r.answer.text}${r.answer.next ? `\n\n**Next:** ${r.answer.next}` : ""}`, at, unprompted: true }].slice(-80),
+  }));
 }
 
 /** Anything logged in that day's evening-to-04:00 window (#107: a beer at 00:40 is that evening's). */
@@ -207,6 +225,10 @@ export function useAiAuto(userId: string | undefined) {
       // the weekly deep dive, from Sunday 09:00 (PLAN 160)
       const dive = diveDue(now.getTime(), ai.dive, getState().entries);
       if (dive) void makeDive(dive);
+      // an experiment that ended gets its verdict (PLAN 160) — the 120 days of facts only when one might be due
+      const st = getState();
+      if (ai.experiments.some((x) => !x.verdict && addDays(x.start, x.days) <= (x.ended ?? today)))
+        for (const d of verdictsDue(ai.experiments, dailyFacts(st.entries, st.workouts, st.settings, addDays(today, -120), addDays(today, -1)), today)) void makeVerdict(d.x, d.v);
       // Your day, read back: tonight from 21:00 (past midnight still tonight, until 04:00); or the next morning if the app
       // wasn't opened that evening (lib/ai/nightread).
       const back = nightDue(now.getTime(), ai.night?.day, loggedOn);
@@ -535,7 +557,11 @@ export function Experiments() {
         return (
           <div key={x.id} className="li exp">
             <span><b>{x.name}</b><small>{x.how}</small>
-              <small>Day {Math.min(v.daysIn, x.days)} of {x.days} · {x.measure}: {v.before != null ? v.before.toFixed(1) : "–"} before → {v.during != null ? v.during.toFixed(1) : "–"} since ({v.n[0]} + {v.n[1]} rated days) · <b>{STATE_TEXT[v.state]}</b>{v.ci ? ` (${v.diff! >= 0 ? "+" : ""}${v.diff!.toFixed(1)}, 95% ${v.ci[0].toFixed(1)} to ${v.ci[1].toFixed(1)})` : ""}</small></span>
+              <small>Day {Math.min(v.daysIn, x.days)} of {x.days} · {x.measure}: {v.before != null ? v.before.toFixed(1) : "–"} before → {v.during != null ? v.during.toFixed(1) : "–"} since ({v.n[0]} + {v.n[1]} rated days) · <b>{x.ended && v.state === "running" ? "ended early — too few days to tell" : STATE_TEXT[v.state]}</b>{v.ci ? ` (${v.diff! >= 0 ? "+" : ""}${v.diff!.toFixed(1)}, 95% ${v.ci[0].toFixed(1)} to ${v.ci[1].toFixed(1)})` : ""}</small>
+              {/* when it ended: the AI's words on the app's result, what next, the studies (PLAN 160) */}
+              {x.verdict && <span className={`exp-v v-${x.verdict.state}`}><b className="exp-chip">{RESULT_WORDS[x.verdict.state]}</b> {x.verdict.text}
+                {x.verdict.next && <span className="exp-next"><b>Next:</b> {x.verdict.next}</span>}
+                {x.verdict.found.map((f) => <span key={f.source.url} className="exp-src"><SourceLink s={f.source} /></span>)}</span>}</span>
             {!x.ended ? <button type="button" className="pill-btn" onClick={() => act.setAi((a) => ({ experiments: a.experiments.map((y) => (y.id === x.id ? { ...y, ended: today } : y)) }))}>End</button>
               : <button type="button" className="pill-btn" onClick={() => act.setAi((a) => ({ experiments: a.experiments.filter((y) => y.id !== x.id) }))}>Remove</button>}
           </div>

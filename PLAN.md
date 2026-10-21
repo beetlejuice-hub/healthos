@@ -26,7 +26,7 @@ The Sleep page stays as it is for now ("we will go thorugh and change things lat
 
 **To discuss first, one at a time** (owner, 21 Oct: "These ideas need to be discussed first so choose one rn and start w
 discussing w me"): #52 more band data — the night check, VO2 max and zones per workout built 21 Oct (below) · #160 the
-AI smarter (agreed, being built — below) · #138 your food logs into Google's app ·
+AI smarter (all four built 21 Oct — below) · #138 your food logs into Google's app ·
 #133 more morning-read ideas ("is good") · a fuller food/nutrition score (#139 has the per-item score; what more?).
 
 **Not now:** #48 live heart rate on the Workout screen ("not needed rn") · #136 Tempo → HealthOS (#50, #92 with it) ·
@@ -2382,7 +2382,11 @@ both reads and the questions. Phases in that order; #152 RPE waits (owner).
        left out. A card at the top of the AI tab, counted in the tab's dot until opened. ≈ $0.30–0.40 a week on Opus
        (estimate). e2e deepdive. The four e2e fakes that answered from a fixed list of tasks crashed on the new one —
        now they say "not in this test" like the others.
-     - [ ] **4 · Experiments end with a verdict** — the app's before/during numbers plus what studies found: worked for
-       you / didn't / not clear, and what to try next.
+     - [x] **4 · Experiments end with a verdict** (lib/ai/experiment verdictsDue / verdictLines). Once an experiment has
+       run its days with enough ratings, the app's own test decides — worked for you / went the wrong way / no clear
+       change — and one AI call (≤ 3 searches, links checked) adds what studies say and what to do next; the AI is told
+       the result is the app's. Shown on the experiment (Insights → Training → Experiments) and as a message in the AI
+       tab. None for one stopped early or with too few ratings — which now says "ended early — too few days to tell"
+       (it said "running"). e2e verdict: a planted +2 energy → "worked for you" (5.2 → 7.2, +2.0, 95% +1.5 to +2.5).
    - Known: the heavy e2e suites (sleep, heartpage, heart, cafsleep) time out now and then under the full run's load
      (4 at a time here) and pass alone — a different one each run, 21 Oct; CI has been green on every push.

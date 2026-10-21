@@ -12,7 +12,7 @@
  * Words: lower case, 4+ letters or digits, the commonest English ones left out ("with", "from", "study"…). No AI call.
  */
 
-import type { DigestAnswer, DiveAnswer, NightAnswer, SupplementAnswer } from "../src/lib/ai/tasks";
+import type { DigestAnswer, DiveStudy, NightAnswer, SupplementAnswer } from "../src/lib/ai/tasks";
 
 export type LinkVerdict = "ok" | "dead" | "mismatch" | "unknown";
 export const LINKS = { timeoutMs: 5000, maxBytes: 300_000, titleShare: 0.5, textShare: 0.6, most: 10 } as const;
@@ -97,8 +97,8 @@ export async function checkSupplementLinks(a: SupplementAnswer, f: typeof fetch)
   return { ...a, sources: a.sources.filter((s) => keep(v, s)).map((s) => mark(v, s)) };
 }
 
-/** A deep dive's studies with their links checked (PLAN 160): a dead or mismatched one is left out, good ones marked. */
-export async function checkDiveLinks(a: DiveAnswer, f: typeof fetch): Promise<DiveAnswer> {
+/** A deep dive's or an experiment verdict's studies with their links checked (PLAN 160): a dead or mismatched one is left out, good ones marked. */
+export async function checkFoundLinks<A extends { found: DiveStudy[] }>(a: A, f: typeof fetch): Promise<A> {
   const v = await verdicts(a.found.map((x) => x.source), f);
   return { ...a, found: a.found.filter((x) => keep(v, x.source)).map((x) => ({ ...x, source: mark(v, x.source) })) };
 }

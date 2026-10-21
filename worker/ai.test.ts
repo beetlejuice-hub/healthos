@@ -247,6 +247,17 @@ describe("/api/ai", () => {
     expect(JSON.stringify(w.sent[0].body.system)).toContain("this week's deep dive");
   });
 
+  it("an experiment's verdict: a few searches, its studies' links checked (PLAN 160)", async () => {
+    const v = { text: "Energy went up 1.5 — clear. Studies on afternoon caffeine and sleep fit that.", next: "Keep the 14:00 cut-off", found: [{ title: "Caffeine 6 h before bed", text: "Cut sleep by an hour.", source: { title: "Caffeine effects on sleep taken 6 hours before bed", url: "https://pubmed.ncbi.nlm.nih.gov/24235903/" } }] };
+    const w = world([{ text: JSON.stringify(v), searches: 2 }], { pages: { "https://pubmed.ncbi.nlm.nih.gov/24235903/": { html: "<title>Caffeine effects on sleep taken 0, 3, or 6 hours before going to bed - PubMed</title>" } } });
+    const res = await handleAi(post({ task: "verdict", context: "## The experiment\n- The app's result: worked for you" }), env, w.deps);
+    const body = (await res.json()) as { answer: { text: string; found: { source: { checked?: boolean } }[] } };
+    expect(res.status).toBe(200);
+    expect(body.answer.found[0].source.checked).toBe(true);
+    expect((w.sent[0].body.tools as { name: string; max_uses: number }[])).toEqual([expect.objectContaining({ name: "web_search", max_uses: 3 })]);
+    expect(JSON.stringify(w.sent[0].body.system)).toContain("The app's result is THE result");
+  });
+
   it("night: the day is read back with web search (its study and thing to try need sources), from text, and checked", async () => {
     const night = { summary: "A steady day; stress peaked at 14:00 with the deadline you noted.", happened: ["2 coffees, last 13:00", "gym 18:00", "x", "y", "dropped"], notes: "You wrote 'deadline' at 14:00 — the stress 8 fits that.", change: [{ what: "Walk after lunch", why: "your 15:00 dip" }, { what: "b", why: "" }, { what: "dropped", why: "" }], remember: ["Stress runs high on deadline days."],
       // PLAN 157: the evening's three — a study and a try need a real link; the morning's other kinds aren't the evening's

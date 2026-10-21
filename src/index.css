@@ -699,6 +699,11 @@ a { color: inherit; }
 .dive .dv-sure.s-weak { background: var(--c-track); color: var(--c-ink-2); }
 .dive .dv-x .pill-btn { margin-top: 6px; }
 .dive .dv-acts { margin-top: 12px; }
+.exp-v { display: grid; gap: 4px; margin-top: 6px; font-size: 13px; line-height: 1.45; color: var(--i-ink, var(--c-ink)); }
+.exp-v .exp-chip { justify-self: start; font-size: 11.5px; padding: 1px 8px; border-radius: 999px; background: var(--i-line-2, var(--c-track)); }
+.exp-v.v-better .exp-chip { background: color-mix(in srgb, var(--z-ideal) 30%, transparent); }
+.exp-v.v-worse .exp-chip { background: color-mix(in srgb, var(--z-poor) 30%, transparent); }
+.exp-v .exp-next b { font-weight: 600; } .exp-v .exp-src a { font-size: 12px; color: var(--i-ink-2, var(--c-ink-2)); }
 .mr-looked { margin: 8px 0 0; font-size: 11.5px; color: var(--c-dim); }
 .src-link { display: inline-flex; flex-wrap: wrap; align-items: baseline; gap: 2px 6px; min-width: 0; }
 .src-ok { font-size: 11px; color: var(--sh-g); white-space: nowrap; } .mr-body .pill-btn { justify-self: start; margin-top: 2px; }

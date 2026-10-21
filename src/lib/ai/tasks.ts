@@ -8,7 +8,7 @@
  * estimate, so it's used once and free after that.
  */
 
-export type Task = "describe" | "supplement" | "chat" | "questions" | "digest" | "night" | "review" | "dive";
+export type Task = "describe" | "supplement" | "chat" | "questions" | "digest" | "night" | "review" | "dive" | "verdict";
 export type ModelChoice = "opus" | "sonnet" | "haiku";
 /**
  * Light = food, photos and quick questions (many small calls); everyday = the chat; research = supplement look-ups and
@@ -25,7 +25,7 @@ export const MODELS: Record<ModelChoice, { id: string; label: string; inUsd: num
 /** Web search is billed per search on top of tokens. */
 export const WEB_SEARCH_USD = 0.01;
 
-export const TIER: Record<Task, Tier> = { describe: "light", chat: "everyday", questions: "light", supplement: "research", digest: "research", night: "research", review: "research", dive: "research" };
+export const TIER: Record<Task, Tier> = { describe: "light", chat: "everyday", questions: "light", supplement: "research", digest: "research", night: "research", review: "research", dive: "research", verdict: "research" };
 export type Models = Record<Tier, ModelChoice>;
 /** Cheap where it's simple, the strongest where it matters. */
 export const DEFAULT_MODELS: Models = { light: "haiku", everyday: "opus", research: "opus" };
@@ -165,6 +165,17 @@ export function checkDive(a: DiveAnswer): DiveAnswer {
     ...(okX ? { experiment: { name: str(x!.name, 80), how: str(x!.how, 300), days: Math.round(x!.days), measure: x!.measure } } : {}) };
 }
 
+/** An experiment's verdict (PLAN 160): the AI's words on the app's result — the app decides whether it worked, never the AI. */
+export type VerdictAnswer = { text: string; next: string; found: DiveStudy[] };
+export function checkVerdict(a: VerdictAnswer): VerdictAnswer {
+  const str = (x: unknown, n: number) => (typeof x === "string" ? x.trim().slice(0, n) : "");
+  const text = str(a?.text, 500);
+  if (!text) throw new SyntaxError("a verdict needs its words");
+  const found = (Array.isArray(a.found) ? a.found : []).filter((f) => f && str(f.title, 1) && /^https:\/\//.test(f.source?.url ?? "")).slice(0, 2)
+    .map((f) => ({ title: str(f.title, 120), text: str(f.text, 300), source: { title: str(f.source.title, 160) || str(f.title, 120), url: f.source.url } }));
+  return { text, next: str(a.next, 240), found };
+}
+
 /** A read mid-way: the look-ups it wants the app to run, and its turns to send back as they were (PLAN 160). */
 export type ReadLooks = { calls: ToolCall[]; turn: ChatTurn[] };
 export const isLooks = (a: unknown): a is ReadLooks => !!a && typeof a === "object" && Array.isArray((a as ReadLooks).calls) && (a as ReadLooks).calls.length > 0;
@@ -191,7 +202,7 @@ const str = { type: "string" } as const, num = { type: "number" } as const;
 const obj = (properties: Record<string, unknown>, required = Object.keys(properties)) => ({ type: "object", properties, required, additionalProperties: false });
 const arr = (items: unknown) => ({ type: "array", items });
 
-export const SCHEMAS: Record<Exclude<Task, "supplement" | "digest" | "chat" | "night" | "dive">, unknown> = {
+export const SCHEMAS: Record<Exclude<Task, "supplement" | "digest" | "chat" | "night" | "dive" | "verdict">, unknown> = {
   describe: obj({
     items: arr(obj({
       kind: { type: "string", enum: ["food", "drink"] }, name: str, amount: str,
@@ -258,6 +269,13 @@ Task: this week's deep dive (owner, 21 Oct: make the AI smarter, "do more resear
 ${LOOK_RULES}
 Answer with ONLY a JSON object, no prose:
 {"topic":"","why":"","yourData":"","found":[{"title":"","text":"","source":{"title":"","url":""}}],"verdict":"","sure":"strong|moderate|weak","experiment":{"name":"","how":"","days":14,"measure":"energy|mood|focus|stress|sleep|weight"}}`,
+  verdict: `${VOICE}
+Task: one of their experiments just ended (owner, 21 Oct: experiments should "end with a verdict"). "## The experiment" has what they tried and the app's own result — before against during, with its test. The app's result is THE result: never say it worked when the app says not clear, never the other way round.
+- "text": 2–3 short sentences — the result in plain words with the app's numbers, then what studies say about it (search: 1–3 searches), so they know whether their result fits the evidence or is unusual. Goes with, never causes; no medical advice.
+- "next": one line, what to do now — keep it, stop it, or a better test (longer, cleaner, a different measure) — starting with a verb.
+- "found": 0–2 studies you leaned on, each with what it found in one sentence and its real https link.
+Answer with ONLY a JSON object, no prose:
+{"text":"","next":"","found":[{"title":"","text":"","source":{"title":"","url":""}}]}`,
   review: `${VOICE}
 Task: the user's week read or month read — the step back from the days (owner: "AI should look at data at eod, eow, eom, and make suggestions, summaries, etc, even make graphs or like interesting notices"). The context ends with "## The week …" or "## The month …, as the app measured it": use those numbers and never invent your own; the rest of the context is background.
 - title: one line naming the period's story, specific ("Better mood, short on protein" — not "Your week").
@@ -478,9 +496,11 @@ export type AiRequest =
   | { task: "night"; day: string; context: string; turn?: ChatTurn[]; final?: boolean }
   | { task: "review"; kind: "week" | "month"; from: string; to: string; context: string }
   /** The weekly deep dive (PLAN 160), with its look-up rounds like the reads'. */
-  | { task: "dive"; context: string; turn?: ChatTurn[]; final?: boolean };
+  | { task: "dive"; context: string; turn?: ChatTurn[]; final?: boolean }
+  /** An experiment that ended (PLAN 160): the app's own numbers in the context; the AI adds what studies say and what next. */
+  | { task: "verdict"; context: string };
 
-export type AiAnswer<T extends Task> = T extends "describe" ? { items: DescribedItem[]; dropped: string[] } : T extends "supplement" ? SupplementAnswer : T extends "chat" ? ChatAnswer : T extends "questions" ? QuestionsAnswer : T extends "night" ? NightAnswer : T extends "review" ? ReviewAnswer : T extends "dive" ? DiveAnswer : DigestAnswer;
+export type AiAnswer<T extends Task> = T extends "describe" ? { items: DescribedItem[]; dropped: string[] } : T extends "supplement" ? SupplementAnswer : T extends "chat" ? ChatAnswer : T extends "questions" ? QuestionsAnswer : T extends "night" ? NightAnswer : T extends "review" ? ReviewAnswer : T extends "dive" ? DiveAnswer : T extends "verdict" ? VerdictAnswer : DigestAnswer;
 
 /** What the Worker keeps per account (doc "ai_usage", written only by the Worker). */
 /** One call, as billed: what it was, on which model, its tokens (cached reads and cache writes apart) and its cost. */
@@ -509,6 +529,8 @@ export const TYPICAL: Record<Task, { perDay: number; in: number; out: number; se
   review: { perDay: 5 / 30, in: 16000, out: 2200, searches: 0 },
   // the weekly deep dive (PLAN 160): more searches, a longer answer
   dive: { perDay: 1 / 7, in: 30000, out: 4000, searches: 8 },
+  // an experiment's verdict (PLAN 160): one when it ends
+  verdict: { perDay: 1 / 21, in: 12000, out: 1200, searches: 3 },
   supplement: { perDay: 0.2, in: 9000, out: 2000, searches: 3 },
 };
 const TASKS = Object.keys(TYPICAL) as Task[];

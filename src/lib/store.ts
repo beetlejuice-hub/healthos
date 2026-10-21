@@ -14,7 +14,7 @@ import { DEFAULT_GOALS, slotOf, slotsOf, slotTime } from "./types";
 import { tidyWorkouts } from "./training";
 import type { ScoutMemo } from "./scout";
 import type { Energy } from "./energy";
-import type { DigestItem, ModelChoice, NightAnswer, Question, ReviewAnswer, SupplementAnswer, DiveAnswer } from "./ai/tasks";
+import type { DigestItem, ModelChoice, NightAnswer, Question, ReviewAnswer, SupplementAnswer, DiveAnswer, DiveStudy } from "./ai/tasks";
 import type { Due, ReviewRow } from "./review";
 import type { ChartSpec } from "./ai/chattools";
 import type { Proposal } from "./ai/propose";
@@ -65,7 +65,9 @@ export type AiState = {
   /** The day the grids were last read for new findings. */
   findingsDay?: string;
 };
-export type Experiment = { id: string; name: string; how: string; days: number; measure: string; start: string; ended?: string };
+export type Experiment = { id: string; name: string; how: string; days: number; measure: string; start: string; ended?: string;
+  /** When it ended (PLAN 160): the AI's words on the app's result, what to do next, studies it leaned on. */
+  verdict?: { at: number; state: "better" | "worse" | "no-clear-change"; text: string; next: string; found: DiveStudy[] } };
 export const EMPTY_AI: AiState = { models: { light: "haiku", everyday: "opus", research: "opus" }, memory: [], chat: [], digest: null, night: null, shown: [], questions: null, daily: [], asked: [], research: {}, experiments: [], seenAt: 0 };
 
 /**
