@@ -15,7 +15,7 @@ Started 29 Sept 2026. Owner: Arnold. Answers behind this: the "HealthOS — Disc
 mood course removed from Mind, with weekday × time and best / worst days kept under the new page; Sleep needed nothing
 (with the band its old panels already don't show).
 
-**Building now:** #158 the morning read, better.
+**Done 21 Oct:** #155 nothing stale · #156 questions with a reason · #157 the evening read with items · #158 follow-ups.
 
 **Your asks from the latest batch, not finished:**
 - #152 RPE — how hard a set felt (later — your call, 21 Oct).
@@ -2275,8 +2275,11 @@ is written, so the next morning still shows the night before last; the read-back
    brief.test (tonight's try never this morning's, shown titles passed), e2e night (folded three, kinds, open one →
    Tomorrow + source, told its picks, its question on Today), the full e2e run (93; trainingc timed out once under
    load and passes alone — with heart, two load-sensitive suites to firm up). Not checked: a real evening read.
-158. [ ] **The morning read, better**: the next read follows up what it suggested ("tried the protein coffee before 10?"),
-   and #133's ideas when they fit (this day last month; guess first).
+158. [x] **The morning read, better**: the next read follows up what it suggested ("tried the protein coffee before 10?"),
+   and #133's ideas when they fit (this day last month; guess first). Done (21 Oct) as part of #156: the morning read's
+   follow-up question is fed yesterday's "try" items and last night's "tomorrow, maybe", the evening's this morning's
+   "try". Not built, ideas for you to pick: ☆ save an item for later (a list in the AI tab); "guess first" (the read
+   asks you to guess a number before showing it); "this day last month".
 Tested with: pure rules for what's shown when (a read from yesterday morning is gone this morning — fails on today's
 code), the prompts' contracts (kinds, a source on study questions, no repeat of the same text), e2e on the phone for
 both reads and the questions. Phases in that order; #152 RPE waits (owner).
