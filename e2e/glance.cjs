@@ -25,7 +25,8 @@ const { chromium, APP, OUT, handle } = require('./harness.cjs');
     const heads = await pg.locator('.gl-days thead th').allInnerTexts();
     check(name + ': day strip has 7 days ending today', heads.length === 8 && /^Today/.test(heads[7].trim()));
     const vt = await pg.locator('.gl-vt').innerText();
-    check(name + ': vitals table has mind and intake rows (no sleep ratings in the sample, so no sleep row)', /Mood/.test(vt) && /Calories/.test(vt) && /Weight/.test(vt) && !/Sleep rating/.test(vt));
+    // the sample rates most nights since PLAN 151, so the sleep row is there too
+    check(name + ': vitals table has mind, sleep and intake rows', /Mood/.test(vt) && /Calories/.test(vt) && /Weight/.test(vt) && /Sleep rating/.test(vt));
     check(name + ': judged against a usual week', (name === 'phone' || /Usual week/i.test(vt)) && /(Typical|Higher|Lower)/.test(vt)); // a phone drops the usual-range column; the word still says it
     // the heat view (PLAN 105): each row's shade and line agree with its word — better green, worse red, typical none
     const rows = await pg.locator('.gl-vt tbody tr:not(.grp)').evaluateAll((trs) => trs.map((tr) => [tr.querySelector('.st')?.className ?? '', tr.querySelector('.wv .sh')?.dataset.tone ?? '', tr.querySelector('svg.spark')?.getAttribute('class') ?? '']));

@@ -2138,9 +2138,17 @@ he already finds useless or confusing — default: the five questions find them.
   Proposal: the header stays the day in numbers; the Caffeine and Food cards start folded to their one-line read.
   *His call, with the one above.*
 - [ ] The caffeine chart's scale is fixed at 200 mg: on a 12 mg morning the line lies on the floor (minor).
-- [ ] **The sample can't review the rest:** it has no sleep ratings or band minutes, so every sleep-linked card reads
-  "0 of 6 nights". Before Sleep / Heart / Insights: a richer sample with planted effects (late caffeine → lower sleep
-  rating, wine → readiness down, low-protein days → lower energy) — which also checks each engine finds them, and
-  finds nothing in a copy without them.
+- [x] **A sample that can review the rest** (owner picked it: "1"). It had no sleep ratings, so every sleep-linked
+  card read "0 of 6 nights". Done (21 Oct): most mornings rated, and known effects planted — caffeine left at 23:00
+  (30+ mg) → the night rated 1.6 lower; evening alcohol → a little lower, and less energy and mood next day; late
+  caffeine → less energy and focus next day; protein → next-day energy (a point per 25 g from 160 g); no supplement
+  does anything. `effects: false` is the control: the same days and draws, every effect off. Checked (sample.test):
+  the engines find each planted effect — caffeine-sleep says "worse" with −1.6 inside its range (−2.3 to −0.5); the
+  pattern finder finds protein → energy, late caffeine → focus, alcohol → energy — and in the control none of those.
+- [ ] **The pattern finder finds things in pure noise** (found by the control): "calories and alcohol go together"
+  same day in both — beer's own kcal are counted in calories, so it's built in, not found; and in the control
+  "Magnesium → next-day energy" (p 0.004): it runs ~400 comparisons at p < 0.005 each, so about two hits in pure noise
+  are expected. Fix next: count the comparisons (false-discovery rate), and leave drinks' own kcal out of a same-day
+  alcohol pairing. The forward check (watching → confirmed) already guards what's shown as settled.
 
 
