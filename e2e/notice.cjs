@@ -41,7 +41,8 @@ const calls = [];
   // the next questions: the notice with what the day held, and a check-up (none answered yet)
   await pg.evaluate((k) => { const s = JSON.parse(localStorage.getItem(k)); s.ai.questions = null; localStorage.setItem(k, JSON.stringify(s)); }, KEY);
   const asked = calls.filter((c) => c.task === 'questions').length;
-  await pg.clock.setFixedTime(new Date('2026-10-21T10:30:00')); await pg.goto(APP + '#today'); await pg.reload(); await pg.waitForSelector('.notice-box');
+  // no read brought questions: the cheap call from 13:00 (PLAN 156)
+  await pg.clock.setFixedTime(new Date('2026-10-21T13:30:00')); await pg.goto(APP + '#today'); await pg.reload(); await pg.waitForSelector('.notice-box');
   for (let i = 0; i < 40 && calls.filter((c) => c.task === 'questions').length === asked; i++) await pg.waitForTimeout(100);
   const q = calls.filter((c) => c.task === 'questions').at(-1);
   check(`the questions get it with that day up to then (${q ? (q.context.match(/- Tue 20 Oct 15:20[^\n]*/) || [''])[0] : 'no call'})`, q && /## Things I noticed about myself[^\n]*\n- Tue 20 Oct 15:20: "went downstairs, forgot why" \(95 mg caffeine so far; last check-in 12:00: stress 7\)/.test(q.context));
