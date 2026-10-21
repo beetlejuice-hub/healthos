@@ -2019,16 +2019,6 @@ D questions answered in chat. Numbered on from #112.
    "change" may be the single swap that would lift it most, read from its parts. No extra AI call. Checked:
    nightread.test (the plates in order, the beer after midnight in, the next morning's oats out, the scores' lines),
    e2e night/morningread/foodday/foodscore. #139 done; later ideas: a 7-day strip of plate scores, a plate's parts graded.
-
-### D · Asked — answered in chat (20 Oct)
-- "Would a lower upper body then a full body day work better than the current 3 full body day?"
-- "also explain how is readiness calculated??"
-- "also when does ai update the log it sees, like the food i logged, etc? like how often"
-- "should i log body fat % too?" (with #134)
-
-Order: A first (113 → 123), then B, then C; D in the chat. (claimed: this session, 20 Oct — A items as they're worked.)
-
-## 20 Oct, later — workout notes (owner, his words)
    - [x] **The day score (21 Oct).** Owner: "food notrution score can be bult too" → asked "start with the day score? the
      weights? where?" → "do whatever" (defaults kept). lib/dayscore: the day out of 100, built like readiness — protein 25
      (goal; none at half), protein spread 10 (meals with 25 g+), calories 15 (85–110 % full; none at 130 % or at 60 %, too
@@ -2041,6 +2031,15 @@ Order: A first (113 → 123), then B, then C; D in the chat. (claimed: this sess
      (found the panel 40 px wide in Intake's 12-column grid — fixed, and now checked).
      Next, when you want: (2) what the score goes with — high-fibre or high-protein days against next-morning sleep and
      energy, with the app's compare test, after a few weeks of scores; (3) vitamins and minerals per food.
+
+### D · Asked — answered in chat (20 Oct)
+- "Would a lower upper body then a full body day work better than the current 3 full body day?"
+- "also explain how is readiness calculated??"
+- "also when does ai update the log it sees, like the food i logged, etc? like how often"
+- "should i log body fat % too?" (with #134)
+
+Order: A first (113 → 123), then B, then C; D in the chat. (claimed: this session, 20 Oct — A items as they're worked.)
+## 20 Oct, later — workout notes (owner, his words)
 140. [x] **Dumbbell kg: one convention** — "In workout, some exercises like db bench press was logged w all kgs, not kg per
    dumbbel and now data is lessed up … All sets on that example is logged as overall kg not per hand so far. I mean it
    makes sense that it counts it overall but then dont put kg per dumbbell … lat raise was overall not per hand. So just
