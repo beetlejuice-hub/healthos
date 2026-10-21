@@ -59,7 +59,8 @@ export function makeSample(now = Date.now(), days = 60, o: { effects?: boolean }
     }
     // coffee
     entries.push({ id: id(), kind: "drink", at: t(8, 5, 20), name: "Filter coffee", ml: 250, caffeineMg: 95, alcoholG: 0, kcal: 2 });
-    if (r() < .55) entries.push({ id: id(), kind: "drink", at: t(12, 50, 40), name: r() < .6 ? "Filter coffee" : "Espresso", ml: 250, caffeineMg: r() < .6 ? 95 : 63, alcoholG: 0, kcal: 2 });
+    // the name and the caffeine go together (a "filter coffee" of 63 mg showed in the review's Recent drinks)
+    if (r() < .55) { const filter = r() < .6; r(); entries.push({ id: id(), kind: "drink", at: t(12, 50, 40), name: filter ? "Filter coffee" : "Espresso", ml: filter ? 250 : 30, caffeineMg: filter ? 95 : 63, alcoholG: 0, kcal: filter ? 2 : 1 }); }
     if (r() < .3) entries.push({ id: id(), kind: "drink", at: t(16, 15, 50), name: "Espresso", ml: 30, caffeineMg: 63, alcoholG: 0, kcal: 1 });
     // alcohol on some weekend evenings
     if ((dow === 5 || dow === 6) && r() < .55) { const c = 1 + Math.floor(r() * 3); for (let i = 0; i < c; i++) entries.push({ id: id(), kind: "drink", at: t(20, 30 + i * 45, 20), name: "Beer 500 ml, 5%", ml: 500, caffeineMg: 0, alcoholG: 19.7, kcal: 215 }); }

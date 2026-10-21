@@ -36,7 +36,8 @@ const server = http.createServer((req, res) => {
     const s = await pg.evaluate(() => JSON.parse(localStorage.getItem('healthos.v1:u-test') || '{}'));
     await routeBand(ctx, sampleBand(s.entries || [], s.workouts || [], now), now);
     for (const route of routes.split(',')) {
-      await pg.goto(APP + '#' + route); await pg.reload(); await pg.waitForSelector('text=Settings'); await pg.waitForTimeout(1500);
+      // the tab bar is on every screen (not every screen has a Settings link — Log hasn't)
+      await pg.goto(APP + '#' + route); await pg.reload(); await pg.waitForSelector('nav.tabs'); await pg.waitForTimeout(1500);
       const tag = `${route.replace(/\//g, '-')}-${t.replace(':', '')}-${w}`, h = await pg.evaluate(() => document.documentElement.scrollHeight);
       const n = Math.ceil(h / 800);
       for (let k = 0; k < n; k++) { await pg.evaluate((y) => window.scrollTo(0, y), k * 800); await pg.waitForTimeout(120); await pg.screenshot({ path: `${OUT}${tag}-${k}.png` }); }

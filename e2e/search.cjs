@@ -45,6 +45,10 @@ const HITS = [
   await pg.getByLabel('kcal', { exact: true }).fill('350'); await pg.getByLabel('Protein', { exact: true }).fill('12');
   await pg.getByLabel('Grams (exact)').fill('200');
   check('totals use edited values', /700\s*kcal/.test(await pg.locator('.row4.num').innerText()));
+  // PLAN 151 (the review): a comma from a Romanian keyboard — "100,5" was read as nothing, and Done did nothing
+  await pg.getByLabel('Grams (exact)').fill('100,5');
+  check(`grams with a comma count (${(await pg.locator('.row4.num').innerText()).replace(/\s+/g, ' ')})`, /35[12]\s*kcal/.test(await pg.locator('.row4.num').innerText()));
+  await pg.getByLabel('Grams (exact)').fill('200');
   await pg.screenshot({ path: out + 's-edit.png', fullPage: true });
   await pg.getByRole('button', { name: 'Done' }).click();
   await pg.locator('.basket').getByRole('button', { name: 'Log it' }).click(); await pg.waitForTimeout(200);

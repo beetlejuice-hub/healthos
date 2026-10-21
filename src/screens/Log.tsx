@@ -396,7 +396,7 @@ function Basket({ lines, when, crafting, onChange, onDetail, onAsk, onNotThis, o
     onLogged(`Logged ${label}${onDay(when)}`);
   };
   const saveMeal = () => {
-    const n = Math.max(1, Number(pieces) || 1);
+    const n = Math.max(1, numIn(pieces) || 1);
     const f = mealFood(`custom:${newId()}`, mealName.trim(), foods, n, inPlates ? "plate" : "piece");
     act.rememberFood(f);
     // A plate: the one you're eating now (a pot that makes 4 is still one plate on yours). Pieces: the lot, as before.
@@ -525,7 +525,8 @@ function Portion({ line, onCancel, onDone }: { line: Line; onCancel: () => void;
   const [vals, setVals] = useState(() => Object.fromEntries(MACRO_FIELDS.map(([k]) => [k, String(Math.round(food.per100[k] * 10) / 10)])) as Record<keyof Macros, string>);
   const per100: Macros = editing ? { kcal: numIn(vals.kcal) || 0, p: numIn(vals.p) || 0, c: numIn(vals.c) || 0, f: numIn(vals.f) || 0 } : food.per100;
   const changed = editing && MACRO_FIELDS.some(([k]) => Math.abs(per100[k] - food.per100[k]) > 0.05);
-  const g = Number(grams) || 0, m = forGrams(per100, g);
+  // "12,5" from a Romanian keyboard is 12.5, not nothing (PLAN 151, the review — like #141's "40,5")
+  const g = numIn(grams) || 0, m = forGrams(per100, g);
   const gramsChanged = Math.abs(g - gramsOf(line)) > 0.5;
   const save = () => {
     if (g <= 0) return;

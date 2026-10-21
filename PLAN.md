@@ -17,19 +17,22 @@ mood course removed from Mind, with weekday × time and best / worst days kept u
 
 **Done 21 Oct:** #155 nothing stale · #156 questions with a reason · #157 the evening read with items · #158 follow-ups.
 
-**Your asks from the latest batch, not finished:**
+**Also done 21 Oct:** #154 food over the week · #159 save a read's item for later.
+
+**Your asks, not finished:**
 - #152 RPE — how hard a set felt (later — your call, 21 Oct).
 - #153 Why Fitbit said 81 and the app 98 — needs that night (a screenshot of Fitbit's breakdown, or the date).
 
-**The review (#151):** Today first pass done; next Sleep and Heart, then logging, Workout, Insights, AI, Settings.
+**The review (#151):** done — Today, Sleep, Heart, logging. Next: Workout, the rest of Insights, the AI tab, Settings.
 
-**Waiting on you:** #125 are the daily questions less generic now? (prompt changed 20 Oct).
+**Waiting on you:** shorter Sleep page (the plain words open from their score row; one list of nights) — yes or no?
 
 **Parked:** #136 Tempo → HealthOS (three questions when you want it; #50, #92 with it) · #138 your food in Google's
 app (on hold) · #52 the rest of the band's data (distance, floors, zones, SpO2, breathing, VO2 max, skin temp) · #48
 live heart rate over Bluetooth on the Workout screen · #49 a testing session on your real data · #51 a deep dive on
 everything the data can show · #133 more morning-read ideas (this day last month, guess first, you vs the study, a
-weekly theme) · #135 notices next to the band's night and steps.
+weekly theme) · #135 notices next to the band's night and steps · #160 the AI smarter, more research (your note,
+21 Oct: "we have room to work w").
 
 ## 1. Why
 
@@ -1781,7 +1784,7 @@ D questions answered in chat. Numbered on from #112.
    look like "worse days without it" — the morning catch-up is the guard. Checked: suppdays.test (each case; the engines
    get the unlogged days as without and find a planted lift — fail on the old day facts), chattools.test (now 29 days
    without, not 14), e2e suppafter/stack/glance/connections/trainingb/mindpage/sleep/supplog/catchup/dose/scout/top.
-125. [ ] **Questions less generic** — "questions feel way too generic rn, like weight logged before bathroom, etc" — prompt
+125. [x] **Questions less generic** (closed 21 Oct — your newer note on the same thing became #156, done) — "questions feel way too generic rn, like weight logged before bathroom, etc" — prompt
    (20 Oct): tie questions to their patterns and goals; no questions about how they log. To judge on real questions.
 126. [x] **Exercise variants** — "On workouts can we have the exercises as like incline bench press and the i can choose
    wheter machine, bench w barbell, bemch w dumbbell etc? Idk if it changes anything tho" Done (20 Oct): a variant is its own exercise (its own history
@@ -2213,6 +2216,16 @@ HR +4, HRV −9, less deep) not shown — only ~4 in 30 nights, under the 5-and-
   night). *Your call.*
 - [ ] Heart: "Above your usual 0 h 00 of 0 h 08 awake" at 07:30 says nothing yet in the morning — fold that tile until
   you've been awake an hour (small; next pass).
+
+**Phase 3 — Logging: Food, Drink, Stack, Body (21 Oct).** Sample + fake band, phone 390 px at 13:00.
+- [x] **"Grams (exact)" with a comma** ("100,5") was read as nothing — the portion went to 0 kcal and Done did nothing,
+  silently. Now the comma is a decimal point there (and in a recipe's piece count), like the workout box since #141.
+  Every other number box already took it. Checked: e2e search (fails without: 0 kcal; with: 352 kcal).
+- [x] The sample named some 63 mg coffees "Filter coffee" (name and caffeine picked separately) — the review's Recent
+  drinks said "Filter coffee · 63 mg". Now they go together, with the same draws, so the planted effects hold.
+- Fine as they are: Drink's one-tap Recent; Stack's list and "Took one now?"; Body's weigh-in, trend (−0.16 kg a week
+  over 30 days, planted −0.19 over 60) and list. Food's "Recent" fills from foods you've logged (the sample's never
+  were, so it's empty there — not on your phone).
 
 ## 21 Oct — loose ends from the latest batch (found in the tidy)
 152. [ ] **RPE — how hard a set felt** — your pick on 20 Oct for #143's phase 2: "rep ranges per exercise (8–12) instead
