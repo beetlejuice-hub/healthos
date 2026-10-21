@@ -25,7 +25,10 @@ mood course removed from Mind, with weekday × time and best / worst days kept u
 The Sleep page stays as it is for now ("we will go thorugh and change things later").
 
 **To discuss first, one at a time** (owner, 21 Oct: "These ideas need to be discussed first so choose one rn and start w
-discussing w me"): #52 more band data (discussing now) · #138 your food logs into Google's app · #160 the AI smarter ·
+discussing w me"): #52 more band data — agreed 21 Oct: the night check first (skin temperature, breathing, blood
+oxygen against your usual; "2 line": a warning line on readiness, the score unchanged), then VO2 max, then zones per
+workout ("3 per workout") (claimed 21 Oct — lib/band.ts, worker/band.ts, lib/nightcheck.ts, Readiness.tsx, ai/sections.ts,
+ai/nights.ts, e2e/tools/sampleband.cjs) · #138 your food logs into Google's app · #160 the AI smarter ·
 #133 more morning-read ideas ("is good") · a fuller food/nutrition score (#139 has the per-item score; what more?).
 
 **Not now:** #48 live heart rate on the Workout screen ("not needed rn") · #136 Tempo → HealthOS (#50, #92 with it) ·
