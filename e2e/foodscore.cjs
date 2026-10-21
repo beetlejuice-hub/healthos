@@ -2,7 +2,7 @@
 // made before nutrients were asked for has none yet — "—", and why — and "✨ Ask the AI for its nutrients" asks once (one
 // light call, on the tap), keeps the answer on the food, and the item gets its score. Owner, 20 Oct: "I wont really b able
 // to add the number or letter for home foods etc".
-const { chromium, APP, OUT, handle, tables } = require('./harness.cjs');
+const { chromium, APP, OUT, handle, tables, openCard } = require('./harness.cjs');
 
 const KEY = 'healthos.v1:u-test', NOW = new Date('2026-10-16T14:00:00').getTime();
 const t = (hm) => new Date(`2026-10-16T${hm}:00`).getTime();
@@ -39,7 +39,7 @@ const calls = [];
   const st = () => pg.evaluate((k) => JSON.parse(localStorage.getItem(k)), KEY);
   if (!(await st()).foods.some((f) => f.id === SCH.id)) { await pg.evaluate(([k, foods]) => { const s = JSON.parse(localStorage.getItem(k)); s.foods = [...foods, ...(s.foods || [])]; localStorage.setItem(k, JSON.stringify(s)); }, [KEY, [SCH, BAR]]); await pg.reload(); await pg.waitForSelector('#fuel'); }
 
-  await pg.locator('#fuel .fuel-open').click();
+  await openCard(pg, 'fuel'); await pg.locator('#fuel .fuel-open').click();
   const sheet = pg.getByRole('dialog', { name: 'What I ate' });
   await sheet.waitFor();
   const chip = (name) => sheet.getByRole('button', { name: new RegExp(`^${name}: score`) });

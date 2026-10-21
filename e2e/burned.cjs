@@ -1,7 +1,7 @@
 // Calories burned (PLAN 83; owner, 13 Oct: "one would assume calories burned are already in the app…pls include"). The band
 // says 1,840 burned so far today and 2,650 yesterday; 1,520 eaten today, 2,310 yesterday. Today's Food card says both and the
 // difference; without a band it says nothing about burning.
-const { chromium, APP, OUT, handle } = require('./harness.cjs');
+const { chromium, APP, OUT, handle, openCard } = require('./harness.cjs');
 
 const NOW = new Date('2026-10-13T16:00:00').getTime(), H = 3_600_000;
 (async () => {
@@ -25,7 +25,7 @@ const NOW = new Date('2026-10-13T16:00:00').getTime(), H = 3_600_000;
       const food = (id, at, kcal) => ({ id, kind: 'food', at, name: 'Meal', grams: 400, macros: { kcal, p: 30, c: 100, f: 30 } });
       s.entries = [food('y1', now - 24 * 3600e3 - 4 * 3600e3, 1310), food('y2', now - 24 * 3600e3 + 2 * 3600e3, 1000), food('t1', now - 6 * 3600e3, 820), food('t2', now - 2 * 3600e3, 700)];
       localStorage.setItem(k, JSON.stringify(s)); }, NOW);
-    await pg.goto(APP + '#today'); await pg.reload(); await pg.waitForSelector('#fuel');
+    await pg.goto(APP + '#today'); await pg.reload(); await pg.waitForSelector('#fuel'); await openCard(pg, 'fuel');
     await pg.waitForSelector('#fuel .burn', { timeout: 6000 }).catch(() => {});
     return { ctx, pg, text: await pg.locator('#fuel .burn').innerText().catch(() => '') };
   }

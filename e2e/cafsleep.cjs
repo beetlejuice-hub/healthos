@@ -1,6 +1,6 @@
 // Caffeine & sleep (owner, 2 Oct): amount at bedtime, could it matter in general, does it for you —
 // kept apart; a normal coffee day isn't warned about; the morning sleep rating is what it learns from.
-const { chromium, APP, OUT, handle, rate } = require('./harness.cjs');
+const { chromium, APP, OUT, handle, rate, openCard } = require('./harness.cjs');
 
 (async () => {
   const b = await chromium.launch(); const errs = [];
@@ -18,7 +18,7 @@ const { chromium, APP, OUT, handle, rate } = require('./harness.cjs');
   const T = (s) => new Date(s).getTime();
   const coffee = (iso, mg = 95) => ({ id: 'c' + iso, kind: 'drink', at: T(iso), name: 'Coffee', ml: 250, caffeineMg: mg, alcoholG: 0, kcal: 2 });
   const setEntries = (es) => pg.evaluate((es) => { const k = 'healthos.v1:u-test', s = JSON.parse(localStorage.getItem(k)); s.entries = es; localStorage.setItem(k, JSON.stringify(s)); }, es);
-  const at = async (iso) => { await pg.clock.setFixedTime(new Date(iso)); await pg.goto(APP + '#today'); await pg.reload(); await pg.waitForSelector('text=Settings'); };
+  const at = async (iso) => { await pg.clock.setFixedTime(new Date(iso)); await pg.goto(APP + '#today'); await pg.reload(); await pg.waitForSelector('text=Settings'); await openCard(pg, 'caffeine'); };
 
   // 08:30 — the morning check-in asks about last night, once per night.
   const sleepRow = pg.locator('#feel [role=slider][data-name="sleep"]');

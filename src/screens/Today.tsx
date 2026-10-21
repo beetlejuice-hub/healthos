@@ -16,7 +16,8 @@ import { bedtimeVerdict, CAF_SLEEP, personalSleep, ratedNights, tierOf, tonights
 import { caffeineDoses } from "../lib/insights";
 import { add, byDay, macrosOf, ZERO } from "../lib/nutrition";
 import { atMinute, clock, dayLabel, localDay, MIN, addDays, quarterDown } from "../lib/time";
-import { go } from "../lib/nav";
+import { go, openCard } from "../lib/nav";
+import { FoldCard } from "../components/FoldCard";
 import type { Drink, Entry, EntryOf, Slot } from "../lib/types";
 import { answerSlot, SLOTS, slotsOf } from "../lib/types";
 import { parseFat } from "../lib/bodyfat";
@@ -110,7 +111,7 @@ export function Today() {
             {(it.kind === "supp-missed" || it.kind === "supp-due") && <>
               <button type="button" className="pill-btn pri" onClick={() => answer(it.suppIds, "taken", it.slot)}>{it.suppIds.length > 1 ? "Took all" : "Took it"}</button>
               {it.suppIds.length > 1
-                ? <button type="button" className="pill-btn" onClick={() => document.getElementById("stack")?.scrollIntoView({ behavior: "smooth" })}>Pick…</button>
+                ? <button type="button" className="pill-btn" onClick={() => openCard("stack")}>Pick…</button>
                 : <button type="button" className="pill-btn" onClick={() => answer(it.suppIds, "skipped", it.slot)}>Skip</button>}
             </>}
             {it.kind === "caffeine" && <button type="button" className="pill-btn" onClick={() => setDismissed((d) => [...d, it.id])}>Got it</button>}
@@ -172,8 +173,8 @@ export function Today() {
 function Fuel({ totals, goals, usual, burned, yday, items, onOpen }: { totals: { kcal: number; p: number; c: number; f: number }; goals: { kcal: number; p: number; c: number; f: number }; usual: number | null; burned: number | null; yday: { ate: number; burned: number } | null; items: number; onOpen: () => void }) {
   const pct = Math.min(1, totals.kcal / goals.kcal);
   return (
-    <div className="card" id="fuel">
-      <h3>Food <span>goal {fmt(goals.kcal)} kcal{usual ? ` · usual day ${fmt(usual)}` : ""}</span></h3>
+    <FoldCard id="fuel" title="Food" read={<>goal {fmt(goals.kcal)} kcal{usual ? ` · usual day ${fmt(usual)}` : ""}</>}
+      more={<><b>{fmt(totals.kcal)}</b> kcal eaten · {totals.kcal <= goals.kcal ? `${fmt(goals.kcal - totals.kcal)} left` : `${fmt(totals.kcal - goals.kcal)} over`} · protein <b>{fmt(totals.p)}</b> / {goals.p} g{items ? ` · ${items} item${items === 1 ? "" : "s"}` : ""}</>}>
       <div className="fuel">
         <div className="ring">
           <svg viewBox="0 0 112 112" width="112" height="112" aria-hidden="true">
@@ -199,7 +200,7 @@ function Fuel({ totals, goals, usual, burned, yday, items, onOpen }: { totals: {
       </div>}
       {/* what you ate, meal by meal — change or delete any of it, and yesterday's too (PLAN 128, #113) */}
       <button type="button" className="pill-btn fuel-open" onClick={onOpen}>What I ate{items ? ` · ${items} item${items === 1 ? "" : "s"}` : ""} ›</button>
-    </div>
+    </FoldCard>
   );
 }
 
@@ -225,9 +226,10 @@ function CaffeineCard({ doses, now, bed, halfLife, cafNow, cafComing, cafBed, pe
   };
   const pmg = probe != null ? Math.round(caffeineInBlood(doses, probe, halfLife)) : 0;
   const px = probe != null ? x(probe) : 0;
+  const tier = tierOf(cafBed);
   return (
-    <div className="card" id="caffeine">
-      <h3>Caffeine <span>{mgText(cafNow)} now{cafComing >= 10 ? ", rising" : ""} · {mgText(cafBed)} at {clock(bed)}</span></h3>
+    <FoldCard id="caffeine" title="Caffeine" read={<>{mgText(cafNow)} now{cafComing >= 10 ? ", rising" : ""} · {mgText(cafBed)} at {clock(bed)}</>}
+      more={now < bed ? <><b className={`tier-${tier}`}>{tier === "low" ? "Low" : tier === "possible" ? "Possible effect on sleep" : "Higher chance of an effect on sleep"}</b> at bedtime{cafComing >= 10 ? ` · ${cafComing} mg still going in` : ""}</> : undefined}>
       <svg viewBox={`0 0 ${W} ${H}`} width="100%" role="img" aria-label={`Caffeine in your body today: ${cafNow} mg now, ${cafBed} mg at your planned bedtime`}
         style={{ touchAction: "pan-y", cursor: "crosshair" }} onPointerMove={onMove} onPointerDown={onMove} onPointerLeave={(e) => { if (e.pointerType !== "touch") setProbe(null); }}>
         {[0, max / 2, max].map((v) => <g key={v}><line x1={pl} x2={W - pr} y1={y(v)} y2={y(v)} stroke="var(--c-track)" /><text x={pl - 4} y={y(v) + 3} textAnchor="end" fontSize="9" fill="var(--c-dim)">{v}</text></g>)}
@@ -250,7 +252,7 @@ function CaffeineCard({ doses, now, bed, halfLife, cafNow, cafComing, cafBed, pe
       {cafComing >= 10 && <p className="note caf-coming">About {cafComing} mg still on its way in — a drink is sipped over ~15 min and takes about 45 more to reach your blood.</p>}
       {doses.some((d) => d.at > now - 24 * 60 * MIN) && <BedtimeRead doses={doses.filter((d) => d.at <= now)} now={now} bed={bed} halfLife={halfLife} personal={personal} coffeeMg={coffeeMg} />}
       <UsualDrink />
-    </div>
+    </FoldCard>
   );
 }
 
@@ -340,9 +342,11 @@ function Stack({ now }: { now: number }) {
   };
   const doses = supps.flatMap((s) => slotsOf(s).map((slot) => key(s.id, slot)));
   const taken = doses.filter((k) => answers.get(k)?.status === "taken").length;
+  // folded: what's still to tick, slot by slot (owner, 21 Oct: supplements "in one place" — Now asks for what's due)
+  const left = SLOTS.map((slot) => ({ name: slot.name, n: supps.filter((s) => slotsOf(s).includes(slot.id) && !answers.has(key(s.id, slot.id))).length })).filter((x) => x.n);
   return (
-    <div className="card" id="stack">
-      <h3>Stack <span>{taken} of {doses.length} taken{extras.length ? ` · +${extras.length} more` : ""}</span></h3>
+    <FoldCard id="stack" title="Stack" read={supps.length ? <>{taken} of {doses.length} taken{extras.length ? ` · +${extras.length} more` : ""}</> : "none set up"}
+      more={supps.length ? (left.length ? left.map((x) => `${x.name}: ${x.n} to tick`).join(" · ") : "Everything answered today") : "Add your stack in Log → Stack"}>
       {SLOTS.map((slot) => {
         const list = supps.filter((s) => slotsOf(s).includes(slot.id));
         const more = extras.filter((e) => answerSlot(e, all.find((x) => x.id === e.suppId)) === slot.id);
@@ -377,7 +381,7 @@ function Stack({ now }: { now: number }) {
       })}
       <SuppQuick now={now} />
       {supps.length === 0 && <p className="note">No supplements set up. Add your stack in Log → Stack.</p>}
-    </div>
+    </FoldCard>
   );
 }
 

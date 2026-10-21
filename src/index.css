@@ -1029,6 +1029,15 @@ a { color: inherit; }
 .today2 .card { border-radius: 20px; }
 .today2 .card h3 { font-family: var(--f-cond); font-size: 20px; font-weight: 700; letter-spacing: .02em; text-transform: uppercase; color: var(--c-ink); align-items: baseline; }
 .today2 .card h3 span { font-family: var(--f-bar); font-size: 12.5px; letter-spacing: 0; text-transform: none; color: var(--c-ink-2); font-weight: 500; }
+/* PLAN 151: Today's Stack, Caffeine and Food fold to their one-line read; the whole heading is the button */
+.fold-head { all: unset; cursor: pointer; box-sizing: border-box; width: 100%; display: flex; align-items: baseline; gap: 10px; }
+.fold-head h3 { flex: 1 1 auto; min-width: 0; }
+.fold-head .chev { font-style: normal; font-size: 12px; color: var(--c-dim); }
+.fold-head:focus-visible { outline: 2px solid var(--c-ink-2); outline-offset: 4px; border-radius: 6px; }
+.fold-more { margin: -4px 0 0; font-size: 13.5px; color: var(--c-ink-2); line-height: 1.4; }
+.fold-more b { color: var(--c-ink); font-weight: 600; }
+.fold-more .tier-possible { color: var(--caf); } .fold-more .tier-higher { color: var(--sh-r); }
+.fold-body { display: contents; }
 .t2-head { display: flex; justify-content: space-between; align-items: flex-end; padding: 0 2px 2px; }
 .t2-head span { display: block; font-size: 12px; font-weight: 600; letter-spacing: .12em; text-transform: uppercase; color: var(--c-ink-2); }
 .t2-head h1 { margin: 2px 0 0; font-family: var(--f-cond); font-size: 38px; font-weight: 700; line-height: 1; text-transform: uppercase; }

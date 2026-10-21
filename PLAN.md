@@ -11,8 +11,8 @@ Started 29 Sept 2026. Owner: Arnold. Answers behind this: the "HealthOS — Disc
 
 `[ ]` open · `[x]` done · `[~]` parked on purpose (an idea, or waiting for you to want it). Details at each number.
 
-**Building now — your answers of 21 Oct (#151):** supplements in one place on Today · Caffeine and Food cards folded ·
-the old panels under Sleep and Mind removed.
+**Building now — your answers of 21 Oct (#151):** the old panels under Sleep and Mind removed. (Done: supplements in
+one place, Caffeine and Food folded.)
 
 **Your asks from the latest batch, not finished:**
 - #152 RPE — how hard a set felt (your phase-2 pick with rep ranges; rep ranges done).
@@ -2159,13 +2159,18 @@ he already finds useless or confusing — default: the five questions find them.
 - [x] "A coffee before 14:01 keeps bedtime under 30 mg" → on the quarter hour ("before 10:15"). Checked: e2e cafsleep
   (fails without: "before 10:23").
 - [x] "+ 1 more due" didn't say what → names them ("+ Running low: Saffron", "+ Morning stack and 1 more"). e2e today2.
-- [ ] **Long** (the two above are the fix): Today is 2,400–2,850 px — 3 to 3.4 phone screens; the Now card alone 630–910 px.
-- [ ] (owner, 21 Oct: "One place") **Supplements four times on one screen:** the header tile (0 / 5), Now ("Morning stack … Took all / Pick…"), the
+- [x] **Long** (the two below were the fix): Today was 2,400–2,850 px — 3 to 3.4 phone screens; the Now card alone 630–910 px.
+- [x] (owner, 21 Oct: "One place") **Supplements four times on one screen:** the header tile (0 / 5), Now ("Morning stack … Took all / Pick…"), the
   Stack quick tile, and the full Stack card (✓ / ✗ per supplement and "Took one now?" chips). Proposal: Now keeps the
   due stack; the Stack card folds to one line ("0 of 5 · evening stack at 21:30 ›") that opens the list. *His call.*
-- [ ] (owner, 21 Oct: "Fold both") **Caffeine three times** (header tile, Coffee tile, Caffeine card) and kcal/protein twice (header, Food card).
+- [x] (owner, 21 Oct: "Fold both") **Caffeine three times** (header tile, Coffee tile, Caffeine card) and kcal/protein twice (header, Food card).
   Proposal: the header stays the day in numbers; the Caffeine and Food cards start folded to their one-line read.
   *His call, with the one above.*
+  **Done (21 Oct):** the Stack, Caffeine and Food cards start folded to their heading and one line — "Morning: 3 to
+  tick · Evening: 2 to tick", "Low at bedtime", "0 kcal eaten · 2,600 left · protein 0 / 160 g"; a tap opens one; the Now
+  card asks for what's due, and its "Pick…", the Stack tile and the numbers on top open the card they point at. Today
+  at 390 px with the sample: 3,119 → 2,268 px at 07:30, 2,605 → 1,975 at 22:30. Checked: e2e today2 (folded, the line,
+  a tap opens one, "Pick…" opens the Stack), and the 13 suites that use those cards; shots looked at.
 - [ ] The caffeine chart's scale is fixed at 200 mg: on a 12 mg morning the line lies on the floor (minor).
 - [x] **A sample that can review the rest** (owner picked it: "1"). It had no sleep ratings, so every sleep-linked
   card read "0 of 6 nights". Done (21 Oct): most mornings rated, and known effects planted — caffeine left at 23:00

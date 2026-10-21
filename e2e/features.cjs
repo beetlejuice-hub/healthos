@@ -1,4 +1,4 @@
-const { chromium, APP, OUT, handle } = require('./harness.cjs');
+const { chromium, APP, OUT, handle, openCard } = require('./harness.cjs');
 (async () => {
   const b = await chromium.launch(); const errs = []; const out = OUT;
   const check = (label, ok) => { console.log((ok ? 'PASS ' : 'FAIL ') + label); if (!ok) process.exitCode = 1; };
@@ -20,7 +20,7 @@ const { chromium, APP, OUT, handle } = require('./harness.cjs');
   await pg.getByRole('button', { name: 'Sign in' }).click(); await pg.waitForSelector('text=Settings');
 
   // Usual drink: empty at first, pick one, one-tap log, undo, clear.
-  await pg.goto(APP + '#today');
+  await pg.goto(APP + '#today'); await pg.waitForSelector('#caffeine'); await openCard(pg, 'caffeine');
   check('usual drink starts empty', await pg.getByRole('button', { name: '☆ Set usual drink' }).count() === 1);
   await pg.getByRole('button', { name: '☆ Set usual drink' }).click();
   await pg.getByRole('button', { name: /^Red Bull 250 ml/ }).click();
@@ -45,6 +45,7 @@ const { chromium, APP, OUT, handle } = require('./harness.cjs');
   await pg.screenshot({ path: out + 'f-today.png', fullPage: true });
 
   // Stack by slot, Took all, then undo.
+  await openCard(pg, 'stack');
   const morning = pg.locator('#stack .h', { hasText: 'Morning' });
   check('stack is grouped by slot', await morning.count() === 1 && await pg.locator('#stack .h', { hasText: 'Evening' }).count() === 1);
   await morning.getByRole('button', { name: 'Took all' }).click(); await pg.waitForTimeout(150);

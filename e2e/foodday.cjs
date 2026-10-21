@@ -4,7 +4,7 @@
 // day's macros, the same total as the card; × then "Delete?" removes one; ‹ to yesterday, delete one there too, change a
 // drink's calories; Add food to yesterday opens Log on yesterday. Then the proof it's really gone: a reload, and a second
 // phone signing in fresh from the server — neither brings the deleted food back.
-const { chromium, APP, OUT, handle, tables } = require('./harness.cjs');
+const { chromium, APP, OUT, handle, tables, openCard } = require('./harness.cjs');
 
 const KEY = 'healthos.v1:u-test', NOW = new Date('2026-10-16T14:00:00').getTime();
 const t = (d, hm) => new Date(`2026-10-${d}T${hm}:00`).getTime();
@@ -35,7 +35,7 @@ const ENTRIES = [
   // logged earlier (as if on another phone): on the server, so the app pulls them the way it really gets them
   for (const e of ENTRIES) tables.entries.set(`u-test|${e.id}`, { user_id: 'u-test', id: e.id, kind: e.kind, at: new Date(e.at).toISOString(), data: e, deleted: false, updated_at: '2026-09-29T11:00:00.000Z' });
   const pg = await phone();
-  await pg.goto(APP + '#today'); await pg.waitForSelector('#fuel');
+  await pg.goto(APP + '#today'); await pg.waitForSelector('#fuel'); await openCard(pg, 'fuel');
   await pg.waitForFunction((k) => (JSON.parse(localStorage.getItem(k) || '{}').entries || []).some((e) => e.id === 'pizza'), KEY, { timeout: 8000 });
   const ids = async (p = pg) => (await p.evaluate((k) => JSON.parse(localStorage.getItem(k) || '{}').entries || [], KEY)).map((e) => e.id);
   const sheet = pg.getByRole('dialog', { name: 'What I ate' });
@@ -92,7 +92,7 @@ const ENTRIES = [
     two.some((e) => e.id === 'oats') && !two.some((e) => e.id === 'toast' || e.id === 'pizza') && two.find((e) => e.id === 'beer')?.kcal === 250);
 
   // add food to an earlier day: Log opens on that day
-  await pg.locator('#fuel .fuel-open').click(); await sheet.getByRole('button', { name: 'Day before' }).click();
+  await openCard(pg, 'fuel'); await pg.locator('#fuel .fuel-open').click(); await sheet.getByRole('button', { name: 'Day before' }).click();
   await sheet.getByRole('button', { name: /Add food to yesterday/ }).click(); await pg.waitForTimeout(300);
   check(`"+ Add food to yesterday" opens Log on yesterday (${await pg.locator('.log-for').innerText().catch(() => '—')})`, /#log/.test(pg.url()) && /Logging for yesterday/.test(await pg.locator('.log-for').innerText().catch(() => '')));
 

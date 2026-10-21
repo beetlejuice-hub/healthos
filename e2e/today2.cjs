@@ -1,6 +1,6 @@
 // Today, redesigned (owner, 6 Oct, approved on the canvas: "I LOVE THIS!! build this pls"): four live
 // numbers, a Now card that follows the clock, six one-tap buttons, the detail below. At phone size.
-const { chromium, APP, OUT, handle } = require('./harness.cjs');
+const { chromium, APP, OUT, handle, openCard } = require('./harness.cjs');
 
 (async () => {
   const b = await chromium.launch(); const errs = [];
@@ -30,6 +30,12 @@ const { chromium, APP, OUT, handle } = require('./harness.cjs');
   check('six buttons, always in this order', JSON.stringify(await pg.locator('.t2-pad button b').allInnerTexts()) === '["Coffee","Food","Drink","Stack","Feel","Weigh"]');
   check('four numbers on top', (await pg.locator('.t2-tile').count()) === 4 && /kcal[\s\S]*2,600[\s\S]*left today/i.test(await tile(pg, 'kcal')));
   check('07:45: nothing scrolls sideways', !(await sideways(pg)));
+  // owner, 21 Oct (PLAN 151): supplements in one place, the Caffeine and Food cards folded to their one-line read
+  const folded = async (id) => (await pg.locator(`#${id}.fold:not(.open)`).count()) === 1 && (await pg.locator(`#${id} .fold-body`).count()) === 0;
+  const reads = (await pg.locator('.fold-more').allInnerTexts()).map((t) => t.replace(/\s+/g, ' '));
+  check(`Stack, Caffeine and Food start folded, each with its line (${reads.join(' | ')})`, await folded('stack') && await folded('caffeine') && await folded('fuel') && reads.some((t) => /kcal eaten · 2,600 left · protein 0 \/ 160 g/.test(t)));
+  await pg.locator('#fuel .fold-head').click();
+  check('a tap opens one, the rest stay folded', await pg.locator('#fuel.open .fuel-open').count() === 1 && await folded('stack') && await folded('caffeine'));
   await pg.screenshot({ path: OUT + 'today2-morning.png' });
 
   // Coffee without a usual drink: pick one, then it's one tap with Undo, and the numbers move.
@@ -47,7 +53,7 @@ const { chromium, APP, OUT, handle } = require('./harness.cjs');
   await pg.getByRole('button', { name: 'Undo' }).click(); await pg.waitForTimeout(250);
   check('…and takes it back', (await st(pg)).entries.filter((e) => e.kind === 'drink').length === 0 && /Caffeine\s*0\s*mg/i.test(await tile(pg, 'Caffeine')));
   await pg.locator('.t2-pad button', { hasText: 'Stack' }).click(); await pg.waitForTimeout(600);
-  check('Stack scrolls to the checklist', await pg.locator('#stack').evaluate((el) => { const r = el.getBoundingClientRect(); return r.top >= -2 && r.top < 200; }));
+  check('Stack scrolls to the checklist, opened', await pg.locator('#stack.open .stack-row').count() > 0 && await pg.locator('#stack').evaluate((el) => { const r = el.getBoundingClientRect(); return r.top >= -2 && r.top < 200; }));
   await pg.locator('.t2-pad button', { hasText: 'Food' }).click(); await pg.waitForTimeout(200);
   check('Food opens Log → Food', await pg.evaluate(() => location.hash) === '#log/food');
   await ctx.close();
@@ -63,6 +69,10 @@ const { chromium, APP, OUT, handle } = require('./harness.cjs');
   // PLAN 151: the rest are named, not counted ("+ 1 more due" didn't say what)
   const more = await pg.locator('.t2-more').innerText();
   check(`two due items at a time, the rest named (${due} shown; ${more})`, due === 2 && /^\+ [A-Z][a-z]/.test(more) && !/more due/.test(more));
+  // "Pick…" on a due stack opens the folded Stack card at its list
+  const pick = pg.locator('.t2-items .item', { hasText: 'stack' }).getByRole('button', { name: 'Pick…' });
+  if (await pick.count()) { await pick.first().click(); await pg.waitForTimeout(500); check('"Pick…" opens the Stack card at its list', await pg.locator('#stack.open .stack-row').count() > 0); }
+  else check('a due stack offers "Pick…"', false);
   await pg.locator('.t2-more').click(); await pg.waitForTimeout(100);
   check('"more" shows the rest', await pg.locator('.t2-items .item').count() > 2 && await pg.locator('.t2-more').innerText() === 'Show fewer');
   check('the check-in is not repeated as a "Rate it" item', !/How was today|Rate it/.test(await pg.locator('.t2-items').innerText()));

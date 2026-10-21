@@ -67,4 +67,9 @@ async function seed(pg, url, write, arg) {
   }
 }
 
-module.exports = { rate, chromium, APP, OUT, handle, users, tables, seed };
+/** Open one of Today's folded cards — Stack, Caffeine, Food (PLAN 151) — when it's folded. */
+async function openCard(pg, id) {
+  const head = pg.locator(`#${id}.fold:not(.open) > .fold-head`);
+  if (await head.count()) { await head.click(); await pg.locator(`#${id}.fold.open`).waitFor({ timeout: 3000 }).catch(() => {}); }
+}
+module.exports = { rate, chromium, APP, OUT, handle, users, tables, seed, openCard };

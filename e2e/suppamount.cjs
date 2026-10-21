@@ -1,6 +1,6 @@
 // Owner, 9 Oct: "i set up 1 capsule as 200mg, i should be either change to 300mg when im logging, or just +1 to add
 // +1 caps, so its 400mg taken". Tick it, then − / + a capsule or type the amount; only that intake changes.
-const { chromium, APP, OUT, handle } = require('./harness.cjs');
+const { chromium, APP, OUT, handle, openCard } = require('./harness.cjs');
 
 (async () => {
   const b = await chromium.launch(); const errs = [];
@@ -16,7 +16,7 @@ const { chromium, APP, OUT, handle } = require('./harness.cjs');
   await pg.getByRole('button', { name: 'Sign in' }).click(); await pg.waitForSelector('text=Settings');
   await pg.evaluate(() => { const k = 'healthos.v1:u-test', s = JSON.parse(localStorage.getItem(k) || '{}');
     s.supplements = [{ id: 'mag', name: 'Magnesium glycinate', dose: '200 mg', slot: 'evening', at: 21 * 60 + 30, active: true }]; s.entries = []; localStorage.setItem(k, JSON.stringify(s)); });
-  await pg.reload(); await pg.waitForSelector('#stack');
+  await pg.reload(); await pg.waitForSelector('#stack'); await openCard(pg, 'stack');
   const st = () => pg.evaluate(() => JSON.parse(localStorage.getItem('healthos.v1:u-test') || '{}'));
   const intake = async () => (await st()).entries.filter((e) => e.kind === 'supp');
   const row = pg.locator('#stack .stack-row').filter({ hasText: 'Magnesium' });

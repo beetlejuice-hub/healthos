@@ -7,13 +7,12 @@
 import type { ReactNode } from "react";
 import { act, offerUndo, useStore } from "../lib/store";
 import { DRINKS } from "../lib/drinks";
-import { go } from "../lib/nav";
+import { go, openCard } from "../lib/nav";
 import { clock, localDay } from "../lib/time";
 import { answerSlot, slotsOf, type Drink } from "../lib/types";
 import { MOMENT_TITLE, type Moment } from "../lib/moment";
 
 const fmt = (n: number) => Math.round(n).toLocaleString("en-GB");
-const scrollTo = (id: string) => document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
 
 /** Today's stack doses (one per supplement per slot) and how many are ticked taken. */
 export function useStackCount(now: number) {
@@ -30,7 +29,7 @@ export function Status({ kcal, goalKcal, protein, goalP, cafNow, rising = false,
 }) {
   const left = goalKcal - kcal;
   const tile = (label: string, value: ReactNode, pct: number, color: string, sub: string, target: string) => (
-    <button type="button" className="t2-tile" onClick={() => scrollTo(target)} aria-label={`${label}: ${typeof value === "string" ? value : ""} ${sub}`.trim()}>
+    <button type="button" className="t2-tile" onClick={() => openCard(target)} aria-label={`${label}: ${typeof value === "string" ? value : ""} ${sub}`.trim()}>
       <span className="k">{label}</span>
       <b>{value}</b>
       <span className="bar"><i style={{ width: `${Math.max(0, Math.min(100, pct))}%`, background: color }} /></span>
@@ -105,8 +104,8 @@ export function Pad({ now, onPickUsual, stack }: { now: number; onPickUsual: () 
         coffee, usual ? `Log ${usual.name}, ${usual.caffeineMg} mg caffeine` : "Coffee: choose your usual drink")}
       {btn("food", "Food", kcal ? `${fmt(kcal)} kcal` : "or scan", svg("var(--kcal)", <><path d="M7 3v8M5 3v5a2 2 0 0 0 4 0V3M7 11v10" /><path d="M17 21V3c-2 1.5-3 4-3 7h3" /></>), () => go("log", "food"))}
       {btn("drink", "Drink", drinks ? `${drinks} today` : "water, beer", svg("var(--alc)", <><path d="M6 3h12l-1.6 16.6A1.6 1.6 0 0 1 14.8 21H9.2a1.6 1.6 0 0 1-1.6-1.4z" /><path d="M6.6 9h10.8" /></>), () => go("log", "drink"))}
-      {btn("stack", "Stack", stack.total ? `${stack.taken} of ${stack.total}` : "set it up", svg("var(--supp)", <><rect x="3" y="8.5" width="18" height="7" rx="3.5" transform="rotate(-35 12 12)" /><path d="M9.6 8.6l4.8 6.8" /></>), () => (stack.total ? scrollTo("stack") : go("log", "stack")))}
-      {btn("feel", "Feel", lastFeel ? `last ${clock(lastFeel.at)}` : "check in", svg("var(--mood)", <><circle cx="12" cy="12" r="9" /><path d="M8.5 14.5c1 1.2 2.1 1.8 3.5 1.8s2.5-.6 3.5-1.8" /><path d="M9 9.5h.01M15 9.5h.01" /></>), () => scrollTo("feel"))}
+      {btn("stack", "Stack", stack.total ? `${stack.taken} of ${stack.total}` : "set it up", svg("var(--supp)", <><rect x="3" y="8.5" width="18" height="7" rx="3.5" transform="rotate(-35 12 12)" /><path d="M9.6 8.6l4.8 6.8" /></>), () => (stack.total ? openCard("stack") : go("log", "stack")))}
+      {btn("feel", "Feel", lastFeel ? `last ${clock(lastFeel.at)}` : "check in", svg("var(--mood)", <><circle cx="12" cy="12" r="9" /><path d="M8.5 14.5c1 1.2 2.1 1.8 3.5 1.8s2.5-.6 3.5-1.8" /><path d="M9 9.5h.01M15 9.5h.01" /></>), () => openCard("feel"))}
       {btn("weigh", "Weigh", weight?.kind === "weight" ? `${weight.kg} today` : "not yet", svg("var(--wt)", <><rect x="3" y="4" width="18" height="16" rx="4" /><path d="M8.5 10a5 5 0 0 1 7 0" /><path d="M12 10l1.2-1.6" /></>), () => go("log", "body"))}
     </section>
   );
