@@ -7,9 +7,9 @@ const { chromium, APP, OUT, handle } = require('./harness.cjs');
 const KEY = 'healthos.v1:u-test', EVE = new Date('2026-10-15T20:30:00').getTime(), MORNING = new Date('2026-10-16T07:40:00').getTime();
 const calls = [];
 const READ = { greeting: 'Morning! 7 h last night — a better start.', items: [
-  { type: 'pattern', title: 'Yesterday was foggy', text: 'Focus 3 at 11:36 yesterday, after 5 h of sleep.' },
-  { type: 'study', title: 'Sleep and focus', text: 'A short night costs focus the next day.', source: { title: 'Sleep 2025', url: 'https://example.org/s' } },
-  { type: 'fact', title: 'Caffeine half-life', text: 'About five hours.', source: { title: 'NIH', url: 'https://example.org/c' } },
+  // PLAN 150 (owner, 21 Oct: "too long, too much info w no visual"): three short items, a tip and a chart each
+  { type: 'pattern', title: 'Yesterday was foggy', text: 'Focus 3 at 11:36 yesterday, after 5 h of sleep.', tip: 'Take the hard task before 11 today', measure: 'focus' },
+  { type: 'study', title: 'Protein through the day', text: 'Spreading protein over 3–4 meals kept more muscle in a 12-week trial.', tip: 'Have the protein coffee before 10', measure: 'protein', source: { title: 'Sleep 2025', url: 'https://example.org/s' } },
   // PLAN 132: one new thing to try, from the kind the app picked this morning
   { type: 'try', title: 'Cluster sets for your bench', text: 'Rest 20 s inside a set to keep the bar speed up.', source: { title: 'J Strength Cond Res 2025', url: 'https://example.org/cl' } },
 ], // something new (#109): a message in the chat, not on Today
@@ -34,7 +34,11 @@ const READ = { greeting: 'Morning! 7 h last night — a better start.', items: [
   await pg.getByRole('button', { name: 'Sign in' }).click(); await pg.waitForSelector('text=Settings');
   // the 15th: a foggy check-in at 11:36, the 15th's read written that morning
   await pg.evaluate(([k, at]) => { const s = JSON.parse(localStorage.getItem(k) || '{}');
-    s.entries = [...(s.entries || []), { id: 'fog', kind: 'feel', at, focus: 3, note: 'foggy' }];
+    s.entries = [...(s.entries || []), { id: 'fog', kind: 'feel', at, focus: 3, note: 'foggy' }, { id: 'fog2', kind: 'feel', at: at - 2 * 864e5, focus: 6 },
+      // protein: 120 g on the 13th; on the 15th 108 g of food and the protein coffee's 50 (owner, 21 Oct: "in reality it was 158")
+      { id: 'm13', kind: 'food', at: at - 2 * 864e5, name: 'Lunch', grams: 400, macros: { kcal: 900, p: 120, c: 80, f: 30 } },
+      { id: 'm15', kind: 'food', at, name: 'Lunch', grams: 400, macros: { kcal: 800, p: 108, c: 80, f: 20 } },
+      { id: 'pc15', kind: 'drink', at: at - 3 * 3600e3, name: 'Protein coffee', ml: 330, caffeineMg: 80, alcoholG: 0, kcal: 210, p: 50 }];
     s.ai = { ...(s.ai || {}), digest: { day: '2026-10-15', at: at - 4 * 3600e3, greeting: 'Morning from the 15th', items: [] }, chat: [] };
     localStorage.setItem(k, JSON.stringify(s)); }, [KEY, new Date('2026-10-15T11:36:00').getTime()]);
   await pg.reload(); await pg.waitForSelector('text=Settings'); await pg.waitForTimeout(1200);
@@ -67,15 +71,33 @@ const READ = { greeting: 'Morning! 7 h last night — a better start.', items: [
   // PLAN 132–133 (owner, 20 Oct: "make the digest messages more intereesting"; "recommend me new stuff"): the app's picks
   const picks = c.slice(c.indexOf('## This morning (the app'));
   check(`it's given this morning's angle and the kind of new thing to bring (${picks.split('\n').slice(1, 3).map((l) => l.slice(0, 50)).join(' | ')})`, /^## This morning \(the app's picks, so mornings differ\)\n- Angle for the "pattern" item: .+\n- "try" item today: .+/.test(picks));
+  // folded: the three titles, each with a small chart of its number when it has one
+  const rows = mr.locator('.mr-row');
+  check(`folded: three titles, the two with a number have their small chart (${await rows.count()} rows, ${await mr.locator('.dc-mini').count()} charts)`, await rows.count() === 3 && await mr.locator('.dc-mini').count() === 2 && await mr.locator('.mr-body').count() === 0);
+  const mrH = await mr.evaluate((e) => Math.round(e.getBoundingClientRect().height));
+  check(`…and still small on a phone (${mrH} px)`, mrH < 240);
+  await mr.screenshot({ path: OUT + 'morning-read-folded.png' });
   await mr.locator('.mr-head').click(); await pg.waitForTimeout(150);
   check(`the new thing shows as "New to try" (${(await mr.innerText()).replace(/\s+/g, ' ').match(/NEW TO TRY[^.]*|New to try[^.]*/i)?.[0]})`, /New to try\s*Cluster sets for your bench/i.test(await mr.innerText()));
+  // an item open: its two sentences, what to do today, its 14 days drawn from his own data with the goal line
+  await rows.filter({ hasText: 'Protein through the day' }).click(); await pg.waitForTimeout(150);
+  const body = mr.locator('.mr-body');
+  check(`opened: the tip for today (${await body.locator('.mr-tip').innerText().catch(() => '')})`, /Today\s*Have the protein coffee before 10/i.test(await body.locator('.mr-tip').innerText().catch(() => '')));
+  const bars = body.locator('.dc-day');
+  check(`…14 days drawn, a bar on the days with food (${await bars.count()} days, ${await body.locator('.dc-bar').count()} bars)`, await bars.count() === 14 && await body.locator('.dc-bar').count() === 2);
+  const words = await body.locator('.dc-words').innerText();
+  check(`…its numbers counted the app's way, the protein coffee included (${words})`, words === 'avg 139 g over 2 days · yesterday 158 g');
+  check(`…with the protein goal as a line, named above it (${await body.locator('.dc-head').innerText()})`, await body.locator('.dc-goal').count() === 1 && /^Protein · last 14 days · goal 160 g$/.test(await body.locator('.dc-head').innerText()));
+  await bars.nth(12).click();
+  check(`tapping a day says its value (${await body.locator('.dc-words').innerText()})`, /^Thu 15 Oct · 158 g$/.test(await body.locator('.dc-words').innerText()));
+  await mr.screenshot({ path: OUT + 'morning-read-item.png' });
   check('opened once: not new any more, and that sticks', await mr.getAttribute('data-new') === null && (await pg.evaluate((k) => JSON.parse(localStorage.getItem(k)).ai.digest.seen, KEY)) > 0);
   check('the news isn\'t on Today — it\'s a message', !/Creatine and sleep loss/.test(card));
   const badge = async () => (await pg.locator('nav.tabs a[href="#ai"] .tabbadge').textContent().catch(() => '')) || '0';
   check(`the AI tab's number says there's a message (${await badge()})`, await badge() === '1');
   await pg.reload(); await pg.waitForSelector('section.morning'); await pg.waitForTimeout(800);
   check('a reload doesn\'t write it again', calls.filter((x) => x.task === 'digest').length === 1);
-  check('after a reload: folded, not highlighted', await pg.locator('section.morning .mr-list').count() === 0 && await pg.locator('section.morning').getAttribute('data-new') === null);
+  check('after a reload: folded, not highlighted', await pg.locator('section.morning.open').count() === 0 && await pg.locator('section.morning .mr-body').count() === 0 && await pg.locator('section.morning').getAttribute('data-new') === null);
   await pg.goto(APP + '#ai'); await pg.waitForTimeout(300);
   const chat = await pg.locator('.chat').innerText();
   check('the chat doesn\'t repeat the read — it\'s on Today (owner, 16 Oct)', !/☀️|a better start|Rough night|Sleep and focus/.test(chat));

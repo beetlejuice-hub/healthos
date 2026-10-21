@@ -19,7 +19,7 @@ import { scout } from "../lib/scout";
 import { currentKg } from "../lib/body";
 import { Proposals } from "./Proposal";
 import type { Proposal } from "../lib/ai/propose";
-import { CHAT_ROUNDS, MODELS, estimateMonthUsd, timeless, type ChatTurn, type DigestItem, type ModelChoice, type Question, type Tier } from "../lib/ai/tasks";
+import { CHAT_ROUNDS, MODELS, estimateMonthUsd, timeless, type ChatTurn, type DigestItem, type DigestMeasure, type ModelChoice, type Question, type Tier } from "../lib/ai/tasks";
 import { judge } from "../lib/ai/apply";
 import { dailyFacts } from "../lib/insights";
 import { addDays, atMinute, clock, dayLabel, localDay } from "../lib/time";
@@ -28,6 +28,8 @@ import { InboxCard } from "./Inbox";
 import { ReviewCard } from "./Review";
 import { dueReviews, monthFacts, monthLines, weekFacts, weekLines, type Due } from "../lib/review";
 import { Md } from "./Md";
+import { DigestChart, MiniChart } from "./DigestChart";
+import { measureDays } from "../lib/ai/digestchart";
 import { digestDue, freshRead, nightIn } from "../lib/ai/morning";
 import { dayWindow, eveningOf, nightDue } from "../lib/ai/nightread";
 import { byDay, foldLine } from "../lib/ai/thread";
@@ -179,45 +181,57 @@ export function startExperiment(p: NonNullable<DigestItem["protocol"]>) {
 
 /**
  * Today's morning read (owner, 15 Oct: "the morning read looks a bit too big on front page, its at least should be
- * collapsable, and also lets make it a tiny bit nicer"): folded to its greeting and what's inside — a line per item with
- * its kind — and each item opens on its own. Folded or open is kept for the day on this phone.
+ * collapsable, and also lets make it a tiny bit nicer"): folded to its greeting and its three titles, each with a small
+ * chart of the number it's about (PLAN 150; owner, 21 Oct: "too long, too much info w no visual and just boring. I like
+ * that its adding tips and advices"). Each item opens on its own: two sentences, what to do today, the 14 days drawn
+ * from his own data, the source.
  */
 export function MorningRead() {
   const d = useStore((s) => s.ai.digest);
   const experiments = useStore((s) => s.ai.experiments);
+  const entries = useStore((s) => s.entries), workouts = useStore((s) => s.workouts), settings = useStore((s) => s.settings), goals = useStore((s) => s.goals);
   const running = experiments.filter((x) => !x.ended).map((x) => x.name);
   const today = localDay(Date.now());
   // folded every time Today opens; highlighted until you've opened it once (owner, 16 Oct: "collapsed at default … a
   // subtle highlight … when it wasnt opened … after opening its just sits tehre collapsed not highlighted")
   const [open, setOpenState] = useState(false);
   const [row, setRow] = useState<number | null>(null);
+  const charted = d?.items.some((i) => i.measure);
+  const facts = useMemo(() => (charted ? dailyFacts(entries, workouts, settings, addDays(today, -13), today) : []), [charted, entries, workouts, settings, today]);
+  const series = useMemo(() => (d?.items ?? []).map((i) => (i.measure ? measureDays(i.measure, facts, entries, today) : null)), [d, facts, entries, today]);
   // only a read written that morning: one written the evening before talks about the wrong night (16 Oct)
   if (!d || d.day > today || d.day < addDays(today, -1) || !freshRead(d)) return null;
   const fresh = unseen(d);
   const setOpen = (v: boolean) => { setOpenState(v); if (v && fresh) act.setAi((a) => ({ digest: a.digest ? { ...a.digest, seen: Date.now() } : a.digest })); };
+  const goalOf = (k: DigestMeasure) => (k === "protein" ? goals.p : k === "kcal" ? goals.kcal : undefined);
   return (
     <section className={`card morning${open ? " open" : ""}`} aria-label="Morning read" data-new={fresh || undefined}>
-      <button type="button" className="mr-head" aria-expanded={open} onClick={() => setOpen(!open)}>
+      <button type="button" className="mr-head" aria-expanded={open} onClick={() => { setOpen(!open); setRow(null); }}>
         <span className="k">Morning read</span><span className="when">{d.day === today ? "today" : "yesterday"}{d.at != null && <> · <time>{clock(d.at)}</time></>}</span>{fresh && <span className="rd-new">new</span>}
-        {!open && <span className="mr-dots" aria-hidden="true">{d.items.map((i, k) => <i key={k} className={`mr-${i.type}`} />)}</span>}
         <span className="chev" aria-hidden="true">{open ? "▴" : "▾"}</span>
       </button>
       <p className="greet">{d.greeting}</p>
-      {!open && <button type="button" className="linkish mr-more" onClick={() => setOpen(true)}>{d.items.length} thing{d.items.length === 1 ? "" : "s"} to read — {d.items.map((i) => i.title).slice(0, 2).join(" · ")}{d.items.length > 2 ? " …" : ""}</button>}
-      {open && <ul className="mr-list">{d.items.map((i, k) => (
-        <li key={k} className={`mr mr-${i.type}`} data-open={row === k || undefined}>
-          <button type="button" className="mr-row" aria-expanded={row === k} onClick={() => setRow(row === k ? null : k)}>
-            <span className="mr-kind">{KIND[i.type]}</span><b>{i.title}</b><span className="chev" aria-hidden="true">{row === k ? "▴" : "▾"}</span>
-          </button>
-          {row === k && <div className="mr-body">
-            <p>{i.text}</p>
-            {i.source && <a href={i.source.url} target="_blank" rel="noreferrer">{i.source.title} ↗</a>}
-            {i.protocol && (running.includes(i.protocol.name)
-              ? <p className="note">Running — see Insights → Experiments.</p>
-              : <button type="button" className="pill-btn pri" onClick={() => startExperiment(i.protocol!)}>Try it for {i.protocol.days} days</button>)}
-          </div>}
-        </li>
-      ))}</ul>}
+      <ul className="mr-list">{d.items.map((i, k) => {
+        const on = open && row === k, vals = series[k];
+        return (
+          <li key={k} className={`mr mr-${i.type}`} data-open={on || undefined}>
+            <button type="button" className="mr-row" aria-expanded={on} onClick={() => { if (!open) setOpen(true); setRow(on ? null : k); }}>
+              <span className="mr-kind">{KIND[i.type]}</span><b>{i.title}</b>
+              {!open && i.measure && vals && <MiniChart k={i.measure} vals={vals} />}
+              <span className="chev" aria-hidden="true">{on ? "▴" : "▾"}</span>
+            </button>
+            {on && <div className="mr-body">
+              <p>{i.text}</p>
+              {i.tip && <p className="mr-tip"><small>Today</small>{i.tip}</p>}
+              {i.measure && vals && <DigestChart k={i.measure} vals={vals} today={today} goal={goalOf(i.measure)} />}
+              {i.source && <a href={i.source.url} target="_blank" rel="noreferrer">{i.source.title} ↗</a>}
+              {i.protocol && (running.includes(i.protocol.name)
+                ? <p className="note">Running — see Insights → Experiments.</p>
+                : <button type="button" className="pill-btn pri" onClick={() => startExperiment(i.protocol!)}>Try it for {i.protocol.days} days</button>)}
+            </div>}
+          </li>
+        );
+      })}</ul>
     </section>
   );
 }

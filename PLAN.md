@@ -2068,9 +2068,16 @@ Order: A first (113 → 123), then B, then C; D in the chat. (claimed: this sess
    missed the shake. Fixed: a drink with protein says it ("…; 210 kcal, P 50 g"), and both sections open with the app's
    own totals ("Totals, as the app counts them (food and drinks): 1,630 kcal · P 158 g … — goals …"), so the AI never
    does the sum. Checked: nightread.test (his case — fails without the fix), e2e night/morningread.
-150. [ ] **The morning read: shorter, with a visual** — "Read todays ai digest, it was just too long, too much info w no
-   visual and just boring. I like that its adding tips and advices." (claimed: this session — lib/ai/tasks digest,
-   Ai.tsx MorningRead)
+150. [x] **The morning read: shorter, with a visual** — "Read todays ai digest, it was just too long, too much info w no
+   visual and just boring. I like that its adding tips and advices." Done (21 Oct): exactly 3 items, each at most 2
+   short sentences, plus a **tip** — one line of what to do today ("Have the protein coffee before 10") — and the one
+   **number** it's about (sleep, protein, kcal, mood, energy, focus, stress, caffeine, alcohol, weight, kg lifted). The
+   app draws that number's last 14 days from his own data (the AI never draws numbers): bars for amounts with his goal
+   as a dashed line, a line for ratings and weight, today lighter (it isn't over), tap a day for its value. Folded, the
+   card is the greeting and the three titles, each with a small chart. The worker enforces it (3 items; a long text
+   cut at a sentence). Checked: ai.test (trim, tip, measure), digestchart.test (protein with the coffee counted,
+   weigh-ins, logged-vs-unknown days), e2e morningread (folded size, tip, 14 days, his 158 g, goal line, tap) + ai,
+   phone screenshots. Not checked: a real morning's answer from the model — the first one comes tomorrow at wake-up.
 151. [ ] **Then the app, part by part** — "after we done w all my notes, we should take the app part by part and check
    them, update them visualy and backend-wise, the engine behind them. also figure out what can i realistically do w
    this app, how can it improve my day". (after #150: a plan first)

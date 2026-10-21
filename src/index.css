@@ -669,6 +669,31 @@ a { color: inherit; }
 .mr-body { display: grid; gap: 6px; padding: 0 0 12px; }
 .mr-body p { margin: 0; color: var(--c-ink-2); font-size: 14px; line-height: 1.45; }
 .mr-body a { font-size: 12.5px; color: var(--c-ink-2); } .mr-body .pill-btn { justify-self: start; margin-top: 2px; }
+/* PLAN 150: what to do today, and the item's number over 14 days (bars for amounts, a line for levels; today lighter) */
+.mr-row .dc-mini { flex: none; margin-left: auto; } .mr-row .dc-mini + .chev { margin-left: 0; }
+/* folded: a line per item — its kind as a dot, the title on one line, its little chart */
+.mr-row b { flex: 1 1 auto; min-width: 0; }
+.morning:not(.open) .mr-row { padding: 7px 0; gap: 9px; }
+.morning:not(.open) .mr-row b { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 14px; font-weight: 500; }
+.morning:not(.open) .mr-kind { width: 6px; height: 6px; padding: 0; font-size: 0; border-radius: 50%; background: currentColor; }
+.morning:not(.open) .mr-row .chev { display: none; }
+.dc-mini rect { fill: var(--dc); } .dc-mini polyline { fill: none; stroke: var(--dc); stroke-width: 1.6; stroke-linejoin: round; stroke-linecap: round; }
+.mr-body .mr-tip { display: grid; gap: 2px; padding: 8px 10px; border-radius: 10px; background: #ffffff0a; color: var(--c-ink); }
+.mr-tip small { font: 600 9.5px var(--f-sans); letter-spacing: .1em; text-transform: uppercase; color: var(--ok); }
+.dc { display: grid; gap: 6px; margin-top: 2px; }
+.mr-body .dc-head, .mr-body .dc-words { font-size: 12px; color: var(--c-dim); } .dc-head b, .dc-words b { color: var(--c-ink-2); font-weight: 600; }
+.dc-plot { position: relative; height: 64px; display: grid; grid-template-columns: repeat(14, 1fr); border-bottom: 1px solid #ffffff1a; }
+.dc-day { all: unset; cursor: pointer; position: relative; height: 100%; }
+.dc-bar { position: absolute; left: 16%; right: 16%; bottom: 0; background: var(--dc); border-radius: 3px 3px 0 0; }
+.dc-dot { position: absolute; left: 50%; width: 7px; height: 7px; margin: 0 0 -3.5px -3.5px; border-radius: 50%; background: var(--dc); box-shadow: 0 0 0 2px var(--c-card); }
+.dc-day[data-today] .dc-bar, .dc-day[data-today] .dc-dot { opacity: .45; }
+.dc-day[data-pick]::before { content: ""; position: absolute; inset: 0 0 -1px; background: #ffffff14; border-radius: 4px 4px 0 0; }
+.dc-plot:has([data-pick]) .dc-day:not([data-pick]) :is(.dc-bar, .dc-dot) { opacity: .35; }
+.mr-body .dc-ends { display: flex; justify-content: space-between; margin: -2px 0 0; font-size: 10.5px; color: var(--c-dim); }
+.dc-head .dc-g { white-space: nowrap; }
+.dc-line { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; overflow: visible; }
+.dc-line polyline { fill: none; stroke: var(--dc); stroke-width: 2; opacity: .6; vector-effect: non-scaling-stroke; stroke-linejoin: round; }
+.dc-goal { position: absolute; left: 0; right: 0; border-top: 1px dashed var(--c-ink-2); opacity: .7; pointer-events: none; z-index: 1; }
 /* both reads fold by default; a soft outline and a "new" tag until opened once (owner, 16 Oct) */
 .morning[data-new], .night[data-new] { box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--mood) 40%, transparent), 0 0 18px -6px color-mix(in srgb, var(--mood) 35%, transparent); }
 .rd-new { font: 600 9.5px var(--f-sans); letter-spacing: .08em; text-transform: uppercase; color: var(--mood); padding: 2px 7px; border-radius: 999px; background: color-mix(in srgb, var(--mood) 14%, transparent); }

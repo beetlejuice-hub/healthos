@@ -121,7 +121,12 @@ export const CHAT_ROUNDS = 6;
 export type Question = { id: string; text: string; why: string; options: string[]; /** Short key for a repeated question whose answers become a daily signal ("lunch_size"). */ key: string; repeat: "daily" | "once" };
 export type QuestionsAnswer = { questions: Question[] };
 
-export type DigestItem = { type: "fact" | "study" | "pattern" | "protocol" | "try"; title: string; text: string; source?: { title: string; url: string }; protocol?: { name: string; how: string; days: number; measure: string } };
+/** The numbers a morning-read item can point at; the app draws that one's last 14 days beside it (PLAN 150). */
+export const DIGEST_MEASURES = ["sleep", "protein", "kcal", "mood", "energy", "focus", "stress", "caffeine", "alcohol", "weight", "lifting"] as const;
+export type DigestMeasure = (typeof DIGEST_MEASURES)[number];
+export const isDigestMeasure = (k: unknown): k is DigestMeasure => (DIGEST_MEASURES as readonly unknown[]).includes(k);
+export type DigestItem = { type: "fact" | "study" | "pattern" | "protocol" | "try"; title: string; text: string; source?: { title: string; url: string }; protocol?: { name: string; how: string; days: number; measure: string };
+  /** One thing to do today (owner, 21 Oct: "I like that its adding tips and advices"). */ tip?: string; measure?: DigestMeasure };
 /**
  * Something new enough to message about (owner, 16 Oct: "it should only send message when it has a new finding, a new
  * sttudy or whatever but if its displayed on today page then nonsensee"): sent to the chat, not shown on Today. Most days none.
@@ -218,14 +223,15 @@ Check-up (owner, 20 Oct: "a checkup from time to time, like how you been, have u
 Each question: tappable options (2–5, short), a one-line "why" that says what it would help find, a short snake_case key, and repeat="daily" if asking it every day would build a useful signal, else "once". A daily question is shown again every day word for word, so its text must hold on any day: no numbers or facts from today ("Stress is at 6 this morning" is once, never daily); put today's fact in "why" if it matters. Don't repeat questions listed as already asked.`,
   digest: `${VOICE}
 Task: write the user's morning read — it's written this morning, after last night, and it's what they see when they wake up. Owner, 20 Oct: "make the digest messages more interesting" — so no generic wellness content: every item is about THIS user, specific, with a number or a source, and something they didn't know.
-Items, 3–4 of them:
+Items, exactly 3 (owner, 21 Oct: "it was just too long, too much info w no visual and just boring. I like that its adding tips and advices"):
 - one "pattern" from their own data through this morning's angle ("## This morning" at the end of the context names it; from the context, never invented);
 - one "try" (owner: "recommend me new stuff … studies, workout splits, and supps, foods, everything … or perhaps look at forums too"): search the web for the kind of thing "## This morning" names; something new to them — not in their stack, not already shown — with why it fits their goals and their data, and its source. A forum find is anecdotes: say so;
 - one study or fun fact with its source, or one protocol to try as an experiment (concrete: what to do, for how many days, what the app will measure);
 - on a training day ("Today's plan"), one may be for that session.
-Titles hook: specific and curious ("Your 3 pm dip has a suspect", "Deep sleep came early — that's normal"), never a topic label ("Sleep tips").
+Titles hook: specific and curious ("Your 3 pm dip has a suspect", "Deep sleep came early — that's normal"), never a topic label ("Sleep tips"); under 60 characters.
+SHORT — it's read on a phone at wake-up. "text": at most 2 short sentences (under 200 characters), with the one number that matters. "tip": one line, what to do today, starting with a verb ("Have the protein coffee before 10"), under 100 characters. "measure": the one of their numbers the item is about — sleep (their sleep rating), protein, kcal, mood, energy, focus, stress, caffeine, alcohol, weight or lifting (kg lifted) — and the app draws its last 14 days beside the item, so don't recite what the chart shows; leave it out when none fits.
 Answer with ONLY a JSON object, no prose:
-{"greeting":"one short line","items":[{"type":"fact|study|pattern|protocol|try","title":"","text":"2–3 sentences","source":{"title":"","url":""},"protocol":{"name":"","how":"","days":14,"measure":"energy|mood|focus|stress|sleep|weight"}}],"news":null}
+{"greeting":"one short line","items":[{"type":"fact|study|pattern|protocol|try","title":"","text":"1–2 short sentences","tip":"one line for today","measure":"${DIGEST_MEASURES.join("|")}","source":{"title":"","url":""},"protocol":{"name":"","how":"","days":14,"measure":"energy|mood|focus|stress|sleep|weight"}}],"news":null}
 "source" is required for facts, studies and tries. "protocol" only on protocol items. Don't repeat titles listed as already shown.
 news (owner: "it should only send message when it has a new finding, a new sttudy or whatever"): null on most days. Only when your search turned up something genuinely new and worth a message for THIS user — a study or review from the last 12 months on something in their stack, their training or their conditions, or a safety note on something they take — give {"title":"","text":"2–3 sentences: what it found and what it means for them","source":{"title":"","url":"https://…"}}. It's sent to their chat, not shown with the items, so it must not repeat an item or anything already shown. No news is better than filler.`,
 };
@@ -289,11 +295,26 @@ export function checkSupplement(a: SupplementAnswer): SupplementAnswer {
   };
 }
 
+/** Cut to `n` characters at a sentence's end when one fits, else at a word, with "…". */
+export function short(t: string, n: number): string {
+  const s = t.trim().replace(/\s+/g, " ");
+  if (s.length <= n) return s;
+  const cut = s.slice(0, n), end = Math.max(cut.lastIndexOf(". "), cut.lastIndexOf("! "), cut.lastIndexOf("? "));
+  return end >= n * 0.5 ? cut.slice(0, end + 1) : `${cut.slice(0, Math.max(cut.lastIndexOf(" "), n * 0.6)).trimEnd()}…`;
+}
+
+/** Three short items at most (PLAN 150: "too long, too much info"), each with its tip and chart when given. */
 export function checkDigest(a: DigestAnswer): DigestAnswer {
-  const items = (a.items ?? []).filter((i) => typeof i?.title === "string" && typeof i?.text === "string")
+  const items = (a.items ?? []).filter((i) => typeof i?.title === "string" && i.title.trim() && typeof i?.text === "string" && i.text.trim())
     // A fact or study without a real link isn't shown: no source, no claim.
     .filter((i) => !(i.type === "fact" || i.type === "study" || i.type === "try") || (i.source && /^https?:\/\//.test(i.source.url)))
-    .map((i) => (i.type === "protocol" && i.protocol ? { ...i, protocol: { ...i.protocol, days: Math.min(42, Math.max(7, Math.round(i.protocol.days || 14))) } } : i));
+    .slice(0, 3)
+    .map((i): DigestItem => {
+      const { tip, measure, ...rest } = i, t = typeof tip === "string" ? short(tip, 120) : "";
+      return { ...rest, title: short(i.title, 70), text: short(i.text, 240),
+        ...(i.type === "protocol" && i.protocol ? { protocol: { ...i.protocol, days: Math.min(42, Math.max(7, Math.round(i.protocol.days || 14))) } } : {}),
+        ...(t ? { tip: t } : {}), ...(isDigestMeasure(measure) ? { measure } : {}) };
+    });
   // news: a real link, short, and not one of the items (it's a message, not a repeat of Today)
   const n = a.news, ok = n && typeof n.title === "string" && n.title.trim() && typeof n.text === "string" && n.text.trim() && n.source && /^https:\/\//.test(n.source.url ?? "")
     && !items.some((i) => i.title.trim().toLowerCase() === n.title.trim().toLowerCase());

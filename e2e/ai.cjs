@@ -68,7 +68,7 @@ const GOGOSI = [['Gogosi', 330, 6, 48, 13], ['Gogosi', 350, 7, 50, 14]].map(([na
     await pg.goto(APP + '#today'); await pg.waitForTimeout(200);
     // owner, 15 Oct: "the morning read looks a bit too big on front page, its at least should be collapsable"
     const mrH = await pg.locator('.morning').evaluate((e) => Math.round(e.getBoundingClientRect().height));
-    check(`Today: the morning read folded — its greeting and what's inside in a line (${mrH} px)`, /Quiet night, two things worth a look[\s\S]*3 things to read — Saffron and mood/.test(await pg.locator('.morning').innerText()) && mrH < 200 && await pg.locator('.morning .mr-list').count() === 0);
+    check(`Today: the morning read folded — its greeting and a line per item (${mrH} px)`, /Quiet night, two things worth a look[\s\S]*Saffron and mood/.test(await pg.locator('.morning').innerText()) && mrH < 240 && await pg.locator('.morning .mr-body').count() === 0 && await pg.locator('.morning.open').count() === 0);
     await pg.locator('.morning .mr-head').click();
     check('opened: a line per item with its kind, each folded', await pg.locator('.morning .mr-row').count() === 3 && await pg.locator('.morning .mr-body').count() === 0 && /TRY THIS/i.test(await pg.locator('.morning .mr-protocol .mr-kind').innerText()));
     await pg.locator('.morning .mr-row', { hasText: 'caffeine cut-off' }).click();
