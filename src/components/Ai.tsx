@@ -191,7 +191,7 @@ export function MorningRead() {
   const experiments = useStore((s) => s.ai.experiments);
   const entries = useStore((s) => s.entries), workouts = useStore((s) => s.workouts), settings = useStore((s) => s.settings), goals = useStore((s) => s.goals);
   const running = experiments.filter((x) => !x.ended).map((x) => x.name);
-  const now = Date.now(), today = localDay(now);
+  const today = localDay(Date.now());
   // folded every time Today opens; highlighted until you've opened it once (owner, 16 Oct: "collapsed at default … a
   // subtle highlight … when it wasnt opened … after opening its just sits tehre collapsed not highlighted")
   const [open, setOpenState] = useState(false);
@@ -201,7 +201,7 @@ export function MorningRead() {
   const series = useMemo(() => (d?.items ?? []).map((i) => (i.measure ? measureDays(i.measure, facts, entries, today) : null)), [d, facts, entries, today]);
   // only a read written that morning (16 Oct), and only until the evening read replaces it — never the next morning
   // (owner, 21 Oct: "if i get them at yesterday morning, it should not be there"; lib/ai/morning morningShown)
-  if (!d || !morningShown(d, night, now)) return null;
+  if (!d || !morningShown(d, night, Date.now())) return null;
   const fresh = unseen(d);
   const setOpen = (v: boolean) => { setOpenState(v); if (v && fresh) act.setAi((a) => ({ digest: a.digest ? { ...a.digest, seen: Date.now() } : a.digest })); };
   const goalOf = (k: DigestMeasure) => (k === "protein" ? goals.p : k === "kcal" ? goals.kcal : undefined);
