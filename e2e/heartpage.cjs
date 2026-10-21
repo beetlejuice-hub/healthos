@@ -190,6 +190,10 @@ function world({ seed = 7, everyMin = 1 } = {}) {
   // ---- phone
   ({ ctx, pg } = await open(390, w));
   check(`phone: nothing sticks out (${await noOverflow(pg)} px)`, await noOverflow(pg) <= 390);
+  // PLAN 151 (the review): on a phone the columns stack — "Thin lines: each coffee" sat under the workout chart
+  const notes = await pg.locator('.he-col').evaluateAll((cols) => cols.map((c) => [c.querySelector('h3')?.textContent ?? '', c.querySelector('.he-note')?.textContent ?? '']));
+  check(`phone: each chart's note under its own chart (${notes.map(([h, n]) => `${h.split(' ')[0]} ${h.split(' ')[1]}: ${n.slice(0, 22)}`).join(' | ')})`,
+    notes.length === 2 && /^After coffee/.test(notes[0][0]) && /each coffee/.test(notes[0][1]) && /^After a workout/.test(notes[1][0]) && /each workout/.test(notes[1][1]) && !/coffee/.test(notes[1][1]));
   const kb = await pg.locator('.hp-kpis .kpi').evaluateAll((els) => els.map((e) => { const r = e.getBoundingClientRect(); return [Math.round(r.x), Math.round(r.y), Math.round(r.width)]; }));
   check(`phone: the four numbers two by two (${JSON.stringify(kb)})`, kb.length === 4 && kb[0][1] === kb[1][1] && kb[2][1] > kb[0][1] && kb.every((k) => k[2] >= 150));
   const ph = await pg.locator('.hp-chart svg').boundingBox();

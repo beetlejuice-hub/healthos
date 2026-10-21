@@ -2197,6 +2197,23 @@ he already finds useless or confusing — default: the five questions find them.
   and this move each other"; it's "worth a look", says how often it held, and the forward check fades flukes
   (scout.test measures ~0.9 chance flags per person at 60 days, 0.3 at 90).
 
+**Phase 2 — Sleep and Heart (21 Oct).** Sample + fake band (e2e/tools), phone 390 px at 07:30. The engines against
+what's planted: caffeine at bed → falling asleep +13 min (planted ~+15, "clear"), the night rated −1.6 (planted −1.6);
+after coffee +5–6 bpm at 30–90 min (planted ~+4–5, "clear"); workouts back to usual in ~59 min; stress and heart rate:
+"no clear link" (nothing planted — right); supplements: no clear cell (nothing planted — right); drink nights (resting
+HR +4, HRV −9, less deep) not shown — only ~4 in 30 nights, under the 5-and-5 the grids need — honest, not missed.
+- [x] Sleep: "lowest 51 at 03:07" ran off the phone's edge — the label only flipped left past 70 % of the width. Now it
+  flips whenever it wouldn't fit. Checked: e2e sleep walks 8 nights on the phone (fails without: 3 nights, 7–21 px).
+- [x] Heart: the coffee chart's note ("Thin lines: each coffee …") sat under both charts; on a phone, under "After a
+  workout". Each chart has its own note now. Checked: e2e heartpage on the phone (fails without).
+- [ ] **Sleep is long — 5,000 px, about six phone screens** — and says the same things three times: the score's rows
+  (length, deep, REM, awake, lowest heart rate, HRV), the line under it ("7 h 17 asleep · 93 %"), and "In plain words"
+  (the same six again, explained). Two night lists too (the 14-night cards and the 30-night stages). Proposal: the
+  plain-words explanation opens from its score row (tap a row); one night list (the stages list, with the score on each
+  night). *Your call.*
+- [ ] Heart: "Above your usual 0 h 00 of 0 h 08 awake" at 07:30 says nothing yet in the morning — fold that tile until
+  you've been awake an hour (small; next pass).
+
 ## 21 Oct — loose ends from the latest batch (found in the tidy)
 152. [ ] **RPE — how hard a set felt** — your pick on 20 Oct for #143's phase 2: "rep ranges per exercise (8–12) instead
    of one target, and RPE". Rep ranges were built (#144); RPE wasn't. (found in the 21 Oct tidy)
@@ -2294,3 +2311,8 @@ both reads and the questions. Phases in that order; #152 RPE waits (owner).
    follow-ups only untried and 2+ days old), e2e morningread (save from the read, the folded card, opened with tip and
    source, Tried it, still there the next morning after the read is gone), the full e2e run. Also: plan.cjs read the
    store a fixed 200 ms after a tap (writes land at 150 ms) and lost that race under the full run — now waits for it.
+
+160. [~] **The AI, smarter, with more research** — owner, 21 Oct: "later we can make the ai smarter, do more research,
+   etc..its not consuming too much credits rn, which is not bad but means we have room to work w". Ideas when we get
+   there: a weekly deep-research read (one call, more searches, a topic from your data); the chat's look-ups searching
+   the web more; the reads' studies checked against a second source. Later — his call when.

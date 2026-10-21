@@ -170,7 +170,9 @@ function NightChart({ n, ns, band, data, w, wide }: { n: Night; ns: Night[]; ban
       {uLow && uLowAt && <circle cx={X(atMinute(n.eve, 0) + uLowAt.mid * HOUR)} cy={HY(uLow.mid)} r={4.5} fill="none" stroke="var(--i-ink-2)" strokeWidth="1.5" />}
       {n.low != null && n.lowAt != null && <>
         <circle cx={X(n.lowAt)} cy={HY(n.low)} r={5} fill="var(--hr)" stroke="var(--i-panel)" strokeWidth="2" />
-        <text x={X(n.lowAt) + (X(n.lowAt) > w * 0.7 ? -9 : 9)} y={HY(n.low) + 18} textAnchor={X(n.lowAt) > w * 0.7 ? "end" : "start"} className="he-mark">lowest {Math.round(n.low)} at {clock(n.lowAt)}</text>
+        {/* to the left when it wouldn't fit before the scale (it ran off a phone's edge at 03:07 — PLAN 151); ~7 px a letter */}
+        {(() => { const t = `lowest ${Math.round(n.low!)} at ${clock(n.lowAt!)}`, left = X(n.lowAt!) + 9 + t.length * 7 > w - R;
+          return <text x={X(n.lowAt!) + (left ? -9 : 9)} y={HY(n.low!) + 18} textAnchor={left ? "end" : "start"} className="he-mark">{t}</text>; })()}
       </>}
       {uLow && uLowAt && <text x={X(atMinute(n.eve, 0) + uLowAt.mid * HOUR)} y={HY(uLow.mid) - 10} textAnchor="middle" className="cmp-s">usually ~{Math.round(uLow.mid)}</text>}
       {usualBand.length > 1 && wide && <text x={w - R} y={hy0 + 4 * RW + 42} textAnchor="end" className="cmp-s">grey: the middle half of your other nights at each time · red: a 5-minute average</text>}

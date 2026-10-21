@@ -156,6 +156,14 @@ function world(seed = 5) {
   check('phone: the grid has every measure and scrolls inside its card', await pg.locator('.sl .sl-mh').count() === 10 && (await pg.locator('.sl .sl-mscroll').boundingBox()).width <= 370 && await pg.evaluate(() => document.documentElement.scrollWidth) <= 390);
   const bb = await pg.locator('.sl .sl-bar .ibtn').first().boundingBox();
   check(`phone: night arrows big enough to tap (${Math.round(bb.width)}×${Math.round(bb.height)})`, bb.height >= 34 && bb.width >= 44);
+  // PLAN 151 (the review): "lowest 51 at 03:07" ran off a phone's edge — every night with its label inside the chart
+  const sticks = [];
+  for (let k = 0; k < 8; k++) {
+    const r = await pg.locator('.sl text.he-mark').evaluateAll((ts) => ts.map((t) => { const svg = t.ownerSVGElement.getBoundingClientRect(), b = t.getBoundingClientRect(); return [t.textContent, Math.round(b.right - svg.right), Math.round(svg.left - b.left)]; }));
+    for (const [t, over, under] of r) if (over > 0 || under > 0) sticks.push(`${t} by ${Math.max(over, under)} px`);
+    const prev = pg.getByRole('button', { name: 'The night before' }).first(); if (!(await prev.count()) || await prev.isDisabled()) break; await prev.click(); await pg.waitForTimeout(120);
+  }
+  check(`phone: the lowest heart rate's label stays inside the chart, night after night (${sticks.join('; ') || 'all inside'})`, sticks.length === 0);
   await pg.locator('.sl .sl-b').screenshot({ path: OUT + 'sleep-b-phone.png' });
   await pg.locator('.sl .sl-a').screenshot({ path: OUT + 'sleep-a-phone.png' });
   await pg.locator('.sl .sl-c').screenshot({ path: OUT + 'sleep-c-phone.png' });

@@ -84,6 +84,8 @@ export function AfterCards({ coffee, gym, usual }: { coffee: AfterCoffee; gym: A
               mark={peak} xTicks={[[-30, "−30"], [0, "coffee"], [60, "60"], [120, "120"], [180, "180 min"]]} yTicks={[cLo, 0, Math.round(cHi / 2), cHi].filter((v, i, a) => a.indexOf(v) === i)}
               label={`Heart rate after ${c.n} coffees, each lined up at the coffee, against coffee-free days`} />}
             <p className="he-words" data-sure={c.sure}>{coffeeWords(c)}</p>
+            {/* with its own chart: on a phone the columns stack, and under both it read as the workout's (PLAN 151) */}
+            {c.n > 0 && <p className="he-note">Thin lines: each coffee. Thick: their average. {c.wobble ? "Grey strip: what chance alone could draw. " : ""}Lined up so the half hour before each coffee is 0 — a day you're higher anyway doesn't count as the coffee.</p>}
           </div>
           <div className="he-col">
             <h3>After a workout <span>coming back down</span></h3>
@@ -91,9 +93,9 @@ export function AfterCards({ coffee, gym, usual }: { coffee: AfterCoffee; gym: A
               mark={g.backMin != null ? { m: g.backMin, text: `back in ${g.backMin} min` } : null} xTicks={[[0, "end"], [30, "30"], [60, "60"], [90, "90 min"]]} yTicks={[0, gHi / 2, gHi]}
               label={`Heart rate above your usual after ${g.n} workouts`} />}
             <p className="he-words">{workoutWords(g, usual)}</p>
+            {g.n > 0 && <p className="he-note">Thin lines: each workout. Thick: their average — how far above your usual for that time of day, from the moment it ended.</p>}
           </div>
         </div>
-        {c.n > 0 && <p className="he-note">Thin lines: each coffee. Thick: their average. {c.wobble ? "Grey strip: what chance alone could draw. " : ""}Lined up so the half hour before each coffee is 0 — a day you're higher anyway doesn't count as the coffee.</p>}
       </div>
   );
 }
