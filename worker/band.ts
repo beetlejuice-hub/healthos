@@ -5,15 +5,16 @@
  *    phone every ~15–30 min, so pulling faster gains nothing),
  *  - keeps heart rate per minute (avg/min/max, one bucket per UTC day, 120 days), sleep sessions with
  *    stages, daily resting heart rate and HRV, steps per 5 minutes (PLAN 66), and each night's skin temperature,
- *    breathing rate and blood oxygen (PLAN 52) — what the app draws.
+ *    breathing rate and blood oxygen, and each day's VO2 max (PLAN 52) — what the app draws.
  * Google's side: lib/band.ts (shapes from Google's own CLI).
  */
 
 import type { Storage } from "./push";
 import {
-  GOOGLE_TOKEN, HEALTH_API, STEP_WINDOWS, dailyFilter, dailyRollUpBody, readDailyKcal, wakeFor, mergeMinutes, mergeSteps, perMinute, readDaily, readHeartRate, readSleep, readSteps, rollUpBody, sampleFilter, sleepFilter,
+  GOOGLE_TOKEN, HEALTH_API, STEP_WINDOWS, readVo2, dailyFilter, dailyRollUpBody, readDailyKcal, wakeFor, mergeMinutes, mergeSteps, perMinute, readDaily, readHeartRate, readSleep, readSteps, rollUpBody, sampleFilter, sleepFilter,
   type HrMinute, type Page, type RollUpPage, type SleepSession, type StepBucket,
 } from "../src/lib/band";
+import type { Vo2Day } from "../src/lib/vo2";
 
 export type BandEnv = {
   GOOGLE_CLIENT_ID?: string; GOOGLE_CLIENT_SECRET?: string;
@@ -59,7 +60,7 @@ export const NIGHT_TYPES = [
   ["daily-respiratory-rate", "daily_respiratory_rate", "breath", "breathsPerMinute"],
   ["daily-oxygen-saturation", "daily_oxygen_saturation", "spo2", "averagePercentage"],
 ] as const;
-const NIGHT_KEYS = NIGHT_TYPES.map((t) => t[2]);
+const NIGHT_KEYS = [...NIGHT_TYPES.map((t) => t[2]), "vo2"];
 /** Pages per kind per pull. Cloudflare allows 50 outside calls per run; this keeps one pull under ~25. */
 const MAX_PAGES = 20;
 
@@ -225,6 +226,12 @@ export class BandHub {
         await this.storage.put(key, { ...(kept ?? {}), ...got });
       } catch (e) { nightErrors.push(String((e as Error).message)); }
     }
+    // Cardio fitness (PLAN 52): one VO2 max a day, slow — 90 days back the first time, so there's a trend from day one.
+    try {
+      const kept = await this.storage.get<Record<string, Vo2Day>>("vo2");
+      const got = readVo2(await this.list("daily-vo2-max", dailyFilter("daily_vo2_max", utcDay(now - (kept ? 7 : 90) * DAY)), 1000, nightErrors));
+      await this.storage.put("vo2", { ...(kept ?? {}), ...got });
+    } catch (e) { nightErrors.push(String((e as Error).message)); }
     const said = [...errors, ...nightErrors];
     const next: Sync = { lastRun: now, lastOk: errors.filter((e) => !/pages/.test(e)).length < 6 ? now : prev.lastOk, latest, ...(gapSec != null ? { gapSec } : {}), ...(stepsLatest != null ? { stepsLatest } : {}), ...(said.length ? { error: said.join("; ").slice(0, 300) } : {}) };
     await this.storage.put("sync", next);

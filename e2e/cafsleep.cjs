@@ -39,6 +39,8 @@ const { chromium, APP, OUT, handle, rate, openCard } = require('./harness.cjs');
   await at('2026-10-02T14:20:00');
   const now = await pg.locator('.item').allInnerTexts();
   check('normal coffee day: nothing about caffeine in Now', !now.some((t) => /caffeine|mg likely|cut-off/i.test(t)));
+  // under a full run's load the card can draw before the coffees are read in: wait for it to have them
+  await pg.waitForFunction(() => /\d+ mg now/.test(document.querySelector('#caffeine h3')?.textContent ?? ''), null, { timeout: 10000 }).catch(() => {});
   const sum = await pg.locator('#caffeine h3').innerText();
   check(`caffeine card keeps the half-life read (${sum.replace(/\s+/g, ' ')})`, /\d+ mg now · \d+ mg at 23:00/.test(sum) && /Caffeine\s*\d+\s*mg\s*\d+ at 23:00/i.test(await pg.locator('.t2-status').innerText()));
   const read = pg.getByLabel('Caffeine at bedtime');

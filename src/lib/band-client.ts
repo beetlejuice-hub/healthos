@@ -33,7 +33,7 @@ async function api<T>(op: string, post = false): Promise<T> {
 
 const pick = (j: BandStatus): BandStatus => ({ connected: j.connected, needsReconnect: j.needsReconnect, connectedAt: j.connectedAt, lastSync: j.lastSync, latest: j.latest, error: j.error, gapSec: j.gapSec ?? null });
 
-const asData = (d: Partial<BandData>): BandData => ({ hr: d.hr ?? [], sleep: d.sleep ?? [], rhr: d.rhr ?? {}, hrv: d.hrv ?? {}, steps: d.steps ?? [], kcal: d.kcal ?? {}, skin: d.skin ?? {}, breath: d.breath ?? {}, spo2: d.spo2 ?? {} });
+const asData = (d: Partial<BandData>): BandData => ({ hr: d.hr ?? [], sleep: d.sleep ?? [], rhr: d.rhr ?? {}, hrv: d.hrv ?? {}, steps: d.steps ?? [], kcal: d.kcal ?? {}, skin: d.skin ?? {}, breath: d.breath ?? {}, spo2: d.spo2 ?? {}, vo2: d.vo2 ?? {} });
 
 /**
  * Ask the Worker to pull from Google (at most once every 20 s; it says no more often), then load what's new:

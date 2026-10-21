@@ -6,6 +6,7 @@ import { MONTHLY_USD } from "./tasks";
 import { gridLines, todayLines, trainingLines } from "./sections";
 import { readiness } from "../readiness";
 import { heartSigns, nightCheck, nightCheckLines } from "../nightcheck";
+import { kgByDay, vo2Trend } from "../vo2";
 import { nights } from "../sleep";
 import { mainLifts, muscleStrength, sessions, thisWeek } from "../liftstrength";
 import type { LoggedSet } from "../training";
@@ -93,7 +94,9 @@ export function contextNow(state: State = getState(), now = Date.now(), { slim =
     // last night's skin temperature, breathing and blood oxygen against your usual, and the night check's line (PLAN 52)
     today: [...todayLines(ready), ...(band && ready ? nightCheckLines(nightCheck(today, band, heartSigns(ready))) : [])], training: [...trainingLines(ss, mainLifts(sets), thisWeek(ss, now), 6, muscleStrength(sets, now)),
       // cardio (PLAN 130): this week's minutes against the weeks before, the last sessions with the band's heart rate
-      ...cardioWeekLines(cardioSpans(state.workouts, now), band?.hr ?? [], currentKg(state.entries, 0, now) || null, now, 4, 3, maxHrOf(state.settings)?.bpm)], grids: gridLines(state.ai.inbox ?? []), slim, onToday,
+      ...cardioWeekLines(cardioSpans(state.workouts, now), band?.hr ?? [], currentKg(state.entries, 0, now) || null, now, 4, 3, maxHrOf(state.settings)?.bpm),
+      // cardio fitness from the band, and which way it's going — split from the kilos while you lose weight (PLAN 52)
+      ...[vo2Trend(band?.vo2, today, kgByDay(state.entries))?.line].filter((l): l is string => !!l)], grids: gridLines(state.ai.inbox ?? []), slim, onToday,
     // today from midnight; before 04:00 it was still last night's evening, and says so (#107)
     // the app's own totals first: the AI never adds up the lines itself (PLAN 149)
     ...(todaySoFar ? { todaySoFar: [totalsLine(state.entries, dayWindow(today)[0], now + 1, state.goals), ...timeline(state, atMinute(today, 0), now + 1, (at) => (at < dayWindow(today)[0] ? " (last night, after midnight)" : ""))].filter((l): l is string => !!l) } : {}) });

@@ -1,7 +1,7 @@
 /**
  * Insights → Heart (PLAN 55; owner, 9 Oct: "ok do" to "C with A's one-day chart on top"). One day against your usual
  * on top; under it each morning's resting heart rate and HRV and each day's awake average, what goes with the next
- * morning, after coffee / after a workout, and heart rate around a check-in. Numbers from lib/heart, lib/hrusual and
+ * morning, cardio fitness (VO2 max, PLAN 52), after coffee / after a workout, and heart rate around a check-in. Numbers from lib/heart, lib/hrusual and
  * lib/sleep (tested with planted effects); this file only draws. Words say what goes with what, never why.
  */
 
@@ -21,6 +21,7 @@ import { addDays, atMinute, clock, dayLabel, localDay, DAY, MIN } from "../lib/t
 import { shade, shadeAttrs, NO_SHADE } from "../lib/shade";
 import type { Entry } from "../lib/types";
 import { AfterCards } from "./HeartEffects";
+import { CardioFitness } from "./CardioFitness";
 import { GoesWith, type GridCopy } from "./Sleep";
 import { useNights } from "./useNights";
 import { useWidth } from "./useWidth";
@@ -89,6 +90,7 @@ export function HeartPage({ data, band, now, entries, halfLifeMin }: { data: Lan
         <Mornings band={band} awake={awake} ns={ns} evs={evs} today={today} span={span} sel={day} onSel={(d) => setDay(d === today ? null : d)} w={wide ? Math.floor((w - 12) * 0.58) : w} />
         <GoesWith ns={ns} evs={evs} wide={false} w={wide ? w - 12 - Math.floor((w - 12) * 0.58) : w} outcomes={outcomes} factors={factors} narrow={outcomes} copy={HEART_COPY} />
       </div>
+      <CardioFitness vo2={band.vo2} entries={entries} today={today} w={w} />
       {after && <AfterCards coffee={after.coffee} gym={after.gym} usual={after.usual} />}
       {checks && <AroundCheckIns a={checks} span={span} w={w} />}
     </div>

@@ -1518,6 +1518,10 @@ a { color: inherit; }
 .rd summary .zw { display: inline-flex; align-items: center; gap: 6px; } .rd summary .zw::before { content: ""; width: 8px; height: 8px; border-radius: 50%; }
 .rd summary .zw.ideal::before { background: var(--z-ideal); } .rd summary .zw.fair::before { background: var(--z-fair); } .rd summary .zw.poor::before { background: var(--z-poor); }
 .rd-flag { font-size: 12px; color: var(--c-ink); padding: 1px 8px; border-radius: 999px; background: color-mix(in srgb, var(--z-poor) 30%, var(--c-card)); }
+.hp-vo2 { margin-top: 12px; }
+.hp-vo2 h3 { margin: 0 0 6px; } .hp-vo2 h3 span { font: 400 11px var(--f-sans); letter-spacing: 0; text-transform: none; color: var(--i-ink-2); margin-left: 6px; }
+.hp-vo2 .vo2-then { stroke: var(--i-line-2); stroke-dasharray: 3 3; } .hp-vo2 .vo2-hov { stroke: var(--i-line-2); }
+.hp-vo2 .vo2-line { margin: 2px 0 6px; font-size: 13px; line-height: 1.45; color: var(--i-ink); }
 .rd-night { flex-basis: 100%; margin-top: 4px; font-size: 12.5px; line-height: 1.45; color: var(--c-ink-2); padding: 6px 10px; border-radius: 8px; border-left: 3px solid var(--z-fair); background: color-mix(in srgb, var(--z-fair) 12%, var(--c-card)); }
 .nc { margin-top: 12px; }
 .nc .k { font: 600 11px var(--f-sans); letter-spacing: .08em; text-transform: uppercase; color: var(--c-ink-2); }

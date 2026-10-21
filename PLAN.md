@@ -25,8 +25,8 @@ mood course removed from Mind, with weekday × time and best / worst days kept u
 The Sleep page stays as it is for now ("we will go thorugh and change things later").
 
 **To discuss first, one at a time** (owner, 21 Oct: "These ideas need to be discussed first so choose one rn and start w
-discussing w me"): #52 more band data — agreed 21 Oct: the night check first (built 21 Oct, below), then VO2 max, then
-zones per workout ("3 per workout") · #138 your food logs into Google's app · #160 the AI smarter ·
+discussing w me"): #52 more band data — agreed 21 Oct: the night check, VO2 max (both built 21 Oct, below), then zones
+per workout ("3 per workout"; claimed 21 Oct — lib/cardio.ts, ZoneBar, workout summary) · #138 your food logs into Google's app · #160 the AI smarter ·
 #133 more morning-read ideas ("is good") · a fuller food/nutrition score (#139 has the per-item score; what more?).
 
 **Not now:** #48 live heart rate on the Workout screen ("not needed rn") · #136 Tempo → HealthOS (#50, #92 with it) ·
@@ -639,6 +639,13 @@ email get Dev tools (`#dev`): raw entry editor, generate/remove sample, wipe acc
      **Not checked: your real band** — the first morning it shows, open readiness and see the three have numbers. If one
      says "usual after 10 nights" for long, Google isn't sending it.
      Next, as agreed: VO2 max as a trend on the Heart page, then heart-rate zones per workout.
+   - [x] **VO2 max (21 Oct; owner: "do 1 the 2").** `daily-vo2-max` (vo2Max, cardioFitnessLevel, estimated), 90 days back the
+     first time. lib/vo2: this week's median against the same week 4 and 8 weeks back; under 1 either way is steady. It's per
+     kg, so with weights logged near both weeks the change is split: at the same weight (litres a minute over the old
+     weight) and the rest with the kilos lost. Heart page: "Cardio fitness · VO2 max", a dot a day (hollow = Google's
+     estimate), tap or hover a day; the AI gets the same line under Training. Tests: planted rise found, 200 flat runs never
+     call a direction, a fall, weight loss alone read as all kilos; e2e vo2 (and "nothing from the band yet").
+     **Not checked: your real band.**
 53. [x] **Insights as pages — Timeline first** (claimed 8 Oct — canvas, then Insights.tsx, MasterGraph, a new page shell).
    Owner, 8 Oct: "Should we do the separate pages just like on the phone? … in one page i see one thing, like the master
    graph (i rate the current one a 10/6.5 …) on another page the possible findings, on another the sleep data … i need a

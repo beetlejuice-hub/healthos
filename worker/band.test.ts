@@ -81,6 +81,7 @@ function google(opts: { hr?: unknown[]; pageSize?: number; expireAccessOnce?: bo
       const date = { year: 2026, month: 10, day: 7 };
       if (type === "daily-sleep-temperature-derivations") return Response.json({ dataPoints: [{ dailySleepTemperatureDerivations: { date, nightlyTemperatureCelsius: 34.1, baselineTemperatureCelsius: 33.8, relativeNightlyStddev30dCelsius: 0.2 } }] });
       if (type === "daily-respiratory-rate") return Response.json({ dataPoints: [{ dailyRespiratoryRate: { date, breathsPerMinute: 14.6 } }] });
+      if (type === "daily-vo2-max") return Response.json({ dataPoints: [{ dailyVo2Max: { date, vo2Max: 44.2, cardioFitnessLevel: "GOOD", estimated: true } }, { dailyVo2Max: { date: { ...date, day: 6 }, vo2Max: 0 } }] });
       if (type === "daily-oxygen-saturation") return Response.json({ dataPoints: [{ dailyOxygenSaturation: { date, averagePercentage: 96.2, lowerBoundPercentage: 94, upperBoundPercentage: 98 } }] });
       if (type === "daily-heart-rate-variability") return Response.json({ dataPoints: [{ dailyHeartRateVariability: { date: { year: 2026, month: 10, day: 7 }, averageRmssdMilliseconds: 41 } }] });
     }
@@ -338,10 +339,13 @@ describe("BandHub", () => {
     expect(st.m.get("skin")).toEqual({ "2026-10-07": 34.1 });
     expect(st.m.get("breath")).toEqual({ "2026-10-07": 14.6 });
     expect(st.m.get("spo2")).toEqual({ "2026-10-07": 96.2 });
+    // VO2 max: 90 days back the first time (a slow trend); a 0 is junk, not a value
+    expect(since("daily-vo2-max")).toEqual(["2026-07-09"]);
+    expect(st.m.get("vo2")).toEqual({ "2026-10-07": { v: 44.2, level: "GOOD", est: true } });
     at(T0 + PULL_EVERY_MS); await h.alarm();
     expect(since("daily-oxygen-saturation")).toEqual(["2026-08-28", "2026-09-30"]);
     const d = (await (await h.fetch(new Request("https://band/data"))).json()) as Record<string, unknown>;
-    expect(d).toMatchObject({ skin: { "2026-10-07": 34.1 }, breath: { "2026-10-07": 14.6 }, spo2: { "2026-10-07": 96.2 } });
+    expect(d).toMatchObject({ skin: { "2026-10-07": 34.1 }, breath: { "2026-10-07": 14.6 }, spo2: { "2026-10-07": 96.2 }, vo2: { "2026-10-07": { v: 44.2 } } });
   });
 
   it("one of the night check's kinds failing is said, but the pull still counts and the others are kept", async () => {

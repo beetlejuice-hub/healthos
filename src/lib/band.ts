@@ -7,6 +7,8 @@
  * Pure: the Worker (worker/band.ts) fetches, these read; the app draws what comes out.
  */
 
+import type { Vo2Day } from "./vo2";
+
 export const HEALTH_API = "https://health.googleapis.com/v4";
 export const GOOGLE_AUTH = "https://accounts.google.com/o/oauth2/v2/auth";
 export const GOOGLE_TOKEN = "https://oauth2.googleapis.com/token";
@@ -90,6 +92,17 @@ export function readDaily(page: Page, field?: string): Record<string, number> {
     const b = body(p); const day = civilDate(b?.date);
     const v = b ? (field ? num(b[field]) : hrvValue(b)) : null;
     if (day && v != null) out[day] = v;
+  }
+  return out;
+}
+
+/** Cardio fitness (PLAN 52): dailyVo2Max { date, vo2Max, cardioFitnessLevel?, estimated? } → day → value, level, estimate. */
+export function readVo2(page: Page): Record<string, Vo2Day> {
+  const out: Record<string, Vo2Day> = {};
+  for (const p of page.dataPoints ?? []) {
+    const b = body(p); const day = civilDate(b?.date), v = num(b?.vo2Max);
+    if (!day || v == null || v <= 10 || v >= 100) continue;
+    out[day] = { v, ...(typeof b!.cardioFitnessLevel === "string" ? { level: b!.cardioFitnessLevel } : {}), ...(b!.estimated === true ? { est: true } : {}) };
   }
   return out;
 }
@@ -192,7 +205,9 @@ export function mergeMinutes(kept: HrMinute[], fresh: HrMinute[]): HrMinute[] {
 /** What the app holds of the band (lib/band-client): minutes, nights, daily resting HR and HRV, steps, and from when. */
 export type BandData = { hr: HrMinute[]; sleep: SleepSession[]; rhr: Record<string, number>; hrv: Record<string, number>; steps?: StepBucket[]; /** Calories burned per local day (today so far). */ kcal?: Record<string, number>;
   /** The night check (PLAN 52), per morning's date: skin temperature (°C, the night's mean), breaths a minute, blood oxygen (%, the night's average). */
-  skin?: Record<string, number>; breath?: Record<string, number>; spo2?: Record<string, number> };
+  skin?: Record<string, number>; breath?: Record<string, number>; spo2?: Record<string, number>;
+  /** Cardio fitness (PLAN 52) per day: VO2 max, Fitbit's level, whether Google calls it an estimate. */
+  vo2?: Record<string, Vo2Day> };
 
 /** Fold a newly loaded window into what the app holds: minutes and nights replace their old selves, nothing is lost. */
 export function mergeBand(prev: BandData | null, got: BandData): BandData {
@@ -200,7 +215,7 @@ export function mergeBand(prev: BandData | null, got: BandData): BandData {
   const nights = new Map(prev.sleep.map((n) => [n.id, n]));
   for (const n of got.sleep) nights.set(n.id, n);
   return { hr: mergeMinutes(prev.hr, got.hr), sleep: [...nights.values()].sort((a, b) => a.start - b.start), rhr: { ...prev.rhr, ...got.rhr }, hrv: { ...prev.hrv, ...got.hrv }, steps: mergeSteps(prev.steps ?? [], got.steps ?? []), kcal: { ...prev.kcal, ...got.kcal },
-    skin: { ...prev.skin, ...got.skin }, breath: { ...prev.breath, ...got.breath }, spo2: { ...prev.spo2, ...got.spo2 } };
+    skin: { ...prev.skin, ...got.skin }, breath: { ...prev.breath, ...got.breath }, spo2: { ...prev.spo2, ...got.spo2 }, vo2: { ...prev.vo2, ...got.vo2 } };
 }
 
 /**
