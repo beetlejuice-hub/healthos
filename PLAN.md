@@ -2145,6 +2145,9 @@ he already finds useless or confusing — default: the five questions find them.
   does anything. `effects: false` is the control: the same days and draws, every effect off. Checked (sample.test):
   the engines find each planted effect — caffeine-sleep says "worse" with −1.6 inside its range (−2.3 to −0.5); the
   pattern finder finds protein → energy, late caffeine → focus, alcohol → energy — and in the control none of those.
+  Plus a band that fits it (e2e/tools/sampleband.cjs: nights with stages, every minute's heart rate, steps; drink
+  evenings → resting HR +4, HRV −9, less deep sleep; caffeine at bed → slower to fall asleep) and a shots tool
+  (e2e/tools/shots.cjs) that pictures any screen at any time and width with both — checked on Today, Sleep and Heart.
 - [x] **The pattern finder in pure noise** (found by the control). (1) "Calories and alcohol go together, same day" —
   in both: a beer's own kcal are counted in calories, so it's arithmetic, not a pattern. Fixed: same-day pairs of a
   drink amount (caffeine, alcohol) with a total that counts drinks (calories, protein) aren't tested; the next day

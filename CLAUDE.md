@@ -48,6 +48,10 @@ and fake food databases, so they need no network or real accounts. Each prints P
 `errors: [...]` (console errors seen, must be empty); screenshots land in `e2e/out/`. Add a suite
 for every user-visible feature.
 
+To look at a screen as he sees it — 60 days of the sample (built with known effects, `lib/sample.ts`), a fake band that
+fits it, the AI off — at any times and widths: `node e2e/tools/shots.cjs today,insights/sleep 07:30,22:30 390,1280`
+(after a build; pictures and each screen's text land in `e2e/out/review/`). Used by the part-by-part review (PLAN 151).
+
 ## Data rules
 
 - **The owner's real account is read-only for agents.** Test on `lukacsarnold9+healthtest@gmail.com`
