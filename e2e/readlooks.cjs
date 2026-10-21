@@ -47,7 +47,7 @@ const FINAL = { greeting: 'Morning.', items: [{ type: 'pattern', title: 'Beer ni
     await pg.getByRole('button', { name: 'Sign in' }).click(); await pg.waitForSelector('text=Settings');
     await pg.evaluate((es) => { const k = 'healthos.v1:u-test', s = JSON.parse(localStorage.getItem(k) || '{}'); s.entries = es; s.workouts = []; s.ai = { ...(s.ai || {}), digest: null, chat: [] }; localStorage.setItem(k, JSON.stringify(s)); }, log(plant));
     await pg.goto(APP + '#today'); await pg.reload(); await pg.waitForSelector('#feel');
-    for (let i = 0; i < 80 && calls.filter((c) => c.task === 'digest').length < 2; i++) await pg.waitForTimeout(100);
+    for (let i = 0; i < 200 && calls.filter((c) => c.task === 'digest').length < 2; i++) await pg.waitForTimeout(100);
     const dg = calls.filter((c) => c.task === 'digest'), sent = dg[1]?.turn ?? [];
     const result = sent.at(-1)?.content?.find((x) => x.type === 'tool_result');
     const text = result?.content ?? '';

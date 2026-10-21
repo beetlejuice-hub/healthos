@@ -14,7 +14,7 @@ import { DEFAULT_GOALS, slotOf, slotsOf, slotTime } from "./types";
 import { tidyWorkouts } from "./training";
 import type { ScoutMemo } from "./scout";
 import type { Energy } from "./energy";
-import type { DigestItem, ModelChoice, NightAnswer, Question, ReviewAnswer, SupplementAnswer } from "./ai/tasks";
+import type { DigestItem, ModelChoice, NightAnswer, Question, ReviewAnswer, SupplementAnswer, DiveAnswer } from "./ai/tasks";
 import type { Due, ReviewRow } from "./review";
 import type { ChartSpec } from "./ai/chattools";
 import type { Proposal } from "./ai/propose";
@@ -50,6 +50,9 @@ export type AiState = {
   research: Record<string, SupplementAnswer & { at: number; /** The name you typed when it was looked up. */ asked: string }>;
   /** Protocols you chose to try: the app compares before and during. */
   experiments: Experiment[];
+  /** This week's deep dive (PLAN 160), and the topics so far (never again). `repicks`: "pick another" taps this week. */
+  dive?: (DiveAnswer & { key: string; at: number; seen?: number; looked?: string[]; repicks?: number; skipped?: string[] }) | null;
+  dives?: { key: string; topic: string }[];
   /** Read items you saved for later (PLAN 159), newest first. */
   saved?: Saved[];
   /** When you last opened the AI tab: newer unprompted messages show a dot. */

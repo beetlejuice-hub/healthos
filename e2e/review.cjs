@@ -31,7 +31,7 @@ const ANSWERS = {
     const ctx = await b.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true });
     await ctx.route('https://ubfvaewfdbmecowoeuni.supabase.co/**', handle);
     await ctx.route('**/api/ai/usage**', (r) => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ usage: null, cap: 50, on: true }) }));
-    await ctx.route('**/api/ai?**', (r) => { const body = r.request().postDataJSON(); calls.push(body); r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ answer: ANSWERS[body.task](body), usage: null, costUsd: 0.1, model: 'opus' }) }); });
+    await ctx.route('**/api/ai?**', (r) => { const body = r.request().postDataJSON(); calls.push(body); if (!ANSWERS[body.task]) return r.fulfill({ status: 500, contentType: 'application/json', body: '{"error":"not in this test"}' }); r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ answer: ANSWERS[body.task](body), usage: null, costUsd: 0.1, model: 'opus' }) }); });
     const pg = await ctx.newPage();
     await pg.clock.install({ time: now });
     pg.on('pageerror', (e) => errs.push('pageerror: ' + e.message));

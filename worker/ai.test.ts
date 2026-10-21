@@ -231,6 +231,22 @@ describe("/api/ai", () => {
     expect(((await res3.json()) as { error: string }).error).toBe("bad-answer");
   });
 
+  it("the weekly deep dive: up to 10 searches and the reads' look-ups; its studies' links checked (PLAN 160)", async () => {
+    const good = "https://pubmed.ncbi.nlm.nih.gov/34883514/", gone = "https://journal.example.com/missing";
+    const dive = { topic: "Is magnesium doing anything for your sleep?", why: "40 nights on it.", yourData: "6.4 with vs 6.6 without — not clear.", verdict: "Your data can't tell yet.", sure: "weak",
+      found: [{ title: "Magnesium and sleep in older adults", text: "Small effect on sleep onset.", source: { title: "Magnesium supplementation and sleep in older adults", url: good } }, { title: "Gone", text: "…", source: { title: "Magnesium and REM sleep", url: gone } }] };
+    const w = world([{ text: JSON.stringify(dive), searches: 8 }], { pages: { [good]: { html: "<title>Oral magnesium supplementation for insomnia in older adults: a systematic review - PubMed</title><meta name=\"citation_title\" content=\"Oral magnesium supplementation for insomnia in older adults\">" }, [gone]: { status: 404 } } });
+    const res = await handleAi(post({ task: "dive", context: "c" }), env, w.deps);
+    const body = (await res.json()) as { answer: { found: { title: string; source: { checked?: boolean } }[]; topic: string } };
+    expect(res.status).toBe(200);
+    expect(body.answer.topic).toBe("Is magnesium doing anything for your sleep?");
+    expect(body.answer.found.map((f) => [f.title, f.source.checked ?? false])).toEqual([["Magnesium and sleep in older adults", true]]);
+    const tools = w.sent[0].body.tools as { name: string; max_uses?: number }[];
+    expect(tools.find((t) => t.name === "web_search")?.max_uses).toBe(10);
+    expect(tools.some((t) => t.name === "compare")).toBe(true);
+    expect(JSON.stringify(w.sent[0].body.system)).toContain("this week's deep dive");
+  });
+
   it("night: the day is read back with web search (its study and thing to try need sources), from text, and checked", async () => {
     const night = { summary: "A steady day; stress peaked at 14:00 with the deadline you noted.", happened: ["2 coffees, last 13:00", "gym 18:00", "x", "y", "dropped"], notes: "You wrote 'deadline' at 14:00 — the stress 8 fits that.", change: [{ what: "Walk after lunch", why: "your 15:00 dip" }, { what: "b", why: "" }, { what: "dropped", why: "" }], remember: ["Stress runs high on deadline days."],
       // PLAN 157: the evening's three — a study and a try need a real link; the morning's other kinds aren't the evening's

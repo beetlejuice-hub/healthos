@@ -24,6 +24,9 @@ import { CHAT_ROUNDS, MODELS, estimateMonthUsd, type ChatTurn, type ModelChoice,
 import { askLines, KIND_LABEL, questionKinds, tracking, type Tracked } from "../lib/ai/asking";
 import { savedFollowups } from "../lib/ai/saved";
 import { SavedCard } from "./Saved";
+import { DeepDive } from "./DeepDive";
+import { Looked } from "./Looked";
+import { DIVE, diveBrief, diveDue } from "../lib/ai/dive";
 import { judge } from "../lib/ai/apply";
 import { dailyFacts } from "../lib/insights";
 import { addDays, atMinute, clock, dayLabel, localDay, stamp } from "../lib/time";
@@ -40,7 +43,7 @@ import { byDay, foldLine } from "../lib/ai/thread";
 const usd = (x: number) => (x < 0.1 ? `$${x.toFixed(3)}` : `$${x.toFixed(2)}`);
 const k = (n: number) => (n >= 1000 ? `${(n / 1000).toFixed(1)}k` : String(Math.round(n)));
 const clockOf = (t: number) => new Date(t).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
-const TASK_WORDS: Record<string, string> = { describe: "food", questions: "questions", chat: "chat", digest: "morning read", night: "night read", supplement: "supplement", review: "week / month read" };
+const TASK_WORDS: Record<string, string> = { describe: "food", questions: "questions", chat: "chat", digest: "morning read", night: "night read", supplement: "supplement", review: "week / month read", dive: "deep dive" };
 
 /* ------------------------------------------------------------------ background: morning read + questions */
 
@@ -72,6 +75,25 @@ async function makeDigest(day: string) {
     // something new is a message (owner, 16 Oct: "only send message when it has a new finding, a new sttudy"); the rest is on Today
     ...(n && !a.chat.some((m) => m.unprompted && m.text.startsWith(`📰 **${n.title}**`)) ? { chat: [...a.chat, { role: "assistant" as const, text: `📰 **${n.title}**\n\n${n.text}`, at, unprompted: true, source: n.source }].slice(-80) } : {}),
   }));
+}
+
+/**
+ * The weekly deep dive (PLAN 160; owner: "3: ai" — the AI picks the topic): one question from your data, researched, with
+ * your own numbers from the app's look-ups. `skip`: "pick another" — the topics to leave this time.
+ */
+export async function makeDive(key: string, skip: string[] = []): Promise<string | null> {
+  const id = `dive:${key}:${skip.length}`;
+  if (tried.has(id)) return null;
+  tried.add(id); // once a session: a failed call isn't retried in a loop (it costs)
+  const ai = getState().ai;
+  const r = await askRead({ task: "dive", context: `${contextNow()}\n${diveBrief(ai.dives ?? [], skip).join("\n")}` });
+  if (!r.ok) return r.message;
+  const at = Date.now(), { looked, ...answer } = r.answer;
+  act.setAi((a) => ({
+    dive: { ...answer, key, at, ...(looked ? { looked } : {}), repicks: skip.length, ...(skip.length ? { skipped: skip } : {}) },
+    dives: [...(a.dives ?? []), { key, topic: answer.topic }].slice(-DIVE.keep),
+  }));
+  return null;
 }
 
 /** Anything logged in that day's evening-to-04:00 window (#107: a beer at 00:40 is that evening's). */
@@ -182,6 +204,9 @@ export function useAiAuto(userId: string | undefined) {
       if (h >= 13 && h < 21 && ai.questions?.day !== today) void makeQuestions(today);
       // The week just gone from Monday 06:00, the month just gone from the 1st (PLAN 65).
       for (const d of dueReviews(now.getTime(), (ai.reviews ?? []).map((r) => `${r.kind}:${r.key}`))) void makeReview(d);
+      // the weekly deep dive, from Sunday 09:00 (PLAN 160)
+      const dive = diveDue(now.getTime(), ai.dive, getState().entries);
+      if (dive) void makeDive(dive);
       // Your day, read back: tonight from 21:00 (past midnight still tonight, until 04:00); or the next morning if the app
       // wasn't opened that evening (lib/ai/nightread).
       const back = nightDue(now.getTime(), ai.night?.day, loggedOn);
@@ -200,7 +225,7 @@ export function useAiAuto(userId: string | undefined) {
 /** Unread unprompted messages, for the tab dot: the AI's, and the app's still waiting for you (PLAN 102). */
 export function useAiUnread() {
   const ai = useStore((s) => s.ai);
-  return ai.chat.filter((m) => m.unprompted && m.at > ai.seenAt).length + (ai.inbox ?? []).filter((n) => n.at > ai.seenAt && !n.reply && !n.closed).length + (ai.reviews ?? []).filter((r) => r.at > ai.seenAt).length;
+  return (ai.dive && !ai.dive.seen ? 1 : 0) + ai.chat.filter((m) => m.unprompted && m.at > ai.seenAt).length + (ai.inbox ?? []).filter((n) => n.at > ai.seenAt && !n.reply && !n.closed).length + (ai.reviews ?? []).filter((r) => r.at > ai.seenAt).length;
 }
 
 /* ------------------------------------------------------------------ Today: the morning read */
@@ -238,15 +263,6 @@ export function MorningRead() {
       {open && <Looked names={d.looked} />}
     </section>
   );
-}
-
-/** What a read checked with the app's own numbers (PLAN 160): "its test ×2 · the band's nights". */
-const LOOK_WORDS: Record<string, string> = { compare: "its test", series: "a trend", nights: "the band's nights", day: "a day's log", find: "a search of your log", sessions: "your sessions" };
-function Looked({ names }: { names?: string[] }) {
-  if (!names?.length) return null;
-  const n = new Map<string, number>();
-  for (const x of names) n.set(x, (n.get(x) ?? 0) + 1);
-  return <p className="mr-looked">Checked against your data by the app: {[...n].map(([k, c]) => `${LOOK_WORDS[k] ?? k}${c > 1 ? ` ×${c}` : ""}`).join(" · ")}</p>;
 }
 
 /* ------------------------------------------------------------------ Today: your day, read back */
@@ -429,6 +445,7 @@ export function AiScreen() {
   return (
     <div className="calm ai-screen">
       <div className="head"><span>Your AI</span><a href="#settings">Settings</a></div>
+      <DeepDive onRepick={makeDive} />
       <SavedCard />
       <div className="chat" aria-live="polite">
         {thread.length === 0 && <p className="note">Ask me anything about your data — I see your numbers, patterns, stack and About me. The morning read and your day read back are on Today — ask me about them here. I only write here myself with something new: a heart-rate stretch the app can't explain, a new finding to comment on, your week and month.</p>}

@@ -2374,9 +2374,15 @@ both reads and the questions. Phases in that order; #152 RPE waits (owner).
        readlooks: a planted beer → sleep effect comes back "clear" (5.2 vs 8.2), the same evenings unplanted "not clear";
        fails without the change. Found on the way: an answer with no JSON at all crashed the server (500) instead of
        "try again" (502) — fixed.
-     - [ ] **3 · A weekly deep dive** — Sundays; the AI picks one question from your data ("pick another" to change it);
-       8–10 searches, 2–3 studies against your numbers, a verdict and one experiment.
+     - [x] **3 · A weekly deep dive** (lib/ai/dive.ts, DeepDive.tsx) — due from Sunday 09:00 (or the first open after
+       that, that week; not on an account with under 10 days logged in 4 weeks). The AI picks ONE unsettled question from
+       your data (never a past topic), uses the reads' look-ups for your numbers and up to 10 searches for 2–3 studies
+       (links checked), and answers: why this, your data, what studies found, the verdict with how sure (strong /
+       moderate / thin), and one experiment that starts with a tap. "Pick another topic" twice a week, the skipped ones
+       left out. A card at the top of the AI tab, counted in the tab's dot until opened. ≈ $0.30–0.40 a week on Opus
+       (estimate). e2e deepdive. The four e2e fakes that answered from a fixed list of tasks crashed on the new one —
+       now they say "not in this test" like the others.
      - [ ] **4 · Experiments end with a verdict** — the app's before/during numbers plus what studies found: worked for
        you / didn't / not clear, and what to try next.
-   - Known: the sleep and heartpage e2e suites time out now and then under the full run's load (4 at a time) and pass
-     alone — seen 21 Oct before and after these changes.
+   - Known: the heavy e2e suites (sleep, heartpage, heart, cafsleep) time out now and then under the full run's load
+     (4 at a time here) and pass alone — a different one each run, 21 Oct; CI has been green on every push.

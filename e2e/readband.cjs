@@ -59,7 +59,7 @@ const STUDIES = [{ type: 'study', title: 'Skin temperature rises before symptoms
     await pg.getByRole('button', { name: 'Sign in' }).click(); await pg.waitForSelector('text=Settings');
     await pg.evaluate(() => { const k = 'healthos.v1:u-test', s = JSON.parse(localStorage.getItem(k) || '{}'); s.entries = []; s.workouts = []; s.ai = { ...(s.ai || {}), digest: null, chat: [] }; localStorage.setItem(k, JSON.stringify(s)); });
     await pg.goto(APP + '#today'); await pg.reload(); await pg.waitForSelector('#feel');
-    for (let i = 0; i < 80 && !calls.some((c) => c.task === 'digest'); i++) await pg.waitForTimeout(100);
+    for (let i = 0; i < 200 && !calls.some((c) => c.task === 'digest'); i++) await pg.waitForTimeout(100);
     const c = calls.find((x) => x.task === 'digest')?.context ?? '';
     const angle = (c.match(/- Angle for the "pattern" item: [^\n]*/) ?? [''])[0];
     if (plant) {

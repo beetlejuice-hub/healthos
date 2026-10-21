@@ -80,7 +80,7 @@ export async function askAi<T extends Task>(req: Extract<AiRequest, { task: T }>
  * own numbers (compare, series, nights…); they're worked out here from your data and sent back, at most READ_ROUNDS
  * times, then it must answer. `looked`: what it looked up, shown with the read.
  */
-export async function askRead<T extends "digest" | "night">(req: Extract<AiRequest, { task: T }>): Promise<AiResult<AiAnswer<T> & { looked?: string[] }>> {
+export async function askRead<T extends "digest" | "night" | "dive">(req: Extract<AiRequest, { task: T }>): Promise<AiResult<AiAnswer<T> & { looked?: string[] }>> {
   let turn: ChatTurn[] = [];
   const looked: string[] = [];
   for (let round = 0; ; round++) {

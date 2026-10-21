@@ -8,7 +8,7 @@
  * estimate, so it's used once and free after that.
  */
 
-export type Task = "describe" | "supplement" | "chat" | "questions" | "digest" | "night" | "review";
+export type Task = "describe" | "supplement" | "chat" | "questions" | "digest" | "night" | "review" | "dive";
 export type ModelChoice = "opus" | "sonnet" | "haiku";
 /**
  * Light = food, photos and quick questions (many small calls); everyday = the chat; research = supplement look-ups and
@@ -25,7 +25,7 @@ export const MODELS: Record<ModelChoice, { id: string; label: string; inUsd: num
 /** Web search is billed per search on top of tokens. */
 export const WEB_SEARCH_USD = 0.01;
 
-export const TIER: Record<Task, Tier> = { describe: "light", chat: "everyday", questions: "light", supplement: "research", digest: "research", night: "research", review: "research" };
+export const TIER: Record<Task, Tier> = { describe: "light", chat: "everyday", questions: "light", supplement: "research", digest: "research", night: "research", review: "research", dive: "research" };
 export type Models = Record<Tier, ModelChoice>;
 /** Cheap where it's simple, the strongest where it matters. */
 export const DEFAULT_MODELS: Models = { light: "haiku", everyday: "opus", research: "opus" };
@@ -147,6 +147,24 @@ export type DigestItem = { type: "fact" | "study" | "pattern" | "protocol" | "tr
  */
 export type DigestNews = { title: string; text: string; source: { title: string; url: string; checked?: boolean } };
 export type DigestAnswer = { greeting: string; items: DigestItem[]; news?: DigestNews | null; /** 1–2, the kinds the app picked (PLAN 156). */ questions?: Question[] };
+/**
+ * The weekly deep dive (PLAN 160): the question it picked and why (from their data), what their own numbers say (from the
+ * app's look-ups), 2–3 studies with their links, the verdict and how sure, and one experiment to try.
+ */
+export type DiveStudy = { title: string; text: string; source: { title: string; url: string; checked?: boolean } };
+export type DiveAnswer = { topic: string; why: string; yourData: string; found: DiveStudy[]; verdict: string; sure: "strong" | "moderate" | "weak";
+  experiment?: { name: string; how: string; days: number; measure: (typeof EXPERIMENT_MEASURES)[number] } };
+export function checkDive(a: DiveAnswer): DiveAnswer {
+  const str = (x: unknown, n: number) => (typeof x === "string" ? x.trim().slice(0, n) : "");
+  const topic = str(a?.topic, 140), verdict = str(a?.verdict, 700);
+  if (!topic || !verdict) throw new SyntaxError("a deep dive needs its question and its verdict");
+  const found = (Array.isArray(a.found) ? a.found : []).filter((f) => f && str(f.title, 1) && /^https:\/\//.test(f.source?.url ?? "")).slice(0, 3)
+    .map((f) => ({ title: str(f.title, 120), text: str(f.text, 400), source: { title: str(f.source.title, 160) || str(f.title, 120), url: f.source.url } }));
+  const x = a.experiment, okX = x && str(x.name, 1) && str(x.how, 1) && Number.isFinite(x.days) && x.days >= 3 && x.days <= 60 && (EXPERIMENT_MEASURES as readonly string[]).includes(x.measure);
+  return { topic, why: str(a.why, 400), yourData: str(a.yourData, 600), found, verdict, sure: a.sure === "strong" || a.sure === "moderate" ? a.sure : "weak",
+    ...(okX ? { experiment: { name: str(x!.name, 80), how: str(x!.how, 300), days: Math.round(x!.days), measure: x!.measure } } : {}) };
+}
+
 /** A read mid-way: the look-ups it wants the app to run, and its turns to send back as they were (PLAN 160). */
 export type ReadLooks = { calls: ToolCall[]; turn: ChatTurn[] };
 export const isLooks = (a: unknown): a is ReadLooks => !!a && typeof a === "object" && Array.isArray((a as ReadLooks).calls) && (a as ReadLooks).calls.length > 0;
@@ -173,7 +191,7 @@ const str = { type: "string" } as const, num = { type: "number" } as const;
 const obj = (properties: Record<string, unknown>, required = Object.keys(properties)) => ({ type: "object", properties, required, additionalProperties: false });
 const arr = (items: unknown) => ({ type: "array", items });
 
-export const SCHEMAS: Record<Exclude<Task, "supplement" | "digest" | "chat" | "night">, unknown> = {
+export const SCHEMAS: Record<Exclude<Task, "supplement" | "digest" | "chat" | "night" | "dive">, unknown> = {
   describe: obj({
     items: arr(obj({
       kind: { type: "string", enum: ["food", "drink"] }, name: str, amount: str,
@@ -229,6 +247,17 @@ Leave "workout" out on a day without one.`;
 
 export const SYSTEM: Record<Task, string> = {
   night: NIGHT,
+  dive: `${VOICE}
+Task: this week's deep dive (owner, 21 Oct: make the AI smarter, "do more research"; the AI picks the topic). "## This week's deep dive" says how to pick: ONE question from THEIR data, never a past topic. Then dig:
+- their own numbers first — use the app's look-ups (compare, series, nights, day, find, sessions) and put what they say in "yourData", with the numbers ("sleep 6.4 after magnesium vs 6.6 without over 40 nights — not clear");
+- search the web for the best 2–3 studies or reviews on it (recent where you can; a meta-analysis beats one small trial), each in "found" with what it found in one or two sentences and its real https link;
+- "verdict": answer the question for THEM in 2–4 sentences — what the studies say against what their data shows, plainly, including "the evidence is thin" or "your data can't tell yet" when that's the truth. Goes with, never causes; no medical advice;
+- "sure": strong, moderate or weak — how sure the verdict is;
+- "experiment": one to settle it on them, when one fits: name, how (concrete), days (7–28), measure (${EXPERIMENT_MEASURES.join(", ")}).
+"topic" is the question itself, under 100 characters ("Is magnesium doing anything for your sleep?"); "why" one sentence on why it came up in their data.
+${LOOK_RULES}
+Answer with ONLY a JSON object, no prose:
+{"topic":"","why":"","yourData":"","found":[{"title":"","text":"","source":{"title":"","url":""}}],"verdict":"","sure":"strong|moderate|weak","experiment":{"name":"","how":"","days":14,"measure":"energy|mood|focus|stress|sleep|weight"}}`,
   review: `${VOICE}
 Task: the user's week read or month read — the step back from the days (owner: "AI should look at data at eod, eow, eom, and make suggestions, summaries, etc, even make graphs or like interesting notices"). The context ends with "## The week …" or "## The month …, as the app measured it": use those numbers and never invent your own; the rest of the context is background.
 - title: one line naming the period's story, specific ("Better mood, short on protein" — not "Your week").
@@ -447,9 +476,11 @@ export type AiRequest =
   /** turn / final: the read's look-up rounds so far, as the chat's (PLAN 160). */
   | { task: "digest"; context: string; shown: string[]; turn?: ChatTurn[]; final?: boolean }
   | { task: "night"; day: string; context: string; turn?: ChatTurn[]; final?: boolean }
-  | { task: "review"; kind: "week" | "month"; from: string; to: string; context: string };
+  | { task: "review"; kind: "week" | "month"; from: string; to: string; context: string }
+  /** The weekly deep dive (PLAN 160), with its look-up rounds like the reads'. */
+  | { task: "dive"; context: string; turn?: ChatTurn[]; final?: boolean };
 
-export type AiAnswer<T extends Task> = T extends "describe" ? { items: DescribedItem[]; dropped: string[] } : T extends "supplement" ? SupplementAnswer : T extends "chat" ? ChatAnswer : T extends "questions" ? QuestionsAnswer : T extends "night" ? NightAnswer : T extends "review" ? ReviewAnswer : DigestAnswer;
+export type AiAnswer<T extends Task> = T extends "describe" ? { items: DescribedItem[]; dropped: string[] } : T extends "supplement" ? SupplementAnswer : T extends "chat" ? ChatAnswer : T extends "questions" ? QuestionsAnswer : T extends "night" ? NightAnswer : T extends "review" ? ReviewAnswer : T extends "dive" ? DiveAnswer : DigestAnswer;
 
 /** What the Worker keeps per account (doc "ai_usage", written only by the Worker). */
 /** One call, as billed: what it was, on which model, its tokens (cached reads and cache writes apart) and its cost. */
@@ -476,6 +507,8 @@ export const TYPICAL: Record<Task, { perDay: number; in: number; out: number; se
   digest: { perDay: 1, in: 25000, out: 2500, searches: 3 },
   night: { perDay: 1, in: 15000, out: 2500, searches: 3 },
   review: { perDay: 5 / 30, in: 16000, out: 2200, searches: 0 },
+  // the weekly deep dive (PLAN 160): more searches, a longer answer
+  dive: { perDay: 1 / 7, in: 30000, out: 4000, searches: 8 },
   supplement: { perDay: 0.2, in: 9000, out: 2000, searches: 3 },
 };
 const TASKS = Object.keys(TYPICAL) as Task[];

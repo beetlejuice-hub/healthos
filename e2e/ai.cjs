@@ -45,6 +45,7 @@ const GOGOSI = [['Gogosi', 330, 6, 48, 13], ['Gogosi', 350, 7, 50, 14]].map(([na
       const body = r.request().postDataJSON();
       if (!aiOn) return r.fulfill({ status: 503, contentType: 'application/json', body: JSON.stringify({ error: 'no-key', message: 'The AI is off.' }) });
       calls.push(body);
+      if (!ANSWERS[body.task]) return r.fulfill({ status: 500, contentType: 'application/json', body: '{"error":"not in this test"}' });
       r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ answer: ANSWERS[body.task](body), usage: usage(calls.length), costUsd: 0.02, model: 'opus' }) });
     });
     const pg = await ctx.newPage();

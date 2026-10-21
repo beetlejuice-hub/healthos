@@ -10,10 +10,10 @@
 
 import Anthropic from "@anthropic-ai/sdk";
 import {
-  DAILY_CAP, MODELS, MONTHLY_USD, RECENT_CALLS, SCHEMAS, logOf, SYSTEM, TIER, checkChat, modelFor, checkDescribe, checkDigest, checkNight, checkQuestions, checkReview, checkSupplement, costUsd, jsonFrom, DESCRIBE_SHAPE, CHAT_TOOLS, CHAT_ROUNDS, READ_ROUNDS, READ_TOOLS, checkReadCalls, type ChatTurn,
-  type AiRequest, type DigestAnswer, type ModelChoice, type NightAnswer, type SupplementAnswer, type Task, type UsageDoc,
+  DAILY_CAP, MODELS, MONTHLY_USD, RECENT_CALLS, SCHEMAS, logOf, SYSTEM, TIER, checkChat, modelFor, checkDescribe, checkDigest, checkNight, checkQuestions, checkReview, checkSupplement, costUsd, jsonFrom, DESCRIBE_SHAPE, CHAT_TOOLS, CHAT_ROUNDS, READ_ROUNDS, READ_TOOLS, checkReadCalls, checkDive, type ChatTurn,
+  type AiRequest, type DigestAnswer, type DiveAnswer, type ModelChoice, type NightAnswer, type SupplementAnswer, type Task, type UsageDoc,
 } from "../src/lib/ai/tasks";
-import { checkReadLinks, checkSupplementLinks } from "./links";
+import { checkDiveLinks, checkReadLinks, checkSupplementLinks } from "./links";
 
 export type AiEnv = { ANTHROPIC_API_KEY?: string; SUPABASE_URL?: string; SUPABASE_KEY?: string; AI_DAILY_CAP?: string; AI_MONTHLY_USD?: string };
 type Deps = { fetch: typeof fetch; now: () => number };
@@ -68,6 +68,7 @@ function validate(b: AiRequest): string | null {
     case "digest": return long(b.context, 48000) ? "context too long" : badTurn(b.turn) ? "bad look-ups" : null;
     case "night": return !/^\d{4}-\d{2}-\d{2}$/.test(String(b.day)) ? "bad day" : long(b.context, 52000) ? "context too long" : badTurn(b.turn) ? "bad look-ups" : null;
     case "review": return !["week", "month"].includes(b.kind) || ![b.from, b.to].every((d) => /^\d{4}-\d{2}-\d{2}$/.test(String(d))) ? "bad review" : long(b.context, 60000) ? "context too long" : null;
+    case "dive": return long(b.context, 60000) ? "context too long" : badTurn(b.turn) ? "bad look-ups" : null;
     default: return "unknown task";
   }
 }
@@ -88,6 +89,7 @@ function messagesFor(b: AiRequest, today: string): Anthropic.Beta.BetaMessagePar
     case "digest": return [{ role: "user", content: [{ type: "text", text: `Today is ${today}. Write my morning read.\n\nMy data:\n${b.context}\n\nAlready shown: ${b.shown.join(" | ") || "nothing yet"}`, cache_control: { type: "ephemeral" } }] }, ...((b.turn ?? []) as Anthropic.Beta.BetaMessageParam[])];
     case "night": return [{ role: "user", content: [{ type: "text", text: `Read back my day, ${b.day}.\n\nMy data:\n${b.context}`, cache_control: { type: "ephemeral" } }] }, ...((b.turn ?? []) as Anthropic.Beta.BetaMessageParam[])];
     case "review": return [{ role: "user", content: `Write my ${b.kind} read: ${b.from} to ${b.to}.\n\nMy data:\n${b.context}` }];
+    case "dive": return [{ role: "user", content: [{ type: "text", text: `Today is ${today}. Do this week's deep dive.\n\nMy data:\n${b.context}`, cache_control: { type: "ephemeral" } }] }, ...((b.turn ?? []) as Anthropic.Beta.BetaMessageParam[])];
   }
 }
 
@@ -100,7 +102,7 @@ export async function callModel(b: AiRequest, choice: ModelChoice, apiKey: strin
   // structured output don't mix, so that answer is parsed from text like the research tasks'.
   const lookup = b.task === "describe" && !!b.lookup && !!b.text && !b.image, chat = b.task === "chat";
   // the evening read searches too (PLAN 157: its study and its thing to try need real sources)
-  const web = task === "supplement" || task === "digest" || task === "night" || lookup || chat;
+  const web = task === "supplement" || task === "digest" || task === "night" || task === "dive" || lookup || chat;
   const schema = web ? undefined : (SCHEMAS as Record<string, unknown>)[task];
   const client = new Anthropic({ apiKey, fetch: deps.fetch, maxRetries: 1 });
   const effort = TIER[task] === "research" ? "medium" : "low";
@@ -112,9 +114,9 @@ export async function callModel(b: AiRequest, choice: ModelChoice, apiKey: strin
   let res: Anthropic.Beta.BetaMessage | null = null;
   // The chat's own tools (the app runs them) and web search for outside facts; the last round may not call any.
   // the reads may ask the app for exact numbers too (PLAN 160): its read-only look-ups, beside web search
-  const read = b.task === "digest" || b.task === "night", final = (chat || read) && !!(b as { final?: boolean }).final;
+  const read = b.task === "digest" || b.task === "night" || b.task === "dive", final = (chat || read) && !!(b as { final?: boolean }).final;
   const tools = chat ? [...CHAT_TOOLS.map((t) => ({ ...t, strict: true })), { type: m.web, name: "web_search" as const, max_uses: 3 }]
-    : read ? [...READ_TOOLS.map((t) => ({ ...t, strict: true })), { type: m.web, name: "web_search" as const, max_uses: 4 }]
+    : read ? [...READ_TOOLS.map((t) => ({ ...t, strict: true })), { type: m.web, name: "web_search" as const, max_uses: b.task === "dive" ? 10 : 4 }]
     : web ? [{ type: m.web, name: "web_search" as const, max_uses: lookup ? 2 : 4 }] : null;
   const paused: ChatTurn[] = [];
   // A web-search turn can pause; continue it (at most 3 times) by sending the partial answer back.
@@ -153,10 +155,11 @@ export async function callModel(b: AiRequest, choice: ModelChoice, apiKey: strin
   }
   const text = textOf(res.content);
   const raw = schema ? JSON.parse(text) : jsonFrom(text);
-  const checked = task === "describe" ? checkDescribe(raw) : task === "supplement" ? checkSupplement(raw) : task === "chat" ? checkChat(raw) : task === "questions" ? checkQuestions(raw) : task === "night" ? checkNight(raw) : task === "review" ? checkReview(raw) : checkDigest(raw);
+  const checked = task === "describe" ? checkDescribe(raw) : task === "supplement" ? checkSupplement(raw) : task === "chat" ? checkChat(raw) : task === "questions" ? checkQuestions(raw) : task === "night" ? checkNight(raw) : task === "review" ? checkReview(raw) : task === "dive" ? checkDive(raw) : checkDigest(raw);
   // every link it cites, opened: a dead one or one about something else takes its item with it (PLAN 160)
   const answer = task === "digest" || task === "night" ? await checkReadLinks(checked as DigestAnswer | NightAnswer, deps.fetch)
-    : task === "supplement" ? await checkSupplementLinks(checked as SupplementAnswer, deps.fetch) : checked;
+    : task === "supplement" ? await checkSupplementLinks(checked as SupplementAnswer, deps.fetch)
+    : task === "dive" ? await checkDiveLinks(checked as DiveAnswer, deps.fetch) : checked;
   return { refused: false as const, answer, usage };
 }
 
@@ -180,7 +183,7 @@ export async function handleAi(req: Request, env: AiEnv, deps: Deps = { fetch: (
 
   const usage = await readUsage(user, env, deps, today);
   // a chat message's tool rounds count as the one call it is (priced and logged each)
-  const more = (body.task === "chat" || body.task === "digest" || body.task === "night") && !!body.turn?.length;
+  const more = (body.task === "chat" || body.task === "digest" || body.task === "night" || body.task === "dive") && !!body.turn?.length;
   if (usage.calls >= cap && !more) return json({ error: "cap", message: `Daily AI limit reached (${cap}). It resets at midnight.`, usage }, 429);
 
   // yours for the task's tier; past the month's budget, the cheapest until the 1st
