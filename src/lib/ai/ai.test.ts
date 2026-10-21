@@ -2,7 +2,7 @@ import type { Finding } from "../findings";
 import { describe, expect, it } from "vitest";
 import { fromDescribed, judge } from "./apply";
 import { ASK_MORE, CONTEXT_MAX, buildContext, onTodayLines, dayTimeline, feelByTime, moodJournal } from "./context";
-import { checkDescribe, checkDigest, checkNight, checkQuestions, costUsd, estimateMonthUsd, jsonFrom, SYSTEM, type CallLog } from "./tasks";
+import { checkAsk, checkDescribe, checkDigest, checkNight, checkQuestions, costUsd, estimateMonthUsd, jsonFrom, SYSTEM, type CallLog } from "./tasks";
 import { parseItem } from "../quickadd";
 import { mealFood } from "../units";
 import { runChatTool } from "./chattools";
@@ -338,14 +338,30 @@ describe("the AI sees what's in a plate (owner, 20 Oct: \"it only sees the title
   });
 });
 
-describe("a daily question reads right on any day (owner, 20 Oct: \"question posed as today but it was last day\")", () => {
-  const q = (text: string, repeat: "daily" | "once") => ({ id: "q", text, why: "w", options: ["a", "b"], key: "k", repeat });
-  it("one carrying today's numbers is asked once, not daily; a timeless one stays daily", () => {
-    const out = checkQuestions({ questions: [q("Stress is at 6 this morning. What's sitting on it most today?", "daily"), q("What's sitting on your stress most today?", "daily")] }).questions;
-    expect(out.map((x) => x.repeat)).toEqual(["once", "daily"]);
+describe("questions with a reason (owner, 21 Oct: \"got the same questions. Please dont make it generic\")", () => {
+  const q = (o: Record<string, unknown> = {}) => ({ id: "", text: "Is the 3 pm slump a lunch thing or a Slack thing?", why: "your energy dips at 15:00 on 9 of 14 days", options: ["Lunch", "Slack", "Both"], key: "Slump Cause!", repeat: "once", kind: "investigate", ...o });
+  it("a read's questions: 2 at most, each with a reason and 2–5 options, keys made safe, never word-for-word daily", () => {
+    const out = checkAsk([q(), q({ key: "b" }), q({ key: "c" })]);
+    expect(out.map((x) => [x.key, x.repeat, x.kind])).toEqual([["slump_cause", "once", "investigate"], ["b", "once", "investigate"]]);
+    expect(checkAsk([q({ why: "" }), q({ options: ["one"] }), q({ options: ["1", "2", "3", "4", "5", "6"] }), q({ text: "  " })])).toEqual([]);
+    expect(checkAsk([q({ kind: "vibes", repeat: "daily" })])[0]).toMatchObject({ kind: "check", repeat: "once" });
   });
-  it("the prompt says so, and bans questions about how they log", () => {
-    expect(SYSTEM.questions).toMatch(/no numbers or facts from today/);
-    expect(SYSTEM.questions).toMatch(/questions about how they log/);
+  it("a study question needs its real link, or it isn't asked (no source, no claim)", () => {
+    const study = { kind: "study", text: "A 2025 trial: 3 g glycine before bed, deeper sleep. Ever tried it?", source: { title: "Sleep 2025", url: "https://example.org/g" } };
+    expect(checkAsk([q(study)])[0].source).toEqual({ title: "Sleep 2025", url: "https://example.org/g" });
+    expect(checkAsk([q({ ...study, source: { title: "x", url: "http://example.org" } }), q({ ...study, source: undefined })])).toEqual([]);
+  });
+  it("the morning read brings them; the cheap fallback call never asks a study (it has no web)", () => {
+    expect(checkDigest({ greeting: "Hi", items: [], questions: [q()] as never }).questions).toHaveLength(1);
+    expect(checkDigest({ greeting: "Hi", items: [] }).questions).toBeUndefined();
+    expect(checkQuestions({ questions: [q({ kind: "study", source: { title: "s", url: "https://e.org" } }), q()] as never }).questions.map((x) => x.kind)).toEqual(["investigate"]);
+  });
+  it("both prompts carry the same rules: about them, with a reason, re-worded when tracked, never about how they log", () => {
+    for (const p of [SYSTEM.digest, SYSTEM.questions]) {
+      expect(p).toMatch(/never at the cost of the reason/);
+      expect(p).toMatch(/re-worded every time it comes back/);
+      expect(p).toMatch(/never about how they log/);
+      expect(p).toMatch(/never about a medication/);
+    }
   });
 });

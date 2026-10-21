@@ -20,7 +20,7 @@ const ANSWERS = {
     { type: 'pattern', title: 'Afternoon dips', text: 'Your 4pm energy is lower on days with a big lunch.' },
     { type: 'protocol', title: 'Try a 14:00 caffeine cut-off', text: 'Two weeks, then we compare.', protocol: { name: 'Caffeine cut-off 14:00', how: 'No caffeine after 14:00', days: 14, measure: 'energy' } },
   ] }),
-  questions: () => ({ questions: [{ id: 'q', text: 'Your energy dips around 4pm — big lunch today?', why: 'to see if lunch size explains the dip', options: ['Big', 'Normal', 'Skipped'], key: 'lunch_size', repeat: 'daily' }] }),
+  questions: () => ({ questions: [{ id: 'q', text: 'Your energy dips around 4pm — big lunch today?', why: 'to see if lunch size explains the dip', options: ['Big', 'Normal', 'Skipped'], key: 'lunch_size', repeat: 'once', kind: 'tracking' }] }),
   // PLAN 67: the first round asks the app for data (as the worker relays it: the calls and the AI's raw turn); then it answers
   chat: (b) => (b.turn ? { reply: 'Hey! Your **afternoon energy** is the thing to watch:\n- the cut-off experiment will tell us\n- *one* coffee before noon', remember: [] }
     : { reply: '', remember: [], calls: CHAT_CALLS, turn: [{ role: 'assistant', content: [{ type: 'thinking', thinking: '', signature: 'sig-1' }, ...CHAT_CALLS.map((c) => ({ type: 'tool_use', ...c }))] }] }),
@@ -75,7 +75,8 @@ const GOGOSI = [['Gogosi', 330, 6, 48, 13], ['Gogosi', 350, 7, 50, 14]].map(([na
     await pg.locator('.morning').screenshot({ path: OUT + 'ai-morning-open.png' });
     await pg.locator('.morning').getByRole('button', { name: 'Try it for 14 days' }).click();
     check('a protocol becomes a running experiment', /Running — see Insights/.test(await pg.locator('.morning').innerText()));
-    check('a quick question with tappable answers', /big lunch today\?[\s\S]*Why: to see if lunch size explains the dip · asked daily/.test(await pg.locator('.question').innerText()));
+    // no read brought questions today, so the cheap call did after 13:00 (PLAN 156); a tracking one says it comes back reworded
+    check('a quick question with tappable answers', /^Tracking/i.test(await pg.locator('.question h3').innerText()) && /big lunch today\?[\s\S]*Why: to see if lunch size explains the dip · comes back now and then, in new words/.test(await pg.locator('.question').innerText()));
     // owner, 15 Oct: "for questions make sure i can write custom reply"
     await pg.locator('.question .q-own input').fill('a huge kebab, then sleepy'); await pg.locator('.question .q-own').getByRole('button', { name: 'Send' }).click(); await pg.waitForTimeout(200);
     const own = await pg.evaluate(() => (JSON.parse(localStorage.getItem('healthos.v1:u-test') || '{}').entries || []).find((e) => e.kind === 'answer'));

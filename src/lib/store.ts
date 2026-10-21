@@ -36,8 +36,9 @@ export type AiState = {
   reviews?: (Due & ReviewAnswer & { at: number; rows: ReviewRow[]; /** the columns: the week's days, or the month's weeks ("1–7") */ cols?: string[] })[];
   /** Titles already shown, so the morning read doesn't repeat itself. */
   shown: string[];
-  /** Today's questions; daily ones are asked again every day without a new AI call. */
-  questions: { day: string; list: Question[] } | null;
+  /** The latest questions and the read that brought them — shown while that read is (PLAN 155–156); "fallback": the cheap call. */
+  questions: { day: string; list: Question[]; from?: "morning" | "evening" | "fallback"; at?: number } | null;
+  /** What's tracked: a tracking question's key and its latest words — re-worded every time it's asked (PLAN 156; before 21 Oct these were asked word for word every day). */
   daily: Question[];
   asked: string[];
   /** Questions you said to stop asking (their keys), and those skipped today (owner, 16 Oct: "Stop asking this is not working also i should be able to skip question"). */

@@ -19,7 +19,8 @@ import { scout } from "../lib/scout";
 import { currentKg } from "../lib/body";
 import { Proposals } from "./Proposal";
 import type { Proposal } from "../lib/ai/propose";
-import { CHAT_ROUNDS, MODELS, estimateMonthUsd, timeless, type ChatTurn, type DigestItem, type DigestMeasure, type ModelChoice, type Question, type Tier } from "../lib/ai/tasks";
+import { CHAT_ROUNDS, MODELS, estimateMonthUsd, type ChatTurn, type DigestItem, type DigestMeasure, type ModelChoice, type Question, type Tier } from "../lib/ai/tasks";
+import { askLines, KIND_LABEL, questionKinds, tracking, type Tracked } from "../lib/ai/asking";
 import { judge } from "../lib/ai/apply";
 import { dailyFacts } from "../lib/insights";
 import { addDays, atMinute, clock, dayLabel, localDay, stamp } from "../lib/time";
@@ -51,11 +52,18 @@ async function makeDigest(day: string) {
   const ai = getState().ai;
   // this morning's angle and kind of new thing, in turn (PLAN 132–133)
   const st = getState(), brief = morningBrief(day, st.templates, st.workouts, Date.now());
-  const r = await askAi({ task: "digest", context: `${contextNow()}\n${brief.join("\n")}`, shown: ai.shown.slice(-40) });
+  // what yesterday's reads suggested, for a follow-up question (PLAN 156)
+  const follow = [
+    ...(ai.digest && ai.digest.day < day && ai.digest.day >= addDays(day, -2) ? ai.digest.items.filter((i) => i.type === "try" || i.type === "protocol").map((i) => `${ai.digest!.day} morning read: ${i.title}${i.tip ? ` — "${i.tip}"` : ""}`) : []),
+    ...(ai.night && ai.night.day >= addDays(day, -1) ? ai.night.change.map((c) => `${ai.night!.day} read-back: ${c.what}`) : []),
+  ];
+  const r = await askAi({ task: "digest", context: `${contextNow()}\n${brief.join("\n")}\n${askFor(day, "morning", follow).join("\n")}`, shown: ai.shown.slice(-40) });
   if (!r.ok) return;
   const n = r.answer.news, at = Date.now();
+  const qs = keepNew(r.answer.questions ?? [], `${day}:m`);
   act.setAi((a) => ({
     digest: { day, at, greeting: r.answer.greeting, items: r.answer.items },
+    ...(qs.length ? { questions: { day, list: qs, from: "morning" as const, at }, asked: [...a.asked, ...qs.map((q) => q.text)].slice(-60), daily: tracked(a.daily, qs) } : {}),
     shown: [...a.shown, ...r.answer.items.map((i) => i.title), ...(n ? [n.title] : [])].slice(-80),
     // something new is a message (owner, 16 Oct: "only send message when it has a new finding, a new sttudy"); the rest is on Today
     ...(n && !a.chat.some((m) => m.unprompted && m.text.startsWith(`📰 **${n.title}**`)) ? { chat: [...a.chat, { role: "assistant" as const, text: `📰 **${n.title}**\n\n${n.text}`, at, unprompted: true, source: n.source }].slice(-80) } : {}),
@@ -108,23 +116,38 @@ async function makeReview(d: Due) {
   }));
 }
 
+/**
+ * What a read is told about its questions (PLAN 156): the kinds the app picked in turn, the check-up when it's due
+ * (PLAN 135), what's tracked and when each was last answered, what to follow up, and what was asked before.
+ */
+function askFor(day: string, when: "morning" | "evening", follow: string[]): string[] {
+  const st = getState(), now = Date.now();
+  const check = checkupLines(st.entries, bandNow(), now);
+  const kinds = questionKinds(day, when, { checkup: check.length > 0, followup: follow.length > 0 });
+  return [...(kinds.includes("checkup") ? check : []),
+    ...askLines(kinds, tracking(st.ai.daily, st.entries, now), kinds.includes("followup") ? follow : [], [...st.ai.asked, ...(st.ai.stopped ?? []).map((k) => `(never ask again) ${k}`)], (t) => dayLabel(t))];
+}
+
+/** One you said to stop asking never comes back, and never the same words twice — even if the AI writes them again. */
+function keepNew(qs: Question[], prefix: string): Question[] {
+  const { stopped = [], asked } = getState().ai, said = new Set(asked.map((t) => t.toLowerCase()));
+  return qs.filter((q) => !stopped.includes(q.key) && !said.has(q.text.toLowerCase())).map((q) => ({ ...q, id: `${prefix}:${q.key}` }));
+}
+
+/** What's tracked: a tracking question's key, its latest words (only for reference — it's re-worded every time). */
+const tracked = (prev: Tracked[], qs: Question[]): Question[] =>
+  [...(prev as Question[]).filter((d) => !qs.some((q) => q.kind === "tracking" && q.key === d.key)), ...qs.filter((q) => q.kind === "tracking")].slice(-8);
+
+/** Questions when no read brought any today — a cheap call, after 13:00 (PLAN 156). */
 async function makeQuestions(day: string) {
   const key = `questions:${day}`;
   if (tried.has(key)) return;
   tried.add(key);
-  const ai = getState().ai;
-  const stopped = new Set(ai.stopped ?? []);
-  // a check-up now and then, from the markers that moved (PLAN 135)
-  const check = checkupLines(getState().entries, bandNow(), Date.now());
-  const r = await askAi({ task: "questions", context: [contextNow(), ...check].join("\n"), asked: [...ai.asked.slice(-30), ...ai.daily.map((q) => q.text), ...[...stopped].map((k) => `(never ask again) ${k}`)] });
+  const r = await askAi({ task: "questions", context: [contextNow(), ...askFor(day, "morning", [])].join("\n"), asked: getState().ai.asked.slice(-30) });
   if (!r.ok) return;
-  // one you said to stop asking never comes back, even if the AI writes it again
-  const list = r.answer.questions.filter((q) => !stopped.has(q.key)).map((q) => ({ ...q, id: `${day}:${q.key}` }));
-  act.setAi((a) => ({
-    questions: { day, list },
-    asked: [...a.asked, ...list.map((q) => q.text)].slice(-60),
-    daily: [...a.daily.filter(timeless), ...list.filter((q) => q.repeat === "daily" && !a.daily.some((d) => d.key === q.key))].slice(-5),
-  }));
+  const list = keepNew(r.answer.questions, `${day}:q`), at = Date.now();
+  if (!list.length) return;
+  act.setAi((a) => ({ questions: { day, list, from: "fallback" as const, at }, asked: [...a.asked, ...list.map((q) => q.text)].slice(-60), daily: tracked(a.daily, list) }));
 }
 
 
@@ -143,7 +166,8 @@ export function useAiAuto(userId: string | undefined) {
       const rated = getState().entries.some((e) => e.kind === "sleep" && e.rating != null && localDay(e.at) === today);
       const target = digestDue(now.getTime(), ai.digest, nightIn(bandNow()?.sleep, rated, now.getTime()));
       if (target) void makeDigest(target);
-      if (h >= 10 && h < 22 && ai.questions?.day !== today) void makeQuestions(today);
+      // the reads bring the questions; only a day without any gets them from the cheap call (PLAN 156)
+      if (h >= 13 && h < 21 && ai.questions?.day !== today) void makeQuestions(today);
       // The week just gone from Monday 06:00, the month just gone from the 1st (PLAN 65).
       for (const d of dueReviews(now.getTime(), (ai.reviews ?? []).map((r) => `${r.kind}:${r.key}`))) void makeReview(d);
       // Your day, read back: tonight from 21:00 (past midnight still tonight, until 04:00); or the next morning if the app
@@ -284,10 +308,12 @@ export function AiQuestions() {
   const entries = useStore((s) => s.entries);
   const today = localDay(Date.now());
   const answeredToday = useMemo(() => new Set(entries.filter((e) => e.kind === "answer" && localDay(e.at) === today).map((e) => (e.kind === "answer" ? e.key : ""))), [entries, today]);
-  const fresh = ai.questions?.day === today ? ai.questions.list : [];
+  // a read's questions while that read is on Today; never one from a day before, never word for word again (PLAN 155–156)
+  const q0 = ai.questions, now = Date.now();
+  const live = !!q0 && (q0.from === "morning" ? ai.digest?.day === q0.day && morningShown(ai.digest, ai.night, now)
+    : q0.from === "evening" ? ai.night?.day === q0.day && nightShown(ai.night, ai.digest, now) : q0.day === today);
   const stopped = new Set(ai.stopped ?? []), skipped = new Set(ai.skipped?.day === today ? ai.skipped.keys : []);
-  // a daily question kept from before 20 Oct with a day's numbers in it ("Stress is at 6 this morning") isn't asked again
-  const list: Question[] = [...fresh, ...ai.daily.filter(timeless).filter((d) => !fresh.some((q) => q.key === d.key))].filter((q) => !answeredToday.has(q.key) && !stopped.has(q.key) && !skipped.has(q.key));
+  const list: Question[] = (live ? q0!.list : []).filter((q) => !answeredToday.has(q.key) && !stopped.has(q.key) && !skipped.has(q.key));
   const [q] = list;
   return q ? <QuestionCard key={q.key} q={q} count={list.length} today={today} /> : null;
 }
@@ -300,19 +326,20 @@ function QuestionCard({ q, count, today }: { q: Question; count: number; today: 
   const send = () => { if (all.length) act.addEntry({ kind: "answer", at: Date.now(), key: q.key, question: q.text, answer: all.join(", ") }); };
   return (
     <section className="card question" aria-label="Quick question">
-      <h3>Quick question <span>{count > 1 ? `1 of ${count}` : "pick one or more"}</span></h3>
+      <h3>{q.kind ? KIND_LABEL[q.kind] : "Quick question"} <span>{count > 1 ? `1 of ${count}` : "pick one or more"}</span></h3>
       <p className="q">{q.text}</p>
+      {q.source && <a className="q-src" href={q.source.url} target="_blank" rel="noreferrer">{q.source.title} ↗</a>}
       <div className="chips">{q.options.map((o) => <button key={o} type="button" className="pill-btn" aria-pressed={picked.includes(o)} onClick={() => toggle(o)}>{o}</button>)}</div>
       <div className="row-add q-own">
         <input value={own} placeholder="or in your own words…" aria-label="Your answer, in your own words" onChange={(e) => setOwn(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") send(); }} />
         <button type="button" className="pill-btn pri" disabled={!all.length} onClick={send}>Send{all.length > 1 ? ` ${all.length}` : ""}</button>
       </div>
-      <small className="why">Why: {q.why}{q.repeat === "daily" ? " · asked daily" : ""}</small>
+      <small className="why">Why: {q.why}{q.kind === "tracking" ? " · comes back now and then, in new words" : ""}</small>
       <div className="q-acts">
         {/* skip: gone for today, no answer saved; a daily one comes back tomorrow */}
         <button type="button" className="linkish" onClick={() => act.setAi((a) => ({ skipped: { day: today, keys: [...(a.skipped?.day === today ? a.skipped.keys : []), q.key] } }))}>Skip</button>
         {/* stop: gone now and for good — the AI is told never to ask it again */}
-        {q.repeat === "daily" && <button type="button" className="linkish" onClick={() => act.setAi((a) => ({ daily: a.daily.filter((d) => d.key !== q.key), stopped: [...new Set([...(a.stopped ?? []), q.key])].slice(-60) }))}>Stop asking this</button>}
+        {(q.kind === "tracking" || q.repeat === "daily") && <button type="button" className="linkish" onClick={() => act.setAi((a) => ({ daily: a.daily.filter((d) => d.key !== q.key), stopped: [...new Set([...(a.stopped ?? []), q.key])].slice(-60) }))}>Stop asking this</button>}
       </div>
     </section>
   );

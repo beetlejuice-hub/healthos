@@ -15,7 +15,7 @@ Started 29 Sept 2026. Owner: Arnold. Answers behind this: the "HealthOS — Disc
 mood course removed from Mind, with weekday × time and best / worst days kept under the new page; Sleep needed nothing
 (with the band its old panels already don't show).
 
-**Building now:** #156 questions with a reason · #157 the evening read with items · #158 the morning read, better.
+**Building now:** #157 the evening read with items · #158 the morning read, better.
 
 **Your asks from the latest batch, not finished:**
 - #152 RPE — how hard a set felt (later — your call, 21 Oct).
@@ -2239,7 +2239,7 @@ is written, so the next morning still shows the night before last; the read-back
    11:59 vs 12:00, a read-back written the next morning), ai.test (the On Today lines — both fail on the old rule),
    the full e2e run (93). Found on the way: three suites (ai, editentry, suppout) still expected Today's Stack and
    Caffeine cards open after the fold (f90ad58) — test-side, fixed; I'd run only the suites I expected to touch.
-156. [ ] **Questions with a reason, never the same twice.** They come with the reads — 1–2 in the morning, 1–2 in the
+156. [x] **Questions with a reason, never the same twice.** They come with the reads — 1–2 in the morning, 1–2 in the
    evening — written by the reads' model (the strong one, with web search) instead of the cheap 10:00 call. Each is one
    of: *tracking* (a measure worth following, mental health too — re-worded every time it comes back, the key kept so
    the answers still add up, at most every 3 days); *investigating* (a Noticed note or a Worth-a-look link: what would
@@ -2247,6 +2247,19 @@ is written, so the next morning still shows the night before last; the read-back
    it sees, "goes with", never medical advice); *a check* on something not logged ("any allergies flaring?") with the
    reason; *following up* yesterday's "try"; the check-up when due. The app picks today's kinds in turn so days differ.
    Clever and sometimes playful, never generic, every one with a "why". Verbatim daily repeats stop.
+   Done (21 Oct), morning side (the evening's come with #157): lib/ai/asking picks each read's two kinds in turn (morning:
+   study · check · tracking · follow-up; evening: investigating · tracking · check · study; the check-up first when
+   due; a follow-up only when yesterday's reads suggested something), lists what's tracked with its last answers and
+   whether it's due (every 3 days), and everything asked before. The morning read's answer carries the questions; the
+   app drops a study without an https source, one in the same words as before, one you stopped. The card says its
+   kind ("Saw a study", "Tracking", "Investigating", "Quick check", "Follow-up", "Check-up"), a study shows its link, a
+   tracking one says it comes back in new words and has "Stop asking this". Old "daily" questions are no longer shown
+   word for word — they're the tracked list the reads re-word. The 10:00 cheap call is now only for a day no read
+   brought questions, after 13:00. Checked: asking.test (rotation over 14 days, morning ≠ evening, check-up first,
+   follow-up only with something, due every 3 days, the lines), ai.test (2 at most, reasons, options, a study needs
+   https, fallback never asks a study, both prompts share the rules), e2e morningread (kinds asked, the study card with
+   its source, the tracking one, remembered by key, next morning nothing from yesterday), questions (tomorrow nothing
+   word for word; the fallback told the kinds, what's tracked and what not to repeat), ai.
 157. [ ] **The evening read gets items too**: a study, a thing to try, and a "noticed" (an investigation of something in
    the day or a note), the morning read's look (a tip, a 14-day chart, the source), never repeating the morning's.
    The read-back gets web search for it: about one more searching call a day (the 10:00 questions call goes, so

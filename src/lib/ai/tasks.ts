@@ -118,7 +118,12 @@ export type ChatToolName = (typeof CHAT_TOOLS)[number]["name"];
 /** Tool rounds in one message, at most. */
 export const CHAT_ROUNDS = 6;
 
-export type Question = { id: string; text: string; why: string; options: string[]; /** Short key for a repeated question whose answers become a daily signal ("lunch_size"). */ key: string; repeat: "daily" | "once" };
+/** What a question is for (PLAN 156; lib/ai/asking). */
+export const Q_KINDS = ["tracking", "investigate", "study", "check", "followup", "checkup"] as const;
+export type QKind = (typeof Q_KINDS)[number];
+export const isQKind = (k: unknown): k is QKind => (Q_KINDS as readonly unknown[]).includes(k);
+export type Question = { id: string; text: string; why: string; options: string[]; /** Short key; a tracking question keeps its key across days so the answers add up ("lunch_size"). */ key: string;
+  /** "daily" is from before 21 Oct (asked word for word every day) — no longer shown that way. */ repeat: "daily" | "once"; kind?: QKind; /** A study question's source. */ source?: { title: string; url: string } };
 export type QuestionsAnswer = { questions: Question[] };
 
 /** The numbers a morning-read item can point at; the app draws that one's last 14 days beside it (PLAN 150). */
@@ -132,7 +137,7 @@ export type DigestItem = { type: "fact" | "study" | "pattern" | "protocol" | "tr
  * sttudy or whatever but if its displayed on today page then nonsensee"): sent to the chat, not shown on Today. Most days none.
  */
 export type DigestNews = { title: string; text: string; source: { title: string; url: string } };
-export type DigestAnswer = { greeting: string; items: DigestItem[]; news?: DigestNews | null };
+export type DigestAnswer = { greeting: string; items: DigestItem[]; news?: DigestNews | null; /** 1–2, the kinds the app picked (PLAN 156). */ questions?: Question[] };
 
 /** The nightly read-back of your day (owner, 2 Oct: "summarizing what happened, what i should change"). */
 export type NightAnswer = { summary: string; happened: string[]; notes: string; change: { what: string; why: string }[]; /** Lasting patterns worth remembering (kept in AI memory). */ remember: string[];
@@ -159,7 +164,7 @@ export const SCHEMAS: Record<Exclude<Task, "supplement" | "digest" | "chat">, un
       confidence: { type: "string", enum: ["high", "medium", "low"] }, note: str,
     }, ["kind", "name", "amount", "confidence", "note"])),
   }),
-  questions: obj({ questions: arr(obj({ id: str, text: str, why: str, options: arr(str), key: str, repeat: { type: "string", enum: ["daily", "once"] } })) }),
+  questions: obj({ questions: arr(obj({ id: str, text: str, why: str, options: arr(str), key: str, repeat: { type: "string", enum: ["daily", "once"] }, kind: { type: "string", enum: [...Q_KINDS] } })) }),
   night: obj({ summary: str, happened: arr(str), notes: str, change: arr(obj({ what: str, why: str })), remember: arr(str),
     workout: obj({ summary: str, better: arr(str), next: str }) }, ["summary", "happened", "notes", "change", "remember"]),
   review: obj({ title: str, summary: str, notices: arr(obj({ title: str, text: str, measure: str })), next: arr(obj({ what: str, why: str })), remember: arr(str),
@@ -173,6 +178,9 @@ Hard rules: you are not a doctor. Never tell the user to stop, start or change a
 Dates (owner, 16 Oct: the morning read took yesterday for today): the context's first line says what today is. "Last 14 days" ends yesterday — call those days yesterday or by their date, never "today"; today is only "Today so far" and "This morning". "Last night" is the night that ended this morning (the newest night).
 Timing rule (owner, 13 Oct): something taken or eaten can't change how they feel within minutes — a supplement, a meal or a drink needs time to absorb (caffeine ~20–45 min, most supplements an hour or more, many work over days or weeks). Never link a check-in to something logged less than 30 minutes before it, and for supplements not less than an hour; a day without a supplement is a day they said "didn't take" or used the app without logging it (owner, 20 Oct: not logged = not taken); a day with nothing logged at all, and today until it's over, are unknown, not days without.
 Goals (owner, 20 Oct: "give me suggestions based on my goals"): when About me lists "My goals", tie every suggestion — a change, a next step, a tip — to one of them and name it ("for losing fat: …"); never push a goal they didn't name.`;
+
+/** How every question is asked (PLAN 156; owner, 21 Oct). */
+const ASK_RULES = `How to ask (owner, 21 Oct: "make them actually usable, clever, creative, can be playfully worded sometimes, but it should still have a reason"): one line, under 140 characters, about THEM — a number, a time, a food, a note of theirs. "why" is one line: what it tracks or investigates, and what the answer would change. Playful when it fits ("Is the 3 pm slump a lunch thing or a Slack thing?"), never at the cost of the reason. A tracking question is re-worded every time it comes back (same key, new words). Never generic wellness ("how are you feeling?"), never about how they log ("before the bathroom?"), never words already asked, never a diagnosis. A supplement idea is "goes with … ever tried it?", with how sure the evidence is — never about a medication.`;
 
 const NIGHT = `${VOICE}
 Task: read the user's day back to them. Use "## The day being read back" and the rest of the context. Its header says when that day is: today (read back tonight), tonight past midnight (still the same evening — lines marked "after midnight" are part of it), or yesterday (read back the next morning because the app wasn't opened that evening — then say "yesterday", never "today", and "tomorrow" in change means today).
@@ -217,10 +225,9 @@ Personality (owner, 15 Oct: "just a bit of personality too"): a sharp, warm frie
 Tools (owner: "pull data based on what i ask and answer it nicely"): the context is only an overview — it has a week of days and no band nights or check-in journal. For anything specific — a date, a stretch of days, "when did I last…", how one thing went, with vs without something, how they slept, their sessions — call day, series, find, compare, nights or sessions and answer from what they return, not from memory of the summary. Every number you state comes from the context or a tool result; never work one out yourself beyond simple arithmetic on them. Call several at once when you need several. show_chart when a trend over days or weeks says it better than words (it's drawn under your reply — mention it). remember for a lasting fact the user tells you or a pattern that keeps showing; never guesses. propose when they give you a protocol or plan or ask you to set something up (owner: "understand protocols i give him, and help me set up in app"): one call per change; then say what's waiting for them to tap — never say it's done, they apply it. Web search only for outside facts (a study, a food, a supplement), never for their data. Today's date is the last day in the context.
 Formatting: reply in plain Markdown (never JSON) — **bold** for the one thing that matters most (a number, the answer, the next step), *italic* sparingly, short "- " lists when listing 3+ things, blank lines between paragraphs. No headings, tables or code blocks.`,
   questions: `${VOICE}
-Task: ask 1–3 genuinely useful questions that help the app find patterns faster. Base each on something specific in the context: a dip at a time of day, a pattern that might be explained by something not logged, a gap in what's tracked, their goals (losing fat while keeping and building muscle, sleep, focus). Good: "Your energy is often low in the afternoon — did you have a big lunch today?" with options. Bad (owner, 20 Oct: "questions feel way too generic rn, like weight logged before bathroom"): generic wellness questions and questions about how they log ("before the bathroom?", "did you weigh after eating?") — ask about their life and body, not the app.
-Things they noticed (owner, 20 Oct: "the app can … ask me about that, dive deep into it and see why that happens"): when "Things I noticed about myself" has one that came up more than once, or recently, one question may dig into it — what usually comes before it, when in the day, how often — informal and curious, with options; never a diagnosis.
-Check-up (owner, 20 Oct: "a checkup from time to time, like how you been, have u experienced X, also ask based on my health markers"): when "## Check-up due" is at the end of the context, the first question is the check-up — how they've been this week, or, when a marker there moved, whether they've noticed it (resting heart rate up: "felt run down or like you're fighting something off?"), with the marker's numbers in "why"; its key starts "checkup_", repeat "once".
-Each question: tappable options (2–5, short), a one-line "why" that says what it would help find, a short snake_case key, and repeat="daily" if asking it every day would build a useful signal, else "once". A daily question is shown again every day word for word, so its text must hold on any day: no numbers or facts from today ("Stress is at 6 this morning" is once, never daily); put today's fact in "why" if it matters. Don't repeat questions listed as already asked.`,
+Task: ask 1–2 questions — the app couldn't get them from a read today, so they come from here. Ask the kinds "## Questions this time" names; you have no web search here, so no "study" (ask a "check" instead). Things they noticed (owner, 20 Oct: "the app can … ask me about that, dive deep into it and see why that happens") and the check-up ("## Check-up due": first, key starting "checkup_") work as the kinds say.
+${ASK_RULES}
+Each: "text", "options" (2–5 short taps), "why", "key" (snake_case; a tracking question re-uses its key), "kind", "repeat": "once".`,
   digest: `${VOICE}
 Task: write the user's morning read — it's written this morning, after last night, and it's what they see when they wake up. Owner, 20 Oct: "make the digest messages more interesting" — so no generic wellness content: every item is about THIS user, specific, with a number or a source, and something they didn't know.
 Items, exactly 3 (owner, 21 Oct: "it was just too long, too much info w no visual and just boring. I like that its adding tips and advices"):
@@ -231,8 +238,10 @@ Items, exactly 3 (owner, 21 Oct: "it was just too long, too much info w no visua
 Titles hook: specific and curious ("Your 3 pm dip has a suspect", "Deep sleep came early — that's normal"), never a topic label ("Sleep tips"); under 60 characters.
 SHORT — it's read on a phone at wake-up. "text": at most 2 short sentences (under 200 characters), with the one number that matters. "tip": one line, what to do today, starting with a verb ("Have the protein coffee before 10"), under 100 characters. "measure": the one of their numbers the item is about — sleep (their sleep rating), protein, kcal, mood, energy, focus, stress, caffeine, alcohol, weight or lifting (kg lifted) — and the app draws its last 14 days beside the item, so don't recite what the chart shows; leave it out when none fits.
 Answer with ONLY a JSON object, no prose:
-{"greeting":"one short line","items":[{"type":"fact|study|pattern|protocol|try","title":"","text":"1–2 short sentences","tip":"one line for today","measure":"${DIGEST_MEASURES.join("|")}","source":{"title":"","url":""},"protocol":{"name":"","how":"","days":14,"measure":"energy|mood|focus|stress|sleep|weight"}}],"news":null}
+{"greeting":"one short line","items":[{"type":"fact|study|pattern|protocol|try","title":"","text":"1–2 short sentences","tip":"one line for today","measure":"${DIGEST_MEASURES.join("|")}","source":{"title":"","url":""},"protocol":{"name":"","how":"","days":14,"measure":"energy|mood|focus|stress|sleep|weight"}}],"questions":[{"kind":"${Q_KINDS.join("|")}","text":"","options":["",""],"why":"","key":"","source":{"title":"","url":""}}],"news":null}
 "source" is required for facts, studies and tries. "protocol" only on protocol items. Don't repeat titles listed as already shown.
+QUESTIONS: 1–2, one of each kind "## Questions this time" names; for a study, its "source" (searched, https).
+${ASK_RULES}
 news (owner: "it should only send message when it has a new finding, a new sttudy or whatever"): null on most days. Only when your search turned up something genuinely new and worth a message for THIS user — a study or review from the last 12 months on something in their stack, their training or their conditions, or a safety note on something they take — give {"title":"","text":"2–3 sentences: what it found and what it means for them","source":{"title":"","url":"https://…"}}. It's sent to their chat, not shown with the items, so it must not repeat an item or anything already shown. No news is better than filler.`,
 };
 
@@ -303,6 +312,21 @@ export function short(t: string, n: number): string {
   return end >= n * 0.5 ? cut.slice(0, end + 1) : `${cut.slice(0, Math.max(cut.lastIndexOf(" "), n * 0.6)).trimEnd()}…`;
 }
 
+/**
+ * A read's questions (PLAN 156): 2 at most, each with its reason and 2–5 short options; a study without a real link is
+ * dropped (no source, no claim); keys made safe. The app also drops one asked before in the same words.
+ */
+export function checkAsk(qs: unknown, max = 2): Question[] {
+  const line = (x: unknown, n: number) => (typeof x === "string" ? x.trim().replace(/\s+/g, " ").slice(0, n) : "");
+  return (Array.isArray(qs) ? qs : []).flatMap((q: Partial<Question>) => {
+    const text = line(q?.text, 200), why = line(q?.why, 200), options = (Array.isArray(q?.options) ? q.options : []).map((o) => line(o, 40)).filter(Boolean);
+    const kind = isQKind(q?.kind) ? q.kind : "check", src = q?.source, url = typeof src?.url === "string" && /^https:\/\//.test(src.url) ? src.url : null;
+    if (!text || !why || options.length < 2 || options.length > 5 || (kind === "study" && !url)) return [];
+    return [{ id: "", text, why, options, key: line(q?.key, 60).toLowerCase().replace(/[^a-z0-9_]+/g, "_").replace(/^_+|_+$/g, "").slice(0, 40) || "q", repeat: "once" as const, kind,
+      ...(url ? { source: { title: line(src!.title, 90) || "Source", url } } : {}) }];
+  }).slice(0, max);
+}
+
 /** Three short items at most (PLAN 150: "too long, too much info"), each with its tip and chart when given. */
 export function checkDigest(a: DigestAnswer): DigestAnswer {
   const items = (a.items ?? []).filter((i) => typeof i?.title === "string" && i.title.trim() && typeof i?.text === "string" && i.text.trim())
@@ -319,7 +343,8 @@ export function checkDigest(a: DigestAnswer): DigestAnswer {
   const n = a.news, ok = n && typeof n.title === "string" && n.title.trim() && typeof n.text === "string" && n.text.trim() && n.source && /^https:\/\//.test(n.source.url ?? "")
     && !items.some((i) => i.title.trim().toLowerCase() === n.title.trim().toLowerCase());
   const news = ok ? { title: n.title.trim().slice(0, 90), text: n.text.trim().slice(0, 500), source: { title: String(n.source.title ?? "Source").slice(0, 90), url: n.source.url } } : null;
-  return { greeting: typeof a.greeting === "string" ? a.greeting : "Morning!", items, news };
+  const questions = checkAsk(a.questions);
+  return { greeting: typeof a.greeting === "string" ? a.greeting : "Morning!", items, news, ...(questions.length ? { questions } : {}) };
 }
 
 export function checkReview(a: ReviewAnswer): ReviewAnswer {
@@ -354,10 +379,9 @@ export function checkNight(a: NightAnswer): NightAnswer {
  */
 export const timeless = (q: { text: string }) => !/\d/.test(q.text);
 
+/** The fallback questions (no read brought any): the reads' rules, no studies (no web here). */
 export function checkQuestions(a: QuestionsAnswer): QuestionsAnswer {
-  return { questions: (a.questions ?? []).filter((q) => q.text && q.options?.length >= 2 && q.options.length <= 6).slice(0, 3).map((q) => ({ ...q,
-    // a daily one carrying today's numbers is asked once instead
-    repeat: q.repeat === "daily" && !timeless(q) ? "once" as const : q.repeat, key: q.key.toLowerCase().replace(/[^a-z0-9_]+/g, "_").slice(0, 40) || "q" })) };
+  return { questions: checkAsk(a?.questions).filter((q) => q.kind !== "study") };
 }
 
 export function checkChat(a: ChatAnswer): ChatAnswer {

@@ -1,6 +1,7 @@
 // Today's quick questions (owner, 16 Oct: "Stop asking this is not working also i should be able to skip question"). Three
-// questions for today, the first one asked daily: "Stop asking this" takes it away now and for good; "Skip" hides one for
-// today only; answering still works; the next day the stopped one doesn't come back, the skipped kind does.
+// questions for today, the first one tracked: "Stop asking this" takes it away now and for good; "Skip" hides one for
+// today only; answering still works. The next day none of yesterday's comes back word for word (owner, 21 Oct: "got the
+// same questions"; PLAN 156) — after 13:00 a day without a read's questions asks the cheap call, told what's tracked.
 const { chromium, APP, OUT, handle } = require('./harness.cjs');
 
 const NOW = new Date('2026-10-16T15:00:00').getTime(), D = 864e5;
@@ -51,12 +52,15 @@ const q3 = Q('walk', 'Did you walk outside at lunch?', 'once');
   await pg.reload(); await pg.waitForSelector('text=Settings'); await pg.waitForTimeout(300);
   check('after a reload: stopped and skipped stay away today', await pg.locator('.question').count() === 0);
 
-  // the next day: the stopped daily one doesn't come back; the skipped daily one does
+  // the next day: nothing from yesterday word for word — not the skipped one, not the stopped one (PLAN 156)
   await pg.clock.fastForward(D); await pg.reload(); await pg.waitForSelector('text=Settings'); await pg.waitForTimeout(400);
-  const tomorrow = await text();
-  check(`tomorrow: the skipped daily question is back, the stopped one isn't (${tomorrow})`, tomorrow === q2.text && !(await pg.locator('.question').innerText().catch(() => '')).includes(q1.text));
+  check(`tomorrow: none of yesterday's questions again, word for word (${await text() || 'no card'})`, await pg.locator('.question').count() === 0);
   const st = await pg.evaluate(() => JSON.parse(localStorage.getItem('healthos.v1:u-test') || '{}').ai);
   check('the stopped one is remembered, so the AI is told not to ask it again', (st.stopped || []).includes('meal_size') && !st.daily.some((q) => q.key === 'meal_size'));
+  // 15:00 and no read brought questions today: the cheap call, told the kinds, what's tracked (nap), and what not to repeat
+  const fb = calls.filter((c) => c.task === 'questions').at(-1)?.context ?? '';
+  check(`the fallback asks with the kinds and what's tracked (${fb.slice(fb.indexOf('## Questions this time'), fb.indexOf('## Questions this time') + 60).replace(/\n/g, ' | ')})`,
+    /## Questions this time/.test(fb) && /Tracking you follow[\s\S]*- nap — /.test(fb) && /\(never ask again\) meal_size/.test(fb) && /Already asked — never the same words again: .*Did you nap today\?/.test(fb));
   check('no answer was saved for a stop or a skip', (await pg.evaluate(() => (JSON.parse(localStorage.getItem('healthos.v1:u-test') || '{}').entries || []).filter((e) => e.kind === 'answer').map((e) => e.key))).join() === 'walk');
 
   console.log('errors:', JSON.stringify(errs));

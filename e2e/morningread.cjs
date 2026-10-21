@@ -12,7 +12,13 @@ const READ = { greeting: 'Morning! 7 h last night — a better start.', items: [
   { type: 'study', title: 'Protein through the day', text: 'Spreading protein over 3–4 meals kept more muscle in a 12-week trial.', tip: 'Have the protein coffee before 10', measure: 'protein', source: { title: 'Sleep 2025', url: 'https://example.org/s' } },
   // PLAN 132: one new thing to try, from the kind the app picked this morning
   { type: 'try', title: 'Cluster sets for your bench', text: 'Rest 20 s inside a set to keep the bar speed up.', source: { title: 'J Strength Cond Res 2025', url: 'https://example.org/cl' } },
-], // something new (#109): a message in the chat, not on Today
+],
+  // PLAN 156 (owner, 21 Oct: "asking a question cause it saw a study … tracking something, tracking mental health even")
+  questions: [
+    { kind: 'study', text: 'A 2025 trial: 3 g glycine before bed, deeper sleep. Ever tried it?', options: ['Yes', 'No', 'Tell me more'], why: 'your deep sleep is under your usual 4 nights of 7', key: 'glycine', source: { title: 'Sleep Med 2025', url: 'https://example.org/gly' } },
+    { kind: 'tracking', text: 'Social battery right now?', options: ['Full', 'Half', 'Empty'], why: 'mood dips the day after busy evenings', key: 'social_battery' },
+  ],
+  // something new (#109): a message in the chat, not on Today
   news: { title: 'Creatine and sleep loss', text: 'A 2026 trial: creatine kept reaction time up after a sleepless night.', source: { title: 'Sci Rep 2026', url: 'https://example.org/cr' } } };
 
 (async () => {
@@ -93,6 +99,15 @@ const READ = { greeting: 'Morning! 7 h last night — a better start.', items: [
   await mr.screenshot({ path: OUT + 'morning-read-item.png' });
   check('opened once: not new any more, and that sticks', await mr.getAttribute('data-new') === null && (await pg.evaluate((k) => JSON.parse(localStorage.getItem(k)).ai.digest.seen, KEY)) > 0);
   check('the news isn\'t on Today — it\'s a message', !/Creatine and sleep loss/.test(card));
+  // the read's questions (PLAN 156): asked with the kinds the app picked, shown with the read, a study with its source
+  check(`the read is told which kinds of question to ask, and not to repeat words (${c.slice(c.indexOf('## Questions this time')).split('\n').slice(0, 3).join(' | ').slice(0, 160)})`, /## Questions this time \(the app's picks, so days differ\)\n- \w+/.test(c));
+  const qc = pg.locator('.question');
+  check(`its study question is on Today, labelled, with its source (${(await qc.innerText().catch(() => '')).split('\n').slice(0, 3).join(' | ')})`, /^Saw a study/i.test(await qc.locator('h3').innerText().catch(() => '')) && /glycine before bed/.test(await qc.innerText()) && await qc.locator('a.q-src').getAttribute('href') === 'https://example.org/gly');
+  await qc.screenshot({ path: OUT + 'question-study.png' });
+  await qc.getByRole('button', { name: 'Skip' }).click(); await pg.waitForTimeout(150);
+  check(`then the tracking one, which says it comes back in new words (${await qc.locator('.why').innerText().catch(() => '')})`, /^Tracking/i.test(await qc.locator('h3').innerText()) && /comes back now and then, in new words/.test(await qc.locator('.why').innerText()) && await qc.getByRole('button', { name: 'Stop asking this' }).count() === 1);
+  const tr = await pg.evaluate((k) => JSON.parse(localStorage.getItem(k)).ai.daily.map((q) => q.key), KEY);
+  check(`what's tracked is remembered by its key (${tr.join()})`, tr.includes('social_battery') && !tr.includes('glycine'));
   const badge = async () => (await pg.locator('nav.tabs a[href="#ai"] .tabbadge').textContent().catch(() => '')) || '0';
   check(`the AI tab's number says there's a message (${await badge()})`, await badge() === '1');
   await pg.reload(); await pg.waitForSelector('section.morning'); await pg.waitForTimeout(800);
@@ -107,6 +122,10 @@ const READ = { greeting: 'Morning! 7 h last night — a better start.', items: [
   await news.screenshot({ path: OUT + 'news-message.png' });
   check('opening the chat clears the number', await pg.locator('nav.tabs a[href="#ai"] .tabbadge').count() === 0);
 
+  // the next morning, before today's read is written: yesterday's read and its questions are gone (PLAN 155–156; owner,
+  // 21 Oct: "if i get them at yesterday morning, it should not be there/ or the same at next morning")
+  await pg.clock.setSystemTime(new Date('2026-10-17T07:10:00').getTime()); await pg.goto(APP + '#today'); await pg.reload(); await pg.waitForSelector('text=Settings'); await pg.waitForTimeout(800);
+  check(`next morning: no read and no question from yesterday (${await pg.locator('section.morning, .question').count()} on Today)`, await pg.locator('section.morning').count() === 0 && await pg.locator('.question').count() === 0);
   console.log('errors:', JSON.stringify(errs));
   check('no page errors', errs.length === 0);
   await b.close();
