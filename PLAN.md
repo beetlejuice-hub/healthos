@@ -145,7 +145,7 @@ a form. Until there's enough data they use sensible defaults, silently.
   median. A brand you type stays its own row, at the top. Small product photos from OFF.
 - **Your values win:** any food's numbers can be edited before logging; the corrected version is
   saved and offered first next time.
-- **Search ideas (30 Sept) — all built since (checked 21 Oct):** your brands float up (lib/foodsearch tasteOf); dry vs
+- **Search ideas (30 Sept) — all built since (checked 21 Oct):** your brands float up (lib/rank tasteOf); dry vs
   cooked (lib/cooked); Hungarian words looked up in English (lib/hu: spagetti → spaghetti); "2 eggs, toast, 300 g
   pörkölt" typed in one line (lib/quickadd, the AI for the rest).
 - **Barcode scanner** — built 1 Oct (see item 17).
