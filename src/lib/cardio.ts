@@ -139,4 +139,10 @@ export function zoneMinutes(hr: HrMinute[], start: number, end: number, max: num
 }
 /** "Z2 18 · Z3 15 · Z4 4 min" — the zones with minutes in them. */
 export const zoneWords = (mins: number[]) => mins.map((m, z) => (m ? `Z${z + 1} ${m}` : "")).filter(Boolean).join(" · ") + " min";
+/** A workout's zones for the AI: "Z1 22 · Z2 18 min (of max 186 bpm)", or null with no max or no band minutes in it. */
+export function zoneLine(hr: HrMinute[], start: number, end: number, max: number | null | undefined): string | null {
+  if (!max) return null;
+  const mins = zoneMinutes(hr, start, end, max);
+  return mins.some(Boolean) ? `${zoneWords(mins)} (of max ${max} bpm)` : null;
+}
 

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { cardioHr, cardioKcal, cardioLine, cardioSpans, cardioWeekLines, cardioWeeks, kindOf, lastLike, maxHrOf, zoneMinutes, zoneWords } from "./cardio";
+import { cardioHr, cardioKcal, cardioLine, cardioSpans, cardioWeekLines, cardioWeeks, kindOf, lastLike, maxHrOf, zoneLine, zoneMinutes, zoneWords } from "./cardio";
 import { nightContext } from "./ai/client";
 import { DEFAULT_SETTINGS, EMPTY_AI, type State } from "./store";
 import { DEFAULT_GOALS } from "./types";
@@ -129,6 +129,10 @@ describe("heart-rate zones (owner: \"go\" on zones for cardio)", () => {
     expect(zoneMinutes(hr, s, m(36), 186)).toEqual([5, 10, 15, 4, 2]);
     expect(zoneMinutes(hr, s, m(15), 186)).toEqual([5, 10, 0, 0, 0]); // only inside the stretch
     expect(zoneWords([0, 18, 15, 4, 0])).toBe("Z2 18 · Z3 15 · Z4 4 min");
+    // a lifting session's, for the read-back (PLAN 52): the words with the max they're from; nothing without a max or minutes
+    expect(zoneLine(hr, s, m(36), 186)).toBe("Z1 5 · Z2 10 · Z3 15 · Z4 4 · Z5 2 min (of max 186 bpm)");
+    expect(zoneLine(hr, s, m(36), null)).toBeNull();
+    expect(zoneLine(hr, m(60), m(90), 186)).toBeNull();
   });
 });
 

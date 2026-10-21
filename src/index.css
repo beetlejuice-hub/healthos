@@ -1732,6 +1732,11 @@ span.fd-score[data-band="none"] { background: none; min-width: 34px; }
 .hidden-by-you li { display: flex; flex-wrap: wrap; gap: 6px; align-items: baseline; }
 /* heart-rate zones: one bar, easy to hard, with minutes */
 .zones { display: grid; gap: 4px; }
+/* inside the Workout tab's Recent list (".plan div" would make every part a spaced row) */
+.plan .rec-w { padding: 2px 0 6px; } .plan .rec-w .zones { display: grid; justify-content: stretch; padding: 0; gap: 3px; }
+.plan .rec-w .zbar { display: flex; justify-content: flex-start; padding: 0; height: 6px; }
+.plan .rec-w .zlegend { display: flex; justify-content: flex-start; padding: 0; gap: 2px 10px; }
+.plan .rec-w .zlegend span, .plan .rec-w .zlegend span:last-child { font: 12px var(--f-sans); color: var(--k-ink-2); white-space: nowrap; }
 .zbar { display: flex; height: 10px; border-radius: 5px; overflow: hidden; gap: 2px; }
 .zbar i { display: block; min-width: 4px; }
 .zlegend { display: flex; flex-wrap: wrap; gap: 4px 10px; font-size: 12.5px; }

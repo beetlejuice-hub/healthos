@@ -6,7 +6,8 @@
  *
  * Each session: its time, working sets and kg lifted against the last session of the same day (template); each lift: its
  * working sets, today's best set as a 1-rep max estimate against the last time that lift was done, and a new best when it
- * beats every time before. Warm-ups are never counted (PLAN 80). Pure.
+ * beats every time before. Warm-ups are never counted (PLAN 80). With the band, the session's minutes in each heart-rate
+ * zone (PLAN 52). Pure.
  */
 
 import { e1rm, type LoggedSet } from "./training";
@@ -18,7 +19,7 @@ const kgs = (v: number) => `${Math.round(v).toLocaleString("en-GB")} kg`;
 const best = (sets: LoggedSet[]) => sets.reduce((b, s) => (e1rm(s.kg, s.reps) > e1rm(b.kg, b.reps) ? s : b));
 
 /** Lines for each workout started in `window`, each lift against the last time before it. */
-export function workoutLines(workouts: W[], sets: LoggedSet[], window: [number, number]): string[] {
+export function workoutLines(workouts: W[], sets: LoggedSet[], window: [number, number], zones: (start: number, end: number) => string | null = () => null): string[] {
   const work = sets.filter((s) => !s.warmup);
   const out: string[] = [];
   for (const w of [...workouts].filter((x) => x.startedAt >= window[0] && x.startedAt < window[1]).sort((a, b) => a.startedAt - b.startedAt)) {
@@ -28,7 +29,7 @@ export function workoutLines(workouts: W[], sets: LoggedSet[], window: [number, 
     const prev = workouts.filter((x) => x.template === w.template && x.startedAt < w.startedAt && work.some((s) => s.workoutId === x.id)).sort((a, b) => b.startedAt - a.startedAt)[0];
     const prevVol = prev ? work.filter((s) => s.workoutId === prev.id).reduce((a, s) => a + s.kg * s.reps, 0) : null;
     const end = w.endedAt ?? mine[mine.length - 1].at;
-    out.push(`${w.template} ${clock(w.startedAt)}–${clock(end)} (${Math.round((end - w.startedAt) / 60_000)} min): ${mine.length} working set${mine.length === 1 ? "" : "s"}, ${kgs(vol)}${prev && prevVol ? ` (last ${w.template}, ${dayLabel(prev.startedAt)}: ${kgs(prevVol)}, ${pct(vol, prevVol)})` : ` (your first ${w.template})`}`);
+    out.push(`${w.template} ${clock(w.startedAt)}–${clock(end)} (${Math.round((end - w.startedAt) / 60_000)} min): ${mine.length} working set${mine.length === 1 ? "" : "s"}, ${kgs(vol)}${prev && prevVol ? ` (last ${w.template}, ${dayLabel(prev.startedAt)}: ${kgs(prevVol)}, ${pct(vol, prevVol)})` : ` (your first ${w.template})`}${(() => { const z = zones(w.startedAt, end); return z ? ` · heart-rate zones ${z}` : ""; })()}`);
     for (const ex of [...new Set(mine.map((s) => s.exercise))]) {
       const today = mine.filter((s) => s.exercise === ex), b = best(today), e = e1rm(b.kg, b.reps);
       const before = work.filter((s) => s.exercise === ex && s.at < w.startedAt);

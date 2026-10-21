@@ -34,6 +34,14 @@ describe("the day's workout, for the read-back", () => {
   it("a day without a workout: nothing (the read-back stays as it was)", () => {
     expect(workoutLines(workouts, sets, [at("18", "04:00"), at("19", "04:00")])).toEqual([]);
   });
+  it("with the band: the session's heart-rate zones, asked for the session's own start and end (PLAN 52: \"3 per workout\")", () => {
+    const asked: [number, number][] = [];
+    const l = workoutLines(workouts, sets, [at("20", "04:00"), at("21", "04:00")], (a, z) => { asked.push([a, z]); return "Z1 30 · Z2 25 · Z3 10 min (of max 186 bpm)"; });
+    expect(asked).toEqual([[at("20", "18:00"), at("20", "19:05")]]);
+    expect(l[0]).toBe("Push 18:00–19:05 (65 min): 4 working sets, 1,328 kg (last Push, Tue 13 Oct: 1,280 kg, +3.7 %) · heart-rate zones Z1 30 · Z2 25 · Z3 10 min (of max 186 bpm)");
+    // no band minutes in it: the line as it was
+    expect(workoutLines(workouts, sets, [at("20", "04:00"), at("21", "04:00")], () => null)[0]).toBe(lines[0]);
+  });
   it("the first session of its kind says so; one set is one set", () => {
     expect(workoutLines(workouts, sets, [at("15", "04:00"), at("16", "04:00")])[0]).toBe("Pull 18:00–19:00 (60 min): 1 working set, 600 kg (your first Pull)");
   });

@@ -8,7 +8,7 @@ import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import { act, getState, newId, useStore } from "../lib/store";
 import { askAi, chatContext, contextNow, nightContext, refreshAiStatus, useAiStatus } from "../lib/ai/client";
 import { runChatTool, type ChartSpec } from "../lib/ai/chattools";
-import { bandNow, onNights } from "../lib/band-client";
+import { bandNow, bandSettled, onBandSettled, onNights } from "../lib/band-client";
 import { ChatChart } from "./ChatChart";
 import { GoalsAsk } from "./GoalsAsk";
 import { eveningBrief, morningBrief } from "../lib/ai/brief";
@@ -169,6 +169,8 @@ export function useAiAuto(userId: string | undefined) {
   useEffect(() => {
     if (!on) return;
     const tick = () => {
+      // not before the band's first load is done: a read written without it misses the heart rate (21 Oct)
+      if (!bandSettled()) return;
       const now = new Date(), h = now.getHours(), today = localDay(now.getTime()), ai = getState().ai;
       const rated = getState().entries.some((e) => e.kind === "sleep" && e.rating != null && localDay(e.at) === today);
       const target = digestDue(now.getTime(), ai.digest, nightIn(bandNow()?.sleep, rated, now.getTime()));
@@ -185,10 +187,10 @@ export function useAiAuto(userId: string | undefined) {
     tick();
     const t = setInterval(tick, 10 * 60_000);
     // the band's nights arrive a few seconds after the app opens: look again then, not 10 minutes later
-    const off = onNights(tick);
+    const off = onNights(tick), offSettled = onBandSettled(tick);
     const vis = () => document.visibilityState === "visible" && tick();
     document.addEventListener("visibilitychange", vis);
-    return () => { clearInterval(t); off(); document.removeEventListener("visibilitychange", vis); };
+    return () => { clearInterval(t); off(); offSettled(); document.removeEventListener("visibilitychange", vis); };
   }, [on]);
 }
 

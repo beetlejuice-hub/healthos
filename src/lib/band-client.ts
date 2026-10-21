@@ -52,7 +52,22 @@ export async function refreshBand(now = Date.now()): Promise<void> {
     const d = await api<BandData & BandStatus>(`data?from=${from}&to=${now + 60_000}`);
     set({ status: pick(d), data: mergeBand(state.data, asData(d)), from: held ? state.from : from });
   } catch { /* offline or not set up: the card says so, the graph keeps what it had */ }
-  finally { set({ loading: false }); }
+  finally { set({ loading: false }); settle(); }
+}
+
+/**
+ * Whether the first load since the app opened has finished — with the band's data, or found there's none, or failed. The
+ * AI's reads wait for it, so they aren't written from an app that hasn't got the band yet (found 21 Oct: the evening read
+ * went out on the first tick, before the heart rate came, without the workout's zones or cardio's heart rate). A slow
+ * connection doesn't hold them past 15 s.
+ */
+let settled = false;
+const onSettle = new Set<() => void>();
+function settle() { if (settled) return; settled = true; onSettle.forEach((f) => f()); }
+export const bandSettled = () => settled;
+export function onBandSettled(f: () => void): () => void {
+  onSettle.add(f);
+  return () => { onSettle.delete(f); };
 }
 
 /** The graph was scrolled back to t: load the week before what's held (the server keeps 120 days). */
@@ -110,6 +125,7 @@ let started = false;
 export function startBand(): void {
   if (started || typeof window === "undefined") return;
   started = true;
+  setTimeout(settle, 15_000);
   void refreshBand();
   setInterval(() => { if (document.visibilityState === "visible") void refreshBand(); }, 15 * 60_000);
   document.addEventListener("visibilitychange", () => {

@@ -25,8 +25,7 @@ mood course removed from Mind, with weekday × time and best / worst days kept u
 The Sleep page stays as it is for now ("we will go thorugh and change things later").
 
 **To discuss first, one at a time** (owner, 21 Oct: "These ideas need to be discussed first so choose one rn and start w
-discussing w me"): #52 more band data — agreed 21 Oct: the night check, VO2 max (both built 21 Oct, below), then zones
-per workout ("3 per workout"; claimed 21 Oct — lib/cardio.ts, ZoneBar, workout summary) · #138 your food logs into Google's app · #160 the AI smarter ·
+discussing w me"): #52 more band data — the night check, VO2 max and zones per workout built 21 Oct (below) · #138 your food logs into Google's app · #160 the AI smarter ·
 #133 more morning-read ideas ("is good") · a fuller food/nutrition score (#139 has the per-item score; what more?).
 
 **Not now:** #48 live heart rate on the Workout screen ("not needed rn") · #136 Tempo → HealthOS (#50, #92 with it) ·
@@ -646,6 +645,12 @@ email get Dev tools (`#dev`): raw entry editor, generate/remove sample, wipe acc
      estimate), tap or hover a day; the AI gets the same line under Training. Tests: planted rise found, 200 flat runs never
      call a direction, a fall, weight loss alone read as all kilos; e2e vo2 (and "nothing from the band yet").
      **Not checked: your real band.**
+   - [x] **Zones per workout (21 Oct; "3 per workout").** The cardio zone bar (Z1–Z5 by % of max heart rate; max from your
+     age or your own number) now on every workout: the Finish sheet (with "the band's minutes up to 17:19 — the rest when
+     it syncs" when the band is behind), each row of the Workout tab's Recent, and the evening read-back's workout line.
+     **Found on the way:** the reads went out on the app's first tick, before the band's data came — the evening read
+     missed the workout's zones and cardio's heart rate (and any read could miss readiness). They now wait for the band's
+     first load (15 s at most on a slow connection); the e2e fails without it. e2e workoutzones.
 53. [x] **Insights as pages — Timeline first** (claimed 8 Oct — canvas, then Insights.tsx, MasterGraph, a new page shell).
    Owner, 8 Oct: "Should we do the separate pages just like on the phone? … in one page i see one thing, like the master
    graph (i rate the current one a 10/6.5 …) on another page the possible findings, on another the sleep data … i need a

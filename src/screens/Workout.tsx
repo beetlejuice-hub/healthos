@@ -20,7 +20,8 @@ import { RepsInput } from "../components/RepsInput";
 import { GuardBox } from "../components/GuardBox";
 import { checkSet, type Guard } from "../lib/sanity";
 import { StrengthCard } from "../components/StrengthCard";
-import { useBand } from "../lib/band-client";
+import { bandLatest, useBand } from "../lib/band-client";
+import { ZoneBar } from "../components/ZoneBar";
 
 type SetE = EntryOf<"set">;
 /** One tap for cardio when none was planned. */
@@ -80,7 +81,10 @@ function Pick() {
           <div className="plan">{recent.map((w) => {
             if (w.kind === "cardio") { const sp = spans.find((x) => x.workoutId === w.id && x.own), h = sp && band ? cardioHr(band.hr, sp.start, sp.end) : null;
               return <div key={w.id}><span>{sp?.what ?? "Cardio"} · {dayLabel(w.startedAt)}{w.note ? <small className="wnote">“{w.note}”</small> : null}</span><span>{sp ? minutesOf(sp) : 0} min{h ? ` · avg ${h.avg} bpm` : ""}</span></div>; }
-            const ws = sets.filter((s) => s.workoutId === w.id); return <div key={w.id}><span>{w.template} · {dayLabel(w.startedAt)}{w.note ? <small className="wnote">“{w.note}”</small> : null}</span><span>{ws.length} sets · {Math.round(volume(ws)).toLocaleString("en-GB")} kg</span></div>; })}</div>
+            const ws = sets.filter((s) => s.workoutId === w.id);
+            // each workout's heart-rate zones too, not only cardio's (PLAN 52; owner, 21 Oct: "3 per workout")
+            return <section key={w.id} className="rec-w"><div><span>{w.template} · {dayLabel(w.startedAt)}{w.note ? <small className="wnote">“{w.note}”</small> : null}</span><span>{ws.length} sets · {Math.round(volume(ws)).toLocaleString("en-GB")} kg</span></div>
+              {band && w.endedAt && <ZoneBar hr={band.hr} start={w.startedAt} end={w.endedAt} quiet />}</section>; })}</div>
         </div>
       )}
     </div>
@@ -466,6 +470,7 @@ function FinishSheet({ w, onBack }: { w: Workout; onBack: () => void }) {
   const sets = useMemo(() => entries.filter((e): e is SetE => e.kind === "set"), [entries]);
   const [now] = useState(() => Date.now());
   const sum = sessionSummary(w, sets, workouts, now);
+  const band = useBand().data;
   return (
     <div className="cockpit">
       <div className="top"><h1>Finish?</h1><div className="meta">{w.template}</div></div>
@@ -476,6 +481,8 @@ function FinishSheet({ w, onBack }: { w: Workout; onBack: () => void }) {
           <div><b>{Math.round(sum.volume).toLocaleString("en-GB")}</b><span>kg moved</span></div>
         </div>
         {sum.vsLast != null && <p className="s">{Math.round(sum.vsLast * 100)}% of last {w.template}'s volume.</p>}
+        {/* how hard the heart worked, from the band (PLAN 52; owner, 21 Oct: "3 per workout") */}
+        {band && <ZoneBar hr={band.hr} start={w.startedAt} end={now} upTo={bandLatest()} />}
         {sum.bests.length > 0 && <div className="fin-bests"><span className="k" style={{ color: "var(--gym)" }}>New bests</span>{sum.bests.map((b) => <p key={b.exercise}><b>{b.exercise}</b> {b.kg} kg × {b.reps} · est. 1RM {b.e1rm} kg</p>)}</div>}
         <label className="kfield">How did it feel?<textarea rows={2} value={w.note ?? ""} placeholder="Strong today, left shoulder a bit off…" onChange={(e) => act.updateWorkout(w.id, { note: e.target.value })} /></label>
       </div>

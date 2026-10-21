@@ -26,7 +26,7 @@ import { buildContext, onTodayLines, timeline, totalsLine } from "./context";
 import { dayWindow, dayWord } from "./nightread";
 import { plateLines } from "../foodscore";
 import { workoutLines } from "../workoutread";
-import { cardioLine, cardioSpans, cardioWeekLines, maxHrOf } from "../cardio";
+import { cardioLine, cardioSpans, cardioWeekLines, maxHrOf, zoneLine } from "../cardio";
 import type { AiAnswer, AiRequest, Task, UsageDoc } from "./tasks";
 import { currentKg } from "../body";
 
@@ -116,7 +116,9 @@ export function nightContext(day: string, state: State = getState(), now = Date.
   // the day's plates with their food scores (PLAN 139): what fit the goal best, and the one swap that would help most
   const plates = plateLines(state.entries, state.foods, day, [from, Math.min(to, now + 1)], state.settings.bedMinute);
   // a workout that day: each lift against the last time, so the read-back can coach it — no call of its own (PLAN 129)
-  const lifts = workoutLines(state.workouts ?? [], state.entries.filter((e): e is EntryOf<"set"> => e.kind === "set"), [from, Math.min(to, now + 1)]);
+  // …with its heart-rate zones from the band (PLAN 52; owner, 21 Oct: "3 per workout")
+  const zhr = bandNow()?.hr ?? [], zmax = maxHrOf(state.settings)?.bpm;
+  const lifts = workoutLines(state.workouts ?? [], state.entries.filter((e): e is EntryOf<"set"> => e.kind === "set"), [from, Math.min(to, now + 1)], (a, z) => zoneLine(zhr, a, z, zmax));
   // …and the day's cardio with the band's heart rate, and the week's minutes so far (PLAN 130)
   const spans = cardioSpans(state.workouts ?? [], now), kg = currentKg(state.entries, 0, now) || null, hr = bandNow()?.hr ?? [];
   const today = spans.filter((s) => !s.running && s.start >= from && s.start < Math.min(to, now + 1));
