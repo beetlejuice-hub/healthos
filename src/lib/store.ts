@@ -67,7 +67,8 @@ export type AiState = {
 };
 export type Experiment = { id: string; name: string; how: string; days: number; measure: string; start: string; ended?: string;
   /** When it ended (PLAN 160): the AI's words on the app's result, what to do next, studies it leaned on. */
-  verdict?: { at: number; state: "better" | "worse" | "no-clear-change"; text: string; next: string; found: DiveStudy[] } };
+  verdict?: { at: number; state: "better" | "worse" | "no-clear-change"; text: string; next: string; found: DiveStudy[]; /** You opened it from Today. */ seen?: number };
+  /** An ended one's line on Today was tapped (PLAN 160). */ seen?: number };
 export const EMPTY_AI: AiState = { models: { light: "haiku", everyday: "opus", research: "opus" }, memory: [], chat: [], digest: null, night: null, shown: [], questions: null, daily: [], asked: [], research: {}, experiments: [], seenAt: 0 };
 
 /**

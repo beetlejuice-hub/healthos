@@ -26,8 +26,8 @@ The Sleep page stays as it is for now ("we will go thorugh and change things lat
 
 **To discuss first, one at a time** (owner, 21 Oct: "These ideas need to be discussed first so choose one rn and start w
 discussing w me"): #52 more band data — the night check, VO2 max and zones per workout built 21 Oct (below) · #160 the
-AI smarter (all four built 21 Oct — below) · #138 your food logs into Google's app ·
-#133 more morning-read ideas ("is good") · a fuller food/nutrition score (#139 has the per-item score; what more?).
+AI smarter (all four built 21 Oct — below) · a fuller food/nutrition score (discussing now, 21 Oct) · #138 your food logs into Google's app ·
+#133 more morning-read ideas ("is good").
 
 **Not now:** #48 live heart rate on the Workout screen ("not needed rn") · #136 Tempo → HealthOS (#50, #92 with it) ·
 #49 a testing session on your real data · #51 a deep dive · #135 notices next to the band's night and steps.
@@ -2388,5 +2388,9 @@ both reads and the questions. Phases in that order; #152 RPE waits (owner).
        the result is the app's. Shown on the experiment (Insights → Training → Experiments) and as a message in the AI
        tab. None for one stopped early or with too few ratings — which now says "ended early — too few days to tell"
        (it said "running"). e2e verdict: a planted +2 energy → "worked for you" (5.2 → 7.2, +2.0, 95% +1.5 to +2.5).
+     - [x] **Experiments easier to find** (21 Oct; owner: "start on these"). A line each on Today, in the top card under
+       the reads: running → "day 9 of 21 — today: last coffee by 14:00" (no numbers mid-way, so it isn't judged early);
+       done → its result ("worked for you · see why") until opened, for a week; stopped early → says so. A tap opens
+       Insights → Training scrolled to the experiments. ExperimentStrip.tsx, lib/ai/experiment experimentStrip; e2e xpstrip.
    - Known: the heavy e2e suites (sleep, heartpage, heart, cafsleep) time out now and then under the full run's load
      (4 at a time here) and pass alone — a different one each run, 21 Oct; CI has been green on every push.

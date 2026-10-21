@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { ExperimentStrip } from "../components/ExperimentStrip";
 import { CheckInCard } from "../components/CheckIn";
 import { AUTO_END } from "../lib/training";
 import { NoticeBox } from "../components/NoticeBox";
@@ -146,6 +147,7 @@ export function Today() {
         <NightRead />
         <MorningRead />
         <AiQuestions />
+        <ExperimentStrip now={now} />
         <WorkoutRunning now={now} />
         <CheckInCard now={now} />
         <StackAlert />

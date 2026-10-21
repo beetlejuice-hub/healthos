@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { verdictLines, verdictsDue } from "./experiment";
+import { experimentStrip, verdictLines, verdictsDue } from "./experiment";
 import { checkVerdict } from "./tasks";
 import { feelWorld } from "../bench";
 import { addDays } from "../time";
@@ -32,5 +32,29 @@ describe("an experiment's verdict", () => {
     expect(() => checkVerdict({ text: "", next: "", found: [] })).toThrow(SyntaxError);
     const f = (url: string) => ({ title: "t", text: "x", source: { title: "s", url } });
     expect(checkVerdict({ text: "Worked: +1.5.", next: "Keep it", found: [f("https://a.org"), f("http://b.org"), f("https://c.org"), f("https://d.org")] }).found.map((s) => s.source.url)).toEqual(["https://a.org", "https://c.org"]);
+  });
+});
+
+describe("Today's experiments strip", () => {
+  const T = "2026-10-21", ok = () => "running" as const;
+  const run: Experiment = { id: "a", name: "No caffeine after 14:00", how: "Last coffee by 14:00", days: 21, measure: "energy", start: "2026-10-13" };
+  it("running: its day and what to do today — no numbers mid-way", () => {
+    expect(experimentStrip([run], T, ok)).toEqual([{ id: "a", done: false, text: "No caffeine after 14:00", sub: "day 9 of 21 — today: last coffee by 14:00" }]);
+    expect(experimentStrip([{ ...run, start: T }], T, ok)[0].sub).toMatch(/^day 1 of 21/);
+  });
+  it("done with a verdict: the result until seen, for a week", () => {
+    const at = Date.parse("2026-10-20T19:00:00");
+    const done = { ...run, start: "2026-09-25", verdict: { at, state: "better" as const, text: "…", next: "", found: [] } };
+    expect(experimentStrip([done], T, ok)).toEqual([{ id: "a", done: true, text: "No caffeine after 14:00", sub: "worked for you · see why" }]);
+    expect(experimentStrip([{ ...done, verdict: { ...done.verdict, seen: at + 1 } }], T, ok)).toEqual([]);
+    expect(experimentStrip([done], "2026-10-30", ok)).toEqual([]);
+  });
+  it("done without a verdict yet: the app's own result; stopped early: says so; a week on: gone", () => {
+    const done = { ...run, start: "2026-09-25" };
+    expect(experimentStrip([done], T, () => "no-clear-change")[0].sub).toBe("no clear change · the AI's read on it is coming");
+    expect(experimentStrip([done], T, () => "too-few")[0].sub).toBe("done — not enough ratings to tell");
+    expect(experimentStrip([{ ...run, ended: "2026-10-18" }], T, ok)[0].sub).toBe("ended early — too few days to tell");
+    expect(experimentStrip([{ ...run, ended: "2026-10-18" }], "2026-10-26", ok)).toEqual([]);
+    expect(experimentStrip([{ ...run, ended: "2026-10-18", seen: 1 }], T, ok)).toEqual([]);
   });
 });
