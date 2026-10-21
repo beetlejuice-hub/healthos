@@ -2366,8 +2366,14 @@ both reads and the questions. Phases in that order; #152 RPE waits (owner).
        each citation of it judged on its own (a test caught one link cited for two claims sinking both). No AI call.
        **Not tried against live sites** — the sandbox can't reach PubMed or the journals; the pages in the tests are
        stand-ins in their shapes. Watch the first reads: if good studies vanish, the matching is too strict.
-     - [ ] **1 · The reads compute** — the morning and evening reads get the chat's look-ups, so a "noticed" item cites
-       numbers the app worked out (its tested engines), not the AI's reading of the summary.
+     - [x] **1 · The reads compute** — the morning and evening reads get the chat's read-only look-ups (compare, series,
+       nights, day, find, sessions; never propose or remember) and are told to check a "pattern" or "noticed" claim with
+       compare and quote the app's numbers, or say it isn't clear. The app runs them on your data and sends them back
+       (lib/ai/client askRead), at most 2 rounds, then the answer; the data block is cached so a round costs ~10% of it;
+       the rounds count as one call. The read shows "Checked against your data by the app: its test ×2 · …". e2e
+       readlooks: a planted beer → sleep effect comes back "clear" (5.2 vs 8.2), the same evenings unplanted "not clear";
+       fails without the change. Found on the way: an answer with no JSON at all crashed the server (500) instead of
+       "try again" (502) — fixed.
      - [ ] **3 · A weekly deep dive** — Sundays; the AI picks one question from your data ("pick another" to change it);
        8–10 searches, 2–3 studies against your numbers, a verdict and one experiment.
      - [ ] **4 · Experiments end with a verdict** — the app's before/during numbers plus what studies found: worked for

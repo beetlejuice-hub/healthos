@@ -7,7 +7,7 @@
 import { SourceLink } from "./SourceLink";
 import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import { act, getState, newId, useStore } from "../lib/store";
-import { askAi, bandForRead, chatContext, contextNow, nightContext, refreshAiStatus, useAiStatus } from "../lib/ai/client";
+import { askAi, askRead, bandForRead, chatContext, contextNow, nightContext, refreshAiStatus, useAiStatus } from "../lib/ai/client";
 import { runChatTool, type ChartSpec } from "../lib/ai/chattools";
 import { bandNow, bandSettled, onBandSettled, onNights } from "../lib/band-client";
 import { ChatChart } from "./ChatChart";
@@ -60,12 +60,13 @@ async function makeDigest(day: string) {
     ...(ai.digest && ai.digest.day < day && ai.digest.day >= addDays(day, -2) ? ai.digest.items.filter((i) => i.type === "try" || i.type === "protocol").map((i) => `${ai.digest!.day} morning read: ${i.title}${i.tip ? ` — "${i.tip}"` : ""}`) : []),
     ...(ai.night && ai.night.day >= addDays(day, -1) ? ai.night.change.map((c) => `${ai.night!.day} read-back: ${c.what}`) : []),
   ];
-  const r = await askAi({ task: "digest", context: `${contextNow()}\n${brief.join("\n")}\n${askFor(day, "morning", follow).join("\n")}`, shown: ai.shown.slice(-40) });
+  // it may check its claims with the app's own numbers first (PLAN 160)
+  const r = await askRead({ task: "digest", context: `${contextNow()}\n${brief.join("\n")}\n${askFor(day, "morning", follow).join("\n")}`, shown: ai.shown.slice(-40) });
   if (!r.ok) return;
   const n = r.answer.news, at = Date.now();
   const qs = keepNew(r.answer.questions ?? [], `${day}:m`);
   act.setAi((a) => ({
-    digest: { day, at, greeting: r.answer.greeting, items: r.answer.items },
+    digest: { day, at, greeting: r.answer.greeting, items: r.answer.items, ...(r.answer.looked ? { looked: r.answer.looked } : {}) },
     ...(qs.length ? { questions: { day, list: qs, from: "morning" as const, at }, asked: [...a.asked, ...qs.map((q) => q.text)].slice(-60), daily: tracked(a.daily, qs) } : {}),
     shown: [...a.shown, ...r.answer.items.map((i) => i.title), ...(n ? [n.title] : [])].slice(-80),
     // something new is a message (owner, 16 Oct: "only send message when it has a new finding, a new sttudy"); the rest is on Today
@@ -83,7 +84,7 @@ async function makeNight(day: string, force = false) {
   // its three and its questions (PLAN 156–157): tonight's "try" kind, the question kinds, what this morning suggested
   const ai = getState().ai;
   const follow = ai.digest && ai.digest.day === day ? ai.digest.items.filter((i) => i.type === "try" || i.type === "protocol").map((i) => `this morning's read: ${i.title}${i.tip ? ` — "${i.tip}"` : ""}`) : [];
-  const r = await askAi({ task: "night", day, context: [nightContext(day), ...eveningBrief(day, ai.shown), ...askFor(day, "evening", follow)].join("\n") });
+  const r = await askRead({ task: "night", day, context: [nightContext(day), ...eveningBrief(day, ai.shown), ...askFor(day, "evening", follow)].join("\n") });
   if (!r.ok) return;
   const at = Date.now(), qs = keepNew(r.answer.questions ?? [], `${day}:e`);
   act.setAi((a) => ({
@@ -234,8 +235,18 @@ export function MorningRead() {
       </button>
       <p className="greet">{d.greeting}</p>
       <ReadItems key={String(open)} items={d.items} open={open} onOpen={() => setOpen(true)} tip="Today" from="morning" day={d.day} />
+      {open && <Looked names={d.looked} />}
     </section>
   );
+}
+
+/** What a read checked with the app's own numbers (PLAN 160): "its test ×2 · the band's nights". */
+const LOOK_WORDS: Record<string, string> = { compare: "its test", series: "a trend", nights: "the band's nights", day: "a day's log", find: "a search of your log", sessions: "your sessions" };
+function Looked({ names }: { names?: string[] }) {
+  if (!names?.length) return null;
+  const n = new Map<string, number>();
+  for (const x of names) n.set(x, (n.get(x) ?? 0) + 1);
+  return <p className="mr-looked">Checked against your data by the app: {[...n].map(([k, c]) => `${LOOK_WORDS[k] ?? k}${c > 1 ? ` ×${c}` : ""}`).join(" · ")}</p>;
 }
 
 /* ------------------------------------------------------------------ Today: your day, read back */
@@ -275,6 +286,7 @@ export function NightRead() {
       </>}
       {/* the evening's study, thing to try and noticed (PLAN 157; owner, 21 Oct: "the same studt, try, and notiiced session at Eod") */}
       {(n.items?.length ?? 0) > 0 && <ReadItems key={String(open)} items={n.items!} open={open} onOpen={() => setOpen(true)} tip="Tomorrow" from="evening" day={n.day} />}
+      {open && <Looked names={n.looked} />}
       {newer && <button type="button" className="linkish" onClick={() => void makeNight(n.day, true)}>You logged more since — read it again</button>}
     </section>
   );

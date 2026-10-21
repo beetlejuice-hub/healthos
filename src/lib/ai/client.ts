@@ -2,7 +2,8 @@
  * The app's side of the AI: send a request to the Worker with your session, keep the latest usage
  * (calls today, cost) for Settings, and build the context the AI is told — on demand, at call time.
  */
-import { MONTHLY_USD } from "./tasks";
+import { MONTHLY_USD, READ_ROUNDS, isLooks } from "./tasks";
+import { runChatTool } from "./chattools";
 import { gridLines, todayLines, trainingLines } from "./sections";
 import { readiness } from "../readiness";
 import { heartSigns, nightCheck, nightCheckLines } from "../nightcheck";
@@ -27,7 +28,7 @@ import { dayWindow, dayWord } from "./nightread";
 import { plateLines } from "../foodscore";
 import { workoutLines } from "../workoutread";
 import { cardioLine, cardioSpans, cardioWeekLines, maxHrOf, zoneLine } from "../cardio";
-import type { AiAnswer, AiRequest, Task, UsageDoc } from "./tasks";
+import type { AiAnswer, AiRequest, ChatTurn, Task, UsageDoc } from "./tasks";
 import { currentKg } from "../body";
 
 export type AiStatus = { on: boolean | null; usage: UsageDoc | null; cap: number; budget: number; busy: number };
@@ -71,6 +72,31 @@ export async function askAi<T extends Task>(req: Extract<AiRequest, { task: T }>
     return { ok: false, error: "network", message: "Couldn't reach the AI — are you online?" };
   } finally {
     set({ busy: Math.max(0, status.busy - 1) });
+  }
+}
+
+/**
+ * A read with its look-ups (PLAN 160; owner, 21 Oct: "do 2, 1, 3, 4" — 1: the reads compute): the AI may ask for the app's
+ * own numbers (compare, series, nights…); they're worked out here from your data and sent back, at most READ_ROUNDS
+ * times, then it must answer. `looked`: what it looked up, shown with the read.
+ */
+export async function askRead<T extends "digest" | "night">(req: Extract<AiRequest, { task: T }>): Promise<AiResult<AiAnswer<T> & { looked?: string[] }>> {
+  let turn: ChatTurn[] = [];
+  const looked: string[] = [];
+  for (let round = 0; ; round++) {
+    const r = await askAi<T>({ ...req, ...(turn.length ? { turn } : {}), ...(round >= READ_ROUNDS ? { final: true } : {}) } as Extract<AiRequest, { task: T }>);
+    if (!r.ok) return r;
+    const a: unknown = r.answer;
+    if (!isLooks(a)) return { ...r, answer: { ...r.answer, ...(looked.length ? { looked } : {}) } };
+    if (round >= READ_ROUNDS) return { ok: false, error: "bad-answer", message: "The read kept looking things up — try again." };
+    const data = { state: getState(), band: bandNow(), now: Date.now() };
+    const results = a.calls.map((c) => {
+      const out = runChatTool(c, data);
+      looked.push(c.name);
+      return { type: "tool_result", tool_use_id: c.id, content: out.text, ...(out.error ? { is_error: true } : {}) };
+    });
+    // every result in one message, after the AI's turns exactly as they came
+    turn = [...turn, ...a.turn, { role: "user", content: results }];
   }
 }
 

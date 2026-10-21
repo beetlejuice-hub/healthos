@@ -118,6 +118,14 @@ export const CHAT_TOOLS = [
 export type ChatToolName = (typeof CHAT_TOOLS)[number]["name"];
 /** Tool rounds in one message, at most. */
 export const CHAT_ROUNDS = 6;
+/**
+ * The reads' look-ups (PLAN 160; owner, 21 Oct: "do 2, 1, 3, 4" — 1: the reads compute): the chat's read-only tools, so a
+ * "pattern" or "noticed" item quotes numbers the app worked out (its tested engines) instead of reading them off the summary.
+ */
+export const READ_TOOL_NAMES = ["compare", "series", "nights", "day", "find", "sessions"] as const;
+export const READ_TOOLS = CHAT_TOOLS.filter((t) => (READ_TOOL_NAMES as readonly string[]).includes(t.name));
+/** Look-up rounds in one read, at most; the round after must answer. */
+export const READ_ROUNDS = 2;
 
 /** What a question is for (PLAN 156; lib/ai/asking). */
 export const Q_KINDS = ["tracking", "investigate", "study", "check", "followup", "checkup"] as const;
@@ -139,6 +147,14 @@ export type DigestItem = { type: "fact" | "study" | "pattern" | "protocol" | "tr
  */
 export type DigestNews = { title: string; text: string; source: { title: string; url: string; checked?: boolean } };
 export type DigestAnswer = { greeting: string; items: DigestItem[]; news?: DigestNews | null; /** 1–2, the kinds the app picked (PLAN 156). */ questions?: Question[] };
+/** A read mid-way: the look-ups it wants the app to run, and its turns to send back as they were (PLAN 160). */
+export type ReadLooks = { calls: ToolCall[]; turn: ChatTurn[] };
+export const isLooks = (a: unknown): a is ReadLooks => !!a && typeof a === "object" && Array.isArray((a as ReadLooks).calls) && (a as ReadLooks).calls.length > 0;
+/** Only the reads' own look-ups, well formed. */
+export function checkReadCalls(calls: unknown[], turn: unknown): ReadLooks {
+  const ok = (calls ?? []).filter((c): c is ToolCall => !!c && typeof (c as ToolCall).id === "string" && (READ_TOOL_NAMES as readonly string[]).includes((c as ToolCall).name) && !!(c as ToolCall).input && typeof (c as ToolCall).input === "object");
+  return { calls: ok, turn: Array.isArray(turn) ? (turn as ChatTurn[]) : [] };
+}
 
 /** The nightly read-back of your day (owner, 2 Oct: "summarizing what happened, what i should change"). */
 export type NightAnswer = { summary: string; happened: string[]; notes: string; change: { what: string; why: string }[]; /** Lasting patterns worth remembering (kept in AI memory). */ remember: string[];
@@ -185,6 +201,9 @@ const ASK_RULES = `How to ask (owner, 21 Oct: "make them actually usable, clever
 Things they noticed (owner, 20 Oct: "the app can … ask me about that, dive deep into it and see why that happens"): when "Things I noticed about myself" has one that came up more than once, or recently, one question may dig into it — what usually comes before it, when in the day, how often — informal and curious, with options; never a diagnosis.
 Check-up (owner, 20 Oct: "a checkup from time to time, like how you been, have u experienced X, also ask based on my health markers"): when "## Check-up due" is at the end of the context, the first question is the check-up — how they've been this week, or, when a marker there moved, whether they've noticed it (resting heart rate up: "felt run down or like you're fighting something off?"), with the marker's numbers in "why"; its key starts "checkup_".`;
 
+/** The reads' look-ups, in their prompts (PLAN 160). */
+const LOOK_RULES = `THE APP'S NUMBERS (owner, 21 Oct: make the AI smarter — numbers must be proven): you can ask the app for exact numbers with its tools: compare (a measure on days with a thing against days without, with the app's own test), series (a measure day by day), nights (the band's nights), day, find, sessions. Before a "pattern" or "noticed" item says two things go together, check it with compare (or series / nights) and put the app's numbers in its text ("sleep 6.1 after drinks vs 7.4 without — clear"). If the app's test says it isn't clear, say so plainly or pick another. At most 2 rounds of look-ups, several in a round when you need them; then answer.`;
+
 const NIGHT = `${VOICE}
 Task: read the user's day back to them. Use "## The day being read back" and the rest of the context. Its header says when that day is: today (read back tonight), tonight past midnight (still the same evening — lines marked "after midnight" are part of it), or yesterday (read back the next morning because the app wasn't opened that evening — then say "yesterday", never "today", and "tomorrow" in change means today).
 - summary: 2–3 sentences on how the day went, with specifics (times, numbers) from the context.
@@ -200,6 +219,7 @@ Task: read the user's day back to them. Use "## The day being read back" and the
   - one "try": the kind "## Tonight" names, for tomorrow, searched, with its source; never in their stack or already shown;
   - one "noticed": an investigation of something in the day — a "noticed about myself" line, or two things in the day that went together (a dip after a big lunch, a calm evening after training) — from the context, never invented; no source needed.
   Each: "title" (hooks, under 60 characters), "text" (at most 2 short sentences, under 200 characters), "tip" (one line for tomorrow, starting with a verb), "measure" (the one number it's about: ${DIGEST_MEASURES.join(", ")}; the app draws its 14 days), "source" for study and try.
+${LOOK_RULES}
 - questions: 1–2 about this day, the kinds "## Questions this time" names; for a study, its "source" (searched, https).
 ${ASK_RULES}
 Use "goes with", never "causes". No medical advice; anything health-worrying → "worth asking a doctor".
@@ -253,6 +273,7 @@ SHORT — it's read on a phone at wake-up. "text": at most 2 short sentences (un
 Answer with ONLY a JSON object, no prose:
 {"greeting":"one short line","items":[{"type":"fact|study|pattern|protocol|try","title":"","text":"1–2 short sentences","tip":"one line for today","measure":"${DIGEST_MEASURES.join("|")}","source":{"title":"","url":""},"protocol":{"name":"","how":"","days":14,"measure":"energy|mood|focus|stress|sleep|weight"}}],"questions":[{"kind":"${Q_KINDS.join("|")}","text":"","options":["",""],"why":"","key":"","source":{"title":"","url":""}}],"news":null}
 "source" is required for facts, studies and tries. "protocol" only on protocol items. Don't repeat titles listed as already shown.
+${LOOK_RULES}
 QUESTIONS: 1–2, one of each kind "## Questions this time" names; for a study, its "source" (searched, https).
 ${ASK_RULES}
 news (owner: "it should only send message when it has a new finding, a new sttudy or whatever"): null on most days. Only when your search turned up something genuinely new and worth a message for THIS user — a study or review from the last 12 months on something in their stack, their training or their conditions, or a safety note on something they take — give {"title":"","text":"2–3 sentences: what it found and what it means for them","source":{"title":"","url":"https://…"}}. It's sent to their chat, not shown with the items, so it must not repeat an item or anything already shown. No news is better than filler.`,
@@ -267,7 +288,7 @@ export const DESCRIBE_SHAPE = `{"items":[{"kind":"food","name":"","amount":"1 bo
 
 export function jsonFrom(text: string): unknown {
   const start = text.indexOf("{"), end = text.lastIndexOf("}");
-  if (start < 0 || end <= start) throw new Error("no JSON in the answer");
+  if (start < 0 || end <= start) throw new SyntaxError("no JSON in the answer"); // handled as "bad-answer", not a crash
   return JSON.parse(text.slice(start, end + 1));
 }
 
@@ -423,8 +444,9 @@ export type AiRequest =
   /** final: the last round — answer with what you have, no more tools. */
   | { task: "chat"; messages: { role: "user" | "assistant"; text: string }[]; context: string; turn?: ChatTurn[]; final?: boolean }
   | { task: "questions"; context: string; asked: string[] }
-  | { task: "digest"; context: string; shown: string[] }
-  | { task: "night"; day: string; context: string }
+  /** turn / final: the read's look-up rounds so far, as the chat's (PLAN 160). */
+  | { task: "digest"; context: string; shown: string[]; turn?: ChatTurn[]; final?: boolean }
+  | { task: "night"; day: string; context: string; turn?: ChatTurn[]; final?: boolean }
   | { task: "review"; kind: "week" | "month"; from: string; to: string; context: string };
 
 export type AiAnswer<T extends Task> = T extends "describe" ? { items: DescribedItem[]; dropped: string[] } : T extends "supplement" ? SupplementAnswer : T extends "chat" ? ChatAnswer : T extends "questions" ? QuestionsAnswer : T extends "night" ? NightAnswer : T extends "review" ? ReviewAnswer : DigestAnswer;

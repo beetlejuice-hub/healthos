@@ -204,6 +204,33 @@ describe("/api/ai", () => {
     expect(body.answer.items.map((i) => [i.title, i.source?.checked ?? false])).toEqual([["Coffee at 4 pm still costs you sleep", true], ["Blocked publisher", false]]);
   });
 
+  it("a read may ask for the app's numbers first: its look-ups go back to the app, the next round carries the results, one call counted (PLAN 160)", async () => {
+    const digest = { greeting: "Morning", items: [{ type: "pattern", title: "Drinks cost you a point of sleep", text: "5.1 after drinks vs 7.9 without — clear.", measure: "sleep" }] };
+    const call = { type: "tool_use", id: "tu_1", name: "compare", input: { measure: "sleep", thing: "drinks", when: "next_day", from: "2026-09-01", to: "2026-09-30" } };
+    const w = world([{ text: "", stop: "tool_use", content: [{ type: "text", text: "Let me check." }, call] }, { text: JSON.stringify(digest) }]);
+    // round 1: the look-up comes back to the app, with this call's turn to send back as it was
+    const r1 = (await (await handleAi(post({ task: "digest", context: "c", shown: [] }), env, w.deps)).json()) as { answer: { calls: { id: string; name: string }[]; turn: unknown[] } };
+    expect(r1.answer.calls).toEqual([{ id: "tu_1", name: "compare", input: call.input }]);
+    expect(r1.answer.turn).toHaveLength(1);
+    const tools = (w.sent[0].body.tools as { name: string }[]).map((t) => t.name);
+    expect([...tools].sort()).toEqual(["compare", "day", "find", "nights", "series", "sessions", "web_search"]); // the read-only ones: never propose or remember
+    expect(JSON.stringify(w.sent[0].body.messages)).toContain('"cache_control":{"type":"ephemeral"}'); // the data block, cached for the next round
+    // round 2: the app's result goes back; the last round may not look anything up
+    const turn = [...r1.answer.turn, { role: "user", content: [{ type: "tool_result", tool_use_id: "tu_1", content: "Sleep rating the next day with drinks vs without — with: average 5.1 over 9 days; without: 7.9 over 20. Difference −2.8 (95% range −3.3 to −2.3): clear." }] }];
+    const res = await handleAi(post({ task: "digest", context: "c", shown: [], turn, final: true }), env, w.deps);
+    const r2 = (await res.json()) as { answer: { items: { title: string }[] } };
+    expect(r2.answer.items.map((i) => i.title)).toEqual(["Drinks cost you a point of sleep"]);
+    expect(w.sent[1].body.tool_choice).toEqual({ type: "none" });
+    expect(JSON.stringify(w.sent[1].body.messages)).toContain("Difference −2.8");
+    expect(w.docs.get("ai_usage")).toMatchObject({ calls: 1 }); // the read's rounds are one call
+    // a look-up the reads don't have is not passed on
+    const w2 = world([{ text: "", stop: "tool_use", content: [{ type: "tool_use", id: "tu_2", name: "propose", input: { change: "goals" } }] }]);
+    const res3 = await handleAi(post({ task: "digest", context: "c", shown: [] }), env, w2.deps);
+    // …and with nothing else in it, it's an answer in the wrong shape (502, "try again") — not a crash
+    expect(res3.status).toBe(502);
+    expect(((await res3.json()) as { error: string }).error).toBe("bad-answer");
+  });
+
   it("night: the day is read back with web search (its study and thing to try need sources), from text, and checked", async () => {
     const night = { summary: "A steady day; stress peaked at 14:00 with the deadline you noted.", happened: ["2 coffees, last 13:00", "gym 18:00", "x", "y", "dropped"], notes: "You wrote 'deadline' at 14:00 — the stress 8 fits that.", change: [{ what: "Walk after lunch", why: "your 15:00 dip" }, { what: "b", why: "" }, { what: "dropped", why: "" }], remember: ["Stress runs high on deadline days."],
       // PLAN 157: the evening's three — a study and a try need a real link; the morning's other kinds aren't the evening's
