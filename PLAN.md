@@ -26,7 +26,8 @@ The Sleep page stays as it is for now ("we will go thorugh and change things lat
 
 **To discuss first, one at a time** (owner, 21 Oct: "These ideas need to be discussed first so choose one rn and start w
 discussing w me"): #52 more band data — the night check, VO2 max and zones per workout built 21 Oct (below) · #160 the
-AI smarter (all four built 21 Oct — below) · a fuller food/nutrition score (discussing now, 21 Oct) · #138 your food logs into Google's app ·
+AI smarter (all four built 21 Oct — below) · a fuller food/nutrition score (21 Oct: the day score built — #139 below; next
+"what it goes with", then vitamins and minerals) · #138 your food logs into Google's app ·
 #133 more morning-read ideas ("is good").
 
 **Not now:** #48 live heart rate on the Workout screen ("not needed rn") · #136 Tempo → HealthOS (#50, #92 with it) ·
@@ -2028,6 +2029,18 @@ D questions answered in chat. Numbered on from #112.
 Order: A first (113 → 123), then B, then C; D in the chat. (claimed: this session, 20 Oct — A items as they're worked.)
 
 ## 20 Oct, later — workout notes (owner, his words)
+   - [x] **The day score (21 Oct).** Owner: "food notrution score can be bult too" → asked "start with the day score? the
+     weights? where?" → "do whatever" (defaults kept). lib/dayscore: the day out of 100, built like readiness — protein 25
+     (goal; none at half), protein spread 10 (meals with 25 g+), calories 15 (85–110 % full; none at 130 % or at 60 %, too
+     deep a deficit), fibre 15 (30 g), fruit/veg/legumes 15 (400 g, from each food's fvl), limits 10 (salt 5 g, sat. fat
+     10 % of kcal, sugar 90 g), last meal 5 (3 h before bed), alcohol 5 (none; 30 g = none). Fibre, plants and limits only
+     when foods with nutrients are 70 % of the day's kcal (else left out and named); under 1,000 kcal logged → not scored.
+     Today's Food card: "yesterday 74/100" folded, and open "Yesterday's food 74/100 · good — fibre low (14 g of 30) ›" →
+     Insights → Intake: a bar a day (tap one for its parts). The AI gets yesterday's in "This morning" and the read-back
+     day's (so far) with its plates. Tests: two days worked out by hand (100 and 32), coverage, deep deficit; e2e dayscore
+     (found the panel 40 px wide in Intake's 12-column grid — fixed, and now checked).
+     Next, when you want: (2) what the score goes with — high-fibre or high-protein days against next-morning sleep and
+     energy, with the app's compare test, after a few weeks of scores; (3) vitamins and minerals per food.
 140. [x] **Dumbbell kg: one convention** — "In workout, some exercises like db bench press was logged w all kgs, not kg per
    dumbbel and now data is lessed up … All sets on that example is logged as overall kg not per hand so far. I mean it
    makes sense that it counts it overall but then dont put kg per dumbbell … lat raise was overall not per hand. So just

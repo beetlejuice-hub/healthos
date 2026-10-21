@@ -74,7 +74,7 @@ function world(plant) {
     await pg.goto(APP + '#settings'); await pg.waitForSelector('#ai');
     await pg.getByRole('button', { name: 'What the AI sees about me' }).click();
     const seen = await pg.locator('.ctx').innerText().catch(() => '');
-    check(`${tag}: the AI sees last night's three against the usual${plant ? ', and the line' : ''}`, /## This morning \(readiness and the night check[^\n]*\n[\s\S]*- Last night from the band: Skin temperature 3\d\.\d °C \(usual 33\.\d/.test(seen) && (plant ? /- Night check: skin \d\.\d °C over your usual and breathing/.test(seen) : !/Night check:/.test(seen)));
+    check(`${tag}: the AI sees last night's three against the usual${plant ? ', and the line' : ''}`, /## This morning \(readiness, the night check[^\n]*\n[\s\S]*- Last night from the band: Skin temperature 3\d\.\d °C \(usual 33\.\d/.test(seen) && (plant ? /- Night check: skin \d\.\d °C over your usual and breathing/.test(seen) : !/Night check:/.test(seen)));
     check(`${tag}: and each night's in the list of nights`, /score \d+\/100[^\n]*skin temperature [+−]\d\.\d °C vs usual, breathing 1\d\.\d\/min, blood oxygen 9\d %/.test(seen));
     await ctx.close();
   }

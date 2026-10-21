@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { dayScore, weakest, type DayScore } from "../lib/dayscore";
 import { ExperimentStrip } from "../components/ExperimentStrip";
 import { CheckInCard } from "../components/CheckIn";
 import { AUTO_END } from "../lib/training";
@@ -84,6 +85,8 @@ export function Today() {
   // calories burned from the band, today so far and yesterday's whole day (PLAN 83)
   const bandKcal = useBand().data?.kcal;
   const burned = bandKcal?.[day] ?? null;
+  // yesterday's whole-day food score (lib/dayscore): a finished day — today's isn't over
+  const yScore = useMemo(() => dayScore(s.entries, s.foods, s.goals, s.settings.bedMinute, addDays(localDay(now), -1)), [s.entries, s.foods, s.goals, s.settings.bedMinute, now]);
   const yday = (() => {
     const y = addDays(day, -1), b = bandKcal?.[y], d = byDay(s.entries).get(y);
     return b != null && d?.logged ? { ate: d.totals.kcal, burned: b } : null;
@@ -161,7 +164,7 @@ export function Today() {
 
       <Stack now={now} />
       <CaffeineCard doses={doses} now={now} bed={bed} halfLife={s.settings.halfLifeMin} cafNow={cafNow} cafComing={cafComing} cafBed={cafBed} personal={personal} coffeeMg={coffeeMg} />
-      <Fuel totals={totals} goals={s.goals} usual={usual} burned={burned} yday={yday} items={todays.filter((e) => macrosOf(e)).length} onOpen={() => setFoodDay(day)} />
+      <Fuel totals={totals} goals={s.goals} usual={usual} burned={burned} yday={yday} items={todays.filter((e) => macrosOf(e)).length} onOpen={() => setFoodDay(day)} yScore={yScore} />
       {foodDay && <FoodDay day={foodDay} onClose={() => setFoodDay(null)} />}
       <DataCard>
         <NoticedLine />
@@ -172,10 +175,10 @@ export function Today() {
   );
 }
 
-function Fuel({ totals, goals, usual, burned, yday, items, onOpen }: { totals: { kcal: number; p: number; c: number; f: number }; goals: { kcal: number; p: number; c: number; f: number }; usual: number | null; burned: number | null; yday: { ate: number; burned: number } | null; items: number; onOpen: () => void }) {
+function Fuel({ totals, goals, usual, burned, yday, items, onOpen, yScore }: { totals: { kcal: number; p: number; c: number; f: number }; goals: { kcal: number; p: number; c: number; f: number }; usual: number | null; burned: number | null; yday: { ate: number; burned: number } | null; items: number; onOpen: () => void; yScore: DayScore | null }) {
   const pct = Math.min(1, totals.kcal / goals.kcal);
   return (
-    <FoldCard id="fuel" title="Food" read={<>goal {fmt(goals.kcal)} kcal{usual ? ` · usual day ${fmt(usual)}` : ""}</>}
+    <FoldCard id="fuel" title="Food" read={<>goal {fmt(goals.kcal)} kcal{usual ? ` · usual day ${fmt(usual)}` : ""}{yScore ? ` · yesterday ${yScore.score}/100` : ""}</>}
       more={<><b>{fmt(totals.kcal)}</b> kcal eaten · {totals.kcal <= goals.kcal ? `${fmt(goals.kcal - totals.kcal)} left` : `${fmt(totals.kcal - goals.kcal)} over`} · protein <b>{fmt(totals.p)}</b> / {goals.p} g{items ? ` · ${items} item${items === 1 ? "" : "s"}` : ""}</>}>
       <div className="fuel">
         <div className="ring">
@@ -200,6 +203,9 @@ function Fuel({ totals, goals, usual, burned, yday, items, onOpen }: { totals: {
         <span>Eaten {fmt(totals.kcal)} — {balance(totals.kcal, burned).words} so far</span>
         {yday && <span className="dimt">Yesterday: ate {fmt(yday.ate)} · burned {fmt(yday.burned)} — {balance(yday.ate, yday.burned).words}</span>}
       </div>}
+      {/* yesterday's food as a whole day, out of 100 (owner, 21 Oct: "food notrution score can be bult too") — its parts on Insights → Intake */}
+      {yScore && <button type="button" className="linkish fuel-score" data-score={yScore.score} onClick={() => go("insights", "intake")}>
+        Yesterday's food <b>{yScore.score}</b>/100 · {yScore.word}{weakest(yScore) ? ` — ${weakest(yScore)}` : ""} ›</button>}
       {/* what you ate, meal by meal — change or delete any of it, and yesterday's too (PLAN 128, #113) */}
       <button type="button" className="pill-btn fuel-open" onClick={onOpen}>What I ate{items ? ` · ${items} item${items === 1 ? "" : "s"}` : ""} ›</button>
     </FoldCard>

@@ -17,6 +17,7 @@ import { CAF_SLEEP } from "../lib/caffeine-sleep";
 import { mean } from "../lib/stats";
 import { addDays, atMinute, dayLabel, localDay } from "../lib/time";
 import { useWidth } from "./useWidth";
+import { FoodScoreDays } from "./FoodScoreDays";
 
 const f0 = (v: number) => Math.round(v).toLocaleString("en-GB");
 const f1 = (v: number) => v.toFixed(1);
@@ -28,7 +29,7 @@ const col = (x: number, w: number, y: number, y0: number, r = 3) => { const h = 
 /** Monday date labels at least 48 px apart: index → label. */
 const mondays = (list: { day: string }[], x: (j: number) => number) => { const out = new Map<number, string>(); let last = -1e9; list.forEach((d, j) => { if (new Date(noon(d.day)).getDay() === 1 && x(j) - last >= 48) { out.set(j, short(d.day)); last = x(j); } }); return out; };
 
-function Panel({ cls, kick, title, ans, meta, foot, children }: { cls: string; kick: string; title: string; ans?: ReactNode; meta?: ReactNode; foot?: ReactNode; children: ReactNode }) {
+export function Panel({ cls, kick, title, ans, meta, foot, children }: { cls: string; kick: string; title: string; ans?: ReactNode; meta?: ReactNode; foot?: ReactNode; children: ReactNode }) {
   return (
     <section className={`gp ${cls}`} aria-label={title}>
       <header className="gp-h"><div><span className="gp-k">{kick}</span><h2>{title}</h2>{ans && <p className="gp-ans">{ans}</p>}</div>{meta && <span className="gp-meta">{meta}</span>}</header>
@@ -58,6 +59,7 @@ export function Body({ days, period, now, bandNights }: { days: GlanceDay[]; per
       {(hasFood || hasWeight || hasDrinks) && <>
         <div className="gl-group" id="ins-intake" data-sec="intake"><h2>Intake &amp; body</h2><span>food, drinks and weight</span></div>
         <div className="gl" data-sec="intake">
+          {hasFood && <FoodScoreDays days={list.slice(-period).map((d) => d.day)} today={localDay(now)} />}
           {hasFood && <KcalPanel list={list.slice(-period)} />}
           {hasDrinks && <DrinksPanel days={days} period={period} />}
           {hasWeight && <WeightPanel period={period} now={now} />}

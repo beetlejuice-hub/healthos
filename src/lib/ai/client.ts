@@ -8,6 +8,7 @@ import { gridLines, todayLines, trainingLines } from "./sections";
 import { readiness } from "../readiness";
 import { heartSigns, nightCheck, nightCheckLines } from "../nightcheck";
 import { kgByDay, vo2Trend, type Vo2Trend } from "../vo2";
+import { dayScore, dayScoreLines } from "../dayscore";
 import { nights } from "../sleep";
 import { mainLifts, muscleStrength, sessions, thisWeek } from "../liftstrength";
 import type { LoggedSet } from "../training";
@@ -132,7 +133,9 @@ export function contextNow(state: State = getState(), now = Date.now(), { slim =
   const ss = sessions(state.workouts, sets);
   return buildContext({ state, now, days, findings: report.found, patterns, weight: t ? { kg: t.nowKg, perWeek: t.perDay * 7 } : null, nights: nightsSeen,
     // last night's skin temperature, breathing and blood oxygen against your usual, and the night check's line (PLAN 52)
-    today: [...todayLines(ready), ...(band && ready ? nightCheckLines(nightCheck(today, band, heartSigns(ready))) : [])], training: [...trainingLines(ss, mainLifts(sets), thisWeek(ss, now), 6, muscleStrength(sets, now)),
+    today: [...todayLines(ready), ...(band && ready ? nightCheckLines(nightCheck(today, band, heartSigns(ready))) : []),
+      // yesterday's food as a whole day, out of 100 (lib/dayscore)
+      ...((ys) => (ys ? dayScoreLines(ys, "Food score yesterday (out of 100)") : []))(dayScore(state.entries, state.foods, state.goals, state.settings.bedMinute, addDays(today, -1)))], training: [...trainingLines(ss, mainLifts(sets), thisWeek(ss, now), 6, muscleStrength(sets, now)),
       // cardio (PLAN 130): this week's minutes against the weeks before, the last sessions with the band's heart rate
       ...cardioWeekLines(cardioSpans(state.workouts, now), band?.hr ?? [], currentKg(state.entries, 0, now) || null, now, 4, 3, maxHrOf(state.settings)?.bpm),
       // cardio fitness from the band, and which way it's going — split from the kilos while you lose weight (PLAN 52)
@@ -155,6 +158,9 @@ export function nightContext(day: string, state: State = getState(), now = Date.
   const tl = [...(tot ? [tot] : []), ...timeline(state, from, Math.min(to, now + 1), (at) => (localDay(at) !== day ? " (after midnight)" : ""))];
   // the day's plates with their food scores (PLAN 139): what fit the goal best, and the one swap that would help most
   const plates = plateLines(state.entries, state.foods, day, [from, Math.min(to, now + 1)], state.settings.bedMinute);
+  // …and the day as a whole, out of 100 (lib/dayscore) — so far, when it isn't over
+  const ds = dayScore(state.entries, state.foods, state.goals, state.settings.bedMinute, day);
+  if (ds) plates.unshift(...dayScoreLines(ds, `The whole day${localDay(now) === day ? ", so far" : ""}`));
   // a workout that day: each lift against the last time, so the read-back can coach it — no call of its own (PLAN 129)
   // …with its heart-rate zones from the band (PLAN 52; owner, 21 Oct: "3 per workout")
   const zhr = bandNow()?.hr ?? [], zmax = maxHrOf(state.settings)?.bpm;

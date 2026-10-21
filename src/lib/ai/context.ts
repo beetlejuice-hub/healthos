@@ -240,7 +240,7 @@ function baseContext({ state, now, days, findings, patterns, weight, today = [],
     `Goals: ${goals.kcal} kcal/day, ${goals.p} g protein.${en?.mode === "burn" ? ` The calorie goal follows my burn: burn − the deficit for ${en.pace} kg/week, to lose fat while keeping and building muscle${en.offset ? `; two-week check-ins moved it ${en.offset > 0 ? "+" : ""}${en.offset}` : ""}.` : ""}${weight ? ` Weight trend: ${weight.kg.toFixed(1)} kg, ${weight.perWeek >= 0 ? "+" : ""}${weight.perWeek.toFixed(2)} kg/week.` : ""}`,
     // PLAN 134: what the scale's weight is made of, and creatine's water
     ...fatLines(state.entries, now, creatineFrom(state.entries, supplements)),
-    ...(today.length ? ["## This morning (readiness and the night check, as the app shows them)", ...today.map((l) => `- ${l}`)] : []),
+    ...(today.length ? ["## This morning (readiness, the night check and yesterday's food score, as the app shows them)", ...today.map((l) => `- ${l}`)] : []),
     ...(onToday.length ? ["## On Today right now, from you (the user reads these there; they aren't in this chat)", ...onToday.map((l) => (l.startsWith("  ") ? l : `- ${l}`))] : []),
     "## My stack",
     ...supplements.map((s) => `- ${s.name}${s.dose ? ` ${s.dose}` : ""} (${s.slot})${s.status ? ` — ${s.status === "low" ? "running low" : s.status === "out" ? "ran out" : "stopped"}` : s.active ? "" : " — paused"}`),
