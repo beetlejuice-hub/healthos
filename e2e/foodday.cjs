@@ -46,6 +46,17 @@ const ENTRIES = [
   await open.click(); await sheet.waitFor();
   const kc = async () => (await sheet.locator('.fd-kcal b').innerText()).replace(/,/g, '');
   check(`opens on today: 564 kcal, the card's total (${await kc()})`, await kc() === '564' && (await sheet.locator('.fd-head b').innerText()) === 'Today');
+  // PLAN 154 (owner, 20 Oct: "a bit better look for … trackking food overall, looking back"): the week on top
+  const fw = sheet.locator('.fw'), line = (await fw.locator('.fw-read').innerText()).replace(/\s+/g, ' ');
+  check(`the week's line: finished days only — yesterday's 1,110 kcal and 35 g, plate 35; today isn't in it (${line})`,
+    /^1,110 kcal a day · 1 of 1 at or under goal · protein 35 g, at goal 0 of 1 · plates 35 the 1 finished day with food logged/.test(line));
+  const labs = await fw.locator('.fw-lab b').allInnerTexts();
+  check(`7 days ending today, a bar on each day with food, the rest empty (${labs.join(' ')})`, labs.length === 7 && labs[6] === 'Fri' && await fw.locator('.fw-row').first().locator('.fw-bar').count() === 2 && await fw.locator('.fw-row').first().locator('.fw-none').count() === 5);
+  check('today drawn lighter (not over yet)', await fw.locator('.fw-row').first().locator('.fw-day[data-partial] .fw-bar').count() === 1);
+  await sheet.screenshot({ path: OUT + 'foodday-week.png' });
+  await fw.getByRole('button', { name: /^Thu 15 Oct: 1,110 kcal, protein 35 g, plates 35$/ }).click(); await pg.waitForTimeout(100);
+  check(`tap a day: it opens below (${await sheet.locator('.fd-head b').innerText()}, ${await kc()})`, (await sheet.locator('.fd-head b').innerText()) === 'Yesterday' && await kc() === '1110');
+  await fw.getByRole('button', { name: /^Fri 16 Oct: .*so far$/ }).click(); await pg.waitForTimeout(100);
   const m0 = await meals();
   check(`by meal, what was in each, with its score (${m0.join(' | ')})`, m0.length === 2 && /^BREAKFAST 384 kcal · 65 Oats 07:40 · 1 bowl · 80 g · P 13 g 65 380 × Long coffee 07:45 · 300 ml 4 ×/i.test(m0[0]) && /^LUNCH 180 kcal · 47 Toast 12:30 · 2 slices · 70 g · P 6 g 47 180 ×/i.test(m0[1]));
   // PLAN 139 (owner, 20 Oct: "a score next to the plate, for each item and for in total too … i can click on it and observe whats up")
@@ -70,7 +81,7 @@ const ENTRIES = [
   await sheet.getByRole('button', { name: 'Delete Pizza' }).click(); await sheet.getByRole('button', { name: 'Delete?' }).click(); await pg.waitForTimeout(150);
   check('yesterday\'s pizza deleted', !(await ids()).includes('pizza') && await kc() === '210');
   await sheet.getByRole('button', { name: 'Change Beer' }).click();
-  await sheet.getByLabel('kcal').fill('250'); await sheet.getByRole('button', { name: 'Save' }).click(); await pg.waitForTimeout(150);
+  await sheet.getByLabel('kcal', { exact: true }).fill('250'); await sheet.getByRole('button', { name: 'Save' }).click(); await pg.waitForTimeout(150);
   check(`tap an item to change its numbers (${await kc()})`, await kc() === '250');
   await sheet.screenshot({ path: OUT + 'foodday-yesterday.png' });
   await sheet.getByRole('button', { name: 'Day before' }).click(); await pg.waitForTimeout(100);

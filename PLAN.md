@@ -18,7 +18,6 @@ mood course removed from Mind, with weekday × time and best / worst days kept u
 **Your asks from the latest batch, not finished:**
 - #152 RPE — how hard a set felt (your phase-2 pick with rep ranges; rep ranges done).
 - #153 Why Fitbit said 81 and the app 98 — needs that night (a screenshot of Fitbit's breakdown, or the date).
-- #154 Food tracking overall, looking back — a week of kcal and protein against your goals.
 
 **The review (#151):** Today first pass done; next Sleep and Heart, then logging, Workout, Insights, AI, Settings.
 
@@ -2202,6 +2201,15 @@ he already finds useless or confusing — default: the five questions find them.
 153. [ ] **Why Fitbit said 81 when the app said 98** (#127) — the score got Restless, but that night's gap was never
    explained (the database link was down), and Fitbit's "restoration" (sleeping heart rate against daytime resting)
    isn't in the app's score. Needs that night: a screenshot of Fitbit's breakdown, or the date. (found in the tidy)
-154. [ ] **Food tracking overall, looking back** (#128) — "need a bit better look for macro breakdwon, food, and trackking
+154. [x] **Food tracking overall, looking back** (#128) — "need a bit better look for macro breakdwon, food, and trackking
    food overall, looking back to yesterday too". Phase 1 (What I ate, any day) is done; the overall look isn't — a
-   7-day strip of kcal and protein against your goals, plate scores across the week. (found in the tidy)
+   7-day strip of kcal and protein against your goals, plate scores across the week. (found in the tidy; owner: "1")
+   Done (21 Oct): What I ate opens with the week — seven days of calories and of protein, each against its goal (two
+   small rows, one scale each), today lighter, a day without food left empty (unknown, not zero); tap a day to open it
+   below; walking back past the week's first day pages a week back. The line on top, finished days with food only:
+   "1,740 kcal a day · 4 of 5 at or under goal · protein 114 g, at goal 1 of 5 · plates 64" (protein counts within 5 %;
+   a day's plate score needs 70 % of its calories scored). Same day and sums as Today's card (lib/foodday). Checked:
+   foodweek.test (hand-worked: a latte-only day unknown, a day's score by calories, none when mostly unscored, the line
+   — today left out, 146 of 150 a hit), e2e foodday (the line for his test day, 7 days, bars, today lighter, tap a day),
+   a phone screenshot looked at. Found on the way: the line first broke into one row per number (a grid) — the e2e
+   caught it.

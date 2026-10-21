@@ -1640,6 +1640,26 @@ a { color: inherit; }
 .fd-li .entry-edit { grid-column: 1 / -1; }
 .fd-del { padding: 4px 10px; font-size: 12px; background: color-mix(in srgb, var(--warn) 22%, transparent); color: var(--c-ink); }
 .fd-add { justify-self: start; }
+/* PLAN 154: the week on top of What I ate — calories and protein, each against its goal; today lighter; tap a day */
+.fw { display: grid; gap: 8px; padding: 4px 0 12px; border-bottom: 1px solid #ffffff0d; }
+.fw-read { margin: 0; display: grid; gap: 2px; font-size: 13.5px; color: var(--c-ink-2); line-height: 1.4; }
+.fw-read b { color: var(--c-ink); font-weight: 600; font-variant-numeric: tabular-nums; }
+.fw-read small { font-size: 11.5px; color: var(--c-dim); }
+.fw-row, .fw-days { display: grid; grid-template-columns: 64px 1fr; gap: 8px; align-items: end; }
+.fw-name { font-size: 12px; color: var(--c-ink-2); display: grid; line-height: 1.25; padding-bottom: 2px; }
+.fw-name small { font-size: 10.5px; color: var(--c-dim); }
+.fw-plot { position: relative; height: 46px; display: grid; grid-template-columns: repeat(7, 1fr); border-bottom: 1px solid #ffffff1a; }
+.fw-goal { position: absolute; left: 0; right: 0; border-top: 1px dashed var(--c-ink-2); opacity: .6; pointer-events: none; }
+.fw-day { all: unset; cursor: pointer; position: relative; height: 100%; }
+.fw-bar { position: absolute; left: 22%; right: 22%; bottom: 0; background: var(--fw); border-radius: 3px 3px 0 0; min-height: 2px; }
+.fw-none { position: absolute; left: 50%; bottom: 0; width: 6px; height: 2px; margin-left: -3px; background: var(--c-dim); opacity: .5; }
+.fw-day[data-partial] .fw-bar { opacity: .45; }
+.fw-day[data-on]::before, .fw-lab[data-on]::before { content: ""; position: absolute; inset: 0 2px; background: #ffffff10; border-radius: 4px; }
+.fw-days > div { display: grid; grid-template-columns: repeat(7, 1fr); }
+.fw-lab { all: unset; cursor: pointer; position: relative; display: grid; justify-items: center; padding: 3px 0; font-size: 11px; color: var(--c-dim); font-variant-numeric: tabular-nums; }
+.fw-lab b { font-weight: 600; color: var(--c-ink-2); font-size: 11px; }
+.fw-lab[data-on] b, .fw-lab[data-on] { color: var(--c-ink); }
+.fw-lab:focus-visible { outline: 2px solid var(--c-ink-2); outline-offset: 1px; border-radius: 4px; }
 #fuel .fuel-open { margin-top: 12px; }
 /* the food score (PLAN 139): a number per item and per meal; tap an item's for its three parts */
 .fd-li { grid-template-columns: minmax(0, 1fr) auto auto auto; }

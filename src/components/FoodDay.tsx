@@ -17,6 +17,8 @@ import { go, LOG_FOR_KEY } from "../lib/nav";
 import { addDays, atMinute, clock, dayLabel, localDay } from "../lib/time";
 import { EntryEdit } from "./EntryEdit";
 import { askAi, useAiStatus } from "../lib/ai/client";
+import { foodWeek, weekRead } from "../lib/foodweek";
+import { FoodWeek } from "./FoodWeek";
 
 const fmt = (n: number) => Math.round(n).toLocaleString("en-GB");
 /** 70+ fits well, 40+ in between, under 40 fits the goal less — never "bad". */
@@ -50,9 +52,17 @@ export function FoodDay({ day: first, onClose }: { day: string; onClose: () => v
     act.rememberFood({ ...f, nutri: { sugar: n.sugar, satFat: n.satFat, salt: n.salt, fiber: n.fiber, ...(n.fvl ? { fvl: n.fvl } : {}), ...(n.redMeat ? { redMeat: true } : {}), ...(n.cheese ? { cheese: true } : {}) } });
   };
   const today = localDay(Date.now());
+  // the week shown on top: ends today, and pages a week back when you walk past its first day (PLAN 154)
+  const [end, setEnd] = useState(() => (first > today ? first : today));
+  const week = useMemo(() => foodWeek(entries, foods, bedMinute, end, today), [entries, foods, bedMinute, end, today]);
+  const read = useMemo(() => weekRead(week, goals), [week, goals]);
   const name = day === today ? "Today" : day === addDays(today, -1) ? "Yesterday" : dayLabel(atMinute(day, 720));
   useEffect(() => { const k = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); }; window.addEventListener("keydown", k); return () => window.removeEventListener("keydown", k); }, [onClose]);
-  const move = (n: number) => { setDay(addDays(day, n)); setEdit(null); setSure(null); setWhy(null); };
+  const show = (d: string) => {
+    setDay(d); setEdit(null); setSure(null); setWhy(null);
+    if (d < addDays(end, -6)) setEnd(d < addDays(today, -6) ? addDays(d, 6) : today); else if (d > end) setEnd(d);
+  };
+  const move = (n: number) => show(addDays(day, n));
   // another day: Log opens on that day, at lunch time (as Today's catch-up hands it over)
   const addFood = () => { if (day !== today) { try { sessionStorage.setItem(LOG_FOR_KEY, JSON.stringify({ day, time: "12:30" })); } catch { /* Log opens on today */ } } onClose(); go("log", "food"); };
   const chip = (e: FoodItem, s: ItemScore | null | undefined) => s
@@ -92,6 +102,7 @@ export function FoodDay({ day: first, onClose }: { day: string; onClose: () => v
           <button type="button" className="fd-nav" aria-label="Day after" disabled={day >= today} onClick={() => move(1)}>›</button>
           <button type="button" className="x fd-close" aria-label="Close" onClick={onClose}>✕</button>
         </header>
+        <FoodWeek week={week} read={read} goals={goals} day={day} onPick={show} />
         <div className="fd-sum">
           <p className="fd-kcal"><b>{fmt(d.totals.kcal)}</b> kcal <span>{d.count ? (d.totals.kcal <= goals.kcal ? `${fmt(goals.kcal - d.totals.kcal)} under` : `${fmt(d.totals.kcal - goals.kcal)} over`) + ` your ${fmt(goals.kcal)}` : `goal ${fmt(goals.kcal)}`}</span></p>
           <div className="macros">
