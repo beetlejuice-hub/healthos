@@ -145,9 +145,9 @@ a form. Until there's enough data they use sensible defaults, silently.
   median. A brand you type stays its own row, at the top. Small product photos from OFF.
 - **Your values win:** any food's numbers can be edited before logging; the corrected version is
   saved and offered first next time.
-- **Search ideas not built yet:** rank by what you actually log (your brands float up); dry vs
-  cooked hint for pasta/rice/meat; English USDA lookup for Hungarian words (spagetti → spaghetti);
-  AI "2 eggs, toast, 300 g pörkölt" parsing.
+- **Search ideas (30 Sept) — all built since (checked 21 Oct):** your brands float up (lib/foodsearch tasteOf); dry vs
+  cooked (lib/cooked); Hungarian words looked up in English (lib/hu: spagetti → spaghetti); "2 eggs, toast, 300 g
+  pörkölt" typed in one line (lib/quickadd, the AI for the rest).
 - **Barcode scanner** — built 1 Oct (see item 17).
 - **Wearable** — **Fitbit Charge 6** (owner, 30 Sept; not bought yet, so parked). Criterion: an official API the web app can read (heart rate,
   sleep stages, HRV, resting HR). Fitbit has one (OAuth web API, intraday data for your own
@@ -2308,8 +2308,8 @@ is written, so the next morning still shows the night before last; the read-back
 158. [x] **The morning read, better**: the next read follows up what it suggested ("tried the protein coffee before 10?"),
    and #133's ideas when they fit (this day last month; guess first). Done (21 Oct) as part of #156: the morning read's
    follow-up question is fed yesterday's "try" items and last night's "tomorrow, maybe", the evening's this morning's
-   "try". Not built, ideas for you to pick: ☆ save an item for later (a list in the AI tab); "guess first" (the read
-   asks you to guess a number before showing it); "this day last month".
+   "try". ☆ Save for later was built as #159. Not built, ideas for you to pick: "guess first" (the read asks you to
+   guess a number before showing it); "this day last month".
 Tested with: pure rules for what's shown when (a read from yesterday morning is gone this morning — fails on today's
 code), the prompts' contracts (kinds, a source on study questions, no repeat of the same text), e2e on the phone for
 both reads and the questions. Phases in that order; #152 RPE waits (owner).
