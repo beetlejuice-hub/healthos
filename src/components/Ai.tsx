@@ -30,7 +30,7 @@ import { dueReviews, monthFacts, monthLines, weekFacts, weekLines, type Due } fr
 import { Md } from "./Md";
 import { DigestChart, MiniChart } from "./DigestChart";
 import { measureDays } from "../lib/ai/digestchart";
-import { digestDue, freshRead, nightIn } from "../lib/ai/morning";
+import { digestDue, morningShown, nightIn, nightShown } from "../lib/ai/morning";
 import { dayWindow, eveningOf, nightDue } from "../lib/ai/nightread";
 import { byDay, foldLine } from "../lib/ai/thread";
 
@@ -187,7 +187,7 @@ export function startExperiment(p: NonNullable<DigestItem["protocol"]>) {
  * from his own data, the source.
  */
 export function MorningRead() {
-  const d = useStore((s) => s.ai.digest);
+  const d = useStore((s) => s.ai.digest), night = useStore((s) => s.ai.night);
   const experiments = useStore((s) => s.ai.experiments);
   const entries = useStore((s) => s.entries), workouts = useStore((s) => s.workouts), settings = useStore((s) => s.settings), goals = useStore((s) => s.goals);
   const running = experiments.filter((x) => !x.ended).map((x) => x.name);
@@ -199,8 +199,9 @@ export function MorningRead() {
   const charted = d?.items.some((i) => i.measure);
   const facts = useMemo(() => (charted ? dailyFacts(entries, workouts, settings, addDays(today, -13), today) : []), [charted, entries, workouts, settings, today]);
   const series = useMemo(() => (d?.items ?? []).map((i) => (i.measure ? measureDays(i.measure, facts, entries, today) : null)), [d, facts, entries, today]);
-  // only a read written that morning: one written the evening before talks about the wrong night (16 Oct)
-  if (!d || d.day > today || d.day < addDays(today, -1) || !freshRead(d)) return null;
+  // only a read written that morning (16 Oct), and only until the evening read replaces it — never the next morning
+  // (owner, 21 Oct: "if i get them at yesterday morning, it should not be there"; lib/ai/morning morningShown)
+  if (!d || !morningShown(d, night, Date.now())) return null;
   const fresh = unseen(d);
   const setOpen = (v: boolean) => { setOpenState(v); if (v && fresh) act.setAi((a) => ({ digest: a.digest ? { ...a.digest, seen: Date.now() } : a.digest })); };
   const goalOf = (k: DigestMeasure) => (k === "protein" ? goals.p : k === "kcal" ? goals.kcal : undefined);
@@ -243,13 +244,14 @@ export function MorningRead() {
  * things to try tomorrow. Shown from when it's written until noon the next day.
  */
 export function NightRead() {
-  const n = useStore((s) => s.ai.night);
+  const n = useStore((s) => s.ai.night), morning = useStore((s) => s.ai.digest);
   const entries = useStore((s) => s.entries);
   // folded every time Today opens, highlighted until opened (owner, 16 Oct: "the your day, read back cannot be made
   // collapsed and i read it first time, now its just sitting there taking up space")
   const [open, setOpenState] = useState(false);
-  const now = Date.now(), today = localDay(now), tonight = n ? eveningOf(now) === n.day : false;
-  if (!n || !(n.day === today || (n.day === addDays(today, -1) && new Date(now).getHours() < 12))) return null;
+  const now = Date.now(), tonight = n ? eveningOf(now) === n.day : false;
+  // until the next morning read replaces it, and never past noon (PLAN 155; lib/ai/morning nightShown)
+  if (!n || !nightShown(n, morning, now)) return null;
   // still that evening (to 04:00): logged more since → read it again; at 00:40 it's still "tonight" (#107)
   const newer = tonight && entries.some((e) => e.at > n.at && e.at >= dayWindow(n.day)[0] && e.at < dayWindow(n.day)[1]);
   const fresh = unseen(n);

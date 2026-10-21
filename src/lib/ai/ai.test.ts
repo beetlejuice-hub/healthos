@@ -262,13 +262,18 @@ describe("the chat sees what Today shows from the AI (owner, 16 Oct: the ☀️ 
   const at = (d: string, hm: string) => new Date(`2026-10-${d}T${hm}:00`).getTime();
   const digest = { day: "2026-10-16", at: at("16", "07:41"), greeting: "Morning! 7 h last night.", items: [{ type: "study" as const, title: "Black seed oil and skin", text: "Still early science.", source: { title: "JAAD 2025", url: "https://example.org/b" } }] };
   const night = { day: "2026-10-15", at: at("15", "21:40"), summary: "A steady day.", happened: [], notes: "", change: [{ what: "Walk at 14:00", why: "the dip" }], remember: [] };
-  it("this morning's read and last night's read-back, as Today shows them", () => {
+  it("this morning's read, as Today shows it — last night's read-back is replaced once it's written (PLAN 155)", () => {
     expect(onTodayLines({ digest, night }, at("16", "09:00"))).toEqual([
       "Morning read (this morning): Morning! 7 h last night.",
       "  - [study] Black seed oil and skin: Still early science. (JAAD 2025, https://example.org/b)",
+    ]);
+    expect(onTodayLines({ digest, night }, at("16", "07:30"))).toEqual([
       "Your day read back (last night, 2026-10-15): A steady day.",
       "  - to try: Walk at 14:00 (the dip)",
     ]);
+  });
+  it("yesterday morning's read isn't on Today the next morning (owner, 21 Oct: \"it should not be there\")", () => {
+    expect(onTodayLines({ digest, night: null }, at("17", "08:30"))).toEqual([]);
   });
   it("not a read written the evening before; not last night's read-back after noon (Today hides both)", () => {
     expect(onTodayLines({ digest: { ...digest, at: at("15", "20:31") }, night }, at("16", "12:30"))).toEqual([]);

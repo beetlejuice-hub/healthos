@@ -2,7 +2,7 @@
 // show protein" and "i should be able to click on the logged food or drink and modify its macros". A protein coffee logged
 // today shows its protein; tapping it opens its numbers; a change is saved on that entry only. The one-tap usual drink keeps
 // its protein too (it used to drop it).
-const { chromium, APP, OUT, handle } = require('./harness.cjs');
+const { chromium, APP, OUT, handle, openCard } = require('./harness.cjs');
 
 const NOW = new Date('2026-10-13T11:00:00').getTime();
 const drink = { id: 'drink:off:59900:330', name: 'Protein coffee 330 ml', ml: 330, caffeineMg: 150, alcoholG: 0, kcal: 165, p: 25, c: 9, f: 2.5 };
@@ -46,7 +46,7 @@ const drink = { id: 'drink:off:59900:330', name: 'Protein coffee 330 ml', ml: 33
   await ff.getByRole('button', { name: 'Cancel' }).click();
   check('Cancel leaves it as it was', (await st()).entries.find((e) => e.id === 'e2').macros.f === 35);
   // the usual drink, one tap on Today: protein comes along
-  await pg.goto(APP + '#today'); await pg.waitForTimeout(300);
+  await pg.goto(APP + '#today'); await pg.waitForSelector('#caffeine'); await openCard(pg, 'caffeine');
   // wait for it to be saved: the store writes 150 ms after a change, and a read at 150 ms lost the race under load
   const drinks0 = (await st()).entries.filter((e) => e.kind === 'drink').length;
   await pg.getByRole('button', { name: '+ Protein coffee 330 ml' }).click();

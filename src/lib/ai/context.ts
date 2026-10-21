@@ -19,7 +19,7 @@ import { weekly } from "../weekly";
 import { personalSleep, ratedNights } from "../caffeine-sleep";
 import { doseCompare } from "../dose";
 import { nightLabel, phoneLabel } from "../lastnight";
-import { freshRead } from "./morning";
+import { morningShown, nightShown } from "./morning";
 
 const BANDS: [string, number, number][] = [["morning (5–11)", 5, 11], ["midday (11–14)", 11, 14], ["afternoon (14–18)", 14, 18], ["evening (18–24)", 18, 24]];
 const avg = (xs: number[]) => (xs.length ? Math.round((xs.reduce((a, b) => a + b, 0) / xs.length) * 10) / 10 : null);
@@ -207,14 +207,15 @@ export const nowLine = (now: number, span = 14, today = true) => `Now: ${dayLabe
  * find in today window" — so it's not posted any more; "ask me about it" still works because the chat sees it here).
  */
 export function onTodayLines(ai: Pick<State["ai"], "digest" | "night">, now: number): string[] {
-  const today = localDay(now), yesterday = addDays(today, -1), out: string[] = [];
+  const today = localDay(now), out: string[] = [];
+  // the same rule as Today (lib/ai/morning, PLAN 155): what's on screen, nothing older
   const d = ai.digest;
-  if (d && freshRead(d) && (d.day === today || d.day === yesterday)) {
+  if (d && morningShown(d, ai.night, now)) {
     out.push(`Morning read (${d.day === today ? "this morning" : "yesterday morning"}): ${d.greeting}`);
     for (const i of d.items) out.push(`  - [${i.type}] ${i.title}: ${i.text}${i.source?.url ? ` (${i.source.title}, ${i.source.url})` : ""}${i.protocol ? ` — try: ${i.protocol.how}, ${i.protocol.days} days, measuring ${i.protocol.measure}` : ""}`);
   }
   const n = ai.night;
-  if (n && (n.day === today || (n.day === yesterday && new Date(now).getHours() < 12))) {
+  if (n && nightShown(n, d, now)) {
     out.push(`Your day read back (${n.day === today ? "tonight" : "last night"}, ${n.day}): ${n.summary}`);
     if (n.change.length) out.push(`  - to try: ${n.change.map((c) => `${c.what} (${c.why})`).join("; ")}`);
   }

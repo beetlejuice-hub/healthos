@@ -1,4 +1,4 @@
-const { chromium, APP, OUT, handle } = require('./harness.cjs');
+const { chromium, APP, OUT, handle, openCard } = require('./harness.cjs');
 // The in-app AI against a fake /api/ai (no credits spent) and a fake food database:
 // sentence → built-in, database median, then AI (saved, free next time); drink by description →
 // "my usual"; supplement look-up; morning read → experiment; quick question; chat that writes first,
@@ -135,7 +135,7 @@ const GOGOSI = [['Gogosi', 330, 6, 48, 13], ['Gogosi', 350, 7, 50, 14]].map(([na
     await pg.waitForSelector('.made');
     check('the AI made a drink: 150 mg, says what it assumed', /Long coffee, large[\s\S]*150 mg caffeine · AI estimate — assumed a double shot/.test(await pg.locator('.made').innerText()));
     await pg.getByRole('button', { name: 'Make it my usual' }).click();
-    await pg.goto(APP + '#today'); await pg.waitForTimeout(150);
+    await pg.goto(APP + '#today'); await pg.waitForSelector('#caffeine'); await openCard(pg, 'caffeine');
     check('Today\'s one-tap button is now that coffee', await pg.getByRole('button', { name: '+ Long coffee, large' }).count() === 1);
 
     // A new supplement is looked up.

@@ -3,7 +3,7 @@
 // offering the restock option for vit d3. I mean it can offfer but also should be able to just log."). Today's one-tap
 // chips show Vitamin D3 marked "out": a tap logs it and it stays ran out. In the chat, "took 2000 IU D3 at 8:30 and a vit
 // B from mom's" → two cards; Log it logs each (B as a stopped one-off, so Today never asks for it); D3 is still out.
-const { chromium, APP, OUT, handle, seed } = require('./harness.cjs');
+const { chromium, APP, OUT, handle, seed, openCard } = require('./harness.cjs');
 
 const NOW = new Date('2026-10-16T10:00:00').getTime(), KEY = 'healthos.v1:u-test';
 const CALLS = [
@@ -40,6 +40,7 @@ const calls = [];
   const st = () => pg.evaluate((k) => JSON.parse(localStorage.getItem(k) || '{}'), KEY);
   const supps = async () => (await st()).entries.filter((e) => e.kind === 'supp');
 
+  await pg.waitForSelector('#stack'); await openCard(pg, 'stack');
   const chip = pg.locator('.supp-quick .sq-chip', { hasText: 'Vitamin D3' }).first();
   check(`Today: Vitamin D3 is offered, marked out (${(await chip.innerText().catch(() => '—')).replace(/\s+/g, ' ')})`, await chip.count() === 1 && /out/.test(await chip.innerText()));
   await pg.locator('.supp-quick').first().screenshot({ path: OUT + 'suppout-chips.png' });
@@ -68,7 +69,7 @@ const calls = [];
   check('D3 still out, nothing added to what Today asks for', s.supplements.find((x) => x.id === 'd3').status === 'out' && s.supplements.filter((x) => x.active).length === 1);
   check(`the cards say it's done (${(await cards.nth(0).innerText()).replace(/\s+/g, ' ')})`, /✓ Logged Vitamin D3 2000 IU at 08:30 — still marked as ran out/.test(await cards.nth(0).innerText()) && /✓ Logged Vitamin B complex 1 tablet at 10:00/.test(await cards.nth(1).innerText()));
 
-  await pg.goto(APP + '#today'); await pg.waitForTimeout(300);
+  await pg.goto(APP + '#today'); await pg.waitForSelector('#stack'); await openCard(pg, 'stack');
   const body = await pg.locator('body').innerText();
   check('Today never asks about Vitamin B complex', !/Vitamin B complex/.test(await pg.locator('.supp-quick').first().innerText()));
   check('the restock offer is still there for D3 ("it can offer")', /Out of Vitamin D3/.test(body));

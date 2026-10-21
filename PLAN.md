@@ -15,7 +15,7 @@ Started 29 Sept 2026. Owner: Arnold. Answers behind this: the "HealthOS — Disc
 mood course removed from Mind, with weekday × time and best / worst days kept under the new page; Sleep needed nothing
 (with the band its old panels already don't show).
 
-**Building now:** #155 nothing stale · #156 questions with a reason · #157 the evening read with items · #158 the morning read, better.
+**Building now:** #156 questions with a reason · #157 the evening read with items · #158 the morning read, better.
 
 **Your asks from the latest batch, not finished:**
 - #152 RPE — how hard a set felt (later — your call, 21 Oct).
@@ -2231,10 +2231,14 @@ Found (21 Oct, in the code): "the same questions" — a question the AI marked "
 word every day (up to 5, until "Stop asking this"). "Sitting" — yesterday's morning read stays on Today until today's
 is written, so the next morning still shows the night before last; the read-back stays until noon.
 
-155. [ ] **Nothing stale** (claimed: this session — lib/ai/morning, Ai.tsx MorningRead/NightRead/AiQuestions). Each read
-   is on Today until the next one replaces it: the morning read until the evening read is written (and never past
-   04:00 the next night); the evening read until the next morning read (and never past noon). Questions go with their
-   read. Phase 1 — quick, and it's the annoyance now.
+155. [x] **Nothing stale** (lib/ai/morning, Ai.tsx MorningRead/NightRead). Each read is on Today until the next one
+   replaces it: the morning read until the evening read is written (and never past 04:00 the next night); the evening
+   read until the next morning read (and never past noon). Questions go with their read (#156). Done (21 Oct):
+   `morningShown` / `nightShown`, used by both cards and by what the chat is told is on Today. Checked: morning.test
+   (each edge: yesterday's read gone at 06:30 before today's is written, 21:00 vs 21:31, 00:40, 04:00, 07:50 vs 08:00,
+   11:59 vs 12:00, a read-back written the next morning), ai.test (the On Today lines — both fail on the old rule),
+   the full e2e run (93). Found on the way: three suites (ai, editentry, suppout) still expected Today's Stack and
+   Caffeine cards open after the fold (f90ad58) — test-side, fixed; I'd run only the suites I expected to touch.
 156. [ ] **Questions with a reason, never the same twice.** They come with the reads — 1–2 in the morning, 1–2 in the
    evening — written by the reads' model (the strong one, with web search) instead of the cheap 10:00 call. Each is one
    of: *tracking* (a measure worth following, mental health too — re-worded every time it comes back, the key kept so
