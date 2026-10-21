@@ -11,7 +11,7 @@ import type { DigestMeasure } from "../lib/ai/tasks";
 import { addDays, dayLabel, atMinute } from "../lib/time";
 
 const TONE: Record<DigestMeasure, string> = { protein: "--pro", kcal: "--kcal", caffeine: "--caf", alcohol: "--alc", weight: "--wt", lifting: "--gym",
-  sleep: "--supp", mood: "--mood", energy: "--mood", focus: "--mood", stress: "--mood" };
+  sleep: "--supp", mood: "--mood", energy: "--mood", focus: "--mood", stress: "--mood", skin: "--warn", breathing: "--ok", oxygen: "--kcal", vo2: "--wt" };
 const tone = (k: DigestMeasure) => ({ "--dc": `var(${TONE[k]})` }) as React.CSSProperties;
 
 /** The scale: amounts from zero (and up to the goal); levels around their own range, a little padded. */

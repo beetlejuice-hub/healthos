@@ -6,7 +6,7 @@ import { MONTHLY_USD } from "./tasks";
 import { gridLines, todayLines, trainingLines } from "./sections";
 import { readiness } from "../readiness";
 import { heartSigns, nightCheck, nightCheckLines } from "../nightcheck";
-import { kgByDay, vo2Trend } from "../vo2";
+import { kgByDay, vo2Trend, type Vo2Trend } from "../vo2";
 import { nights } from "../sleep";
 import { mainLifts, muscleStrength, sessions, thisWeek } from "../liftstrength";
 import type { LoggedSet } from "../training";
@@ -21,7 +21,7 @@ import { scout } from "../scout";
 import { bodyDays, weightTrend } from "../tdee";
 import { addDays, atMinute, localDay } from "../time";
 import { nightsForAi } from "./nights";
-import { bandNow } from "../band-client";
+import { bandNow, type BandData } from "../band-client";
 import { buildContext, onTodayLines, timeline, totalsLine } from "./context";
 import { dayWindow, dayWord } from "./nightread";
 import { plateLines } from "../foodscore";
@@ -74,6 +74,21 @@ export async function askAi<T extends Task>(req: Extract<AiRequest, { task: T }>
   }
 }
 
+/** This morning's readiness as Today shows it (the band's nights, this morning's rating, your sets). */
+export function readinessNow(state: State, band: BandData, now: number) {
+  const today = localDay(now), sets = state.entries.filter((e): e is EntryOf<"set"> => e.kind === "set") as LoggedSet[];
+  const rating = (state.entries.find((e) => e.kind === "sleep" && localDay(e.at) === today && e.rating != null) as { rating?: number } | undefined)?.rating;
+  return readiness(today, nights(band.sleep, band.hr, band.rhr, band.hrv), rating, sets, now, { hrv: band.hrv, rhr: band.rhr });
+}
+
+/** The band's two for the morning read's angle (PLAN 52): last night's check as readiness shows it, and the VO2 max trend. */
+export function bandForRead(state: State = getState(), now = Date.now()): { night: string | null; vo2: Vo2Trend | null } {
+  const band = bandNow(), today = localDay(now);
+  if (!band) return { night: null, vo2: null };
+  const ready = readinessNow(state, band, now);
+  return { night: ready ? nightCheck(today, band, heartSigns(ready)).line : null, vo2: vo2Trend(band.vo2, today, kgByDay(state.entries)) };
+}
+
 /** The text the AI is told about you right now (also shown in Settings → AI → What the AI sees). */
 export function contextNow(state: State = getState(), now = Date.now(), { slim = false, todaySoFar = true } = {}): string {
   // the chat sees what Today shows from the AI: it isn't posted in the chat any more (owner, 16 Oct)
@@ -87,8 +102,7 @@ export function contextNow(state: State = getState(), now = Date.now(), { slim =
   const band = bandNow(), nightsSeen = band && !slim ? nightsForAi({ ...state, halfLifeMin: state.settings.halfLifeMin }, band, now) : [];
   // this morning's readiness, training, and what the grids found (owner, 15 Oct: "make sure app sees all data, organized")
   const sets = state.entries.filter((e): e is EntryOf<"set"> => e.kind === "set") as LoggedSet[];
-  const rating = (state.entries.find((e) => e.kind === "sleep" && localDay(e.at) === today && e.rating != null) as { rating?: number } | undefined)?.rating;
-  const ready = band ? readiness(today, nights(band.sleep, band.hr, band.rhr, band.hrv), rating, sets, now, { hrv: band.hrv, rhr: band.rhr }) : null;
+  const ready = band ? readinessNow(state, band, now) : null;
   const ss = sessions(state.workouts, sets);
   return buildContext({ state, now, days, findings: report.found, patterns, weight: t ? { kg: t.nowKg, perWeek: t.perDay * 7 } : null, nights: nightsSeen,
     // last night's skin temperature, breathing and blood oxygen against your usual, and the night check's line (PLAN 52)

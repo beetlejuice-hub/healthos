@@ -6,7 +6,7 @@
 
 import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import { act, getState, newId, useStore } from "../lib/store";
-import { askAi, chatContext, contextNow, nightContext, refreshAiStatus, useAiStatus } from "../lib/ai/client";
+import { askAi, bandForRead, chatContext, contextNow, nightContext, refreshAiStatus, useAiStatus } from "../lib/ai/client";
 import { runChatTool, type ChartSpec } from "../lib/ai/chattools";
 import { bandNow, bandSettled, onBandSettled, onNights } from "../lib/band-client";
 import { ChatChart } from "./ChatChart";
@@ -52,7 +52,8 @@ async function makeDigest(day: string) {
   tried.add(key);
   const ai = getState().ai;
   // this morning's angle and kind of new thing, in turn (PLAN 132–133)
-  const st = getState(), brief = morningBrief(day, st.templates, st.workouts, Date.now());
+  // …and the band's night check or VO2 max when they have something to say (PLAN 52)
+  const st = getState(), brief = morningBrief(day, st.templates, st.workouts, Date.now(), bandForRead(st));
   // what yesterday's reads suggested, for a follow-up question (PLAN 156)
   const follow = [
     ...(ai.digest && ai.digest.day < day && ai.digest.day >= addDays(day, -2) ? ai.digest.items.filter((i) => i.type === "try" || i.type === "protocol").map((i) => `${ai.digest!.day} morning read: ${i.title}${i.tip ? ` — "${i.tip}"` : ""}`) : []),

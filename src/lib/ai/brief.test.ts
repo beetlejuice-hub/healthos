@@ -30,6 +30,29 @@ describe("the morning's picks", () => {
   });
 });
 
+describe("the band's two in the morning's picks (PLAN 52: \"3\")", () => {
+  const vo2 = (word: string) => ({ line: "VO2 max this week 44.0. +1.6 over 8 weeks, rising.", changes: [{ word: "up" }, { word }] });
+  const days = Array.from({ length: 16 }, (_, k) => addDays("2026-10-01", k));
+  it("a night check that's off is the angle, whatever the turn — the app's line quoted, never a diagnosis", () => {
+    for (const d of days) {
+      const a = morningBrief(d, [], [], at(d), { night: "Night check: skin 0.8 °C over your usual and breathing 1.9/min over your usual — together these go with getting ill.", vo2: vo2("up") })[1];
+      expect(a).toMatch(/^- Angle for the "pattern" item: Last night's night check — the app flagged it: "Night check: skin 0\.8 °C/);
+      expect(a).toMatch(/measure skin, breathing or oxygen/);
+      expect(a).toMatch(/never a diagnosis or medical advice/);
+    }
+  });
+  it("VO2 max takes \"One number that moved\"'s turn when it moved — every 8th morning, not every morning; steady never", () => {
+    const with_ = days.map((d) => morningBrief(d, [], [], at(d), { night: null, vo2: vo2("up") })[1]);
+    const plain = days.map((d) => morningBrief(d, [], [], at(d))[1]);
+    const turns = plain.map((a, k) => (/One number that moved/.test(a) ? k : -1)).filter((k) => k >= 0);
+    expect(turns).toHaveLength(2);
+    with_.forEach((a, k) => expect(/Cardio fitness — their VO2 max moved: "VO2 max this week 44\.0/.test(a)).toBe(turns.includes(k)));
+    with_.forEach((a, k) => { if (!turns.includes(k)) expect(a).toBe(plain[k]); });
+    expect(days.map((d) => morningBrief(d, [], [], at(d), { night: null, vo2: vo2("steady") })[1])).toEqual(plain);
+    expect(days.map((d) => morningBrief(d, [], [], at(d), { night: null, vo2: { line: "x", changes: [] } })[1])).toEqual(plain);
+  });
+});
+
 describe("a \"New to try\" item", () => {
   const item = (url: string) => ({ type: "try" as const, title: "Try: cluster sets", text: "…", source: { title: "Study", url } });
   it("is kept with a real link and dropped without one — no source, no recommendation", () => {

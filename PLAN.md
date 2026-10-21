@@ -651,6 +651,10 @@ email get Dev tools (`#dev`): raw entry editor, generate/remove sample, wipe acc
      **Found on the way:** the reads went out on the app's first tick, before the band's data came — the evening read
      missed the workout's zones and cardio's heart rate (and any read could miss readiness). They now wait for the band's
      first load (15 s at most on a slow connection); the e2e fails without it. e2e workoutzones.
+   - [x] **The band in the morning read (21 Oct; "3").** A night check that's off is the morning's angle, whatever the
+     turn (the app's line quoted; never a diagnosis); VO2 max takes "One number that moved"'s turn (every 8th morning)
+     when it rose or fell. Skin temperature, breathing, blood oxygen and VO2 max are now measures a read item can chart
+     (14 days, from the band). Tests: brief.test, digestchart.test; e2e readband (fails without the wiring).
 53. [x] **Insights as pages — Timeline first** (claimed 8 Oct — canvas, then Insights.tsx, MasterGraph, a new page shell).
    Owner, 8 Oct: "Should we do the separate pages just like on the phone? … in one page i see one thing, like the master
    graph (i rate the current one a 10/6.5 …) on another page the possible findings, on another the sleep data … i need a

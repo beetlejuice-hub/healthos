@@ -9,6 +9,7 @@ import { useMemo, useState } from "react";
 import { act, useStore } from "../lib/store";
 import { dailyFacts } from "../lib/insights";
 import { measureDays } from "../lib/ai/digestchart";
+import { useBand } from "../lib/band-client";
 import { startExperiment } from "../lib/ai/experiment";
 import { isSaved, toggleSaved } from "../lib/ai/saved";
 import type { DigestItem, DigestMeasure } from "../lib/ai/tasks";
@@ -25,7 +26,9 @@ export function ReadItems({ items, open, onOpen, tip, from, day }: { items: Dige
   const [row, setRow] = useState<number | null>(null);
   const charted = items.some((i) => i.measure);
   const facts = useMemo(() => (charted ? dailyFacts(entries, workouts, settings, addDays(today, -13), today) : []), [charted, entries, workouts, settings, today]);
-  const series = useMemo(() => items.map((i) => (i.measure ? measureDays(i.measure, facts, entries, today) : null)), [items, facts, entries, today]);
+  // the band's measures (skin temperature, breathing, blood oxygen, VO2 max — PLAN 52) come from the band
+  const band = useBand().data;
+  const series = useMemo(() => items.map((i) => (i.measure ? measureDays(i.measure, facts, entries, today, 14, band) : null)), [items, facts, entries, today, band]);
   const goalOf = (k: DigestMeasure) => (k === "protein" ? goals.p : k === "kcal" ? goals.kcal : undefined);
   return (
     <ul className="mr-list">{items.map((i, k) => {

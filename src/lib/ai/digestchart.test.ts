@@ -57,4 +57,15 @@ describe("measureWords", () => {
     expect(measureValue("sleep", 6.66)).toBe("6.7/10");
     expect(measureValue("kcal", 1939.6)).toBe("1,940 kcal");
   });
+  it("the band's measures come from the band (PLAN 52): skin, breathing, oxygen, VO2 max; a day without one is a gap", () => {
+    const band = { skin: { [TODAY]: 34.1, [addDays(TODAY, -2)]: 33.8 }, breath: { [TODAY]: 14.6 }, spo2: { [TODAY]: 96.2 }, vo2: { [addDays(TODAY, -1)]: { v: 44.2 } } };
+    const skin = measureDays("skin", [], [], TODAY, 14, band);
+    expect(skin).toHaveLength(14);
+    expect(skin.slice(-3)).toEqual([33.8, null, 34.1]);
+    expect(measureDays("breathing", [], [], TODAY, 14, band).at(-1)).toBe(14.6);
+    expect(measureDays("oxygen", [], [], TODAY, 14, band).at(-1)).toBe(96.2);
+    expect(measureDays("vo2", [], [], TODAY, 14, band).slice(-2)).toEqual([44.2, null]);
+    expect(measureDays("skin", [], [], TODAY, 14, null).every((v) => v == null)).toBe(true);
+    expect([measureValue("skin", 34.12), measureValue("breathing", 14.6), measureValue("oxygen", 96.2), measureValue("vo2", 44.25)]).toEqual(["34.1 °C", "14.6/min", "96.2 %", "44.3 ml/kg/min"]);
+  });
 });

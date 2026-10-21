@@ -22,25 +22,35 @@ export const MEASURES: Record<DigestMeasure, { name: string; unit: string; amoun
   alcohol: { name: "Alcohol", unit: "g", amount: true, of: (d) => (d.logged ? d.alcoholG : null) },
   lifting: { name: "Kg lifted", unit: "kg", amount: true, of: (d) => (d.volumeKg > 0 ? d.volumeKg : null) },
   weight: { name: "Weight", unit: "kg", amount: false },
+  // the band's, each night or day (PLAN 52) — from the band, not the day's facts
+  skin: { name: "Skin temperature", unit: "°C", amount: false },
+  breathing: { name: "Breathing", unit: "/min", amount: false },
+  oxygen: { name: "Blood oxygen", unit: "%", amount: false },
+  vo2: { name: "VO2 max", unit: "ml/kg/min", amount: false },
 };
+/** The band's daily values a measure reads from (PLAN 52). */
+export type BandDaily = { skin?: Record<string, number>; breath?: Record<string, number>; spo2?: Record<string, number>; vo2?: Record<string, { v: number }> };
+const fromBand = (key: DigestMeasure, b: BandDaily | null | undefined, d: string): number | null | undefined =>
+  key === "skin" ? b?.skin?.[d] : key === "breathing" ? b?.breath?.[d] : key === "oxygen" ? b?.spo2?.[d] : key === "vo2" ? b?.vo2?.[d]?.v : undefined;
+const BAND_KEYS: DigestMeasure[] = ["skin", "breathing", "oxygen", "vo2"];
 
 /** The last `days` days (oldest first, the last one today) of a measure: a value or null per day. */
-export function measureDays(key: DigestMeasure, facts: DayFacts[], entries: Entry[], today: string, days = 14): (number | null)[] {
+export function measureDays(key: DigestMeasure, facts: DayFacts[], entries: Entry[], today: string, days = 14, band?: BandDaily | null): (number | null)[] {
   const by = new Map(facts.map((f) => [f.day, f])), kg = new Map<string, number>();
   // a day's weight is its first weigh-in (the morning one)
   if (key === "weight") for (const e of [...entries].sort((a, b) => a.at - b.at)) if (e.kind === "weight" && !kg.has(localDay(e.at))) kg.set(localDay(e.at), e.kg);
   const out: (number | null)[] = [];
   for (let i = days - 1; i >= 0; i--) {
     const d = addDays(today, -i), f = by.get(d);
-    out.push(key === "weight" ? kg.get(d) ?? null : f ? MEASURES[key].of!(f) : null);
+    out.push(BAND_KEYS.includes(key) ? fromBand(key, band, d) ?? null : key === "weight" ? kg.get(d) ?? null : f ? MEASURES[key].of!(f) : null);
   }
   return out;
 }
 
 /** One value in its unit: "7.5/10", "158 g", "1,940 kcal", "82.4 kg". */
 export function measureValue(key: DigestMeasure, v: number): string {
-  const m = MEASURES[key], tenth = m.unit === "/10" || key === "weight";
-  return `${tenth ? +v.toFixed(1) : Math.round(v).toLocaleString("en-GB")}${m.unit === "/10" ? "/10" : ` ${m.unit}`}`;
+  const m = MEASURES[key], tenth = m.unit === "/10" || key === "weight" || BAND_KEYS.includes(key);
+  return `${tenth ? +v.toFixed(1) : Math.round(v).toLocaleString("en-GB")}${m.unit === "/10" || m.unit === "/min" ? m.unit : ` ${m.unit}`}`;
 }
 
 /** The words under the chart: "avg 142 g over 11 days · yesterday 158 g". Today is left out of the average (it isn't over). */

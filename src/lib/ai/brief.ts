@@ -33,13 +33,24 @@ export const TRY = [
 
 const dayNo = (day: string) => Math.round(Date.UTC(+day.slice(0, 4), +day.slice(5, 7) - 1, +day.slice(8, 10)) / 86_400_000);
 
+/**
+ * The band's two, when they have something to say (PLAN 52; owner, 21 Oct: "3" — the read can make an item of them):
+ * a night check that's off is this morning's angle, whatever the turn; VO2 max takes "One number that moved"'s turn
+ * (every 8th morning) when it rose or fell over the weeks — not when it's steady.
+ */
+export const NIGHT_ANGLE = (line: string) => `Last night's night check — the app flagged it: "${line}" Make the pattern item about it (measure skin, breathing or oxygen): what these signals are in plain words, and what went with nights like it in their own data (drinks, a late meal, hard training, a short night). If yesterday's read already said it, say whether it's still there. Goes with — never a diagnosis or medical advice`;
+export const VO2_ANGLE = (line: string) => `Cardio fitness — their VO2 max moved: "${line}" Make the pattern item about it (measure vo2): what moved it in their own data (cardio minutes and zones, training), and how much is the kilos (it's per kg)`;
+
 /** This morning's angle and "New to try" kind, and the workout that's due (when they train). */
-export function morningBrief(day: string, templates: { name: string }[], workouts: { template: string; startedAt: number; endedAt: number | null; kind?: string }[], now: number): string[] {
+export function morningBrief(day: string, templates: { name: string }[], workouts: { template: string; startedAt: number; endedAt: number | null; kind?: string }[], now: number,
+  band: { night: string | null; vo2: { line: string; changes: { word: string }[] } | null } = { night: null, vo2: null }): string[] {
   const n = dayNo(day), lifting = workouts.filter((w) => w.kind !== "cardio");
   // the day's due workout only when they trained in the last 2 weeks — not a nudge into a split they've stopped
   const due = lifting.some((w) => w.startedAt >= now - 14 * DAY) ? nextTemplate(templates, lifting) : undefined;
   // the session angle needs a session: without one due, one that isn't yesterday's or tomorrow's
-  const a = n % ANGLES.length, angle = !due && ANGLES[a].startsWith("Today's session") ? ANGLES[(a + 2) % ANGLES.length] : ANGLES[a];
+  const a = n % ANGLES.length, turn = !due && ANGLES[a].startsWith("Today's session") ? ANGLES[(a + 2) % ANGLES.length] : ANGLES[a];
+  const moved = band.vo2 && band.vo2.changes.at(-1)?.word !== "steady" && band.vo2.changes.length > 0;
+  const angle = band.night ? NIGHT_ANGLE(band.night) : moved && turn.startsWith("One number that moved") ? VO2_ANGLE(band.vo2!.line) : turn;
   return [
     "## This morning (the app's picks, so mornings differ)",
     `- Angle for the "pattern" item: ${angle}`,

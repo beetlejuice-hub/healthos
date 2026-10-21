@@ -127,7 +127,7 @@ export type Question = { id: string; text: string; why: string; options: string[
 export type QuestionsAnswer = { questions: Question[] };
 
 /** The numbers a morning-read item can point at; the app draws that one's last 14 days beside it (PLAN 150). */
-export const DIGEST_MEASURES = ["sleep", "protein", "kcal", "mood", "energy", "focus", "stress", "caffeine", "alcohol", "weight", "lifting"] as const;
+export const DIGEST_MEASURES = ["sleep", "protein", "kcal", "mood", "energy", "focus", "stress", "caffeine", "alcohol", "weight", "lifting", "skin", "breathing", "oxygen", "vo2"] as const;
 export type DigestMeasure = (typeof DIGEST_MEASURES)[number];
 export const isDigestMeasure = (k: unknown): k is DigestMeasure => (DIGEST_MEASURES as readonly unknown[]).includes(k);
 export type DigestItem = { type: "fact" | "study" | "pattern" | "protocol" | "try" | /** the evening's investigation (PLAN 157) */ "noticed"; title: string; text: string; source?: { title: string; url: string }; protocol?: { name: string; how: string; days: number; measure: string };
