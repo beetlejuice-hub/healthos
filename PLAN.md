@@ -19,20 +19,17 @@ mood course removed from Mind, with weekday × time and best / worst days kept u
 
 **Also done 21 Oct:** #154 food over the week · #159 save a read's item for later.
 
-**Your asks, not finished:**
-- #152 RPE — how hard a set felt (later — your call, 21 Oct).
-- #153 Why Fitbit said 81 and the app 98 — needs that night (a screenshot of Fitbit's breakdown, or the date).
+**Your asks, not finished:** none (21 Oct: #152 RPE and #153 Fitbit's 81 dropped — your call).
 
 **The review (#151):** done — Today, Sleep, Heart, logging. Next: Workout, the rest of Insights, the AI tab, Settings.
+The Sleep page stays as it is for now ("we will go thorugh and change things later").
 
-**Waiting on you:** shorter Sleep page (the plain words open from their score row; one list of nights) — yes or no?
+**To discuss first, one at a time** (owner, 21 Oct: "These ideas need to be discussed first so choose one rn and start w
+discussing w me"): #52 more band data (discussing now) · #138 your food logs into Google's app · #160 the AI smarter ·
+#133 more morning-read ideas ("is good") · a fuller food/nutrition score (#139 has the per-item score; what more?).
 
-**Parked:** #136 Tempo → HealthOS (three questions when you want it; #50, #92 with it) · #138 your food in Google's
-app (on hold) · #52 the rest of the band's data (distance, floors, zones, SpO2, breathing, VO2 max, skin temp) · #48
-live heart rate over Bluetooth on the Workout screen · #49 a testing session on your real data · #51 a deep dive on
-everything the data can show · #133 more morning-read ideas (this day last month, guess first, you vs the study, a
-weekly theme) · #135 notices next to the band's night and steps · #160 the AI smarter, more research (your note,
-21 Oct: "we have room to work w").
+**Not now:** #48 live heart rate on the Workout screen ("not needed rn") · #136 Tempo → HealthOS (#50, #92 with it) ·
+#49 a testing session on your real data · #51 a deep dive · #135 notices next to the band's night and steps.
 
 ## 1. Why
 
@@ -2209,7 +2206,7 @@ HR +4, HRV −9, less deep) not shown — only ~4 in 30 nights, under the 5-and-
   flips whenever it wouldn't fit. Checked: e2e sleep walks 8 nights on the phone (fails without: 3 nights, 7–21 px).
 - [x] Heart: the coffee chart's note ("Thin lines: each coffee …") sat under both charts; on a phone, under "After a
   workout". Each chart has its own note now. Checked: e2e heartpage on the phone (fails without).
-- [ ] **Sleep is long — 5,000 px, about six phone screens** — and says the same things three times: the score's rows
+- [~] (owner, 21 Oct: "rn sleep page can stay - as i said we will go thorugh and change things later") **Sleep is long — 5,000 px, about six phone screens** — and says the same things three times: the score's rows
   (length, deep, REM, awake, lowest heart rate, HRV), the line under it ("7 h 17 asleep · 93 %"), and "In plain words"
   (the same six again, explained). Two night lists too (the 14-night cards and the 30-night stages). Proposal: the
   plain-words explanation opens from its score row (tap a row); one night list (the stages list, with the score on each
@@ -2228,9 +2225,9 @@ HR +4, HRV −9, less deep) not shown — only ~4 in 30 nights, under the 5-and-
   were, so it's empty there — not on your phone).
 
 ## 21 Oct — loose ends from the latest batch (found in the tidy)
-152. [ ] **RPE — how hard a set felt** — your pick on 20 Oct for #143's phase 2: "rep ranges per exercise (8–12) instead
+152. [~] **RPE — how hard a set felt** (dropped 21 Oct — owner: "i think we can drop rpe, i wont be logging al sets..like how hard it felt") — your pick on 20 Oct for #143's phase 2: "rep ranges per exercise (8–12) instead
    of one target, and RPE". Rep ranges were built (#144); RPE wasn't. (found in the 21 Oct tidy)
-153. [ ] **Why Fitbit said 81 when the app said 98** (#127) — the score got Restless, but that night's gap was never
+153. [~] **Why Fitbit said 81 when the app said 98** (dropped 21 Oct — owner: "drop this too") (#127) — the score got Restless, but that night's gap was never
    explained (the database link was down), and Fitbit's "restoration" (sleeping heart rate against daytime resting)
    isn't in the app's score. Needs that night: a screenshot of Fitbit's breakdown, or the date. (found in the tidy)
 154. [x] **Food tracking overall, looking back** (#128) — "need a bit better look for macro breakdwon, food, and trackking
