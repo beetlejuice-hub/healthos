@@ -7,6 +7,28 @@ Started 29 Sept 2026. Owner: Arnold. Answers behind this: the "HealthOS — Disc
 
 ---
 
+## Open now (tidied 21 Oct — everything not done, in one place)
+
+`[ ]` open · `[x]` done · `[~]` parked on purpose (an idea, or waiting for you to want it). Details at each number.
+
+**Building now — your answers of 21 Oct (#151):** supplements in one place on Today · Caffeine and Food cards folded ·
+the old panels under Sleep and Mind removed.
+
+**Your asks from the latest batch, not finished:**
+- #152 RPE — how hard a set felt (your phase-2 pick with rep ranges; rep ranges done).
+- #153 Why Fitbit said 81 and the app 98 — needs that night (a screenshot of Fitbit's breakdown, or the date).
+- #154 Food tracking overall, looking back — a week of kcal and protein against your goals.
+
+**The review (#151):** Today first pass done; next Sleep and Heart, then logging, Workout, Insights, AI, Settings.
+
+**Waiting on you:** #125 are the daily questions less generic now? (prompt changed 20 Oct).
+
+**Parked:** #136 Tempo → HealthOS (three questions when you want it; #50, #92 with it) · #138 your food in Google's
+app (on hold) · #52 the rest of the band's data (distance, floors, zones, SpO2, breathing, VO2 max, skin temp) · #48
+live heart rate over Bluetooth on the Workout screen · #49 a testing session on your real data · #51 a deep dive on
+everything the data can show · #133 more morning-read ideas (this day last month, guess first, you vs the study, a
+weekly theme) · #135 notices next to the band's night and steps.
+
 ## 1. Why
 
 Understand your own body, see a lot of data about it, push limits, and find out what AI can do
@@ -521,7 +543,7 @@ email get Dev tools (`#dev`): raw entry editor, generate/remove sample, wipe acc
    kcal, P 54). Fixed: a count after the name ("scrambled eggs 3", "beer 2"; 1–12 only, so "hell 500" and "milk 1.5"
    keep their numbers); tuna in oil as its own food, plain "tuna" stays in water but is marked to check. Added hand
    sizes: palm (cooked meat/fish ≈100 g), fist (cooked starch ≈1 cup), cupped hand (≈30 g nuts), thumb (≈1 tbsp fat).
-48. [ ] **Fitbit Charge 6 → HealthOS** (claimed 7 Oct — new `lib/band.ts`, `worker/band.ts` BandHub, Settings card,
+48. [x] **Fitbit Charge 6 → HealthOS** (tidied 21 Oct: phases 1–2 done; phase 3, live heart rate over Bluetooth, parked — see "Open now") (claimed 7 Oct — new `lib/band.ts`, `worker/band.ts` BandHub, Settings card,
    MasterGraph wearable lanes, wrangler.jsonc). Owner, 7 Oct: "charge6 yes, can we have continous data". The old
    Fitbit Web API shuts off 30 Oct 2026; this uses the **Google Health API** (`health.googleapis.com/v4`,
    `users/me/dataTypes/{type}/dataPoints`, read-only scopes googlehealth.activity_and_fitness / sleep /
@@ -552,7 +574,7 @@ email get Dev tools (`#dev`): raw entry editor, generate/remove sample, wipe acc
      "Newest reading · N min ago" vs "Checked Google", and Pull now says what it found.
    - **Status (16 Oct):** phases 1–2 done — real bedtime and nights (#54), resting HR and HRV (#55), heart rate on the
      Training page (#64). Open: phase 3, live heart rate over Bluetooth on the Workout screen — not started.
-49. [ ] **Band data, audited · a chart that shows effects** (claimed 7 Oct — worker/band.ts, lib/band*.ts, MasterGraph,
+49. [x] **Band data, audited · a chart that shows effects** (tidied 21 Oct: phases 1–3 done; phase 4, a testing session on your real data, parked — see "Open now") (claimed 7 Oct — worker/band.ts, lib/band*.ts, MasterGraph,
    new lib/hreffect.ts). Owner, 7 Oct: "next is going to be a really close look on how the app handles data, and also
    the design of the chart, we'll have to make it better for the eye and to be better to notice things like bpm average
    moves up when taking in coffeine or working out - this needs a long testing session".
@@ -588,12 +610,12 @@ email get Dev tools (`#dev`): raw entry editor, generate/remove sample, wipe acc
      finish this". Then item 52.
    - **Status (16 Oct):** phases 1–3 done (the redesign followed as #53–58). Open: phase 4, the long testing session on
      his real data — needs the owner (agents can't read his account).
-50. [ ] **Idea, not now — heart rate per Tempo task.** Owner, 7 Oct: "i have the other app Tempo, and i plan to either
+50. [~] **Idea, not now — heart rate per Tempo task.** (parked, with #136) Owner, 7 Oct: "i have the other app Tempo, and i plan to either
    from this app or that app to pull info so i can see what heart rate, etc i had from what task, so like i can see that
    work made me stressed, a walk lowered the avg heartbeat… not to do now, just noting for future".
-51. [ ] **Idea, not now — a deep dive on everything the data can show.** Owner, 7 Oct: "in future we'll have to dive
+51. [~] **Idea, not now — a deep dive on everything the data can show.** (parked) Owner, 7 Oct: "in future we'll have to dive
    deeep of what we can check w all the data we have, like what sympotms, and just like interesting connections".
-52. [ ] **Everything the band can give** (after the Insights redesign). Owner, 8 Oct: "after the redesign we will have to
+52. [~] **Everything the band can give** (tidied 21 Oct: steps and calories burned done; the rest parked — see "Open now") (after the Insights redesign). Owner, 8 Oct: "after the redesign we will have to
    slowly change the data, every posssible data we can get from band to be added to app, and also things like calories
    burned, etc". Google's API has ~40 types (from its CLI's registry): steps, distance, floors, active/basal/total
    calories, active minutes, active zone minutes, time and calories per heart-rate zone, exercise (the band's own
@@ -720,7 +742,7 @@ email get Dev tools (`#dev`): raw entry editor, generate/remove sample, wipe acc
      - the after-coffee / after-a-workout card was 32 px wider than its box on laptops (the workout chart's right
        edge was cut off) and its Full screen button sat on the "After a workout" heading — both from before.
      Not checked: the owner's real band data (blocked from here) — first thing to look at when he opens it.
-56. [ ] **Wake time for Tempo** (claimed 9 Oct by the Tempo session — worker/index.ts handleBand, worker/band.ts,
+56. [x] **Wake time for Tempo** (tidied 21 Oct: the HealthOS side is live; Tempo calling it is the Tempo session's) (claimed 9 Oct by the Tempo session — worker/index.ts handleBand, worker/band.ts,
    lib/band.ts `wakeFor`). Owner: "do it". `GET /api/band/wake?day=YYYY-MM-DD&tz=<min east of UTC>`,
    `Authorization: Bearer <TEMPO_KEY>` (secret, same value as Tempo's `HEALTHOS_KEY`) → `{ wokeAt, asleepMin }` from
    the main (non-nap) night ending that morning, `{ wokeAt: null }` if none, 401 on a wrong key. Whose band: `BAND_OWNER`
@@ -1286,10 +1308,13 @@ below, in his words, grouped; A first (broken or wrong now), then the rest. Item
 ### G · AI and the bigger picture
    - AI chat that can look things up: #67 (waits on the AI key). Smarter noticing, incl. food ↔ strength: #65 and #64.
    - Steps: #66, done.
-91. [ ] **The watch, soon** — "We are integrating the watch soon, make sure the app/ai will be able to smartly look at all
+91. [x] **The watch, soon** — "We are integrating the watch soon, make sure the app/ai will be able to smartly look at all
    the data it receives, connect w what i log, adn make assumptions, look at things, compare how i feel when doing X,
-   after doing X, and just smartly ,like a assistant agent, doing its job".
-92. [ ] **Tempo ↔ HealthOS (future)** — "in the future we should connect tempo and healthos apps so healthos can see what i
+   after doing X, and just smartly ,like a assistant agent, doing its job". Closed 21 Oct — owner: the watch is the
+   Charge 6. The AI gets the band's nights (each with the evening before), this morning's readiness, cardio with its
+   heart rate; the chat's tools fetch resting HR, HRV, steps and calories burned day by day, nights and sessions; the
+   Sleep / Heart / Mind / Training grids compare how you feel after X against without it (#48–#64, #88, #130).
+92. [~] **Tempo ↔ HealthOS (future)** (parked, merged into #136) — "in the future we should connect tempo and healthos apps so healthos can see what i
    was doing at what times and how it affected me".
 93. [x] **Too much?** — "Also lmk if its getting too much feature or functions". Answered in chat 13 Oct.
 94. [x] **Workout screen, 14 Oct** (owner's notes, "after ur done") — "Can take out heartrate btw from workout screen";
@@ -1871,7 +1896,7 @@ D questions answered in chat. Numbered on from #112.
    that moved: the band's resting heart rate and HRV and the sleep rating, the last 7 days against the 4 weeks before
    (lib/ai/checkup). No extra AI calls. Next, if wanted: the band's night and steps next to each notice, and a
    Notices view on the Mind page.
-136. [ ] **Tempo → HealthOS** — "in the soon future i want to connect tempo to healthos, or like make it send info, so
+136. [~] **Tempo → HealthOS** (parked until you want it; its three questions are below) — "in the soon future i want to connect tempo to healthos, or like make it send info, so
    healthos can see what i am doing, and make connection between tasks/events to how i feel" (with #92).
    Plan (20 Oct, not built — "soon future", and it touches Tempo too):
    - Why: his days' tasks and events next to how he felt — "deep work blocks go with focus 7+", "days with 6+ meetings
@@ -1906,7 +1931,7 @@ D questions answered in chat. Numbered on from #112.
    month. Nothing is deleted. Checked: overall.test, e2e/review.cjs (the list sent, a made-up id dropped, the label,
    Hide, Bring back, phone). The "faded" part was already there: Worth a look drops a pattern new days stopped backing
    (scout verdict).
-138. [ ] **Idea: send what's logged to the band's app** — "can we share the apps logging to the bands app (google fit or
+138. [~] **Idea: send what's logged to the band's app** (on hold — only if you want your food in Google's app too) — "can we share the apps logging to the bands app (google fit or
    whatever?) looks like it has a much more advanced food logging sections so maybe if my loggings go there, it could kind
    of figure out what other nutrients that foods has and lmk? and lots of other stuff that i log here in app but not in
    that app" — needs a look at what Google's API lets an app write.
@@ -2119,6 +2144,10 @@ taste asked as a question.
 cardio · 4. Insights — Sleep, Heart, Mind, Training, Food & body, Compare · 5. AI tab (chat, inbox, week/month reads,
 experiments) · 6. Settings and the band. About one part per session.
 
+**Answered (owner, 21 Oct):** supplements in one place on Today; Caffeine and Food cards start folded; the old panels
+under the new Sleep and Mind designs go (anything only they showed is listed first); "the watch" is the Charge 6 (#91
+closed).
+
 **Open questions for him** (defaults in use until he says otherwise): which goal leads the review — default: fat loss
 with muscle kept, then sleep; does he want cards cut or only folded — default: folded, cuts listed for him; anything
 he already finds useless or confusing — default: the five questions find them.
@@ -2130,11 +2159,11 @@ he already finds useless or confusing — default: the five questions find them.
 - [x] "A coffee before 14:01 keeps bedtime under 30 mg" → on the quarter hour ("before 10:15"). Checked: e2e cafsleep
   (fails without: "before 10:23").
 - [x] "+ 1 more due" didn't say what → names them ("+ Running low: Saffron", "+ Morning stack and 1 more"). e2e today2.
-- [ ] **Long:** Today is 2,400–2,850 px — 3 to 3.4 phone screens; the Now card alone 630–910 px.
-- [ ] **Supplements four times on one screen:** the header tile (0 / 5), Now ("Morning stack … Took all / Pick…"), the
+- [ ] **Long** (the two above are the fix): Today is 2,400–2,850 px — 3 to 3.4 phone screens; the Now card alone 630–910 px.
+- [ ] (owner, 21 Oct: "One place") **Supplements four times on one screen:** the header tile (0 / 5), Now ("Morning stack … Took all / Pick…"), the
   Stack quick tile, and the full Stack card (✓ / ✗ per supplement and "Took one now?" chips). Proposal: Now keeps the
   due stack; the Stack card folds to one line ("0 of 5 · evening stack at 21:30 ›") that opens the list. *His call.*
-- [ ] **Caffeine three times** (header tile, Coffee tile, Caffeine card) and kcal/protein twice (header, Food card).
+- [ ] (owner, 21 Oct: "Fold both") **Caffeine three times** (header tile, Coffee tile, Caffeine card) and kcal/protein twice (header, Food card).
   Proposal: the header stays the day in numbers; the Caffeine and Food cards start folded to their one-line read.
   *His call, with the one above.*
 - [ ] The caffeine chart's scale is fixed at 200 mg: on a 12 mg morning the line lies on the floor (minor).
@@ -2157,4 +2186,12 @@ he already finds useless or confusing — default: the five questions find them.
   and this move each other"; it's "worth a look", says how often it held, and the forward check fades flukes
   (scout.test measures ~0.9 chance flags per person at 60 days, 0.3 at 90).
 
-
+## 21 Oct — loose ends from the latest batch (found in the tidy)
+152. [ ] **RPE — how hard a set felt** — your pick on 20 Oct for #143's phase 2: "rep ranges per exercise (8–12) instead
+   of one target, and RPE". Rep ranges were built (#144); RPE wasn't. (found in the 21 Oct tidy)
+153. [ ] **Why Fitbit said 81 when the app said 98** (#127) — the score got Restless, but that night's gap was never
+   explained (the database link was down), and Fitbit's "restoration" (sleeping heart rate against daytime resting)
+   isn't in the app's score. Needs that night: a screenshot of Fitbit's breakdown, or the date. (found in the tidy)
+154. [ ] **Food tracking overall, looking back** (#128) — "need a bit better look for macro breakdwon, food, and trackking
+   food overall, looking back to yesterday too". Phase 1 (What I ate, any day) is done; the overall look isn't — a
+   7-day strip of kcal and protein against your goals, plate scores across the week. (found in the tidy)
