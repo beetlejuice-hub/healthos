@@ -60,7 +60,9 @@ const { chromium, APP, OUT, handle } = require('./harness.cjs');
   }));
   check('14:20: the Now card is "Check in", with the sliders', /Check in/i.test(await pg.locator('.t2-now').innerText()) && await pg.locator('.t2-now.m-day #feel .hn-sliders [role=slider]').count() === 4);
   const due = await pg.locator('.t2-items .item').count();
-  check(`two due items at a time (${due} shown)`, due === 2 && /\+ \d+ more due/.test(await pg.locator('.t2-more').innerText()));
+  // PLAN 151: the rest are named, not counted ("+ 1 more due" didn't say what)
+  const more = await pg.locator('.t2-more').innerText();
+  check(`two due items at a time, the rest named (${due} shown; ${more})`, due === 2 && /^\+ [A-Z][a-z]/.test(more) && !/more due/.test(more));
   await pg.locator('.t2-more').click(); await pg.waitForTimeout(100);
   check('"more" shows the rest', await pg.locator('.t2-items .item').count() > 2 && await pg.locator('.t2-more').innerText() === 'Show fewer');
   check('the check-in is not repeated as a "Rate it" item', !/How was today|Rate it/.test(await pg.locator('.t2-items').innerText()));

@@ -22,7 +22,7 @@ import type { Proposal } from "../lib/ai/propose";
 import { CHAT_ROUNDS, MODELS, estimateMonthUsd, timeless, type ChatTurn, type DigestItem, type DigestMeasure, type ModelChoice, type Question, type Tier } from "../lib/ai/tasks";
 import { judge } from "../lib/ai/apply";
 import { dailyFacts } from "../lib/insights";
-import { addDays, atMinute, clock, dayLabel, localDay } from "../lib/time";
+import { addDays, atMinute, clock, dayLabel, localDay, stamp } from "../lib/time";
 import type { Supplement } from "../lib/types";
 import { InboxCard } from "./Inbox";
 import { ReviewCard } from "./Review";
@@ -318,11 +318,6 @@ function QuestionCard({ q, count, today }: { q: Question; count: number; today: 
 
 /* ------------------------------------------------------------------ the chat (#ai) */
 
-/** When the AI wrote (owner, 16 Oct: "Should add a time stamp for ai sendning messages"): the time today, else yesterday or the day. */
-export const stampOf = (at: number, now: number) => {
-  const d = localDay(at), today = localDay(now);
-  return d === today ? clock(at) : d === addDays(today, -1) ? `yesterday ${clock(at)}` : `${dayLabel(at)} ${clock(at)}`;
-};
 /** What each tool looked at, for the line under a reply. */
 const LOOKED: Record<string, string> = { day: "day", series: "numbers over time", find: "log", show_chart: "numbers over time", compare: "days with and without", nights: "nights", sessions: "training" };
 /** "log, numbers over time" — what the reply's tools looked at; remembering and proposing aren't looking (empty: no line). */
@@ -401,7 +396,7 @@ export function AiScreen() {
             {x.m!.source && /^https:\/\//.test(x.m!.source.url) && <a className="msg-src" href={x.m!.source.url} target="_blank" rel="noopener noreferrer">{x.m!.source.title} ↗</a>}
             {x.m!.proposals?.length ? <Proposals at={x.m!.at} list={x.m!.proposals} now={now} onAdded={(s) => { if (on) void researchSupplement(s); }} /> : null}
             {lookedAt(x.m!.looked) && <small className="looked">looked at your {lookedAt(x.m!.looked)}</small>}
-            {x.m!.role === "assistant" && <time className="ts" dateTime={new Date(x.m!.at).toISOString()}>{stampOf(x.m!.at, now)}</time>}
+            {x.m!.role === "assistant" && <time className="ts" dateTime={new Date(x.m!.at).toISOString()}>{stamp(x.m!.at, now)}</time>}
           </div>
         );
       

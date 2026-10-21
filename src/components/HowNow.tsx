@@ -8,7 +8,7 @@
 import { useMemo, useRef, useState } from "react";
 import { act, getState, useStore } from "../lib/store";
 import type { Entry } from "../lib/types";
-import { clock } from "../lib/time";
+import { clock, stamp } from "../lib/time";
 import {
   ASK_AGAIN_MS, DOING_SHOWN, FEEL_KEYS, OPEN_MS, doingOrder, feelChange, feelState, inferredDoing, labelOf, latestFeel,
   phraseOf, previousCheckIn, sinceLast, tagOf, type FeelKey,
@@ -129,7 +129,7 @@ export function HowNow({ now, always = false }: { now: number; always?: boolean 
 
   return (
     <div className="card hownow" id="feel">
-      <h3>How now? <span>{open ? "saved as you tap" : last ? `last ${clock(last.at)}` : "tap or slide any you want to log"}</span></h3>
+      <h3>How now? <span>{open ? "saved as you tap" : last ? `last ${stamp(last.at, Date.now())}` : "tap or slide any you want to log"}</span></h3>
       {sleptLine && <div className="hn-slept"><span>Last night <b>{night!.rating} / 10</b>{scoreLink && <> · {scoreLink}</>}{night!.slow ? " · slow to fall asleep" : ""}{nightTags.length ? ` · ${nightTags.map(nightLabel).join(", ")}` : ""}{night?.phoneMin != null ? ` · ${phoneLabel(night.phoneMin)}` : ""}</span>
         <button type="button" aria-label="Change last night's sleep" onClick={() => setSleepEdit(true)}>change</button></div>}
       {sleepOpen && <div className="hn-sleep">

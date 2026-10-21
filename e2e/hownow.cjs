@@ -67,6 +67,11 @@ const { chromium, APP, OUT, handle, rate } = require('./harness.cjs');
   // Insights reads the stress line too (the log line shows stress).
   await pg.goto(APP + '#log/food'); await pg.waitForTimeout(200);
   check('log line shows mood and stress', /mood 8 · stress 3/.test(await pg.locator('body').innerText()));
+
+  // PLAN 151 (Today review): next morning the last check-in was yesterday's — it said "last 17:10", read as today's
+  await pg.clock.setFixedTime(new Date('2026-10-03T08:00:00')); await pg.goto(APP + '#today'); await pg.reload(); await pg.waitForSelector('#feel');
+  const head = await pg.locator('#feel h3 span').innerText();
+  check(`next morning it says the last check-in was yesterday (${head})`, /^last yesterday 17:1\d$/.test(head));
   console.log('errors:', JSON.stringify(errs));
   await b.close();
 })().catch((e) => { console.log('CRASH', e.message); process.exit(1); });

@@ -2123,4 +2123,24 @@ experiments) · 6. Settings and the band. About one part per session.
 with muscle kept, then sleep; does he want cards cut or only folded — default: folded, cuts listed for him; anything
 he already finds useless or confusing — default: the five questions find them.
 
+**Phase 1 — Today (first pass, 21 Oct).** 60 days of sample, no band, AI off; phone 390 px at 07:30, 15:00, 22:30,
+00:40. No page errors.
+- [x] "How now? · last 12:40" the morning after read as today's → "last yesterday 12:40". Checked: e2e hownow (fails
+  without the fix).
+- [x] "A coffee before 14:01 keeps bedtime under 30 mg" → on the quarter hour ("before 10:15"). Checked: e2e cafsleep
+  (fails without: "before 10:23").
+- [x] "+ 1 more due" didn't say what → names them ("+ Running low: Saffron", "+ Morning stack and 1 more"). e2e today2.
+- [ ] **Long:** Today is 2,400–2,850 px — 3 to 3.4 phone screens; the Now card alone 630–910 px.
+- [ ] **Supplements four times on one screen:** the header tile (0 / 5), Now ("Morning stack … Took all / Pick…"), the
+  Stack quick tile, and the full Stack card (✓ / ✗ per supplement and "Took one now?" chips). Proposal: Now keeps the
+  due stack; the Stack card folds to one line ("0 of 5 · evening stack at 21:30 ›") that opens the list. *His call.*
+- [ ] **Caffeine three times** (header tile, Coffee tile, Caffeine card) and kcal/protein twice (header, Food card).
+  Proposal: the header stays the day in numbers; the Caffeine and Food cards start folded to their one-line read.
+  *His call, with the one above.*
+- [ ] The caffeine chart's scale is fixed at 200 mg: on a 12 mg morning the line lies on the floor (minor).
+- [ ] **The sample can't review the rest:** it has no sleep ratings or band minutes, so every sleep-linked card reads
+  "0 of 6 nights". Before Sleep / Heart / Insights: a richer sample with planted effects (late caffeine → lower sleep
+  rating, wine → readiness down, low-protein days → lower energy) — which also checks each engine finds them, and
+  finds nothing in a copy without them.
+
 

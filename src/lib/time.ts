@@ -47,3 +47,16 @@ export function dayLabel(ms: number): string {
   const d = new Date(ms);
   return `${WD[d.getDay()]} ${d.getDate()} ${MO[d.getMonth()]}`;
 }
+
+/** Down to the quarter hour, local: a time to say to a person ("before 14:00", not "before 14:01"). */
+export function quarterDown(ms: number): number {
+  const d = new Date(ms);
+  d.setMinutes(Math.floor(d.getMinutes() / 15) * 15, 0, 0);
+  return d.getTime();
+}
+
+/** When something was, said from `now`: "14:05" today, else "yesterday 14:05", else "Tue 29 Sep 14:05". */
+export function stamp(at: number, now: number): string {
+  const d = localDay(at), today = localDay(now);
+  return d === today ? clock(at) : d === addDays(today, -1) ? `yesterday ${clock(at)}` : `${dayLabel(at)} ${clock(at)}`;
+}

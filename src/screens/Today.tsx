@@ -15,7 +15,7 @@ import { caffeineAt, caffeineInBlood, latestDoseFor } from "../lib/caffeine";
 import { bedtimeVerdict, CAF_SLEEP, personalSleep, ratedNights, tierOf, tonightsBed, type Personal } from "../lib/caffeine-sleep";
 import { caffeineDoses } from "../lib/insights";
 import { add, byDay, macrosOf, ZERO } from "../lib/nutrition";
-import { atMinute, clock, dayLabel, localDay, MIN, addDays } from "../lib/time";
+import { atMinute, clock, dayLabel, localDay, MIN, addDays, quarterDown } from "../lib/time";
 import { go } from "../lib/nav";
 import type { Drink, Entry, EntryOf, Slot } from "../lib/types";
 import { answerSlot, SLOTS, slotsOf } from "../lib/types";
@@ -49,6 +49,8 @@ export function useNow(ms = 30_000) {
 const fmt = (n: number) => Math.round(n).toLocaleString("en-GB");
 /** Due items shown in the Now card before "+ N more". */
 const NOW_MAX = 2;
+/** What the rest are, not just how many (PLAN 151: "+ 1 more due" at bedtime didn't say what): "Morning weigh-in, Evening stack and 1 more". */
+const moreDue = (titles: string[]) => { const n = titles.map((t) => (t.length <= 28 ? t : t.split(":")[0].trim())); return `${n.slice(0, 2).join(", ")}${n.length > 2 ? ` and ${n.length - 2} more` : ""}`; };
 
 /** caffeineAt already counts under 10 mg as none (CLEAR_MG), so 0 means cleared. */
 const mgText = (mg: number) => (mg === 0 ? "none" : `${mg} mg`);
@@ -122,7 +124,7 @@ export function Today() {
           </div>
         </div>
       ))}
-      {due.length > NOW_MAX && <button type="button" className="t2-more" onClick={() => setAllDue(!allDue)}>{allDue ? "Show fewer" : `+ ${due.length - NOW_MAX} more due`}</button>}
+      {due.length > NOW_MAX && <button type="button" className="t2-more" onClick={() => setAllDue(!allDue)}>{allDue ? "Show fewer" : `+ ${moreDue(due.slice(NOW_MAX).map((it) => it.title))}`}</button>}
     </div>
   );
   // Evening puts the stack and what's due first; the check-in is usually done by then (one line).
@@ -264,7 +266,7 @@ function BedtimeRead({ doses, now, bed, halfLife, personal, coffeeMg }: { doses:
   const withOne = Math.round(caffeineAt([...doses, { at: now, mg: coffeeMg }], bed, halfLife));
   const window = latestDoseFor(doses, bed, coffeeMg, low, halfLife);
   const plan = window != null && window > now && v.tier === "low"
-    ? `A coffee (${coffeeMg} mg) before ${clock(window)} keeps bedtime under ${low} mg.`
+    ? `A coffee (${coffeeMg} mg) before ${clock(quarterDown(window))} keeps bedtime under ${low} mg.`
     : `Another one now (${coffeeMg} mg): about ${withOne} mg at ${clock(bed)}.`;
   const own = personal.state === "learning"
     ? `Rate last night's sleep in the morning check-in and this learns whether it matters for you — ${Math.min(personal.withN, P.minNights)} of ${P.minNights} nights with ${low}+ mg, ${Math.min(personal.withoutN, P.minNights)} of ${P.minNights} under.`

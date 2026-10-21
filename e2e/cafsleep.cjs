@@ -45,6 +45,12 @@ const { chromium, APP, OUT, handle, rate } = require('./harness.cjs');
   const r1 = await read.innerText();
   check(`card: "Possible effect" with amount, range and the learning line (${r1.split('\n')[0].slice(0, 60)}…)`, /Possible effect · about 3\d mg at 23:00/.test(r1) && /Likely \d+–\d+ mg/.test(r1) && /Rate last night's sleep/.test(r1));
   await read.scrollIntoViewIfNeeded(); await pg.screenshot({ path: OUT + 'cafsleep-normal.png' });
+  // PLAN 151 (Today review): the time to say is a quarter hour — it said "before 14:01"
+  await setEntries([coffee('2026-10-02T08:10:00')]);
+  await at('2026-10-02T09:00:00');
+  const plan = (await pg.getByLabel('Caffeine at bedtime').innerText()).match(/A coffee \(95 mg\) before (\d\d):(\d\d) keeps bedtime under 30 mg/);
+  check(`one coffee in the morning: until when another keeps bedtime low, on the quarter hour (${plan?.[0]})`, !!plan && ['00', '15', '30', '45'].includes(plan[2]));
+  await at('2026-10-02T14:20:00'); await setEntries([coffee('2026-10-02T08:10:00'), coffee('2026-10-02T13:00:00')]); await at('2026-10-02T14:20:00');
 
   // A heavy late day: 15:00, 17:00, 17:30 at 18:00 → ~150 mg at 23:00: a calm item, no "!".
   await setEntries([coffee('2026-10-02T15:00:00'), coffee('2026-10-02T17:00:00'), coffee('2026-10-02T17:30:00')]);
