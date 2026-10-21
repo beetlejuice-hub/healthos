@@ -9,6 +9,8 @@ import { fatLines } from "../bodyfat";
 import { noticeLines } from "../notices";
 import { creatineFrom } from "../checkin";
 import type { State } from "../store";
+import type { Entry } from "../types";
+import { macrosOf } from "../nutrition";
 import type { DayFacts } from "../insights";
 import type { Finding } from "../findings";
 import type { Pattern } from "../scout";
@@ -57,7 +59,9 @@ export function timeline(state: Pick<State, "entries" | "workouts"> & { foods?: 
   for (const e of es) {
     const t = clock(e.at) + mark(e.at);
     if (e.kind === "food") push(e.at, `${t} ate ${e.name} (${Math.round(e.macros.kcal)} kcal, P ${Math.round(e.macros.p)} g)${madeOf(e.foodId ? foods.get(e.foodId) : undefined, e.grams)}`);
-    else if (e.kind === "drink") push(e.at, `${t} drank ${e.name}${e.caffeineMg ? ` (${e.caffeineMg} mg caffeine)` : ""}${e.alcoholG ? ` (${e.alcoholG} g alcohol)` : ""}`);
+    // a drink's protein too (PLAN 149; owner, 21 Oct: the AI "said it cant see how much protein the protein coffee had")
+    else if (e.kind === "drink") { const pr = (e.p ?? 0) >= 1 ? `${Math.round(e.kcal)} kcal, P ${Math.round(e.p!)} g` : "";
+      push(e.at, `${t} drank ${e.name}${e.caffeineMg ? ` (${e.caffeineMg} mg caffeine${pr ? `; ${pr}` : ""})` : pr ? ` (${pr})` : ""}${e.alcoholG ? ` (${e.alcoholG} g alcohol)` : ""}`); }
     else if (e.kind === "feel") push(e.at, `${t} check-in: ${feelText(e) || "no ratings"}${e.doing?.length ? ` · up to: ${e.doing.join(", ")}` : ""}${e.note ? ` · my note: "${e.note}"` : ""}`);
     else if (e.kind === "sleep" && (e.rating != null || e.tags?.length || e.phoneMin != null)) push(e.at, `${t} ${e.rating != null ? `rated last night's sleep ${e.rating}/10` : "about last night"}${e.slow ? ", slow to fall asleep" : ""}${e.tags?.length ? ` · last night: ${e.tags.map(nightLabel).join(", ")}` : ""}${e.phoneMin != null ? ` · ${phoneLabel(e.phoneMin)} before sleep` : ""}`);
     else if (e.kind === "weight") push(e.at, `${t} weighed ${e.kg} kg`);
@@ -69,6 +73,18 @@ export function timeline(state: Pick<State, "entries" | "workouts"> & { foods?: 
     ? `${clock(w.startedAt)}${mark(w.startedAt)} cardio: ${w.cardio?.what || "cardio"} (${w.endedAt ? `${Math.round((w.endedAt - w.startedAt) / 60_000)} min` : "going now"})`
     : `${clock(w.startedAt)}${mark(w.startedAt)} gym: ${w.template ?? "workout"}${w.cardio?.done ? `, then ${w.cardio.what}` : ""}`);
   return rows.sort((a, b) => a[0] - b[0]).slice(0, 60).map(([, l]) => l);
+}
+
+/**
+ * The day's totals as the app counts them — food and drinks (PLAN 149; owner, 21 Oct: "the ai said 108 protein at eod, in
+ * reality it was 158"): the AI was adding up the food lines itself and missed the protein coffee. Null when nothing with
+ * calories was logged.
+ */
+export function totalsLine(entries: Entry[], from: number, to: number, goals?: { kcal: number; p: number }): string | null {
+  const ms = entries.filter((e) => e.at >= from && e.at < to).map(macrosOf).filter((m): m is NonNullable<typeof m> => m != null);
+  if (!ms.length) return null;
+  const t = ms.reduce((a, m) => ({ kcal: a.kcal + m.kcal, p: a.p + m.p, c: a.c + m.c, f: a.f + m.f }), { kcal: 0, p: 0, c: 0, f: 0 }), n = (v: number) => Math.round(v).toLocaleString("en-GB");
+  return `Totals, as the app counts them (food and drinks): ${n(t.kcal)} kcal · P ${n(t.p)} g · C ${n(t.c)} g · F ${n(t.f)} g${goals ? ` — goals ${n(goals.kcal)} kcal · P ${n(goals.p)} g` : ""}`;
 }
 
 /** A plate's insides for the portion eaten: " — made of: pasta 150 g, chicken 120 g" (owner, 20 Oct). */

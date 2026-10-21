@@ -2059,3 +2059,19 @@ Order: A first (113 → 123), then B, then C; D in the chat. (claimed: this sess
    "Start" carry the ranges. His own saved days aren't changed: to get ranges there, edit a day's Reps to "6-8", or make the
    program his split again. Checked: programs.test (the rule; his Squat 6–8; 5×5 unchanged), e2e plan/session/workout*.
 
+## 21 Oct — owner's notes (his words)
+149. [x] **The AI can't see drinks' protein** — "it said it cant see how much protein the protein coffee had, but the app
+   logged it correctly, and the ai said 108 protein at eod, in reality it was 158..even before it did the digest so it
+   clearly cant see protein for some reason". Found (21 Oct, reproduced in a test from his numbers): the daily totals
+   count drinks, but the AI's "Today so far" and the read-back's day are lists of what was logged, and a drink line
+   said only "drank Protein coffee (120 mg caffeine)". With no totals given, the AI added up the food lines itself and
+   missed the shake. Fixed: a drink with protein says it ("…; 210 kcal, P 50 g"), and both sections open with the app's
+   own totals ("Totals, as the app counts them (food and drinks): 1,630 kcal · P 158 g … — goals …"), so the AI never
+   does the sum. Checked: nightread.test (his case — fails without the fix), e2e night/morningread.
+150. [ ] **The morning read: shorter, with a visual** — "Read todays ai digest, it was just too long, too much info w no
+   visual and just boring. I like that its adding tips and advices." (claimed: this session — lib/ai/tasks digest,
+   Ai.tsx MorningRead)
+151. [ ] **Then the app, part by part** — "after we done w all my notes, we should take the app part by part and check
+   them, update them visualy and backend-wise, the engine behind them. also figure out what can i realistically do w
+   this app, how can it improve my day". (after #150: a plan first)
+

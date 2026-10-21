@@ -20,7 +20,7 @@ import { bodyDays, weightTrend } from "../tdee";
 import { addDays, atMinute, localDay } from "../time";
 import { nightsForAi } from "./nights";
 import { bandNow } from "../band-client";
-import { buildContext, onTodayLines, timeline } from "./context";
+import { buildContext, onTodayLines, timeline, totalsLine } from "./context";
 import { dayWindow, dayWord } from "./nightread";
 import { plateLines } from "../foodscore";
 import { workoutLines } from "../workoutread";
@@ -93,7 +93,8 @@ export function contextNow(state: State = getState(), now = Date.now(), { slim =
       // cardio (PLAN 130): this week's minutes against the weeks before, the last sessions with the band's heart rate
       ...cardioWeekLines(cardioSpans(state.workouts, now), band?.hr ?? [], currentKg(state.entries, 0, now) || null, now, 4, 3, maxHrOf(state.settings)?.bpm)], grids: gridLines(state.ai.inbox ?? []), slim, onToday,
     // today from midnight; before 04:00 it was still last night's evening, and says so (#107)
-    ...(todaySoFar ? { todaySoFar: timeline(state, atMinute(today, 0), now + 1, (at) => (at < dayWindow(today)[0] ? " (last night, after midnight)" : "")) } : {}) });
+    // the app's own totals first: the AI never adds up the lines itself (PLAN 149)
+    ...(todaySoFar ? { todaySoFar: [totalsLine(state.entries, dayWindow(today)[0], now + 1, state.goals), ...timeline(state, atMinute(today, 0), now + 1, (at) => (at < dayWindow(today)[0] ? " (last night, after midnight)" : ""))].filter((l): l is string => !!l) } : {}) });
 }
 
 /** The chat's context (PLAN 67 phase 3): the overview only — the AI asks the app's tools for nights, days and the rest. */
@@ -104,7 +105,9 @@ export function nightContext(day: string, state: State = getState(), now = Date.
   // the day runs to 04:00: a beer at 00:40 is that evening's; the header says whether it's today, past midnight or
   // yesterday (read back the next morning) — it used to say "Today" for yesterday (#107)
   const [from, to] = dayWindow(day), w = dayWord(day, now);
-  const tl = timeline(state, from, Math.min(to, now + 1), (at) => (localDay(at) !== day ? " (after midnight)" : ""));
+  // the day's totals as the app counts them, first (PLAN 149: the AI added up the food lines and missed a protein coffee)
+  const tot = totalsLine(state.entries, from, Math.min(to, now + 1), state.goals);
+  const tl = [...(tot ? [tot] : []), ...timeline(state, from, Math.min(to, now + 1), (at) => (localDay(at) !== day ? " (after midnight)" : ""))];
   // the day's plates with their food scores (PLAN 139): what fit the goal best, and the one swap that would help most
   const plates = plateLines(state.entries, state.foods, day, [from, Math.min(to, now + 1)], state.settings.bedMinute);
   // a workout that day: each lift against the last time, so the read-back can coach it — no call of its own (PLAN 129)

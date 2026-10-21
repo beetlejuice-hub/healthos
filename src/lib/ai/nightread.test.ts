@@ -56,13 +56,14 @@ describe("what the read-back is given", () => {
     const s = section(nightContext("2026-10-15", st, at("16", "00:50")));
     expect(s.split("\n")).toEqual([
       "## The day being read back: Thu 15 Oct (tonight, past midnight), as it happened — it runs to 04:00 the next morning",
+      "- Totals, as the app counts them (food and drinks): 550 kcal · P 18 g · C 1 g · F 15 g — goals 2,600 kcal · P 160 g",
       "- 08:30 ate Eggs (220 kcal, P 18 g)", "- 22:10 drank Wine (14 g alcohol)", "- 00:40 (after midnight) drank Beer (20 g alcohol)",
     ]);
   });
   it("read back the next morning: called yesterday, still with the beer, without the next morning's oats", () => {
     const c = nightContext("2026-10-15", st, at("16", "09:30"));
     expect(c).not.toContain("## Today, as it happened");
-    expect(section(c)).toMatch(/^## The day being read back: Thu 15 Oct \(yesterday\)[^\n]*\n- 08:30 ate Eggs[^\n]*\n- 22:10 drank Wine[^\n]*\n- 00:40 \(after midnight\) drank Beer[^\n]*$/);
+    expect(section(c)).toMatch(/^## The day being read back: Thu 15 Oct \(yesterday\)[^\n]*\n- Totals, as the app counts them[^\n]*\n- 08:30 ate Eggs[^\n]*\n- 22:10 drank Wine[^\n]*\n- 00:40 \(after midnight\) drank Beer[^\n]*$/);
     expect(c).not.toContain("Oats");
     expect(c.split("\n")[0]).toMatch(/^Now: Fri 16 Oct 2026, 09:30 — today is 2026-10-16\. "Last 14 days" ends yesterday \(2026-10-15\)\. "Last night"/); // no "Today so far" promised
   });
@@ -98,5 +99,21 @@ describe("a workout day's read-back", () => {
     expect(checkNight({ ...base, workout: { summary: " ", better: ["x"], next: "y" } }).workout).toBeUndefined();
     const w = checkNight({ ...base, workout: { summary: "Up on bench.", better: ["a", "", "b", "c", "d"], next: "Bench 62.5 × 8 ×2" } }).workout;
     expect(w).toEqual({ summary: "Up on bench.", better: ["a", "b", "c"], next: "Bench 62.5 × 8 ×2" });
+  });
+});
+
+// Owner, 21 Oct: the AI "said it cant see how much protein the protein coffee had, but the app logged it correctly, and
+// the ai said 108 protein at eod, in reality it was 158" (PLAN 149)
+describe("protein from drinks reaches the AI", () => {
+  const st = { entries: [
+    { id: "f1", kind: "food", at: at("20", "08:00"), name: "Eggs", grams: 200, macros: { kcal: 300, p: 26, c: 2, f: 20 } },
+    { id: "f2", kind: "food", at: at("20", "13:00"), name: "Chicken rice", grams: 450, macros: { kcal: 700, p: 52, c: 80, f: 12 } },
+    { id: "f3", kind: "food", at: at("20", "19:00"), name: "Salmon", grams: 200, macros: { kcal: 420, p: 30, c: 0, f: 28 } },
+    { id: "d1", kind: "drink", at: at("20", "10:00"), name: "Protein coffee", ml: 330, caffeineMg: 120, alcoholG: 0, kcal: 210, p: 50, c: 9, f: 3 },
+  ], workouts: [], supplements: [], settings: DEFAULT_SETTINGS, profile: { conditions: [], meds: [], allergies: [], notes: "" }, goals: DEFAULT_GOALS, ai: EMPTY_AI, foods: [], drinks: [], templates: [], scout: {} } as unknown as State;
+  it("the read-back's day: the drink with its protein, and the day's totals as the app counts them — 158 g, not 108", () => {
+    const c = nightContext("2026-10-20", st, at("20", "22:00"));
+    expect(c).toMatch(/- 10:00 drank Protein coffee \(120 mg caffeine; 210 kcal, P 50 g\)/);
+    expect(c).toMatch(/- Totals, as the app counts them \(food and drinks\): 1,630 kcal · P 158 g · C 91 g · F 63 g — goals 2,600 kcal · P 160 g/);
   });
 });
