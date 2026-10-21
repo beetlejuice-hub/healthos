@@ -1,6 +1,6 @@
 // Today, redesigned (owner, 6 Oct, approved on the canvas: "I LOVE THIS!! build this pls"): four live
 // numbers, a Now card that follows the clock, six one-tap buttons, the detail below. At phone size.
-const { chromium, APP, OUT, handle, openCard } = require('./harness.cjs');
+const { chromium, APP, OUT, handle } = require('./harness.cjs');
 
 (async () => {
   const b = await chromium.launch(); const errs = [];

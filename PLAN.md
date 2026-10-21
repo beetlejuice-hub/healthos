@@ -11,8 +11,9 @@ Started 29 Sept 2026. Owner: Arnold. Answers behind this: the "HealthOS — Disc
 
 `[ ]` open · `[x]` done · `[~]` parked on purpose (an idea, or waiting for you to want it). Details at each number.
 
-**Building now — your answers of 21 Oct (#151):** the old panels under Sleep and Mind removed. (Done: supplements in
-one place, Caffeine and Food folded.)
+**Done from your answers of 21 Oct (#151):** supplements in one place and Caffeine / Food folded on Today; the old
+mood course removed from Mind, with weekday × time and best / worst days kept under the new page; Sleep needed nothing
+(with the band its old panels already don't show).
 
 **Your asks from the latest batch, not finished:**
 - #152 RPE — how hard a set felt (your phase-2 pick with rep ranges; rep ranges done).
@@ -2146,7 +2147,11 @@ experiments) · 6. Settings and the band. About one part per session.
 
 **Answered (owner, 21 Oct):** supplements in one place on Today; Caffeine and Food cards start folded; the old panels
 under the new Sleep and Mind designs go (anything only they showed is listed first); "the watch" is the Charge 6 (#91
-closed).
+closed). Then, on what only the old Mind panels showed: "Move into new design" — mood by weekday × time and "before your
+best and worst days" stay, as rows under the new Mind page; the mood course went (the calendar and Overview cover it).
+Done (21 Oct): Mind.tsx keeps those two, lib/mind's moodCourse removed with its test; Sleep unchanged — with band nights
+its old rating panels were already hidden (#23), they stay only as the no-band fallback. Checked: e2e mind (both
+panels, no course, phone + laptop), mindpage, glance; shots looked at.
 
 **Open questions for him** (defaults in use until he says otherwise): which goal leads the review — default: fat loss
 with muscle kept, then sleep; does he want cards cut or only folded — default: folded, cuts listed for him; anything

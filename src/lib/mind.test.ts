@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { mindFactors, mindOutcomes, moodCourse, moodMonth, moodRhythm, sleepSlope, stepOf, thisMorning } from "./mind";
+import { mindFactors, mindOutcomes, moodMonth, moodRhythm, sleepSlope, stepOf, thisMorning } from "./mind";
 import { rng } from "./bench";
 import { goesWith, type Evening, type Night } from "./sleep";
 import { atMinute } from "./time";
@@ -8,26 +8,6 @@ import type { Entry } from "./types";
 import { addDays } from "./time";
 
 const day = (d: string, mood: number | null, extra: Partial<GlanceDay> = {}): GlanceDay => ({ day: d, mood, energy: null, focus: null, stress: null, sleep: null, kcal: null, protein: null, cafBed: null, drinks: null, weight: null, trained: false, lateCaffeine: false, note: false, checkins: mood == null ? 0 : 1, ...extra });
-
-describe("moodCourse", () => {
-  const days = [day("2026-09-28", 6), day("2026-09-29", 8, { drinks: 2 }), day("2026-09-30", 4), day("2026-10-01", null), day("2026-10-02", 6)];
-  const c = moodCourse(days, 4);
-  it("measures each day against your average of every rated day", () => {
-    expect(c.base).toBe(6);
-    expect(c.days.map((d) => d.dev)).toEqual([2, -2, null, 0]);
-    expect(c.above).toBe(1);
-    expect(c.rated).toBe(3);
-  });
-  it("names the best and lowest day, and flags the day after drinks", () => {
-    expect(c.best!.day).toBe("2026-09-29");
-    expect(c.lowest!.day).toBe("2026-09-30");
-    expect(c.days[1].drinksBefore).toBe(true); // the 30th follows the 29th's drinks
-  });
-  it("copes with no ratings", () => {
-    const e = moodCourse([day("2026-10-01", null)], 7);
-    expect(e.base).toBeNull(); expect(e.best).toBeNull(); expect(e.above).toBe(0);
-  });
-});
 
 describe("moodRhythm", () => {
   const at = (iso: string, h: number) => new Date(`${iso}T${String(h).padStart(2, "0")}:15`).getTime();

@@ -17,23 +17,6 @@ import { clockH, type Cell as GridCell, type Evening, type Factor, type Night, t
 import { mean } from "./stats";
 import { usualSteps } from "./steps";
 
-export type CourseDay = GlanceDay & { dev: number | null; drinksBefore: boolean; weekend: boolean };
-export type Course = { base: number | null; days: CourseDay[]; above: number; rated: number; best: CourseDay | null; lowest: CourseDay | null };
-
-/** The last `n` days of `days` (oldest → newest), each day's mood against the average of every rated day given. */
-export function moodCourse(days: GlanceDay[], n: number): Course {
-  const rated = days.filter((d) => d.mood != null);
-  const base = rated.length ? mean(rated.map((d) => d.mood!)) : null;
-  const from = Math.max(0, days.length - n);
-  const list: CourseDay[] = days.slice(from).map((d, k) => {
-    const prev = days[from + k - 1], dow = new Date(`${d.day}T12:00`).getDay();
-    return { ...d, dev: d.mood != null && base != null ? d.mood - base : null, drinksBefore: (prev?.drinks ?? 0) > 0, weekend: dow === 0 || dow === 6 };
-  });
-  const r = list.filter((d) => d.mood != null);
-  const sorted = [...r].sort((a, b) => b.mood! - a.mood!);
-  return { base, days: list, above: r.filter((d) => d.dev! > 0).length, rated: r.length, best: sorted[0] ?? null, lowest: sorted[sorted.length - 1] ?? null };
-}
-
 /** Time-of-day blocks, start hours. A check-in before 06:00 counts in the last block (a late night). */
 export const BLOCKS = [6, 9, 12, 15, 18, 21] as const;
 export const WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"] as const;

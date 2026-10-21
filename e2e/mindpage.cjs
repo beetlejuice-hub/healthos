@@ -106,7 +106,8 @@ function world({ seed = 3, band = true } = {}) {
   await pg.mouse.click(cb.x + 14 + 3 * ((Math.min(cb.width, 640) - 28 - 24) / 7 + 4) + 10, cb.y + 30 + 10); await pg.waitForTimeout(150);
   check(`calendar: tapping a day shows its numbers (${await cal.locator('.mp-hov').innerText()})`, /^\w{3} \d+ \w{3} · (mood \d\.\d|no check-in)/.test(await cal.locator('.mp-hov').innerText()));
   check(`laptop: nothing sticks out (${await noOverflow(pg)} px)`, await noOverflow(pg) <= 1280);
-  check('the older Mind panels are still below', await pg.locator('[data-sec="mind"] .gl-course, [data-sec="mind"] .gl-rhythm').count() >= 1);
+  // owner, 21 Oct (PLAN 151): the old mood course goes; weekday × time and best/worst days stay, under the new page
+  check('under it: weekday × time and best/worst days, no old mood course', await pg.locator('[data-sec="mind"] .gl-course').count() === 0 && await pg.locator('[data-sec="mind"] .gl-rhythm').count() === 1);
   await pg.locator('.mp').screenshot({ path: OUT + 'mindpage-laptop.png' });
   await ctx.close();
 
