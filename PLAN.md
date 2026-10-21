@@ -2080,5 +2080,47 @@ Order: A first (113 → 123), then B, then C; D in the chat. (claimed: this sess
    phone screenshots. Not checked: a real morning's answer from the model — the first one comes tomorrow at wake-up.
 151. [ ] **Then the app, part by part** — "after we done w all my notes, we should take the app part by part and check
    them, update them visualy and backend-wise, the engine behind them. also figure out what can i realistically do w
-   this app, how can it improve my day". (after #150: a plan first)
+   this app, how can it improve my day". Plan below (21 Oct); phase 1 (Today) started with the defaults.
+
+### 151 — the part-by-part review (plan, 21 Oct)
+
+**Why.** The app grew fast: ~150 notes, 90+ e2e suites, five Insights pages. Each part was built to a note; nobody has
+looked at a whole screen since and asked "what does this tell him, and what would he do differently after reading
+it?". Some cards will be great, some say the same thing twice, some are numbers nobody acts on.
+
+**What he can realistically do with it — the day it's built for** (his goals: lose fat and keep/build muscle, sleep,
+focus; about 5 minutes of logging a day):
+- *Wake-up, 1 min:* rate the night → readiness and the morning read: 3 things, a tip for today, a chart each.
+- *Through the day, ~3 min:* food and drinks by photo or a few words, supplements with a tap, a feeling check-in or
+  two (the slider). The band fills heart rate, sleep and steps by itself.
+- *Training:* Start → the next weights are suggested from last time, cardio by timer; the night read says how it went.
+- *Evening:* Tonight says what's still in his system at bedtime (caffeine, alcohol) and protein left to goal; the read-
+  back says what the day was and one thing for tomorrow.
+- *Weekly:* the week read; one experiment at a time (14 days: e.g. no caffeine after 14:00 → the app compares sleep
+  and energy against before). This is how it actually changes his days: one question answered every 2–3 weeks, from
+  his own data, not advice.
+- *Honest limits:* everything is "goes with" from one person's logs; an answer needs 2–3 weeks of the thing logged
+  both ways; days not logged are unknown, not zero. The app can't tell him *why*, only *what went together*, and how
+  sure it is.
+
+**How each part is checked** — the same five questions, every part:
+1. *The one thing:* what is this screen/card for, in one line? If it can't be said, it's two cards or none.
+2. *Would he act on it?* For each card: what would he do differently after reading it? Nothing → fold it away or cut it
+   (cutting is his call — listed for him, never removed silently).
+3. *Visual:* phone (390 px) and laptop screenshots, with 60 days of sample data, with an empty account, and at 07:30 /
+   15:00 / 23:30 / 00:40; looked at with a picky eye: hierarchy, density, duplicates, colours that mean two things.
+4. *Engine:* every number on it traced to its function; does a known-answer test exist, and for anything statistical a
+   planted effect it finds and a non-effect it doesn't? Gaps get tests; wrong numbers get fixed first.
+5. *Edges:* midnight, no band, a day not logged, a travel/time-zone day, two devices.
+Output per part: a short findings list in PLAN; small fixes landed straight away; anything bigger or a matter of
+taste asked as a question.
+
+**Order** (most used first): 1. Today · 2. Logging (food, drinks, supplements, feelings, weight) · 3. Workout and
+cardio · 4. Insights — Sleep, Heart, Mind, Training, Food & body, Compare · 5. AI tab (chat, inbox, week/month reads,
+experiments) · 6. Settings and the band. About one part per session.
+
+**Open questions for him** (defaults in use until he says otherwise): which goal leads the review — default: fat loss
+with muscle kept, then sleep; does he want cards cut or only folded — default: folded, cuts listed for him; anything
+he already finds useless or confusing — default: the five questions find them.
+
 
