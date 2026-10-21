@@ -4,7 +4,8 @@
  *  - pulls new data every 15 minutes on an alarm and when the app asks (the band itself syncs to the
  *    phone every ~15–30 min, so pulling faster gains nothing),
  *  - keeps heart rate per minute (avg/min/max, one bucket per UTC day, 120 days), sleep sessions with
- *    stages, daily resting heart rate and HRV, steps per 5 minutes (PLAN 66) — what the app draws.
+ *    stages, daily resting heart rate and HRV, steps per 5 minutes (PLAN 66), and each night's skin temperature,
+ *    breathing rate and blood oxygen (PLAN 52) — what the app draws.
  * Google's side: lib/band.ts (shapes from Google's own CLI).
  */
 
@@ -52,6 +53,13 @@ export function stepsFrom(now: number, latest: number | undefined): number {
   const from = latest == null ? now - 14 * DAY : Math.max(now - MAX_BACK_MS, Math.min(now - AGAIN_MS, latest - 3600_000));
   return Math.floor(from / 300_000) * 300_000;
 }
+/** The night check's kinds (PLAN 52): Google's type, its filter name, where it's kept, the field read (Google's API reference). */
+export const NIGHT_TYPES = [
+  ["daily-sleep-temperature-derivations", "daily_sleep_temperature_derivations", "skin", "nightlyTemperatureCelsius"],
+  ["daily-respiratory-rate", "daily_respiratory_rate", "breath", "breathsPerMinute"],
+  ["daily-oxygen-saturation", "daily_oxygen_saturation", "spo2", "averagePercentage"],
+] as const;
+const NIGHT_KEYS = NIGHT_TYPES.map((t) => t[2]);
 /** Pages per kind per pull. Cloudflare allows 50 outside calls per run; this keeps one pull under ~25. */
 const MAX_PAGES = 20;
 
@@ -206,7 +214,19 @@ export class BandHub {
         await this.storage.put(key, { ...((await this.storage.get<Record<string, number>>(key)) ?? {}), ...got });
       } catch (e) { errors.push(String((e as Error).message)); }
     }
-    const next: Sync = { lastRun: now, lastOk: errors.filter((e) => !/pages/.test(e)).length < 6 ? now : prev.lastOk, latest, ...(gapSec != null ? { gapSec } : {}), ...(stepsLatest != null ? { stepsLatest } : {}), ...(errors.length ? { error: errors.join("; ").slice(0, 300) } : {}) };
+    // The night check (PLAN 52): one value a night each. The first time a kind is pulled — a band connected before these
+    // came in included — 40 days back, so your usual (4 weeks ending a week ago) is there from the first morning. Their
+    // errors are said, but don't make the pull count as failed: heart rate and sleep still came.
+    const nightErrors: string[] = [];
+    for (const [type, name, key, field] of NIGHT_TYPES) {
+      try {
+        const kept = await this.storage.get<Record<string, number>>(key);
+        const got = readDaily(await this.list(type, dailyFilter(name, utcDay(now - (kept ? 7 : 40) * DAY)), 1000, nightErrors), field);
+        await this.storage.put(key, { ...(kept ?? {}), ...got });
+      } catch (e) { nightErrors.push(String((e as Error).message)); }
+    }
+    const said = [...errors, ...nightErrors];
+    const next: Sync = { lastRun: now, lastOk: errors.filter((e) => !/pages/.test(e)).length < 6 ? now : prev.lastOk, latest, ...(gapSec != null ? { gapSec } : {}), ...(stepsLatest != null ? { stepsLatest } : {}), ...(said.length ? { error: said.join("; ").slice(0, 300) } : {}) };
     await this.storage.put("sync", next);
     return next;
   }
@@ -249,7 +269,8 @@ export class BandHub {
       // and the sleep score's usual and readiness need 4 weeks of them on Today, which asks for a week of heart rate
       const sleepFrom = Math.min(from, this.now() - SLEEP_DAYS_SENT * DAY);
       const sleep = ((await this.storage.get<SleepSession[]>("sleep")) ?? []).filter((s) => s.end >= sleepFrom - DAY && s.start <= to);
-      return json({ hr, sleep, rhr: (await this.storage.get("rhr")) ?? {}, hrv: (await this.storage.get("hrv")) ?? {}, steps, kcal: (await this.storage.get("kcal")) ?? {}, ...(await this.status()) });
+      return json({ hr, sleep, rhr: (await this.storage.get("rhr")) ?? {}, hrv: (await this.storage.get("hrv")) ?? {}, steps, kcal: (await this.storage.get("kcal")) ?? {},
+        ...Object.fromEntries(await Promise.all(NIGHT_KEYS.map(async (k) => [k, (await this.storage.get(k)) ?? {}]))), ...(await this.status()) });
     }
     if (path === "wake") {
       const sleep = (await this.storage.get<SleepSession[]>("sleep")) ?? [];
@@ -263,7 +284,7 @@ export class BandHub {
     if (path === "disconnect") {
       const a = await this.auth();
       if (a) await this.f(`https://oauth2.googleapis.com/revoke?token=${encodeURIComponent(a.refresh)}`, { method: "POST" }).catch(() => null);
-      for (const k of ["auth", "sync", "sleep", "rhr", "hrv", "kcal"]) await this.storage.delete(k);
+      for (const k of ["auth", "sync", "sleep", "rhr", "hrv", "kcal", ...NIGHT_KEYS]) await this.storage.delete(k);
       for (let d = 0; d <= KEEP_DAYS; d++) { await this.storage.delete(`hr:${utcDay(this.now() - d * DAY)}`); await this.storage.delete(`steps:${utcDay(this.now() - d * DAY)}`); }
       await this.storage.deleteAlarm();
       return json({ ok: true });

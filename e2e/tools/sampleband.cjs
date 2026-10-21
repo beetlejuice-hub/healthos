@@ -2,7 +2,8 @@
 // Built from the sample's own entries so the two agree: a coffee lifts heart rate for a few hours, a workout is a
 // workout, beers raise the night's heart rate. Planted, like the sample: after a drink evening the night has less
 // deep sleep and more awake, resting heart rate +4 and HRV −9 the next morning; with 30+ mg of caffeine at 23:00 it
-// takes ~15 min longer to fall asleep. Steps: three walks a day. Same seed → same band.
+// takes ~15 min longer to fall asleep; after drinks the night is 0.35 °C warmer, breathing +0.8 a minute, blood oxygen −0.6
+// (PLAN 52's night check). Steps: three walks a day. Same seed → same band.
 const MIN = 60_000, HOUR = 60 * MIN, DAY = 24 * HOUR;
 
 function rng(seed) {
@@ -15,7 +16,7 @@ const cafAt = (doses, t) => doses.reduce((a, d) => a + (d.at <= t ? d.mg * Math.
 
 /** The band's data for the `days` days up to `now`, from the sample's entries and workouts. */
 function sampleBand(entries, workouts, now, days = 30) {
-  const { r, g } = rng(4242), hr = [], sleep = [], steps = [], rhr = {}, hrv = {};
+  const { r, g } = rng(4242), ng = rng(52).g, hr = [], sleep = [], steps = [], rhr = {}, hrv = {}, skin = {}, breath = {}, spo2 = {};
   const drinks = entries.filter((e) => e.kind === 'drink'), caf = drinks.filter((d) => d.caffeineMg > 0).map((d) => ({ at: d.at, mg: d.caffeineMg }));
   const start = new Date(now); start.setHours(0, 0, 0, 0);
   for (let k = days; k >= 0; k--) {
@@ -36,6 +37,8 @@ function sampleBand(entries, workouts, now, days = 30) {
     if (up < now) {
       sleep.push({ id: 'sb' + date, start: bed, end: up, asleepMin: mins('light') + mins('deep') + mins('rem'), awakeMin: mins('awake'), toFallAsleepMin: fall, nap: false, stageMin: { deep: mins('deep'), light: mins('light'), rem: mins('rem'), awake: mins('awake') }, stages });
       rhr[date] = Math.round(53 + g() * 0.8 + (drank ? 4 : 0)); hrv[date] = Math.round(46 + g() * 3 - (drank ? 9 : 0));
+      // the night check (PLAN 52), from its own draws so the rest of the band stays as it was: after drinks a warmer night, faster breathing, a little less oxygen
+      skin[date] = +(33.7 + ng() * 0.12 + (drank ? 0.35 : 0)).toFixed(2); breath[date] = +(14.2 + ng() * 0.3 + (drank ? 0.8 : 0)).toFixed(1); spo2[date] = +(96 + ng() * 0.4 - (drank ? 0.6 : 0)).toFixed(1);
     }
     const gym = workouts.filter((w) => w.startedAt >= T(0) && w.startedAt < T(24));
     const coffees = caf.filter((d) => d.at >= T(0) && d.at < T(24)), beers = drinks.filter((d) => d.alcoholG > 0 && d.at >= T(0) && d.at < T(24));
@@ -58,7 +61,7 @@ function sampleBand(entries, workouts, now, days = 30) {
     for (const w of walks) for (let i = 0; i < 4 && w + i * 5 * MIN < now; i++) steps.push([w + i * 5 * MIN, 5, 480 + Math.round(g() * 40)]);
   }
   const uniq = [...new Map(hr.map((m) => [m[0], m])).values()].sort((a, b) => a[0] - b[0]);
-  return { hr: uniq, sleep, steps: steps.sort((a, b) => a[0] - b[0]), rhr, hrv };
+  return { hr: uniq, sleep, steps: steps.sort((a, b) => a[0] - b[0]), rhr, hrv, skin, breath, spo2 };
 }
 
 /** Serve it as the Worker would (/api/band/status and /api/band/data?from&to). */
@@ -67,7 +70,7 @@ async function routeBand(ctx, band, now) {
     const u = new URL(rt.request().url()), op = u.pathname.split('/').pop(), from = +u.searchParams.get('from') || 0, to = +u.searchParams.get('to') || now;
     const st = { connected: true, needsReconnect: false, connectedAt: now - 40 * DAY, lastSync: now - 3 * MIN, latest: band.hr.at(-1)?.[0] ?? null, error: null, gapSec: 60 };
     const inR = (t) => t >= from && t <= to;
-    rt.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(op === 'data' ? { hr: band.hr.filter((m) => inR(m[0])), steps: band.steps.filter((s) => inR(s[0])), sleep: band.sleep.filter((s) => s.end >= from - DAY && s.start <= to), rhr: band.rhr, hrv: band.hrv, ...st } : st) });
+    rt.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(op === 'data' ? { hr: band.hr.filter((m) => inR(m[0])), steps: band.steps.filter((s) => inR(s[0])), sleep: band.sleep.filter((s) => s.end >= from - DAY && s.start <= to), rhr: band.rhr, hrv: band.hrv, skin: band.skin, breath: band.breath, spo2: band.spo2, ...st } : st) });
   });
 }
 

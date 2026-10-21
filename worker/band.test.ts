@@ -77,6 +77,11 @@ function google(opts: { hr?: unknown[]; pageSize?: number; expireAccessOnce?: bo
       }
       if (type === "sleep") return Response.json({ dataPoints: [{ name: "users/me/dataTypes/sleep/dataPoints/n1", sleep: { interval: { startTime: "2026-10-06T21:40:00Z", endTime: "2026-10-07T05:10:00Z" }, summary: { minutesAsleep: 412 } } }] });
       if (type === "daily-resting-heart-rate") return Response.json({ dataPoints: [{ dailyRestingHeartRate: { date: { year: 2026, month: 10, day: 7 }, beatsPerMinute: 54 } }] });
+      // the night check's three (PLAN 52), shaped as Google's API reference has them, on the 7th only
+      const date = { year: 2026, month: 10, day: 7 };
+      if (type === "daily-sleep-temperature-derivations") return Response.json({ dataPoints: [{ dailySleepTemperatureDerivations: { date, nightlyTemperatureCelsius: 34.1, baselineTemperatureCelsius: 33.8, relativeNightlyStddev30dCelsius: 0.2 } }] });
+      if (type === "daily-respiratory-rate") return Response.json({ dataPoints: [{ dailyRespiratoryRate: { date, breathsPerMinute: 14.6 } }] });
+      if (type === "daily-oxygen-saturation") return Response.json({ dataPoints: [{ dailyOxygenSaturation: { date, averagePercentage: 96.2, lowerBoundPercentage: 94, upperBoundPercentage: 98 } }] });
       if (type === "daily-heart-rate-variability") return Response.json({ dataPoints: [{ dailyHeartRateVariability: { date: { year: 2026, month: 10, day: 7 }, averageRmssdMilliseconds: 41 } }] });
     }
     throw new Error(`unexpected ${req.method} ${req.url}`);
@@ -320,6 +325,32 @@ describe("BandHub", () => {
     expect(d.sleep.map((s) => s.id)).toEqual(["sep1", "n1"]);
     const older = (await (await h.fetch(new Request(`https://band/data?from=${Date.UTC(2026, 7, 15)}&to=${Date.UTC(2026, 7, 25)}`))).json()) as { sleep: { id: string }[] };
     expect(older.sleep.map((s) => s.id)).toEqual(["aug"]); // asked for: there, and nothing after the range
+  });
+
+  it("the night check's three: 40 days back the first time each is pulled (a band connected before), a week after; served with the data", async () => {
+    const { h, st, g, at } = setup();
+    await connect(h);
+    st.m.set("rhr", { "2026-10-01": 55 }); st.m.set("sync", { lastOk: T0 - 3600_000 }); // already pulling before these came in
+    await h.alarm();
+    const since = (type: string) => g.health().filter((c) => c.url.pathname.includes(`/${type}/`)).map((c) => c.url.searchParams.get("filter")!.match(/"([^"]+)"/)![1]);
+    expect(since("daily-sleep-temperature-derivations")).toEqual(["2026-08-28"]);
+    expect(since("daily-resting-heart-rate")).toEqual(["2026-09-30"]); // not the first pull: a week, as before
+    expect(st.m.get("skin")).toEqual({ "2026-10-07": 34.1 });
+    expect(st.m.get("breath")).toEqual({ "2026-10-07": 14.6 });
+    expect(st.m.get("spo2")).toEqual({ "2026-10-07": 96.2 });
+    at(T0 + PULL_EVERY_MS); await h.alarm();
+    expect(since("daily-oxygen-saturation")).toEqual(["2026-08-28", "2026-09-30"]);
+    const d = (await (await h.fetch(new Request("https://band/data"))).json()) as Record<string, unknown>;
+    expect(d).toMatchObject({ skin: { "2026-10-07": 34.1 }, breath: { "2026-10-07": 14.6 }, spo2: { "2026-10-07": 96.2 } });
+  });
+
+  it("one of the night check's kinds failing is said, but the pull still counts and the others are kept", async () => {
+    const { h, st } = setup(google({ failType: "daily-respiratory-rate" }));
+    await connect(h);
+    await h.alarm();
+    expect(await status(h)).toMatchObject({ lastSync: T0, error: "daily-respiratory-rate 500" });
+    expect(st.m.get("skin")).toEqual({ "2026-10-07": 34.1 });
+    expect(st.m.has("breath")).toBe(false);
   });
 
   it("disconnect tells Google to forget it and deletes everything", async () => {

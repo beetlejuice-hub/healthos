@@ -25,10 +25,8 @@ mood course removed from Mind, with weekday × time and best / worst days kept u
 The Sleep page stays as it is for now ("we will go thorugh and change things later").
 
 **To discuss first, one at a time** (owner, 21 Oct: "These ideas need to be discussed first so choose one rn and start w
-discussing w me"): #52 more band data — agreed 21 Oct: the night check first (skin temperature, breathing, blood
-oxygen against your usual; "2 line": a warning line on readiness, the score unchanged), then VO2 max, then zones per
-workout ("3 per workout") (claimed 21 Oct — lib/band.ts, worker/band.ts, lib/nightcheck.ts, Readiness.tsx, ai/sections.ts,
-ai/nights.ts, e2e/tools/sampleband.cjs) · #138 your food logs into Google's app · #160 the AI smarter ·
+discussing w me"): #52 more band data — agreed 21 Oct: the night check first (built 21 Oct, below), then VO2 max, then
+zones per workout ("3 per workout") · #138 your food logs into Google's app · #160 the AI smarter ·
 #133 more morning-read ideas ("is good") · a fuller food/nutrition score (#139 has the per-item score; what more?).
 
 **Not now:** #48 live heart rate on the Workout screen ("not needed rn") · #136 Tempo → HealthOS (#50, #92 with it) ·
@@ -628,6 +626,19 @@ email get Dev tools (`#dev`): raw entry editor, generate/remove sample, wipe acc
    change, HRV samples, ECG / irregular rhythm notifications. Calories burned also closes the loop with food logged.
    - **Status (16 Oct):** steps (#66) and calories burned (#83, used by the calorie goal #95) are in. The rest of the list
      (distance, floors, zones, SpO2, breathing rate, VO2 max, skin temperature, …) not started.
+   - [x] **The night check (21 Oct).** Owner, 21 Oct, to "is the night check the right first slice / a line or the score / zones
+     weekly or per workout": "1 good / 2 line / 3 per workout". The band now pulls each night's skin temperature
+     (`daily-sleep-temperature-derivations`, nightlyTemperatureCelsius), breathing (`daily-respiratory-rate`) and blood oxygen
+     (`daily-oxygen-saturation`, averagePercentage) — field names from Google's discovery document; all three under the
+     health-metrics permission already granted, so no reconnect. 40 days back the first time each is pulled. lib/nightcheck:
+     each against your usual (median of 4 weeks ending a week ago, as readiness; 10 nights needed); off = skin +0.5 °C,
+     breathing +1/min, blood oxygen −1.5 points, and 2× your own spread; only that direction. Readiness shows a line when one
+     is off ("together these go with getting ill…" when two are, the heart's own poor parts counting), the score unchanged;
+     opened, all three with their usual. The AI gets them (This morning, and each night in its list). Tests: planted rise
+     found, ≤ 3 false alarms in 300 ordinary nights, a wide sleeper not flagged; e2e nightcheck at 390 (and checked at 320).
+     **Not checked: your real band** — the first morning it shows, open readiness and see the three have numbers. If one
+     says "usual after 10 nights" for long, Google isn't sending it.
+     Next, as agreed: VO2 max as a trend on the Heart page, then heart-rate zones per workout.
 53. [x] **Insights as pages — Timeline first** (claimed 8 Oct — canvas, then Insights.tsx, MasterGraph, a new page shell).
    Owner, 8 Oct: "Should we do the separate pages just like on the phone? … in one page i see one thing, like the master
    graph (i rate the current one a 10/6.5 …) on another page the possible findings, on another the sleep data … i need a

@@ -191,6 +191,8 @@ function world({ seed = 7, everyMin = 1 } = {}) {
   ({ ctx, pg } = await open(390, w));
   check(`phone: nothing sticks out (${await noOverflow(pg)} px)`, await noOverflow(pg) <= 390);
   // PLAN 151 (the review): on a phone the columns stack — "Thin lines: each coffee" sat under the workout chart
+  // (the notes come with the charts, once the band's weeks are in: under a full run's load that's later — wait for them)
+  await pg.waitForFunction(() => [...document.querySelectorAll('.he-col')].filter((c) => c.querySelector('.he-note')).length >= 2, null, { timeout: 20000 }).catch(() => {});
   const notes = await pg.locator('.he-col').evaluateAll((cols) => cols.map((c) => [c.querySelector('h3')?.textContent ?? '', c.querySelector('.he-note')?.textContent ?? '']));
   check(`phone: each chart's note under its own chart (${notes.map(([h, n]) => `${h.split(' ')[0]} ${h.split(' ')[1]}: ${n.slice(0, 22)}`).join(' | ')})`,
     notes.length === 2 && /^After coffee/.test(notes[0][0]) && /each coffee/.test(notes[0][1]) && /^After a workout/.test(notes[1][0]) && /each workout/.test(notes[1][1]) && !/coffee/.test(notes[1][1]));

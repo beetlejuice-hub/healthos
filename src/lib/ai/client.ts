@@ -5,6 +5,7 @@
 import { MONTHLY_USD } from "./tasks";
 import { gridLines, todayLines, trainingLines } from "./sections";
 import { readiness } from "../readiness";
+import { heartSigns, nightCheck, nightCheckLines } from "../nightcheck";
 import { nights } from "../sleep";
 import { mainLifts, muscleStrength, sessions, thisWeek } from "../liftstrength";
 import type { LoggedSet } from "../training";
@@ -89,7 +90,8 @@ export function contextNow(state: State = getState(), now = Date.now(), { slim =
   const ready = band ? readiness(today, nights(band.sleep, band.hr, band.rhr, band.hrv), rating, sets, now, { hrv: band.hrv, rhr: band.rhr }) : null;
   const ss = sessions(state.workouts, sets);
   return buildContext({ state, now, days, findings: report.found, patterns, weight: t ? { kg: t.nowKg, perWeek: t.perDay * 7 } : null, nights: nightsSeen,
-    today: todayLines(ready), training: [...trainingLines(ss, mainLifts(sets), thisWeek(ss, now), 6, muscleStrength(sets, now)),
+    // last night's skin temperature, breathing and blood oxygen against your usual, and the night check's line (PLAN 52)
+    today: [...todayLines(ready), ...(band && ready ? nightCheckLines(nightCheck(today, band, heartSigns(ready))) : [])], training: [...trainingLines(ss, mainLifts(sets), thisWeek(ss, now), 6, muscleStrength(sets, now)),
       // cardio (PLAN 130): this week's minutes against the weeks before, the last sessions with the band's heart rate
       ...cardioWeekLines(cardioSpans(state.workouts, now), band?.hr ?? [], currentKg(state.entries, 0, now) || null, now, 4, 3, maxHrOf(state.settings)?.bpm)], grids: gridLines(state.ai.inbox ?? []), slim, onToday,
     // today from midnight; before 04:00 it was still last night's evening, and says so (#107)

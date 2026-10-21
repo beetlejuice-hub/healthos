@@ -12,7 +12,8 @@ export const GOOGLE_AUTH = "https://accounts.google.com/o/oauth2/v2/auth";
 export const GOOGLE_TOKEN = "https://oauth2.googleapis.com/token";
 export const BAND_REDIRECT = "https://healthos.lukacsarnold9.workers.dev/api/google/callback";
 
-/** Read-only, and only what the app shows: heart rate, HRV, steps, workouts · sleep · resting HR, daily HRV. */
+/** Read-only, and only what the app shows: heart rate, HRV, steps, workouts · sleep · resting HR, daily HRV, and the night
+ * check's skin temperature, breathing and blood oxygen (all three under "health metrics" — no new sign-in for them). */
 export const BAND_SCOPES = [
   "https://www.googleapis.com/auth/googlehealth.activity_and_fitness.readonly",
   "https://www.googleapis.com/auth/googlehealth.sleep.readonly",
@@ -189,14 +190,17 @@ export function mergeMinutes(kept: HrMinute[], fresh: HrMinute[]): HrMinute[] {
 }
 
 /** What the app holds of the band (lib/band-client): minutes, nights, daily resting HR and HRV, steps, and from when. */
-export type BandData = { hr: HrMinute[]; sleep: SleepSession[]; rhr: Record<string, number>; hrv: Record<string, number>; steps?: StepBucket[]; /** Calories burned per local day (today so far). */ kcal?: Record<string, number> };
+export type BandData = { hr: HrMinute[]; sleep: SleepSession[]; rhr: Record<string, number>; hrv: Record<string, number>; steps?: StepBucket[]; /** Calories burned per local day (today so far). */ kcal?: Record<string, number>;
+  /** The night check (PLAN 52), per morning's date: skin temperature (°C, the night's mean), breaths a minute, blood oxygen (%, the night's average). */
+  skin?: Record<string, number>; breath?: Record<string, number>; spo2?: Record<string, number> };
 
 /** Fold a newly loaded window into what the app holds: minutes and nights replace their old selves, nothing is lost. */
 export function mergeBand(prev: BandData | null, got: BandData): BandData {
   if (!prev) return got;
   const nights = new Map(prev.sleep.map((n) => [n.id, n]));
   for (const n of got.sleep) nights.set(n.id, n);
-  return { hr: mergeMinutes(prev.hr, got.hr), sleep: [...nights.values()].sort((a, b) => a.start - b.start), rhr: { ...prev.rhr, ...got.rhr }, hrv: { ...prev.hrv, ...got.hrv }, steps: mergeSteps(prev.steps ?? [], got.steps ?? []), kcal: { ...prev.kcal, ...got.kcal } };
+  return { hr: mergeMinutes(prev.hr, got.hr), sleep: [...nights.values()].sort((a, b) => a.start - b.start), rhr: { ...prev.rhr, ...got.rhr }, hrv: { ...prev.hrv, ...got.hrv }, steps: mergeSteps(prev.steps ?? [], got.steps ?? []), kcal: { ...prev.kcal, ...got.kcal },
+    skin: { ...prev.skin, ...got.skin }, breath: { ...prev.breath, ...got.breath }, spo2: { ...prev.spo2, ...got.spo2 } };
 }
 
 /**
