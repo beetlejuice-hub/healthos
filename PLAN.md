@@ -15,8 +15,10 @@ Started 29 Sept 2026. Owner: Arnold. Answers behind this: the "HealthOS — Disc
 mood course removed from Mind, with weekday × time and best / worst days kept under the new page; Sleep needed nothing
 (with the band its old panels already don't show).
 
+**Building now:** #155 nothing stale · #156 questions with a reason · #157 the evening read with items · #158 the morning read, better.
+
 **Your asks from the latest batch, not finished:**
-- #152 RPE — how hard a set felt (your phase-2 pick with rep ranges; rep ranges done).
+- #152 RPE — how hard a set felt (later — your call, 21 Oct).
 - #153 Why Fitbit said 81 and the app 98 — needs that night (a screenshot of Fitbit's breakdown, or the date).
 
 **The review (#151):** Today first pass done; next Sleep and Heart, then logging, Workout, Insights, AI, Settings.
@@ -2213,3 +2215,40 @@ he already finds useless or confusing — default: the five questions find them.
    — today left out, 146 of 150 a hit), e2e foodday (the line for his test day, 7 days, bars, today lighter, tap a day),
    a phone screenshot looked at. Found on the way: the line first broke into one row per number (a grid) — the e2e
    caught it.
+
+## 21 Oct, later — the reads and the questions (his words)
+Owner, 21 Oct: "i reaaally liked the morning digest, liked the study, thing to try, graphs, everything. we are on a good
+path here … can make it better if possible" · "got the same questions. Please dont make it generic, make them actually
+usable, clever, creative, can be playfully worded sometimes, but it should still have a reason. like its tracking
+something, tracking mental health even, or just the ai doing an investigation between a connection in noticed, asking a
+question cause it saw a study, or whatever. studies can be ab food, supplements, can recommedn new supplements based on
+what it sees, can ask me about unrelated things, that i didnt even log, it just want to make sure whether i have X or
+not" · "we should have the same studt, try, and notiiced session at Eod, not just in the morning … make sure it does not
+sit for long. like if i get them at yesterday morning, it should not be there/ or the same at next morning, asking
+about 2 days from before" · "can push 152 to later".
+
+Found (21 Oct, in the code): "the same questions" — a question the AI marked "daily" is kept and shown again word for
+word every day (up to 5, until "Stop asking this"). "Sitting" — yesterday's morning read stays on Today until today's
+is written, so the next morning still shows the night before last; the read-back stays until noon.
+
+155. [ ] **Nothing stale** (claimed: this session — lib/ai/morning, Ai.tsx MorningRead/NightRead/AiQuestions). Each read
+   is on Today until the next one replaces it: the morning read until the evening read is written (and never past
+   04:00 the next night); the evening read until the next morning read (and never past noon). Questions go with their
+   read. Phase 1 — quick, and it's the annoyance now.
+156. [ ] **Questions with a reason, never the same twice.** They come with the reads — 1–2 in the morning, 1–2 in the
+   evening — written by the reads' model (the strong one, with web search) instead of the cheap 10:00 call. Each is one
+   of: *tracking* (a measure worth following, mental health too — re-worded every time it comes back, the key kept so
+   the answers still add up, at most every 3 days); *investigating* (a Noticed note or a Worth-a-look link: what would
+   explain it); *a study* (food, supplements, sleep, training — with its link; may suggest a supplement that fits what
+   it sees, "goes with", never medical advice); *a check* on something not logged ("any allergies flaring?") with the
+   reason; *following up* yesterday's "try"; the check-up when due. The app picks today's kinds in turn so days differ.
+   Clever and sometimes playful, never generic, every one with a "why". Verbatim daily repeats stop.
+157. [ ] **The evening read gets items too**: a study, a thing to try, and a "noticed" (an investigation of something in
+   the day or a note), the morning read's look (a tip, a 14-day chart, the source), never repeating the morning's.
+   The read-back gets web search for it: about one more searching call a day (the 10:00 questions call goes, so
+   roughly +€2–4 a month on the strong model; inside the €20).
+158. [ ] **The morning read, better**: the next read follows up what it suggested ("tried the protein coffee before 10?"),
+   and #133's ideas when they fit (this day last month; guess first).
+Tested with: pure rules for what's shown when (a read from yesterday morning is gone this morning — fails on today's
+code), the prompts' contracts (kinds, a source on study questions, no repeat of the same text), e2e on the phone for
+both reads and the questions. Phases in that order; #152 RPE waits (owner).
