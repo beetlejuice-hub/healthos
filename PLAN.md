@@ -26,7 +26,7 @@ The Sleep page stays as it is for now ("we will go thorugh and change things lat
 
 **To discuss first, one at a time** (owner, 21 Oct: "These ideas need to be discussed first so choose one rn and start w
 discussing w me"): #52 more band data — the night check, VO2 max and zones per workout built 21 Oct (below) · #160 the
-AI smarter (discussing now) · #138 your food logs into Google's app ·
+AI smarter (agreed, being built — below) · #138 your food logs into Google's app ·
 #133 more morning-read ideas ("is good") · a fuller food/nutrition score (#139 has the per-item score; what more?).
 
 **Not now:** #48 live heart rate on the Workout screen ("not needed rn") · #136 Tempo → HealthOS (#50, #92 with it) ·
@@ -2357,3 +2357,20 @@ both reads and the questions. Phases in that order; #152 RPE waits (owner).
    etc..its not consuming too much credits rn, which is not bad but means we have room to work w". Ideas when we get
    there: a weekly deep-research read (one call, more searches, a topic from your data); the chat's look-ups searching
    the web more; the reads' studies checked against a second source. Later — his call when.
+   - **Agreed 21 Oct** — owner: "do 2, 1, 3,4 / 3: ai". Budget not answered → kept at $20/month (the four add ≈ $7–8 by
+     estimate). In this order, each landed on its own:
+     - [x] **2 · Links checked** (worker/links.ts). Every link a read, a study question, the news or a supplement's research
+       cites is opened by the server before you see it (5 s, the first 300 kB): 404/410 or no such site → the item goes;
+       opens but the page's title (else its text) holds under half the cited title's words → the item goes; blocked
+       (401/403/429), 5xx or slow → kept, unmarked; opens and matches → "✓ checked" by the link. Each link opened once,
+       each citation of it judged on its own (a test caught one link cited for two claims sinking both). No AI call.
+       **Not tried against live sites** — the sandbox can't reach PubMed or the journals; the pages in the tests are
+       stand-ins in their shapes. Watch the first reads: if good studies vanish, the matching is too strict.
+     - [ ] **1 · The reads compute** — the morning and evening reads get the chat's look-ups, so a "noticed" item cites
+       numbers the app worked out (its tested engines), not the AI's reading of the summary.
+     - [ ] **3 · A weekly deep dive** — Sundays; the AI picks one question from your data ("pick another" to change it);
+       8–10 searches, 2–3 studies against your numbers, a verdict and one experiment.
+     - [ ] **4 · Experiments end with a verdict** — the app's before/during numbers plus what studies found: worked for
+       you / didn't / not clear, and what to try next.
+   - Known: the sleep and heartpage e2e suites time out now and then under the full run's load (4 at a time) and pass
+     alone — seen 21 Oct before and after these changes.

@@ -5,6 +5,7 @@
  * the caller, so folding the card closes the open item. ☆ saves one for later (PLAN 159).
  */
 
+import { SourceLink } from "./SourceLink";
 import { useMemo, useState } from "react";
 import { act, useStore } from "../lib/store";
 import { dailyFacts } from "../lib/insights";
@@ -44,7 +45,7 @@ export function ReadItems({ items, open, onOpen, tip, from, day }: { items: Dige
             <p>{i.text}</p>
             {i.tip && <p className="mr-tip"><small>{tip}</small>{i.tip}</p>}
             {i.measure && vals && <DigestChart k={i.measure} vals={vals} today={today} goal={goalOf(i.measure)} />}
-            {i.source && <a href={i.source.url} target="_blank" rel="noreferrer">{i.source.title} ↗</a>}
+            {i.source && <SourceLink s={i.source} />}
             <div className="mr-acts">
               {i.protocol && (running.includes(i.protocol.name)
                 ? <p className="note">Running — see Insights → Experiments.</p>

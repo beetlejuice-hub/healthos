@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { handleAi } from "./ai";
 
 /** A fake Supabase (one user, the docs table) and a fake Anthropic API, behind one fetch. */
-function world(answers: unknown[], opts: { usage?: object } = {}) {
+function world(answers: unknown[], opts: { usage?: object; /** Pages the cited links open (PLAN 160); any other site answers 403, as one that blocks robots. */ pages?: Record<string, { status?: number; html?: string } | "no-such-site"> } = {}) {
   const docs = new Map<string, unknown>();
   if (opts.usage) docs.set("ai_usage", opts.usage);
   const sent: { url: string; body: Record<string, unknown>; headers: Record<string, string> }[] = [];
@@ -20,6 +20,11 @@ function world(answers: unknown[], opts: { usage?: object } = {}) {
       const a = answers.shift() as { text: string; stop?: string; searches?: number; blocks?: string[]; content?: unknown[] };
       return Response.json({ id: "msg_1", type: "message", role: "assistant", model: body.model, content: a.content ?? (a.blocks ?? [a.text]).map((text) => ({ type: "text", text })), stop_reason: a.stop ?? "end_turn", stop_sequence: null,
         usage: { input_tokens: 1000, output_tokens: 500, cache_read_input_tokens: 0, cache_creation_input_tokens: 0, server_tool_use: { web_search_requests: a.searches ?? 0 } } });
+    }
+    if (url.protocol === "https:" && !/supabase|anthropic/.test(url.hostname)) {
+      const p = opts.pages?.[req.url];
+      if (p === "no-such-site") throw new TypeError("fetch failed: getaddrinfo ENOTFOUND");
+      return p ? new Response(p.html ?? "", { status: p.status ?? 200, headers: { "content-type": "text/html; charset=utf-8" } }) : new Response("Forbidden", { status: 403 });
     }
     throw new Error(`unexpected ${req.url}`);
   }) as typeof fetch;
@@ -185,6 +190,18 @@ describe("/api/ai", () => {
     expect(w.sent).toHaveLength(2);
     expect(body.answer.items.map((i) => i.title)).toEqual(["Creatine and sleep"]); // a fact without a source isn't shown
     expect(body.costUsd).toBeCloseTo((2000 * 4 + 1000 * 20) / 1e6 + 0.03, 6);
+  });
+
+  it("the read's links are opened before you see it: a dead one's item goes, a matching one is marked (PLAN 160)", async () => {
+    const good = "https://pubmed.ncbi.nlm.nih.gov/24235903/", gone = "https://pubmed.ncbi.nlm.nih.gov/99999999/";
+    const digest = { greeting: "Morning!", items: [
+      { type: "study", title: "Coffee at 4 pm still costs you sleep", text: "…", source: { title: "Caffeine effects on sleep taken 6 hours before bed", url: good } },
+      { type: "try", title: "Tart cherry before bed", text: "…", source: { title: "Tart cherry juice and sleep", url: gone } },
+      { type: "study", title: "Blocked publisher", text: "…", source: { title: "Creatine and sleep", url: "https://academic.example.com/1" } },
+    ] };
+    const w = world([{ text: JSON.stringify(digest), searches: 2 }], { pages: { [good]: { html: "<title>Caffeine effects on sleep taken 0, 3, or 6 hours before going to bed - PubMed</title>" }, [gone]: { status: 404 } } });
+    const body = (await (await handleAi(post({ task: "digest", context: "c", shown: [] }), env, w.deps)).json()) as { answer: { items: { title: string; source?: { checked?: boolean } }[] } };
+    expect(body.answer.items.map((i) => [i.title, i.source?.checked ?? false])).toEqual([["Coffee at 4 pm still costs you sleep", true], ["Blocked publisher", false]]);
   });
 
   it("night: the day is read back with web search (its study and thing to try need sources), from text, and checked", async () => {

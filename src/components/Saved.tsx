@@ -3,6 +3,7 @@
  * folded to one line so the chat stays first. "Tried it" marks one done (it's no longer followed up); Remove drops it.
  */
 
+import { SourceLink } from "./SourceLink";
 import { act, useStore } from "../lib/store";
 import { dayLabel } from "../lib/time";
 
@@ -24,7 +25,7 @@ export function SavedCard() {
           {s.tip && <p className="sv-tip">{s.tip}</p>}
           <div className="sv-acts">
             <small>saved {dayLabel(s.savedAt)}{s.tried ? ` · tried ${dayLabel(s.tried)}` : ""}</small>
-            {s.source && <a href={s.source.url} target="_blank" rel="noreferrer">{s.source.title} ↗</a>}
+            {s.source && <SourceLink s={s.source} />}
             <button type="button" className="linkish" aria-pressed={!!s.tried} onClick={() => set(s.id, (x) => ({ ...x, tried: x.tried ? undefined : Date.now() }))}>{s.tried ? "Not tried yet" : "Tried it"}</button>
             <button type="button" className="linkish" onClick={() => set(s.id, () => null)}>Remove</button>
           </div>

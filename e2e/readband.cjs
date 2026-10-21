@@ -31,6 +31,9 @@ function world(plant) {
 }
 
 const ITEM = { type: 'pattern', title: 'A warm night, and faster breathing', text: 'Skin 0.9 °C and breathing 2/min over your usual.', tip: 'Take today easier', measure: 'skin' };
+// PLAN 160 (owner: "do 2"): the server opened the first link and it matched; the second it couldn't check
+const STUDIES = [{ type: 'study', title: 'Skin temperature rises before symptoms', text: 'In a wearables study, nightly skin temperature rose a day or more before people felt ill.', source: { title: 'Wearable sensors and illness onset', url: 'https://example.org/temp', checked: true } },
+  { type: 'try', title: 'A lighter session when the night check flags', text: '…', source: { title: 'Training through illness', url: 'https://example.org/blocked' } }];
 
 (async () => {
   const b = await chromium.launch(); const errs = [];
@@ -46,7 +49,7 @@ const ITEM = { type: 'pattern', title: 'A warm night, and faster breathing', tex
       rt.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(op === 'data' ? { hr: w.hr.filter((m) => inR(m[0])), steps: [], sleep: w.sleep.filter((x) => x.end >= Math.min(from, NOW - 40 * D) - D && x.start <= to), rhr: w.rhr, hrv: w.hrv, skin: w.skin, breath: w.breath, spo2: w.spo2, ...st } : st) });
     });
     await ctx.route('**/api/ai/usage**', (r) => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ usage: null, cap: 50, on: true }) }));
-    await ctx.route('**/api/ai?**', (r) => { const body = r.request().postDataJSON(); calls.push(body); r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ answer: body.task === 'digest' ? { greeting: 'Morning.', items: [ITEM] } : { questions: [] }, usage: null, costUsd: 0.01, model: 'opus' }) }); });
+    await ctx.route('**/api/ai?**', (r) => { const body = r.request().postDataJSON(); calls.push(body); r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ answer: body.task === 'digest' ? { greeting: 'Morning.', items: [ITEM, ...STUDIES] } : { questions: [] }, usage: null, costUsd: 0.01, model: 'opus' }) }); });
     const pg = await ctx.newPage();
     await pg.clock.install({ time: NOW });
     pg.on('pageerror', (e) => errs.push('pageerror: ' + e.message));
@@ -65,6 +68,17 @@ const ITEM = { type: 'pattern', title: 'A warm night, and faster breathing', tex
       await pg.waitForSelector('section.morning .mr-row', { timeout: 5000 }).catch(() => {});
       const mr = pg.locator('section.morning');
       check(`${tag}: folded, the skin item has its small chart (${await mr.locator('.dc-mini').count()})`, await mr.locator('.dc-mini').count() === 1);
+      // the links: "✓ checked" on the one the server opened and matched, nothing on the one it couldn't
+      await mr.locator('.mr-head').click(); await pg.waitForTimeout(150);
+      await mr.locator('.mr-row').nth(1).click(); await pg.waitForTimeout(150);
+      const one = await mr.locator('.mr-body').innerText().catch(() => '');
+      await mr.locator('.mr-row').nth(2).click(); await pg.waitForTimeout(150);
+      const two = await mr.locator('.mr-body').innerText().catch(() => '');
+      check(`${tag}: a checked link says so, an unchecked one doesn't (${one.match(/Wearable[^\n]*\n?[^\n]*/)?.[0]?.replace(/\n/g, ' ')} | ${two.match(/Training through[^\n]*/)?.[0]})`,
+        /Wearable sensors and illness onset ↗\s*✓ checked/.test(one) && /Training through illness ↗/.test(two) && !/✓ checked/.test(two));
+      await mr.locator('.mr-row').nth(1).click(); await pg.waitForTimeout(150);
+      await mr.locator('.mr-body').screenshot({ path: OUT + 'readband-checked.png' });
+      await mr.locator('.mr-head').click(); await pg.waitForTimeout(150);
       await mr.locator('.mr-head').click(); await pg.waitForTimeout(150);
       await mr.locator('.mr-row').first().click(); await pg.waitForTimeout(150);
       const body = mr.locator('.mr-body');

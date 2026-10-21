@@ -11,8 +11,9 @@
 import Anthropic from "@anthropic-ai/sdk";
 import {
   DAILY_CAP, MODELS, MONTHLY_USD, RECENT_CALLS, SCHEMAS, logOf, SYSTEM, TIER, checkChat, modelFor, checkDescribe, checkDigest, checkNight, checkQuestions, checkReview, checkSupplement, costUsd, jsonFrom, DESCRIBE_SHAPE, CHAT_TOOLS, CHAT_ROUNDS, type ChatTurn,
-  type AiRequest, type ModelChoice, type Task, type UsageDoc,
+  type AiRequest, type DigestAnswer, type ModelChoice, type NightAnswer, type SupplementAnswer, type Task, type UsageDoc,
 } from "../src/lib/ai/tasks";
+import { checkReadLinks, checkSupplementLinks } from "./links";
 
 export type AiEnv = { ANTHROPIC_API_KEY?: string; SUPABASE_URL?: string; SUPABASE_KEY?: string; AI_DAILY_CAP?: string; AI_MONTHLY_USD?: string };
 type Deps = { fetch: typeof fetch; now: () => number };
@@ -137,7 +138,10 @@ export async function callModel(b: AiRequest, choice: ModelChoice, apiKey: strin
   }
   const text = textOf(res.content);
   const raw = schema ? JSON.parse(text) : jsonFrom(text);
-  const answer = task === "describe" ? checkDescribe(raw) : task === "supplement" ? checkSupplement(raw) : task === "chat" ? checkChat(raw) : task === "questions" ? checkQuestions(raw) : task === "night" ? checkNight(raw) : task === "review" ? checkReview(raw) : checkDigest(raw);
+  const checked = task === "describe" ? checkDescribe(raw) : task === "supplement" ? checkSupplement(raw) : task === "chat" ? checkChat(raw) : task === "questions" ? checkQuestions(raw) : task === "night" ? checkNight(raw) : task === "review" ? checkReview(raw) : checkDigest(raw);
+  // every link it cites, opened: a dead one or one about something else takes its item with it (PLAN 160)
+  const answer = task === "digest" || task === "night" ? await checkReadLinks(checked as DigestAnswer | NightAnswer, deps.fetch)
+    : task === "supplement" ? await checkSupplementLinks(checked as SupplementAnswer, deps.fetch) : checked;
   return { refused: false as const, answer, usage };
 }
 

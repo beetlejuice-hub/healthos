@@ -75,7 +75,8 @@ export type SupplementAnswer = {
   name: string; what: string; usualDose: string; timing: string;
   evidence: "strong" | "moderate" | "weak" | "very weak";
   uses: string[]; cautions: string[]; interactions: Interaction[];
-  sources: { title: string; url: string }[];
+  /** `checked`: the server opened it and it matched (PLAN 160). */
+  sources: { title: string; url: string; checked?: boolean }[];
 };
 
 /**
@@ -123,20 +124,20 @@ export const Q_KINDS = ["tracking", "investigate", "study", "check", "followup",
 export type QKind = (typeof Q_KINDS)[number];
 export const isQKind = (k: unknown): k is QKind => (Q_KINDS as readonly unknown[]).includes(k);
 export type Question = { id: string; text: string; why: string; options: string[]; /** Short key; a tracking question keeps its key across days so the answers add up ("lunch_size"). */ key: string;
-  /** "daily" is from before 21 Oct (asked word for word every day) — no longer shown that way. */ repeat: "daily" | "once"; kind?: QKind; /** A study question's source. */ source?: { title: string; url: string } };
+  /** "daily" is from before 21 Oct (asked word for word every day) — no longer shown that way. */ repeat: "daily" | "once"; kind?: QKind; /** A study question's source. */ source?: { title: string; url: string; checked?: boolean } };
 export type QuestionsAnswer = { questions: Question[] };
 
 /** The numbers a morning-read item can point at; the app draws that one's last 14 days beside it (PLAN 150). */
 export const DIGEST_MEASURES = ["sleep", "protein", "kcal", "mood", "energy", "focus", "stress", "caffeine", "alcohol", "weight", "lifting", "skin", "breathing", "oxygen", "vo2"] as const;
 export type DigestMeasure = (typeof DIGEST_MEASURES)[number];
 export const isDigestMeasure = (k: unknown): k is DigestMeasure => (DIGEST_MEASURES as readonly unknown[]).includes(k);
-export type DigestItem = { type: "fact" | "study" | "pattern" | "protocol" | "try" | /** the evening's investigation (PLAN 157) */ "noticed"; title: string; text: string; source?: { title: string; url: string }; protocol?: { name: string; how: string; days: number; measure: string };
+export type DigestItem = { type: "fact" | "study" | "pattern" | "protocol" | "try" | /** the evening's investigation (PLAN 157) */ "noticed"; title: string; text: string; /** `checked`: the server opened it and it matched (PLAN 160). */ source?: { title: string; url: string; checked?: boolean }; protocol?: { name: string; how: string; days: number; measure: string };
   /** One thing to do today (owner, 21 Oct: "I like that its adding tips and advices"). */ tip?: string; measure?: DigestMeasure };
 /**
  * Something new enough to message about (owner, 16 Oct: "it should only send message when it has a new finding, a new
  * sttudy or whatever but if its displayed on today page then nonsensee"): sent to the chat, not shown on Today. Most days none.
  */
-export type DigestNews = { title: string; text: string; source: { title: string; url: string } };
+export type DigestNews = { title: string; text: string; source: { title: string; url: string; checked?: boolean } };
 export type DigestAnswer = { greeting: string; items: DigestItem[]; news?: DigestNews | null; /** 1–2, the kinds the app picked (PLAN 156). */ questions?: Question[] };
 
 /** The nightly read-back of your day (owner, 2 Oct: "summarizing what happened, what i should change"). */

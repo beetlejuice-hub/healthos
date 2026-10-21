@@ -4,6 +4,7 @@
  * Calls: lib/ai/client.ts → Worker /api/ai. Contract and checks: lib/ai/tasks.ts.
  */
 
+import { SourceLink } from "./SourceLink";
 import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import { act, getState, newId, useStore } from "../lib/store";
 import { askAi, bandForRead, chatContext, contextNow, nightContext, refreshAiStatus, useAiStatus } from "../lib/ai/client";
@@ -306,7 +307,7 @@ function QuestionCard({ q, count, today }: { q: Question; count: number; today: 
     <section className="card question" aria-label="Quick question">
       <h3>{q.kind ? KIND_LABEL[q.kind] : "Quick question"} <span>{count > 1 ? `1 of ${count}` : "pick one or more"}</span></h3>
       <p className="q">{q.text}</p>
-      {q.source && <a className="q-src" href={q.source.url} target="_blank" rel="noreferrer">{q.source.title} ↗</a>}
+      {q.source && <SourceLink className="q-src" s={q.source} />}
       <div className="chips">{q.options.map((o) => <button key={o} type="button" className="pill-btn" aria-pressed={picked.includes(o)} onClick={() => toggle(o)}>{o}</button>)}</div>
       <div className="row-add q-own">
         <input value={own} placeholder="or in your own words…" aria-label="Your answer, in your own words" onChange={(e) => setOwn(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") send(); }} />
@@ -400,7 +401,7 @@ export function AiScreen() {
           <div key={x.key} className={`msg ${x.m!.role}${x.m!.unprompted ? " first" : ""}`} data-new={isNew || undefined}>
             {x.m!.role === "assistant" ? <Md text={x.m!.text} /> : x.m!.text}
             {x.m!.charts?.map((c, k) => <ChatChart key={k} c={c} />)}
-            {x.m!.source && /^https:\/\//.test(x.m!.source.url) && <a className="msg-src" href={x.m!.source.url} target="_blank" rel="noopener noreferrer">{x.m!.source.title} ↗</a>}
+            {x.m!.source && /^https:\/\//.test(x.m!.source.url) && <SourceLink className="msg-src" s={x.m!.source} />}
             {x.m!.proposals?.length ? <Proposals at={x.m!.at} list={x.m!.proposals} now={now} onAdded={(s) => { if (on) void researchSupplement(s); }} /> : null}
             {lookedAt(x.m!.looked) && <small className="looked">looked at your {lookedAt(x.m!.looked)}</small>}
             {x.m!.role === "assistant" && <time className="ts" dateTime={new Date(x.m!.at).toISOString()}>{stamp(x.m!.at, now)}</time>}
@@ -481,7 +482,7 @@ export function SuppResearch({ s }: { s: Supplement }) {
         {found.uses.length > 0 && <p><b>Used for</b> {found.uses.join(", ")}</p>}
         {found.cautions.length > 0 && <ul className="notes">{found.cautions.map((c) => <li key={c}>{c}</li>)}</ul>}
         {flagged.map((i) => <p key={i.with} className={`v-${i.verdict}`}><span className={`vchip v-${i.verdict}`}>{i.verdict}</span> <b>with {i.with}</b> — {i.say}</p>)}
-        <small>AI-researched {new Date(found.at).toLocaleDateString()} · to verify · {found.sources.map((x, k) => <a key={x.url} href={x.url} target="_blank" rel="noreferrer">{k ? ", " : ""}{x.title}</a>)}</small>
+        <small>AI-researched {new Date(found.at).toLocaleDateString()} · to verify · {found.sources.map((x, k) => <span key={x.url}>{k ? ", " : ""}<SourceLink s={x} arrow={false} /></span>)}</small>
       </div>}
     </div>
   );
