@@ -667,6 +667,17 @@ a { color: inherit; }
 .mr-protocol .mr-kind { color: var(--gym); background: color-mix(in srgb, var(--gym) 14%, transparent); }
 .mr-try .mr-kind { color: var(--ok); background: color-mix(in srgb, var(--ok) 14%, transparent); }
 .mr-noticed .mr-kind { color: var(--kcal); background: color-mix(in srgb, var(--kcal) 14%, transparent); } /* PLAN 157: the evening's investigation */
+/* PLAN 159: save a read item for later; the list at the top of the AI tab */
+.mr-acts { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 2px; } .mr-body .mr-acts .pill-btn { margin: 0; }
+.mr-save[aria-pressed="true"] { color: var(--gym); }
+.saved { gap: 0; padding: 12px 16px; } .saved > summary { list-style: none; cursor: pointer; display: flex; justify-content: space-between; align-items: center; font-weight: 600; }
+.saved > summary::-webkit-details-marker { display: none; } .saved .sv-n { font-weight: 500; font-size: 12.5px; color: var(--c-dim); }
+.saved ul { list-style: none; margin: 10px 0 0; padding: 0; display: grid; }
+.sv { display: grid; gap: 4px; padding: 10px 0; border-top: 1px solid #ffffff10; }
+.sv-top { display: flex; gap: 8px; align-items: baseline; } .sv-top b { font-size: 14.5px; line-height: 1.3; }
+.sv p { margin: 0; font-size: 13.5px; color: var(--c-ink-2); line-height: 1.4; } .sv .sv-tip { color: var(--c-ink); }
+.sv-acts { display: flex; flex-wrap: wrap; gap: 4px 14px; align-items: center; font-size: 12.5px; } .sv-acts small { color: var(--c-dim); }
+.sv-acts a { color: var(--c-ink-2); } .sv[data-tried] b, .sv[data-tried] p { opacity: .6; }
 .mr-body { display: grid; gap: 6px; padding: 0 0 12px; }
 .mr-body p { margin: 0; color: var(--c-ink-2); font-size: 14px; line-height: 1.45; }
 .mr-body a { font-size: 12.5px; color: var(--c-ink-2); } .mr-body .pill-btn { justify-self: start; margin-top: 2px; }

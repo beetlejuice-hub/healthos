@@ -21,6 +21,8 @@ import { Proposals } from "./Proposal";
 import type { Proposal } from "../lib/ai/propose";
 import { CHAT_ROUNDS, MODELS, estimateMonthUsd, type ChatTurn, type ModelChoice, type Question, type Tier } from "../lib/ai/tasks";
 import { askLines, KIND_LABEL, questionKinds, tracking, type Tracked } from "../lib/ai/asking";
+import { savedFollowups } from "../lib/ai/saved";
+import { SavedCard } from "./Saved";
 import { judge } from "../lib/ai/apply";
 import { dailyFacts } from "../lib/insights";
 import { addDays, atMinute, clock, dayLabel, localDay, stamp } from "../lib/time";
@@ -124,8 +126,9 @@ async function makeReview(d: Due) {
  * What a read is told about its questions (PLAN 156): the kinds the app picked in turn, the check-up when it's due
  * (PLAN 135), what's tracked and when each was last answered, what to follow up, and what was asked before.
  */
-function askFor(day: string, when: "morning" | "evening", follow: string[]): string[] {
+function askFor(day: string, when: "morning" | "evening", suggested: string[]): string[] {
   const st = getState(), now = Date.now();
+  const follow = [...suggested, ...savedFollowups(st.ai.saved, now)];
   const check = checkupLines(st.entries, bandNow(), now);
   const kinds = questionKinds(day, when, { checkup: check.length > 0, followup: follow.length > 0 });
   return [...(kinds.includes("checkup") ? check : []),
@@ -226,7 +229,7 @@ export function MorningRead() {
         <span className="chev" aria-hidden="true">{open ? "▴" : "▾"}</span>
       </button>
       <p className="greet">{d.greeting}</p>
-      <ReadItems key={String(open)} items={d.items} open={open} onOpen={() => setOpen(true)} tip="Today" />
+      <ReadItems key={String(open)} items={d.items} open={open} onOpen={() => setOpen(true)} tip="Today" from="morning" day={d.day} />
     </section>
   );
 }
@@ -267,7 +270,7 @@ export function NightRead() {
         {n.change.length > 0 && <div className="night-change"><small>Tomorrow, maybe</small>{n.change.map((c, i) => <p key={i}><b>{c.what}</b> {c.why}</p>)}</div>}
       </>}
       {/* the evening's study, thing to try and noticed (PLAN 157; owner, 21 Oct: "the same studt, try, and notiiced session at Eod") */}
-      {(n.items?.length ?? 0) > 0 && <ReadItems key={String(open)} items={n.items!} open={open} onOpen={() => setOpen(true)} tip="Tomorrow" />}
+      {(n.items?.length ?? 0) > 0 && <ReadItems key={String(open)} items={n.items!} open={open} onOpen={() => setOpen(true)} tip="Tomorrow" from="evening" day={n.day} />}
       {newer && <button type="button" className="linkish" onClick={() => void makeNight(n.day, true)}>You logged more since — read it again</button>}
     </section>
   );
@@ -410,6 +413,7 @@ export function AiScreen() {
   return (
     <div className="calm ai-screen">
       <div className="head"><span>Your AI</span><a href="#settings">Settings</a></div>
+      <SavedCard />
       <div className="chat" aria-live="polite">
         {thread.length === 0 && <p className="note">Ask me anything about your data — I see your numbers, patterns, stack and About me. The morning read and your day read back are on Today — ask me about them here. I only write here myself with something new: a heart-rate stretch the app can't explain, a new finding to comment on, your week and month.</p>}
         {days.map((g) => (g.open ? <Fragment key={g.day}>{g.items.map((x) => render(x, index.get(x.key)!))}</Fragment> : (

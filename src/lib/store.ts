@@ -8,6 +8,7 @@
 
 import { PROGRAMS, asSplit } from "./programs";
 import { useSyncExternalStore } from "react";
+import type { Saved } from "./ai/saved";
 import type { Drink, Entry, Food, Goals, Supplement, Template, Workout } from "./types";
 import { DEFAULT_GOALS, slotOf, slotsOf, slotTime } from "./types";
 import { tidyWorkouts } from "./training";
@@ -48,6 +49,8 @@ export type AiState = {
   research: Record<string, SupplementAnswer & { at: number; /** The name you typed when it was looked up. */ asked: string }>;
   /** Protocols you chose to try: the app compares before and during. */
   experiments: Experiment[];
+  /** Read items you saved for later (PLAN 159), newest first. */
+  saved?: Saved[];
   /** When you last opened the AI tab: newer unprompted messages show a dot. */
   seenAt: number;
   /** What the app wrote to you (PLAN 102), and every id it ever wrote, so none comes twice (optional: older synced docs). */

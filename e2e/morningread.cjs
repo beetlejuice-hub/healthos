@@ -97,6 +97,10 @@ const READ = { greeting: 'Morning! 7 h last night — a better start.', items: [
   await bars.nth(12).click();
   check(`tapping a day says its value (${await body.locator('.dc-words').innerText()})`, /^Thu 15 Oct · 158 g$/.test(await body.locator('.dc-words').innerText()));
   await mr.screenshot({ path: OUT + 'morning-read-item.png' });
+  // PLAN 159: save it for later — it outlives the read
+  await body.getByRole('button', { name: '☆ Save for later' }).click(); await pg.waitForTimeout(150);
+  check('☆ saves the item (★ Saved)', await body.getByRole('button', { name: '★ Saved' }).getAttribute('aria-pressed') === 'true'
+    && (await pg.evaluate((k) => JSON.parse(localStorage.getItem(k)).ai.saved.map((s) => s.title), KEY)).join() === 'Protein through the day');
   check('opened once: not new any more, and that sticks', await mr.getAttribute('data-new') === null && (await pg.evaluate((k) => JSON.parse(localStorage.getItem(k)).ai.digest.seen, KEY)) > 0);
   check('the news isn\'t on Today — it\'s a message', !/Creatine and sleep loss/.test(card));
   // the read's questions (PLAN 156): asked with the kinds the app picked, shown with the read, a study with its source
@@ -114,6 +118,15 @@ const READ = { greeting: 'Morning! 7 h last night — a better start.', items: [
   check('a reload doesn\'t write it again', calls.filter((x) => x.task === 'digest').length === 1);
   check('after a reload: folded, not highlighted', await pg.locator('section.morning.open').count() === 0 && await pg.locator('section.morning .mr-body').count() === 0 && await pg.locator('section.morning').getAttribute('data-new') === null);
   await pg.goto(APP + '#ai'); await pg.waitForTimeout(300);
+  // the saved item at the top of the AI tab, folded to one line; opened: what it is, the tip, the source
+  const sv = pg.locator('details.saved');
+  check(`the AI tab has it, folded (${(await sv.locator('summary').innerText().catch(() => 'none')).replace(/\s+/g, ' ')})`, /☆ Saved for later\s*1/.test(await sv.locator('summary').innerText().catch(() => '')) && await sv.getAttribute('open') === null);
+  await sv.locator('summary').click(); await pg.waitForTimeout(100);
+  check(`…opened: the item, its tip, its source (${(await sv.locator('.sv').innerText()).replace(/\s+/g, ' ').slice(0, 110)})`, /Protein through the day/.test(await sv.innerText()) && /Have the protein coffee before 10/.test(await sv.innerText()) && await sv.locator('.sv a').getAttribute('href') === 'https://example.org/s');
+  await sv.getByRole('button', { name: 'Tried it' }).click(); await pg.waitForTimeout(100);
+  check(`"Tried it" marks it (${(await sv.locator('summary').innerText()).replace(/\s+/g, ' ')})`, /1 tried/.test(await sv.locator('summary').innerText()) && await sv.locator('.sv[data-tried]').count() === 1);
+  await sv.screenshot({ path: OUT + 'saved-card.png' });
+  await sv.getByRole('button', { name: 'Not tried yet' }).click(); await pg.waitForTimeout(100);
   const chat = await pg.locator('.chat').innerText();
   check('the chat doesn\'t repeat the read — it\'s on Today (owner, 16 Oct)', !/☀️|a better start|Rough night|Sleep and focus/.test(chat));
   const news = pg.locator('.msg.assistant', { hasText: 'Creatine and sleep loss' });
@@ -126,6 +139,8 @@ const READ = { greeting: 'Morning! 7 h last night — a better start.', items: [
   // 21 Oct: "if i get them at yesterday morning, it should not be there/ or the same at next morning")
   await pg.clock.setSystemTime(new Date('2026-10-17T07:10:00').getTime()); await pg.goto(APP + '#today'); await pg.reload(); await pg.waitForSelector('text=Settings'); await pg.waitForTimeout(800);
   check(`next morning: no read and no question from yesterday (${await pg.locator('section.morning, .question').count()} on Today)`, await pg.locator('section.morning').count() === 0 && await pg.locator('.question').count() === 0);
+  await pg.goto(APP + '#ai'); await pg.waitForTimeout(300);
+  check('…but what you saved is still in the AI tab', /Saved for later\s*1/.test(await pg.locator('details.saved summary').innerText().catch(() => '')));
   console.log('errors:', JSON.stringify(errs));
   check('no page errors', errs.length === 0);
   await b.close();

@@ -2283,3 +2283,14 @@ is written, so the next morning still shows the night before last; the read-back
 Tested with: pure rules for what's shown when (a read from yesterday morning is gone this morning — fails on today's
 code), the prompts' contracts (kinds, a source on study questions, no repeat of the same text), e2e on the phone for
 both reads and the questions. Phases in that order; #152 RPE waits (owner).
+
+159. [x] **Saved for later** (picked by me on "choose one and do", 21 Oct — lib/ai/saved, components/Saved, ReadItems).
+   Why: you liked the reads' studies and things to try, and each read is replaced by the next (#155), so one you meant
+   to come back to was gone. Done (21 Oct): open any read item (morning or evening) → "☆ Save for later" (★ Saved,
+   tap again to unsave). Saved ones sit at the top of the AI tab, folded to one line ("☆ Saved for later · 3 · 1
+   tried"); open: each with its kind, text, tip, source, when saved, "Tried it" and Remove. One not tried after 2 days
+   becomes a follow-up candidate for the reads' questions (#156: "you saved this Sun 18 Oct: Glycine before bed").
+   Newest first, 30 kept. Synced with the rest of the AI state. Checked: saved.test (save/unsave by title, the cap,
+   follow-ups only untried and 2+ days old), e2e morningread (save from the read, the folded card, opened with tip and
+   source, Tried it, still there the next morning after the read is gone), the full e2e run. Also: plan.cjs read the
+   store a fixed 200 ms after a tap (writes land at 150 ms) and lost that race under the full run — now waits for it.

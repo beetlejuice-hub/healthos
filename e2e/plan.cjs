@@ -46,7 +46,9 @@ const STARTER = [
   await card.screenshot({ path: OUT + 'plan-card.png' });
 
   await card.getByRole('button', { name: 'Make this my split…' }).click();
-  await card.getByRole('button', { name: 'Replace my split' }).click(); await pg.waitForTimeout(200);
+  await card.getByRole('button', { name: 'Replace my split' }).click();
+  // the store writes 150 ms after a change: wait for the write, not a fixed 200 ms (lost that race under a full run's load)
+  await pg.waitForFunction(() => (JSON.parse(localStorage.getItem('healthos.v1:u-test') || '{}').templates || []).some((t) => t.name === 'Push + Quads'), null, { timeout: 5000 }).catch(() => {});
   let s = await st();
   check('two taps make it your split', JSON.stringify(s.templates.map((t) => t.name)) === '["Push + Quads","Pull + Hamstrings","Mixed"]');
   check('saved as split days with their cardio, no program notes', s.templates.every((t) => !('after' in t) && t.cardio && t.exercises.every((e) => !('or' in e))));

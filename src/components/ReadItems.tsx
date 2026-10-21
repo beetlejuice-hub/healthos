@@ -2,22 +2,23 @@
  * A read's items, the morning's and the evening's alike (PLAN 150, 157): a row per item — its kind, its title, and folded
  * a small chart of the number it's about; open, its two sentences, what to do ("Today" in the morning, "Tomorrow" at
  * night), the 14 days drawn from your own data, its source, and a protocol's "Try it". Keyed by the card's open state by
- * the caller, so folding the card closes the open item.
+ * the caller, so folding the card closes the open item. ☆ saves one for later (PLAN 159).
  */
 
 import { useMemo, useState } from "react";
-import { useStore } from "../lib/store";
+import { act, useStore } from "../lib/store";
 import { dailyFacts } from "../lib/insights";
 import { measureDays } from "../lib/ai/digestchart";
 import { startExperiment } from "../lib/ai/experiment";
+import { isSaved, toggleSaved } from "../lib/ai/saved";
 import type { DigestItem, DigestMeasure } from "../lib/ai/tasks";
 import { addDays, localDay } from "../lib/time";
 import { DigestChart, MiniChart } from "./DigestChart";
 
 const KIND: Record<DigestItem["type"], string> = { fact: "Fun fact", study: "New study", pattern: "Your data", protocol: "Try this", try: "New to try", noticed: "Noticed" };
 
-export function ReadItems({ items, open, onOpen, tip }: { items: DigestItem[]; open: boolean; onOpen: () => void; tip: "Today" | "Tomorrow" }) {
-  const experiments = useStore((s) => s.ai.experiments);
+export function ReadItems({ items, open, onOpen, tip, from, day }: { items: DigestItem[]; open: boolean; onOpen: () => void; tip: "Today" | "Tomorrow"; from: "morning" | "evening"; day: string }) {
+  const experiments = useStore((s) => s.ai.experiments), saved = useStore((s) => s.ai.saved);
   const entries = useStore((s) => s.entries), workouts = useStore((s) => s.workouts), settings = useStore((s) => s.settings), goals = useStore((s) => s.goals);
   const running = experiments.filter((x) => !x.ended).map((x) => x.name);
   const today = localDay(Date.now());
@@ -41,9 +42,14 @@ export function ReadItems({ items, open, onOpen, tip }: { items: DigestItem[]; o
             {i.tip && <p className="mr-tip"><small>{tip}</small>{i.tip}</p>}
             {i.measure && vals && <DigestChart k={i.measure} vals={vals} today={today} goal={goalOf(i.measure)} />}
             {i.source && <a href={i.source.url} target="_blank" rel="noreferrer">{i.source.title} ↗</a>}
-            {i.protocol && (running.includes(i.protocol.name)
-              ? <p className="note">Running — see Insights → Experiments.</p>
-              : <button type="button" className="pill-btn pri" onClick={() => startExperiment(i.protocol!)}>Try it for {i.protocol.days} days</button>)}
+            <div className="mr-acts">
+              {i.protocol && (running.includes(i.protocol.name)
+                ? <p className="note">Running — see Insights → Experiments.</p>
+                : <button type="button" className="pill-btn pri" onClick={() => startExperiment(i.protocol!)}>Try it for {i.protocol.days} days</button>)}
+              {/* PLAN 159: keep it past the next read — in the AI tab, and asked about in a couple of days if not tried */}
+              <button type="button" className="pill-btn mr-save" aria-pressed={isSaved(saved, i)} onClick={() => act.setAi((a) => ({ saved: toggleSaved(a.saved, i, from, day, Date.now()) }))}>
+                {isSaved(saved, i) ? "★ Saved" : "☆ Save for later"}</button>
+            </div>
           </div>}
         </li>
       );
