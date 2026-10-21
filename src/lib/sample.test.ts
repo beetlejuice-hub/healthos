@@ -56,6 +56,9 @@ describe("nothing is found where nothing was planted", () => {
   it("the planted pairs are not there", () => {
     for (const id of ["caf-energy", "caf-focus", "alc-energy", "alc-mood"]) expect(pair(control, id).clear).toBe(false);
   });
+  it("…nor anything that's only arithmetic: a beer's kcal make alcohol and calories go together that day", () => {
+    for (const w of [planted, control]) expect(w.scout.some((p) => p.lag === 0 && [p.a.id, p.b.id].includes("alcohol") && [p.a.id, p.b.id].includes("kcal"))).toBe(false);
+  });
   it("the pattern finder doesn't find the planted ones in the control", () => {
     expect(found(control, "protein", "energy", 1) || found(control, "lateCaf", "focus", 1) || found(control, "alcohol", "energy", 1)).toBe(false);
   });

@@ -2145,10 +2145,13 @@ he already finds useless or confusing — default: the five questions find them.
   does anything. `effects: false` is the control: the same days and draws, every effect off. Checked (sample.test):
   the engines find each planted effect — caffeine-sleep says "worse" with −1.6 inside its range (−2.3 to −0.5); the
   pattern finder finds protein → energy, late caffeine → focus, alcohol → energy — and in the control none of those.
-- [ ] **The pattern finder finds things in pure noise** (found by the control): "calories and alcohol go together"
-  same day in both — beer's own kcal are counted in calories, so it's built in, not found; and in the control
-  "Magnesium → next-day energy" (p 0.004): it runs ~400 comparisons at p < 0.005 each, so about two hits in pure noise
-  are expected. Fix next: count the comparisons (false-discovery rate), and leave drinks' own kcal out of a same-day
-  alcohol pairing. The forward check (watching → confirmed) already guards what's shown as settled.
+- [x] **The pattern finder in pure noise** (found by the control). (1) "Calories and alcohol go together, same day" —
+  in both: a beer's own kcal are counted in calories, so it's arithmetic, not a pattern. Fixed: same-day pairs of a
+  drink amount (caffeine, alcohol) with a total that counts drinks (calories, protein) aren't tested; the next day
+  still is. Checked: sample.test (fails without the fix), scout.test, e2e scout/noticed/glance/mind. (2) In the
+  control it also flags "Magnesium → next-day energy" (p 0.004): ~400 comparisons at p < 0.005 give about one chance
+  flag per 60 days. Left as it is, on purpose — his words in the scout: "even if it's not proven, highlight that this
+  and this move each other"; it's "worth a look", says how often it held, and the forward check fades flukes
+  (scout.test measures ~0.9 chance flags per person at 60 days, 0.3 at 90).
 
 

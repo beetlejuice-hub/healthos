@@ -37,18 +37,21 @@ export type Signal = {
   /** Only ever the cause: what you take is your choice, not something a gym day does to you (owner, 20 Oct, on "On the
    *  day after a gym day, L-theanine tends to be higher": "makes not much sense..?? more l theanine on gym days??"). */
   causeOnly?: boolean;
+  /** "drink": it's counted from drinks (caffeine, alcohol). "with-drinks": a day's total that counts drinks too (calories,
+   *  protein). Same day, the two are partly one number — a beer is 215 kcal — so that pair isn't a pattern (PLAN 151). */
+  drinks?: "drink" | "with-drinks";
 };
 
 export function signals(supplements: Supplement[]): Signal[] {
   const logged = (f: (d: DayFacts) => number) => (d: DayFacts) => (d.logged ? f(d) : null);
   const s: Signal[] = [
-    { id: "kcal", family: "food", name: "calories", plural: true, unit: "kcal", get: (d) => d.kcal, lane: "kcal" },
+    { id: "kcal", family: "food", name: "calories", plural: true, unit: "kcal", get: (d) => d.kcal, lane: "kcal", drinks: "with-drinks" },
     { id: "bigMeal", family: "food", name: "biggest meal", unit: "kcal", get: (d) => d.bigMealKcal, lane: "meals" },
-    { id: "protein", family: "food", name: "protein", unit: "g", get: (d) => d.proteinG, lane: "meals" },
+    { id: "protein", family: "food", name: "protein", unit: "g", get: (d) => d.proteinG, lane: "meals", drinks: "with-drinks" },
     { id: "lateEat", family: "food", name: "late eating", yes: "late-eating", get: (d) => (d.kcal == null ? null : d.lateEat ? 1 : 0), lane: "meals" },
-    { id: "caffeine", family: "caf", name: "caffeine", unit: "mg", get: logged((d) => d.caffeineMg), lane: "caf" },
-    { id: "lateCaf", family: "caf", name: "caffeine after 14:00", unit: "mg", get: logged((d) => d.lateCaffeineMg), lane: "caf" },
-    { id: "alcohol", family: "alc", name: "alcohol", unit: "g", get: logged((d) => d.alcoholG), lane: "alc" },
+    { id: "caffeine", family: "caf", name: "caffeine", unit: "mg", get: logged((d) => d.caffeineMg), lane: "caf", drinks: "drink" },
+    { id: "lateCaf", family: "caf", name: "caffeine after 14:00", unit: "mg", get: logged((d) => d.lateCaffeineMg), lane: "caf", drinks: "drink" },
+    { id: "alcohol", family: "alc", name: "alcohol", unit: "g", get: logged((d) => d.alcoholG), lane: "alc", drinks: "drink" },
     { id: "gym", family: "gym", name: "gym", yes: "a gym day", get: (d) => (d.trained ? 1 : 0), lane: "gym" },
     { id: "volume", family: "gym", name: "training volume", unit: "kg", get: (d) => d.volumeKg, lane: "gym" },
     { id: "energy", family: "feel", name: "energy", get: (d) => d.energy, lane: "energy" },
@@ -102,6 +105,8 @@ const fmt = (v: number, unit?: string) => (unit === "kcal" || unit === "mg" || u
 
 /** Evaluate one pair; null when there isn't enough data. */
 export function pair(a: Signal, b: Signal, lag: 0 | 1, facts: DayFacts[]): Pattern | null {
+  // a beer's own kcal make "alcohol and calories, same day" true by arithmetic; the next day is a real question
+  if (lag === 0 && a.drinks && b.drinks && a.drinks !== b.drinks) return null;
   // Same day, a yes/no thing leads the sentence: "On a gym day, calories…", not "Calories and gym…".
   if (lag === 0 && b.yes && !a.yes) return pair(b, a, 0, facts);
   // A supplement is never the outcome: same day it leads the sentence instead; the next day, or next to another
