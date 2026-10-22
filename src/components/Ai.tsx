@@ -139,7 +139,7 @@ async function writeNight(day: string, force: boolean) {
   const ai = getState().ai;
   if (!force && ai.night?.day === day) return null;
   const follow = ai.digest && ai.digest.day === day ? ai.digest.items.filter((i) => i.type === "try" || i.type === "protocol").map((i) => `this morning's read: ${i.title}${i.tip ? ` — "${i.tip}"` : ""}`) : [];
-  const r = await askRead({ task: "night", day, context: [nightContext(day), ...eveningBrief(day, ai.shown), ...askFor(day, "evening", follow)].join("\n") });
+  const r = await askRead({ task: "night", day, context: [nightContext(day), ...eveningBrief(ai.shown), ...askFor(day, "evening", follow)].join("\n") });
   if (!r.ok) return r;
   const at = Date.now(), qs = keepNew(r.answer.questions ?? [], `${day}:e`);
   act.setAi((a) => ({

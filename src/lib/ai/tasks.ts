@@ -139,7 +139,17 @@ export type QuestionsAnswer = { questions: Question[] };
 export const DIGEST_MEASURES = ["sleep", "protein", "kcal", "mood", "energy", "focus", "stress", "caffeine", "alcohol", "weight", "lifting", "skin", "breathing", "oxygen", "vo2"] as const;
 export type DigestMeasure = (typeof DIGEST_MEASURES)[number];
 export const isDigestMeasure = (k: unknown): k is DigestMeasure => (DIGEST_MEASURES as readonly unknown[]).includes(k);
-export type DigestItem = { type: "fact" | "study" | "pattern" | "protocol" | "try" | /** the evening's investigation (PLAN 157) */ "noticed"; title: string; text: string; /** `checked`: the server opened it and it matched (PLAN 160). */ source?: { title: string; url: string; checked?: boolean }; protocol?: { name: string; how: string; days: number; measure: string };
+/**
+ * How sure a claim is (owner, 22 Oct: "make ai more smarter and cautious"): the app's own test on their data, strong
+ * studies (meta-analyses, several good trials), some studies (one trial, small or observational), or anecdote (forums,
+ * personal reports, an expert's say-so).
+ */
+export const SURE = ["yours", "strong", "some", "anecdote"] as const;
+export type Sure = (typeof SURE)[number];
+export const isSure = (x: unknown): x is Sure => (SURE as readonly unknown[]).includes(x);
+export type DigestItem = { type: "fact" | "study" | "pattern" | "protocol" | "try" | /** the evening's investigation (PLAN 157) */ "noticed"
+  /** what they do → a number that moves → what it goes with (owner, 22 Oct: "making the ai come up w connections like this on its own") */ | "connection"; title: string; text: string;
+  sure?: Sure; /** A connection's links, each with how sure it is. */ chain?: { step: string; sure: Sure }[]; /** `checked`: the server opened it and it matched (PLAN 160). */ source?: { title: string; url: string; checked?: boolean }; protocol?: { name: string; how: string; days: number; measure: string };
   /** One thing to do today (owner, 21 Oct: "I like that its adding tips and advices"). */ tip?: string; measure?: DigestMeasure };
 /**
  * Something new enough to message about (owner, 16 Oct: "it should only send message when it has a new finding, a new
@@ -231,6 +241,9 @@ Things they noticed (owner, 20 Oct: "the app can … ask me about that, dive dee
 Check-up (owner, 20 Oct: "a checkup from time to time, like how you been, have u experienced X, also ask based on my health markers"): when "## Check-up due" is at the end of the context, the first question is the check-up — how they've been this week, or, when a marker there moved, whether they've noticed it (resting heart rate up: "felt run down or like you're fighting something off?"), with the marker's numbers in "why"; its key starts "checkup_".`;
 
 /** The reads' look-ups, in their prompts (PLAN 160). */
+/** How sure, and connections (owner, 22 Oct: "make ai more smarter and cautious … come up w connections like this on its own"). */
+const SURE_RULES = `HOW SURE (owner: "make ai more smarter and cautious"): every item carries "sure" — "yours" when it rests on the app's own test of their data (a look-up that came back clear), "strong" for meta-analyses or several good trials, "some" for one trial or small or observational studies, "anecdote" for forum posts, personal reports or someone's say-so without trials. Pick the lowest that fits; never word "some" or "anecdote" as settled. Nothing unsafe, ever: no prescription-only drugs, no megadoses, nothing that clashes with their stack, medications or conditions (About me) — check before you suggest.`;
+const CONNECTION_RULES = `A "connection" item (owner: "i noticed when im drinking, my heart rate variability drops to 20 ms … connected to psoriasis flare ups. wondering what else is connected … not just psoriasis but everything else, me feeling tired, not focused"): a chain of 2–4 links from something they do (drinks, late caffeine, a late or big meal, training, short sleep, a supplement) through a number that moves in their data (HRV, resting heart rate, sleep, the night check) to something they care about — a condition in About me, feeling tired, focus, mood, sleep, skin, training. "chain": each link one short step (under 90 characters) with its own "sure". Check the link in their data with a look-up first (compare, e.g. hrv next_day after drinks) and put its numbers in the step; a link not tested on them says so in its own words ("… — not tested on you"), keeping its "sure" for what the studies show. "text" says in plain words what the chain means for them; "source" for the studies link. Goes with, never causes; never a diagnosis — a health worry → "worth asking a doctor".`;
 const LOOK_RULES = `THE APP'S NUMBERS (owner, 21 Oct: make the AI smarter — numbers must be proven): you can ask the app for exact numbers with its tools: compare (a measure on days with a thing against days without, with the app's own test), series (a measure day by day), nights (the band's nights), day, find, sessions. Before a "pattern" or "noticed" item says two things go together, check it with compare (or series / nights) and put the app's numbers in its text ("sleep 6.1 after drinks vs 7.4 without — clear"). If the app's test says it isn't clear, say so plainly or pick another. At most 2 rounds of look-ups, several in a round when you need them; then answer.`;
 
 const NIGHT = `${VOICE}
@@ -246,14 +259,16 @@ Task: read the user's day back to them. Use "## The day being read back" and the
 - items (owner, 21 Oct: "we should have the same studt, try, and notiiced session at Eod, not just in the morning, its interesting and cool"): exactly 3, the morning read's look and rules, never repeating it or anything already shown ("## Already shown"):
   - one "study": search the web for a recent study (last 12 months when you can) on something in THIS day — a food they ate, their caffeine or alcohol, their session, a supplement they took, how they slept — with its source;
   - one "try": the kind "## Tonight" names, for tomorrow, searched, with its source; never in their stack or already shown;
-  - one "noticed": an investigation of something in the day — a "noticed about myself" line, or two things in the day that went together (a dip after a big lunch, a calm evening after training) — from the context, never invented; no source needed.
+  - one "noticed": an investigation of something in the day — a "noticed about myself" line, or two things in the day that went together (a dip after a big lunch, a calm evening after training) — from the context, never invented; no source needed. When the day holds one (drinks tonight, a late coffee, a hard session), it may be a "connection" instead (type "connection", with its "chain").
   Each: "title" (hooks, under 60 characters), "text" (at most 2 short sentences, under 200 characters), "tip" (one line for tomorrow, starting with a verb), "measure" (the one number it's about: ${DIGEST_MEASURES.join(", ")}; the app draws its 14 days), "source" for study and try.
+${SURE_RULES}
+${CONNECTION_RULES}
 ${LOOK_RULES}
 - questions: 1–2 about this day, the kinds "## Questions this time" names; for a study, its "source" (searched, https).
 ${ASK_RULES}
 Use "goes with", never "causes". No medical advice; anything health-worrying → "worth asking a doctor".
 Answer with ONLY a JSON object, no prose:
-{"summary":"","happened":[""],"notes":"","change":[{"what":"","why":""}],"remember":[],"workout":{"summary":"","better":[""],"next":""},"items":[{"type":"study|try|noticed","title":"","text":"","tip":"","measure":"","source":{"title":"","url":""}}],"questions":[{"kind":"${Q_KINDS.join("|")}","text":"","options":["",""],"why":"","key":"","source":{"title":"","url":""}}]}
+{"summary":"","happened":[""],"notes":"","change":[{"what":"","why":""}],"remember":[],"workout":{"summary":"","better":[""],"next":""},"items":[{"type":"study|try|noticed|connection","title":"","text":"","sure":"${SURE.join("|")}","chain":[{"step":"","sure":""}],"tip":"","measure":"","source":{"title":"","url":""}}],"questions":[{"kind":"${Q_KINDS.join("|")}","text":"","options":["",""],"why":"","key":"","source":{"title":"","url":""}}]}
 Leave "workout" out on a day without one.`;
 
 export const SYSTEM: Record<Task, string> = {
@@ -313,13 +328,15 @@ Task: write the user's morning read — it's written this morning, after last ni
 Items, exactly 3 (owner, 21 Oct: "it was just too long, too much info w no visual and just boring. I like that its adding tips and advices"):
 - one "pattern" from their own data through this morning's angle ("## This morning" at the end of the context names it; from the context, never invented);
 - one "try" (owner: "recommend me new stuff … studies, workout splits, and supps, foods, everything … or perhaps look at forums too"): search the web for the kind of thing "## This morning" names; something new to them — not in their stack, not already shown — with why it fits their goals and their data, and its source. A forum find is anecdotes: say so;
-- one study or fun fact with its source, or one protocol to try as an experiment (concrete: what to do, for how many days, what the app will measure);
+- the third: the kind "## This morning" names — a "connection" (see below), or a study or fun fact with its source, or one protocol to try as an experiment (concrete: what to do, for how many days, what the app will measure);
 - on a training day ("Today's plan"), one may be for that session.
 Titles hook: specific and curious ("Your 3 pm dip has a suspect", "Deep sleep came early — that's normal"), never a topic label ("Sleep tips"); under 60 characters.
 SHORT — it's read on a phone at wake-up. "text": at most 2 short sentences (under 200 characters), with the one number that matters. "tip": one line, what to do today, starting with a verb ("Have the protein coffee before 10"), under 100 characters. "measure": the one of their numbers the item is about — sleep (their sleep rating), protein, kcal, mood, energy, focus, stress, caffeine, alcohol, weight or lifting (kg lifted) — and the app draws its last 14 days beside the item, so don't recite what the chart shows; leave it out when none fits.
 Answer with ONLY a JSON object, no prose:
-{"greeting":"one short line","items":[{"type":"fact|study|pattern|protocol|try","title":"","text":"1–2 short sentences","tip":"one line for today","measure":"${DIGEST_MEASURES.join("|")}","source":{"title":"","url":""},"protocol":{"name":"","how":"","days":14,"measure":"energy|mood|focus|stress|sleep|weight"}}],"questions":[{"kind":"${Q_KINDS.join("|")}","text":"","options":["",""],"why":"","key":"","source":{"title":"","url":""}}],"news":null}
-"source" is required for facts, studies and tries. "protocol" only on protocol items. Don't repeat titles listed as already shown.
+{"greeting":"one short line","items":[{"type":"fact|study|pattern|protocol|try|connection","title":"","text":"1–2 short sentences","sure":"${SURE.join("|")}","chain":[{"step":"","sure":""}],"tip":"one line for today","measure":"${DIGEST_MEASURES.join("|")}","source":{"title":"","url":""},"protocol":{"name":"","how":"","days":14,"measure":"energy|mood|focus|stress|sleep|weight"}}],"questions":[{"kind":"${Q_KINDS.join("|")}","text":"","options":["",""],"why":"","key":"","source":{"title":"","url":""}}],"news":null}
+"source" is required for facts, studies and tries. "protocol" only on protocol items, "chain" only on a connection. Don't repeat titles listed as already shown.
+${SURE_RULES}
+${CONNECTION_RULES}
 ${LOOK_RULES}
 QUESTIONS: 1–2, one of each kind "## Questions this time" names; for a study, its "source" (searched, https).
 ${ASK_RULES}
@@ -413,10 +430,13 @@ export function checkItems(raw: unknown): DigestItem[] {
   return (Array.isArray(raw) ? (raw as DigestItem[]) : []).filter((i) => typeof i?.title === "string" && i.title.trim() && typeof i?.text === "string" && i.text.trim())
     // A fact or study without a real link isn't shown: no source, no claim.
     .filter((i) => !(i.type === "fact" || i.type === "study" || i.type === "try") || (i.source && /^https?:\/\//.test(i.source.url)))
+    // a connection is its chain: 2 links at least, each with how sure; one that leans on studies needs its source
+    .map((i) => (i.type === "connection" ? { ...i, chain: (Array.isArray(i.chain) ? i.chain : []).filter((c) => typeof c?.step === "string" && c.step.trim() && isSure(c.sure)).slice(0, 4).map((c) => ({ step: short(c.step, 110), sure: c.sure })) } : i))
+    .filter((i) => i.type !== "connection" || (i.chain!.length >= 2 && (!i.chain!.some((c) => c.sure === "strong" || c.sure === "some") || (i.source && /^https?:\/\//.test(i.source.url)))))
     .slice(0, 3)
     .map((i): DigestItem => {
-      const { tip, measure, ...rest } = i, t = typeof tip === "string" ? short(tip, 120) : "";
-      return { ...rest, title: short(i.title, 70), text: short(i.text, 240),
+      const { tip, measure, sure, chain, ...rest } = i, t = typeof tip === "string" ? short(tip, 120) : "";
+      return { ...rest, title: short(i.title, 70), text: short(i.text, 240), ...(isSure(sure) ? { sure } : {}), ...(i.type === "connection" ? { chain } : {}),
         ...(i.type === "protocol" && i.protocol ? { protocol: { ...i.protocol, days: Math.min(42, Math.max(7, Math.round(i.protocol.days || 14))) } } : {}),
         ...(t ? { tip: t } : {}), ...(isDigestMeasure(measure) ? { measure } : {}) };
     });
@@ -455,7 +475,7 @@ export function checkNight(a: NightAnswer): NightAnswer {
     change: (a.change ?? []).filter((c) => line(c?.what, 200)).slice(0, 2).map((c) => ({ what: line(c.what, 200), why: line(c.why, 240) })),
     remember: (a.remember ?? []).map((x) => line(x, 180)).filter((x) => x.length > 8).slice(0, 2),
     ...(a.workout && line(a.workout.summary, 600) ? { workout: { summary: line(a.workout.summary, 600), better: (a.workout.better ?? []).map((x) => line(x, 200)).filter(Boolean).slice(0, 3), next: line(a.workout.next, 300) } } : {}),
-    ...(() => { const items = checkItems(a.items).filter((i) => ["study", "try", "noticed"].includes(i.type)), questions = checkAsk(a.questions);
+    ...(() => { const items = checkItems(a.items).filter((i) => ["study", "try", "noticed", "connection"].includes(i.type)), questions = checkAsk(a.questions);
       return { ...(items.length ? { items } : {}), ...(questions.length ? { questions } : {}) }; })(),
   };
 }

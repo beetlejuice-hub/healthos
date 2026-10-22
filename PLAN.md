@@ -2447,8 +2447,7 @@ both reads and the questions. Phases in that order; #152 RPE waits (owner).
      your other 33 days"), every number with what it is (kcal, /10, mg, of days), names that wrap instead of "…", "too
      early" for "not yet", and the footer in words ("Clear: a gap this big is unlikely to be chance"). e2e mind.
 
-163. [ ] **The AI: finds connections on its own, careful, more ideas, mind and brain** (claimed 22 Oct — plan, waiting on
-   his answers). Owner, 22 Oct: "is it possible to make ai more smarter and cautious, like i noticed when im drinking, my
+163. [~] **The AI: finds connections on its own, careful, more ideas, mind and brain** (claimed 22 Oct; phase 1 built). Owner, 22 Oct: "is it possible to make ai more smarter and cautious, like i noticed when im drinking, my
    heart rate variability drops to 20 ms … and looked up that it also is connected to psoriasis flare ups. wondering what
    else is connected … making the ai come up w connections like this on its own would be cool, and not just psoriasis but
    everything else, me feeling tired, not focused, etc" · "i want to see more foods suggestions, supplements, protocols,
@@ -2465,5 +2464,18 @@ both reads and the questions. Phases in that order; #152 RPE waits (owner).
      Reddit labelled anecdote. X/Twitter mostly can't be read by the AI's search — Reddit, blogs and podcasts can.
    - **4 · Mind and brain** — new angles (brain health: sleep, training, omega-3, alcohol; mental-health practices) and
      the affirmations: his lines each morning with a receipt from his data ("Strong — squat up 12% in 6 weeks").
-   - Open (his calls): log psoriasis flares to test connections on him? how often community ideas? affirmations where,
-     his lines or drafted? Budget stays $20/month unless he says otherwise.
+   - **His answers (22 Oct):** flare logging "no" (connections to psoriasis quote studies and say they aren't tested on
+     him); community ideas "1 per day? too much credits?" — every evening, in the evening read's "try" slot, so no extra
+     call (≈ $0); affirmations "nah forget that" — dropped. Budget stays $20/month.
+   - [x] **Phase 1 built (22 Oct):** every read item carries how sure it is, in words on the item — "your data", "strong
+     studies", "some studies", "anecdote, not studied" (lib/ai/tasks SURE, SURE_RULES; nothing unsafe: no prescription-only
+     drugs, megadoses or clashes with his stack and conditions); a "connection" item — 2–4 links, each with how sure, its
+     link in his data checked with a look-up, drawn one under the other (ReadItems .mr-chain) — as the morning's third
+     item every other morning (brief THIRD), and the evening's "noticed" may be one; the evening's "try" is a community
+     idea every evening (brief COMMUNITY: Reddit, forums, blogs, podcasts; X when search reaches it); the morning's
+     tries lose the forum kind and gain a mental- or brain-health practice; two new angles, "Your brain" and "Mental
+     health" (10 angles now). Unchecked from the AI's side: a connection with fewer than 2 links, or leaning on studies
+     without a source, isn't shown. Tests: brief.test (labels, chains, turns, community every evening), e2e readsure
+     (labels and the chain on a phone at 390 and 320; fails 7 checks on the old code).
+   - Next: the connections kept as a list in the AI tab with each one's state (found in your data / studies only /
+     didn't hold) — after he's seen a few in the reads.

@@ -681,6 +681,18 @@ a { color: inherit; }
 .mr-protocol .mr-kind { color: var(--gym); background: color-mix(in srgb, var(--gym) 14%, transparent); }
 .mr-try .mr-kind { color: var(--ok); background: color-mix(in srgb, var(--ok) 14%, transparent); }
 .mr-noticed .mr-kind { color: var(--kcal); background: color-mix(in srgb, var(--kcal) 14%, transparent); } /* PLAN 157: the evening's investigation */
+.mr-connection .mr-kind { color: var(--hr); background: color-mix(in srgb, var(--hr) 14%, transparent); }
+/* how sure (22 Oct): a small label before the words; a connection's links, one under the other with an arrow between */
+.sure { display: inline-block; font-style: normal; font: 600 10px var(--f-sans); letter-spacing: .04em; text-transform: uppercase; padding: 2px 6px; border-radius: 6px; margin-right: 6px; vertical-align: 1px; white-space: nowrap; }
+.sure-yours { color: var(--mood); background: color-mix(in srgb, var(--mood) 15%, transparent); }
+.sure-strong { color: var(--ok); background: color-mix(in srgb, var(--ok) 15%, transparent); }
+.sure-some { color: var(--caf); background: color-mix(in srgb, var(--caf) 15%, transparent); }
+.sure-anecdote { color: var(--c-dim); background: #ffffff0f; }
+.mr-chain { list-style: none; margin: 0; padding: 0; display: grid; gap: 0; }
+.mr-chain li { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 4px 8px; padding: 6px 10px; border-radius: 10px; background: #ffffff08; font-size: 13.5px; color: var(--c-ink); }
+.mr-chain li + li { margin-top: 18px; position: relative; }
+.mr-chain li + li::before { content: "↓"; position: absolute; top: -17px; left: 14px; color: var(--c-dim); font-size: 13px; }
+.mr-chain .sure { margin: 0; }
 /* PLAN 159: save a read item for later; the list at the top of the AI tab */
 .mr-acts { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 2px; } .mr-body .mr-acts .pill-btn { margin: 0; }
 .mr-save[aria-pressed="true"] { color: var(--gym); }

@@ -7,7 +7,7 @@ import { SourceLink } from "./SourceLink";
 import { act, useStore } from "../lib/store";
 import { dayLabel } from "../lib/time";
 
-const KIND: Record<string, string> = { fact: "Fun fact", study: "Study", pattern: "Your data", protocol: "Try this", try: "To try", noticed: "Noticed" };
+const KIND: Record<string, string> = { fact: "Fun fact", study: "Study", pattern: "Your data", protocol: "Try this", try: "To try", noticed: "Noticed", connection: "Connection" };
 
 export function SavedCard() {
   const saved = useStore((s) => s.ai.saved) ?? [];

@@ -19,6 +19,9 @@ export const ANGLES = [
   "A small win — a streak, a record or a goal they're hitting, with the number (never invent one; skip to another angle if none)",
   "Today's session — one technique, warm-up or recovery point for the workout that's due today (\"Today's plan\")",
   "Their sleep timing — one thing about when they go to bed, wake or eat before bed, from the context",
+  // mind and brain (owner, 22 Oct: "focsuing more on mental health would be nice, and brain health")
+  "Your brain — one thing about brain health (sleep, training, omega-3, alcohol, stress) tied to a number of theirs: what it does for focus, memory or mood",
+  "Mental health — one practice with evidence (breathing, time outside, gratitude, reframing a worry, social time) tied to their mood or stress data, and how to do it today",
 ];
 
 /** What the "New to try" item brings, in turn — never something already in their stack or already shown. */
@@ -28,8 +31,18 @@ export const TRY = [
   "a supplement with good evidence for their goals that is NOT in their stack — what it does, the dose studied, how sure the evidence is",
   "a food or a swap that fits their goals and the foods they already eat",
   "a recipe that fits their goals: high protein, simple, with its numbers",
-  "what people say on a forum (Reddit's r/Fitness, r/Supplements, r/sleep…) about something they do — anecdotes, and say so",
+  "a mental- or brain-health practice with evidence that fits their days (focus, stress, mood, sleep) — how to do it and how sure the evidence is",
 ];
+
+/**
+ * The evening's "try", every evening (owner, 22 Oct: "can even sometimes go on reddit or twitter and see whats up, get some
+ * more interesting/not so medically proven protocols/ideas" — "1 per day"): a community idea, in the read that's already
+ * written, so no extra call. X/Twitter is mostly closed to search; Reddit, forums, blogs and podcasts aren't.
+ */
+export const COMMUNITY = "what people are trying, from Reddit (r/Biohackers, r/Nootropics, r/Supplements, r/sleep, r/Fitness…), forums, blogs or podcasts (X/Twitter too when search reaches it) — an interesting, less proven idea that fits something they do or want: what people say it did, what studies say if anything, \"sure\": \"anecdote\" unless trials back it; nothing unsafe";
+
+/** The morning's third item, in turn (owner, 22 Oct: connections "on its own"): a connection every other morning. */
+export const THIRD = ["a \"connection\" — a chain from something they did lately to something they care about (a condition in About me, tiredness, focus, mood, sleep), its link in their data checked with a look-up", "a study or fun fact with its source, or a protocol to try as an experiment"] as const;
 
 const dayNo = (day: string) => Math.round(Date.UTC(+day.slice(0, 4), +day.slice(5, 7) - 1, +day.slice(8, 10)) / 86_400_000);
 
@@ -55,18 +68,19 @@ export function morningBrief(day: string, templates: { name: string }[], workout
     "## This morning (the app's picks, so mornings differ)",
     `- Angle for the "pattern" item: ${angle}`,
     `- "try" item today: ${TRY[n % TRY.length]}`,
+    `- Third item today: ${THIRD[n % THIRD.length]}`,
     ...(due ? [`- Today's plan: ${due.name} is the workout that's due next`] : []),
   ];
 }
 
 /**
- * The evening read's picks (PLAN 157; owner, 21 Oct: "the same studt, try, and notiiced session at Eod"): its "try" kind,
- * a step on from the morning's so one day never brings two of a kind, and what's been shown already.
+ * The evening read's picks (PLAN 157; owner, 21 Oct: "the same studt, try, and notiiced session at Eod"): its "try" — a
+ * community idea every evening (22 Oct), never the morning's kinds — and what's been shown already.
  */
-export function eveningBrief(day: string, shown: string[]): string[] {
+export function eveningBrief(shown: string[]): string[] {
   return [
     "## Tonight (the app's picks)",
-    `- "try" item tonight: ${TRY[(dayNo(day) + 3) % TRY.length]}`,
+    `- "try" item tonight: ${COMMUNITY}`,
     ...(shown.length ? [`## Already shown — never repeat these titles: ${shown.slice(-40).join(" | ")}`] : []),
   ];
 }

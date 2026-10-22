@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { ANGLES, eveningBrief, morningBrief, TRY } from "./brief";
-import { checkDigest, SYSTEM } from "./tasks";
+import { checkDigest, checkNight, SYSTEM } from "./tasks";
 import { addDays } from "../time";
 
 // Owner, 20 Oct: "can we make the digest messages more intereesting?" (PLAN 133) and "ai should look out for studies, workout
@@ -25,8 +25,9 @@ describe("the morning's picks", () => {
     expect(morningBrief("2026-11-20", split, ws, at("2026-11-20")).join("\n")).not.toMatch(/Today's plan/);
   });
   it("the session angle only on a morning with a session due; otherwise the next angle", () => {
-    const day = Array.from({ length: 8 }, (_, k) => addDays("2026-10-01", k)).find((d) => /Today's session/.test(morningBrief(d, split, [{ template: "Push", startedAt: at(d) - 864e5, endedAt: at(d) }], at(d))[1]))!;
-    expect(morningBrief(day, split, [], at(day))[1]).toMatch(/Last night, decoded/);
+    const day = Array.from({ length: ANGLES.length }, (_, k) => addDays("2026-10-01", k)).find((d) => /Today's session/.test(morningBrief(d, split, [{ template: "Push", startedAt: at(d) - 864e5, endedAt: at(d) }], at(d))[1]))!;
+    // two on: not yesterday's angle or tomorrow's (since 22 Oct the brain one, after "Their sleep timing")
+    expect(morningBrief(day, split, [], at(day))[1]).toMatch(/Your brain — /);
   });
 });
 
@@ -66,16 +67,59 @@ describe("a \"New to try\" item", () => {
   });
 });
 
+// owner, 22 Oct: "make ai more smarter and cautious … come up w connections like this on its own" · community ideas "1 per
+// day" · "focsuing more on mental health would be nice, and brain health"
+describe("how sure, connections, a community idea a day, mind and brain", () => {
+  const con = (chain: unknown, source?: { title: string; url: string }) => ({ type: "connection" as const, title: "Drinks, HRV and your skin", text: "Your HRV halves after drinking nights.", sure: "yours" as const, chain: chain as never, ...(source ? { source } : {}) });
+  const steps = [{ step: "Drinking nights: HRV 22 vs 48 ms the next morning — clear", sure: "yours" }, { step: "Low-HRV mornings: energy 5.1 vs 6.6 — clear", sure: "yours" }, { step: "Alcohol and low HRV both go with psoriasis flares — not tested on you", sure: "some" }];
+  const src = { title: "Alcohol and psoriasis — a meta-analysis", url: "https://pubmed.ncbi.nlm.nih.gov/1/" };
+  it("every item keeps how sure it is; a made-up level is dropped, not shown", () => {
+    const [a, b] = checkDigest({ greeting: "Hi", items: [{ type: "pattern", title: "x", text: "y", sure: "yours" }, { type: "pattern", title: "z", text: "w", sure: "certain" as never }] }).items;
+    expect(a.sure).toBe("yours");
+    expect(b.sure).toBeUndefined();
+  });
+  it("a connection is its chain: links kept with how sure each is, at most 4; bad links dropped", () => {
+    const [c] = checkDigest({ greeting: "Hi", items: [con([...steps, { step: "", sure: "some" }, { step: "x", sure: "maybe" }], src)] }).items;
+    expect(c.chain).toEqual(steps);
+  });
+  it("…under 2 links it isn't one; one that leans on studies without a source isn't shown — no source, no claim", () => {
+    expect(checkDigest({ greeting: "Hi", items: [con(steps.slice(0, 1), src)] }).items).toHaveLength(0);
+    expect(checkDigest({ greeting: "Hi", items: [con(steps)] }).items).toHaveLength(0);
+    // all from their own data: no source needed
+    expect(checkDigest({ greeting: "Hi", items: [con(steps.slice(0, 2))] }).items).toHaveLength(1);
+  });
+  it("the evening read may make its \"noticed\" a connection", () => {
+    const n = checkNight({ summary: "A day.", happened: [], notes: "", change: [], remember: [], items: [con(steps, src)] });
+    expect(n.items?.map((i) => i.type)).toEqual(["connection"]);
+  });
+  it("a connection every other morning; the other mornings a study, fact or protocol", () => {
+    const third = (d: string) => morningBrief(d, [], [], 0).find((l) => l.startsWith("- Third item today:"))!;
+    const kinds = Array.from({ length: 6 }, (_, i) => third(addDays("2026-10-20", i)).includes('"connection"'));
+    expect(kinds.filter(Boolean)).toHaveLength(3);
+    expect(kinds.every((k, i) => i === 0 || k !== kinds[i - 1])).toBe(true);
+  });
+  it("a community idea every evening, labelled anecdote, nothing unsafe; the morning's tries don't repeat it", () => {
+    for (let i = 0; i < 7; i++) expect(eveningBrief([])[1]).toMatch(/^- "try" item tonight: what people are trying, from Reddit .*"sure": "anecdote".*nothing unsafe$/);
+    expect(TRY.some((t) => /forum|Reddit/i.test(t))).toBe(false);
+    expect(SYSTEM.digest).toMatch(/HOW SURE .*"yours" .*"strong" .*"some" .*"anecdote"/s);
+    expect(SYSTEM.night).toMatch(/Nothing unsafe, ever: no prescription-only drugs, no megadoses/);
+  });
+  it("mind and brain take their turns among the morning's angles and tries", () => {
+    expect(ANGLES.filter((a) => /^(Your brain|Mental health) — /.test(a))).toHaveLength(2);
+    expect(TRY.some((t) => /mental- or brain-health practice/.test(t))).toBe(true);
+  });
+});
+
 // PLAN 157 — owner, 21 Oct: "we should have the same studt, try, and notiiced session at Eod"
 describe("the evening's picks", () => {
   it("tonight's \"try\" is never the same kind as this morning's", () => {
     for (let i = 0; i < 12; i++) {
-      const d = addDays("2026-10-01", i), m = morningBrief(d, [], [], 0).find((l) => l.includes('"try" item today'))!, e = eveningBrief(d, [])[1];
+      const d = addDays("2026-10-01", i), m = morningBrief(d, [], [], 0).find((l) => l.includes('"try" item today'))!, e = eveningBrief([])[1];
       expect(e.slice(e.indexOf(":") + 2)).not.toBe(m.slice(m.indexOf(":") + 2));
     }
   });
   it("it's told what's been shown, so it never repeats a title", () => {
-    expect(eveningBrief("2026-10-21", ["Glycine and deep sleep"])).toContain("## Already shown — never repeat these titles: Glycine and deep sleep");
-    expect(eveningBrief("2026-10-21", []).some((l) => l.startsWith("## Already shown"))).toBe(false);
+    expect(eveningBrief(["Glycine and deep sleep"])).toContain("## Already shown — never repeat these titles: Glycine and deep sleep");
+    expect(eveningBrief([]).some((l) => l.startsWith("## Already shown"))).toBe(false);
   });
 });

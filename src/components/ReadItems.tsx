@@ -13,11 +13,13 @@ import { measureDays } from "../lib/ai/digestchart";
 import { useBand } from "../lib/band-client";
 import { startExperiment } from "../lib/ai/experiment";
 import { isSaved, toggleSaved } from "../lib/ai/saved";
-import type { DigestItem, DigestMeasure } from "../lib/ai/tasks";
+import type { DigestItem, DigestMeasure, Sure } from "../lib/ai/tasks";
 import { addDays, localDay } from "../lib/time";
 import { DigestChart, MiniChart } from "./DigestChart";
 
-const KIND: Record<DigestItem["type"], string> = { fact: "Fun fact", study: "New study", pattern: "Your data", protocol: "Try this", try: "New to try", noticed: "Noticed" };
+const KIND: Record<DigestItem["type"], string> = { fact: "Fun fact", study: "New study", pattern: "Your data", protocol: "Try this", try: "New to try", noticed: "Noticed", connection: "Connection" };
+/** How sure, in words (owner, 22 Oct: "make ai more smarter and cautious"). */
+const SURE_WORDS: Record<Sure, string> = { yours: "your data", strong: "strong studies", some: "some studies", anecdote: "anecdote, not studied" };
 
 export function ReadItems({ items, open, onOpen, tip, from, day }: { items: DigestItem[]; open: boolean; onOpen: () => void; tip: "Today" | "Tomorrow"; from: "morning" | "evening"; day: string }) {
   const experiments = useStore((s) => s.ai.experiments), saved = useStore((s) => s.ai.saved);
@@ -42,7 +44,9 @@ export function ReadItems({ items, open, onOpen, tip, from, day }: { items: Dige
             <span className="chev" aria-hidden="true">{on ? "▴" : "▾"}</span>
           </button>
           {on && <div className="mr-body">
-            <p>{i.text}</p>
+            {/* a connection's links, each with how sure it is; then what it means */}
+            {i.chain && <ol className="mr-chain">{i.chain.map((c, n) => <li key={n}><span>{c.step}</span><i className={`sure sure-${c.sure}`}>{SURE_WORDS[c.sure]}</i></li>)}</ol>}
+            <p>{i.sure && !i.chain && <i className={`sure sure-${i.sure}`}>{SURE_WORDS[i.sure]}</i>}{i.text}</p>
             {i.tip && <p className="mr-tip"><small>{tip}</small>{i.tip}</p>}
             {i.measure && vals && <DigestChart k={i.measure} vals={vals} today={today} goal={goalOf(i.measure)} />}
             {i.source && <SourceLink s={i.source} />}
