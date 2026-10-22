@@ -26,6 +26,7 @@ import { savedFollowups } from "../lib/ai/saved";
 import { SavedCard } from "./Saved";
 import { DeepDive } from "./DeepDive";
 import { Looked } from "./Looked";
+import { ReadPending } from "./ReadPending";
 import { DIVE, diveBrief, diveDue } from "../lib/ai/dive";
 import { RESULT_WORDS, verdictLines, verdictsDue } from "../lib/ai/experiment";
 import { judge } from "../lib/ai/apply";
@@ -37,25 +38,36 @@ import { ReviewCard } from "./Review";
 import { dueReviews, monthFacts, monthLines, weekFacts, weekLines, type Due } from "../lib/review";
 import { Md } from "./Md";
 import { ReadItems } from "./ReadItems";
-import { digestDue, morningShown, nightIn, nightShown } from "../lib/ai/morning";
+import { digestDue, freshRead, morningShown, nightIn, nightShown } from "../lib/ai/morning";
+import { attempt, onRetryDue, tryNow } from "../lib/ai/attempts";
 import { dayWindow, eveningOf, nightDue } from "../lib/ai/nightread";
 import { byDay, foldLine } from "../lib/ai/thread";
 
 const usd = (x: number) => (x < 0.1 ? `$${x.toFixed(3)}` : `$${x.toFixed(2)}`);
 const k = (n: number) => (n >= 1000 ? `${(n / 1000).toFixed(1)}k` : String(Math.round(n)));
 const clockOf = (t: number) => new Date(t).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
-const TASK_WORDS: Record<string, string> = { describe: "food", questions: "questions", chat: "chat", digest: "morning read", night: "night read", supplement: "supplement", review: "week / month read", dive: "deep dive" };
+const TASK_WORDS: Record<string, string> = { describe: "food", questions: "questions", chat: "chat", digest: "morning read", night: "night read", supplement: "supplement", review: "week / month read", dive: "deep dive", verdict: "experiment verdict" };
 
 /* ------------------------------------------------------------------ background: morning read + questions */
 
-/** Tried this session already (a failed call isn't retried in a loop). */
+/** Tried this session already (a supplement look-up: a failed one is tried again on a tap). */
 const tried = new Set<string>();
 
-async function makeDigest(day: string) {
-  const key = `digest:${day}`;
-  if (tried.has(key)) return;
-  tried.add(key);
+/** A failed background call, kept for Settings → AI (22 Oct: the morning read didn't come, and nothing said why). */
+const keepFail = (task: string) => (r: { error: string; message: string }) =>
+  act.setAi((a) => ({ failed: [...(a.failed ?? []), { at: Date.now(), task, error: r.error, message: r.message }].slice(-10) }));
+
+/**
+ * The morning read — one at a time with the other research calls, the first in line; a failed one is tried again
+ * (lib/ai/attempts). `now`: "Try again" (a tap — it goes now, the waits forgotten).
+ */
+export const makeDigest = (day: string, now = false) =>
+  now ? tryNow(`digest:${day}`, () => writeDigest(day), keepFail("digest")) : attempt(`digest:${day}`, () => writeDigest(day), { onFail: keepFail("digest") });
+
+async function writeDigest(day: string) {
   const ai = getState().ai;
+  // written already (another tick, or another device's synced read)
+  if (ai.digest?.day === day && freshRead(ai.digest)) return null;
   // this morning's angle and kind of new thing, in turn (PLAN 132–133)
   // …and the band's night check or VO2 max when they have something to say (PLAN 52)
   const st = getState(), brief = morningBrief(day, st.templates, st.workouts, Date.now(), bandForRead(st));
@@ -66,7 +78,7 @@ async function makeDigest(day: string) {
   ];
   // it may check its claims with the app's own numbers first (PLAN 160)
   const r = await askRead({ task: "digest", context: `${contextNow()}\n${brief.join("\n")}\n${askFor(day, "morning", follow).join("\n")}`, shown: ai.shown.slice(-40) });
-  if (!r.ok) return;
+  if (!r.ok) return r;
   const n = r.answer.news, at = Date.now();
   const qs = keepNew(r.answer.questions ?? [], `${day}:m`);
   act.setAi((a) => ({
@@ -76,6 +88,7 @@ async function makeDigest(day: string) {
     // something new is a message (owner, 16 Oct: "only send message when it has a new finding, a new sttudy"); the rest is on Today
     ...(n && !a.chat.some((m) => m.unprompted && m.text.startsWith(`📰 **${n.title}**`)) ? { chat: [...a.chat, { role: "assistant" as const, text: `📰 **${n.title}**\n\n${n.text}`, at, unprompted: true, source: n.source }].slice(-80) } : {}),
   }));
+  return r;
 }
 
 /**
@@ -83,49 +96,51 @@ async function makeDigest(day: string) {
  * your own numbers from the app's look-ups. `skip`: "pick another" — the topics to leave this time.
  */
 export async function makeDive(key: string, skip: string[] = []): Promise<string | null> {
-  const id = `dive:${key}:${skip.length}`;
-  if (tried.has(id)) return null;
-  tried.add(id); // once a session: a failed call isn't retried in a loop (it costs)
-  const ai = getState().ai;
-  const r = await askRead({ task: "dive", context: `${contextNow()}\n${diveBrief(ai.dives ?? [], skip).join("\n")}` });
-  if (!r.ok) return r.message;
-  const at = Date.now(), { looked, ...answer } = r.answer;
-  act.setAi((a) => ({
-    dive: { ...answer, key, at, ...(looked ? { looked } : {}), repicks: skip.length, ...(skip.length ? { skipped: skip } : {}) },
-    dives: [...(a.dives ?? []), { key, topic: answer.topic }].slice(-DIVE.keep),
-  }));
-  return null;
+  // "pick another" is a tap: it goes now, not behind the others
+  const r = await attempt(`dive:${key}:${skip.length}`, async () => {
+    const ai = getState().ai;
+    if (!skip.length && ai.dive?.key === key) return null;
+    const r = await askRead({ task: "dive", context: `${contextNow()}\n${diveBrief(ai.dives ?? [], skip).join("\n")}` });
+    if (!r.ok) return r;
+    const at = Date.now(), { looked, ...answer } = r.answer;
+    act.setAi((a) => ({
+      dive: { ...answer, key, at, ...(looked ? { looked } : {}), repicks: skip.length, ...(skip.length ? { skipped: skip } : {}) },
+      dives: [...(a.dives ?? []), { key, topic: answer.topic }].slice(-DIVE.keep),
+    }));
+    return r;
+  }, { queued: !skip.length, onFail: keepFail("dive") });
+  return r?.message ?? null;
 }
 
 /**
  * An experiment's verdict (PLAN 160; owner: "do … 4"): the app's result, the AI's words on it with what studies say, and
  * what to do next — on the experiment, and as a message in the AI tab so you see it.
  */
-async function makeVerdict(x: Experiment, v: Parameters<typeof verdictLines>[1]) {
-  const id = `verdict:${x.id}`;
-  if (tried.has(id)) return;
-  tried.add(id);
+const makeVerdict = (x: Experiment, v: Parameters<typeof verdictLines>[1]) => attempt(`verdict:${x.id}`, async () => {
+  if (getState().ai.experiments.find((y) => y.id === x.id)?.verdict) return null;
   const r = await askAi({ task: "verdict", context: `${chatContext()}\n${verdictLines(x, v).join("\n")}` });
-  if (!r.ok) return;
+  if (!r.ok) return r;
   const at = Date.now(), verdict = { at, state: v.state, ...r.answer };
   act.setAi((a) => ({
     experiments: a.experiments.map((y) => (y.id === x.id ? { ...y, verdict } : y)),
     chat: [...a.chat, { role: "assistant" as const, text: `🧪 **${x.name}** — ${RESULT_WORDS[v.state]}.\n\n${r.answer.text}${r.answer.next ? `\n\n**Next:** ${r.answer.next}` : ""}`, at, unprompted: true }].slice(-80),
   }));
-}
+  return r;
+}, { onFail: keepFail("verdict") });
 
 /** Anything logged in that day's evening-to-04:00 window (#107: a beer at 00:40 is that evening's). */
 const loggedOn = (day: string) => { const [from, to] = dayWindow(day); return getState().entries.some((e) => e.at >= from && e.at < to); };
 
-async function makeNight(day: string, force = false) {
-  const key = `night:${day}:${force ? Date.now() : ""}`;
-  if (tried.has(key)) return;
-  tried.add(key);
+/** `force`: "read it again" (a tap — it goes now). */
+const makeNight = (day: string, force = false) => attempt(`night:${day}:${force ? Date.now() : ""}`, () => writeNight(day, force), { queued: !force, onFail: keepFail("night") });
+
+async function writeNight(day: string, force: boolean) {
   // its three and its questions (PLAN 156–157): tonight's "try" kind, the question kinds, what this morning suggested
   const ai = getState().ai;
+  if (!force && ai.night?.day === day) return null;
   const follow = ai.digest && ai.digest.day === day ? ai.digest.items.filter((i) => i.type === "try" || i.type === "protocol").map((i) => `this morning's read: ${i.title}${i.tip ? ` — "${i.tip}"` : ""}`) : [];
   const r = await askRead({ task: "night", day, context: [nightContext(day), ...eveningBrief(day, ai.shown), ...askFor(day, "evening", follow)].join("\n") });
-  if (!r.ok) return;
+  if (!r.ok) return r;
   const at = Date.now(), qs = keepNew(r.answer.questions ?? [], `${day}:e`);
   act.setAi((a) => ({
     night: { ...r.answer, day, at },
@@ -134,20 +149,21 @@ async function makeNight(day: string, force = false) {
     // What it learned that lasts: into memory (shown in Settings → AI, deletable), no duplicates.
     memory: [...a.memory, ...r.answer.remember.filter((x) => !a.memory.some((m) => m.text.toLowerCase() === x.toLowerCase())).map((x) => ({ id: newId(), text: x, at }))].slice(-60),
   }));
+  return r;
 }
 
 /**
  * The week and month reads (PLAN 65): the app measures, the AI writes it up; both are kept so the card draws the app's
  * numbers. Lasting patterns go to memory like the night read's.
  */
-async function makeReview(d: Due) {
-  const key = `review:${d.kind}:${d.key}`;
-  if (tried.has(key)) return;
-  tried.add(key);
+const makeReview = (d: Due) => attempt(`review:${d.kind}:${d.key}`, () => writeReview(d), { onFail: keepFail("review") });
+
+async function writeReview(d: Due) {
   const s = getState();
+  if ((s.ai.reviews ?? []).some((x) => x.kind === d.kind && x.key === d.key)) return null;
   const f = d.kind === "week" ? weekFacts(s.entries, s.workouts, s.settings, s.goals, d.from, d.to) : monthFacts(s.entries, s.workouts, s.settings, s.goals, d.from, d.to);
   // a week or month with nothing in it gets no read (a new account, time away)
-  if (!f.rows.some((x) => x.value != null) && !f.training.sessions) return;
+  if (!f.rows.some((x) => x.value != null) && !f.training.sessions) return null;
   const lines = "cols" in f ? monthLines(f) : weekLines(f), cols = "cols" in f ? f.cols : undefined;
   // the overall check rides the month read (PLAN 137): the findings on show, with their evidence, by id
   const now = Date.now(), today = localDay(now);
@@ -156,13 +172,14 @@ async function makeReview(d: Due) {
   const list = checkList(found, pats), offered = new Map([...found.map((x): [string, string] => [`n:${x.id}`, x.title]), ...pats.map((p): [string, string] => [`s:${p.id}`, p.text])]);
   const check = list.length ? `\n## Findings on show — the overall check (name the ones that look like noise or plain sense, by [id])\n${list.join("\n")}` : "";
   const r = await askAi({ task: "review", kind: d.kind, from: d.from, to: d.to, context: `${contextNow()}\n${lines.join("\n")}${check}` });
-  if (!r.ok) return;
+  if (!r.ok) return r;
   const at = Date.now();
   act.setAi((a) => ({
     ...(d.kind === "month" ? { checks: mergeChecks(a.checks ?? [], r.answer.checks, offered, at) } : {}),
     reviews: [...(a.reviews ?? []).filter((x) => !(x.kind === d.kind && x.key === d.key)), { ...d, ...r.answer, at, rows: f.rows, ...(cols ? { cols } : {}) }].slice(-12),
     memory: [...a.memory, ...r.answer.remember.filter((x) => !a.memory.some((m) => m.text.toLowerCase() === x.toLowerCase())).map((x) => ({ id: newId(), text: x, at }))].slice(-60),
   }));
+  return r;
 }
 
 /**
@@ -189,16 +206,15 @@ const tracked = (prev: Tracked[], qs: Question[]): Question[] =>
   [...(prev as Question[]).filter((d) => !qs.some((q) => q.kind === "tracking" && q.key === d.key)), ...qs.filter((q) => q.kind === "tracking")].slice(-8);
 
 /** Questions when no read brought any today — a cheap call, after 13:00 (PLAN 156). */
-async function makeQuestions(day: string) {
-  const key = `questions:${day}`;
-  if (tried.has(key)) return;
-  tried.add(key);
+/** In line behind a read that may bring questions of its own: asked only if none came. */
+const makeQuestions = (day: string) => attempt(`questions:${day}`, async () => {
+  if (getState().ai.questions?.day === day) return null;
   const r = await askAi({ task: "questions", context: [contextNow(), ...askFor(day, "morning", [])].join("\n"), asked: getState().ai.asked.slice(-30) });
-  if (!r.ok) return;
+  if (!r.ok) return r;
   const list = keepNew(r.answer.questions, `${day}:q`), at = Date.now();
-  if (!list.length) return;
-  act.setAi((a) => ({ questions: { day, list, from: "fallback" as const, at }, asked: [...a.asked, ...list.map((q) => q.text)].slice(-60), daily: tracked(a.daily, list) }));
-}
+  if (list.length) act.setAi((a) => ({ questions: { day, list, from: "fallback" as const, at }, asked: [...a.asked, ...list.map((q) => q.text)].slice(-60), daily: tracked(a.daily, list) }));
+  return r;
+}, { onFail: keepFail("questions") });
 
 
 /**
@@ -237,10 +253,11 @@ export function useAiAuto(userId: string | undefined) {
     tick();
     const t = setInterval(tick, 10 * 60_000);
     // the band's nights arrive a few seconds after the app opens: look again then, not 10 minutes later
-    const off = onNights(tick), offSettled = onBandSettled(tick);
+    // …and when a failed call's wait is over (lib/ai/attempts)
+    const off = onNights(tick), offSettled = onBandSettled(tick), offRetry = onRetryDue(tick);
     const vis = () => document.visibilityState === "visible" && tick();
     document.addEventListener("visibilitychange", vis);
-    return () => { clearInterval(t); off(); offSettled(); document.removeEventListener("visibilitychange", vis); };
+    return () => { clearInterval(t); off(); offSettled(); offRetry(); document.removeEventListener("visibilitychange", vis); };
   }, [on]);
 }
 
@@ -271,7 +288,8 @@ export function MorningRead() {
   const [open, setOpenState] = useState(false);
   // only a read written that morning (16 Oct), and only until the evening read replaces it — never the next morning
   // (owner, 21 Oct: "if i get them at yesterday morning, it should not be there"; lib/ai/morning morningShown)
-  if (!d || !morningShown(d, night, Date.now())) return null;
+  // not on Today: where it is — being written, didn't come (why, Try again), or waiting for last night (22 Oct)
+  if (!d || !morningShown(d, night, Date.now())) return <ReadPending onRetry={(day) => void makeDigest(day, true)} />;
   const fresh = unseen(d);
   const setOpen = (v: boolean) => { setOpenState(v); if (v && fresh) act.setAi((a) => ({ digest: a.digest ? { ...a.digest, seen: Date.now() } : a.digest })); };
   return (
@@ -578,7 +596,7 @@ export function AiSettings() {
   const { on, usage, cap, budget } = useAiStatus();
   const [seeing, setSeeing] = useState(false);
   useEffect(() => { void refreshAiStatus(); }, []);
-  const recent = usage?.recent ?? [];
+  const recent = usage?.recent ?? [], failed = (ai.failed ?? []).filter((f) => f.at > Date.now() - 3 * 86_400_000);
   const est = estimateMonthUsd(ai.models, recent);
   const now = new Date(), dim = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
   const projected = usage ? (usage.monthUsd / now.getDate()) * dim : null;
@@ -598,8 +616,11 @@ export function AiSettings() {
       <label className="field">Chat (your questions about your data)<select value={ai.models.everyday} onChange={(e) => pick("everyday", e.target.value as ModelChoice)}>{option("everyday")}</select></label>
       <label className="field">Research (morning and nightly reads, supplement look-ups — with web search)<select value={ai.models.research} onChange={(e) => pick("research", e.target.value as ModelChoice)}>{option("research")}</select></label>
       <p className="note">Estimate for a month with these: ≈ {usd(est.total)} — {est.measured ? `from your last ${est.measured} call${est.measured > 1 ? "s" : ""}` : "a first guess until you've used it"}. Past {usd(budget)} in a month everything drops to {MODELS.haiku.label} until the 1st; hard stop at {cap} calls a day.</p>
-      {recent.length > 0 && <details className="ai-calls"><summary>Last calls — what each cost</summary>
-        <ul>{[...recent].reverse().slice(0, 12).map((c) => <li key={c.at}><span>{clockOf(c.at)} · {TASK_WORDS[c.task]} · {MODELS[c.model].label.replace("Claude ", "")}</span><span>{k(c.in + c.cached + c.written)} in{c.cached ? ` (${k(c.cached)} cached)` : ""} · {k(c.out)} out{c.searches ? ` · ${c.searches} search${c.searches > 1 ? "es" : ""}` : ""}</span><b>{usd(c.usd)}</b></li>)}</ul>
+      {(recent.length > 0 || failed.length > 0) && <details className="ai-calls"><summary>Last calls — what each cost{failed.length ? `, and ${failed.length} that failed` : ""}</summary>
+        {/* the ones that failed in among them, with why (22 Oct: the morning read didn't come, and nothing said why) */}
+        <ul>{[...recent.map((c) => ({ at: c.at, c, f: null })), ...failed.map((f) => ({ at: f.at, c: null, f }))].sort((x, y) => y.at - x.at).slice(0, 12).map(({ at, c, f }) => c
+          ? <li key={`c${at}`}><span>{clockOf(c.at)} · {TASK_WORDS[c.task]} · {MODELS[c.model].label.replace("Claude ", "")}</span><span>{k(c.in + c.cached + c.written)} in{c.cached ? ` (${k(c.cached)} cached)` : ""} · {k(c.out)} out{c.searches ? ` · ${c.searches} search${c.searches > 1 ? "es" : ""}` : ""}</span><b>{usd(c.usd)}</b></li>
+          : <li key={`f${at}`} className="ai-failed"><span>{clockOf(f!.at)} · {TASK_WORDS[f!.task] ?? f!.task} · failed</span><span>{f!.message}</span><b>–</b></li>)}</ul>
         <p className="note">"In" is mostly your data summary, sent with chats, questions and the reads — your words are a few tokens of it. "Out" includes the model's thinking.</p>
       </details>}
       {ai.chat.length > 0 && <>

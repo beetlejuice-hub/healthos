@@ -64,6 +64,8 @@ export type AiState = {
   sent?: string[];
   /** The day the grids were last read for new findings. */
   findingsDay?: string;
+  /** Background calls that failed, newest last (22 Oct: the morning read didn't come, and nothing said why) — in Settings → AI. */
+  failed?: { at: number; task: string; error: string; message: string }[];
 };
 export type Experiment = { id: string; name: string; how: string; days: number; measure: string; start: string; ended?: string;
   /** When it ended (PLAN 160): the AI's words on the app's result, what to do next, studies it leaned on. */

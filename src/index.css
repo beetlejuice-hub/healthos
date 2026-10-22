@@ -655,6 +655,11 @@ a { color: inherit; }
 .mr-dots { display: inline-flex; gap: 4px; margin-left: 4px; } .mr-dots i { width: 6px; height: 6px; border-radius: 50%; background: var(--c-ink-2); }
 .mr-dots i.mr-pattern { background: var(--mood); } .mr-dots i.mr-study { background: var(--supp); } .mr-dots i.mr-fact { background: var(--caf); } .mr-dots i.mr-protocol { background: var(--gym); } .mr-dots i.mr-try { background: var(--ok); }
 .morning .greet { font-size: 17px; }
+/* where today's read is while it isn't here (22 Oct): writing, didn't come, waiting for last night */
+.mr-pending { background: var(--c-card); gap: 2px; padding: 10px 16px; }
+.mr-pending p { margin: 0; font-size: 13.5px; line-height: 1.4; color: var(--c-ink-2); }
+.mr-pending .k { font: 600 11px var(--f-sans); letter-spacing: .1em; text-transform: uppercase; margin-right: 6px; }
+.mr-pending[data-state="failed"] .k { color: var(--warn); }
 .mr-more { justify-self: start; text-align: left; font-size: 13px; color: var(--c-ink-2); text-decoration: none; }
 .mr-list { list-style: none; margin: 2px 0 0; padding: 0; display: grid; }
 .mr { border-top: 1px solid #ffffff10; }
@@ -1579,6 +1584,7 @@ a { color: inherit; }
 .ai-calls li { display: grid; grid-template-columns: minmax(0, 1fr) auto; column-gap: 10px; font-size: 12.5px; color: var(--c-ink-2); }
 .ai-calls li span:first-child { color: var(--c-ink); } .ai-calls li span:nth-child(2) { grid-column: 1; font: 400 11.5px var(--f-mono); color: var(--c-dim); }
 .ai-calls li b { grid-row: 1 / span 2; grid-column: 2; align-self: center; font: 500 13px var(--f-mono); color: var(--c-ink); }
+.ai-calls li.ai-failed span:first-child { color: var(--warn); } .ai-calls li.ai-failed span:nth-child(2) { font-family: var(--f-sans); }
 /* the night's one thing on each small night (15 Oct) — quiet, cut short to fit */
 .sl-mini .what { display: block; min-height: 14px; font-size: 10.5px; line-height: 14px; color: var(--i-ink-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 /* the heat view (PLAN 105; owner, 15 Oct: "b is clearly winner"): a value shaded by how far from your usual — none inside

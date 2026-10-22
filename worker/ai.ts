@@ -53,8 +53,14 @@ async function writeUsage(user: { id: string; token: string }, env: AiEnv, deps:
   });
 }
 
-/** A read's look-up rounds (PLAN 160): at most READ_ROUNDS of them, not huge. */
-const badTurn = (t: unknown) => t != null && (!Array.isArray(t) || t.length > (READ_ROUNDS + 1) * 3 || JSON.stringify(t).length > 400_000);
+/**
+ * A read's or a chat message's tool rounds sent back (PLAN 160): at most `rounds` of them, each up to 3 paused web-search
+ * turns, its answer and the app's results. The web search results ride in them whole (each page's encrypted text, often
+ * tens of kB a page), so a read that searched and then looked something up could pass the 400 kB this was until 22 Oct —
+ * refused before anything was spent, and the read never came. The deep dive searches up to 10 times.
+ */
+export const TURN_MAX_BYTES = 12_000_000;
+const badTurn = (t: unknown, rounds: number) => t != null && (!Array.isArray(t) || t.length > rounds * 5 || JSON.stringify(t).length > TURN_MAX_BYTES);
 
 /** Refuse oversized or malformed requests before anything is spent. */
 function validate(b: AiRequest): string | null {
@@ -63,12 +69,12 @@ function validate(b: AiRequest): string | null {
     case "describe": return !b.text && !b.image ? "say or show what it is" : long(b.text, 2000) ? "text too long" : b.image && (long(b.image.data, 2_000_000) || !/^image\/(jpeg|png|webp)$/.test(b.image.mediaType)) ? "image too big or wrong type" : null;
     case "supplement": return !b.name || long(b.name, 100) || long(b.context, 48000) ? "bad supplement request" : null;
     case "chat": return !Array.isArray(b.messages) || !b.messages.length || b.messages.length > 40 || b.messages.some((m) => long(m.text, 4000)) || long(b.context, 48000)
-      || (b.turn != null && (!Array.isArray(b.turn) || b.turn.length > CHAT_ROUNDS * 3 || JSON.stringify(b.turn).length > 400_000)) ? "bad chat request" : null;
+      || badTurn(b.turn, CHAT_ROUNDS) ? "bad chat request" : null;
     case "questions": return long(b.context, 48000) ? "context too long" : null;
-    case "digest": return long(b.context, 48000) ? "context too long" : badTurn(b.turn) ? "bad look-ups" : null;
-    case "night": return !/^\d{4}-\d{2}-\d{2}$/.test(String(b.day)) ? "bad day" : long(b.context, 52000) ? "context too long" : badTurn(b.turn) ? "bad look-ups" : null;
+    case "digest": return long(b.context, 48000) ? "context too long" : badTurn(b.turn, READ_ROUNDS) ? "bad look-ups" : null;
+    case "night": return !/^\d{4}-\d{2}-\d{2}$/.test(String(b.day)) ? "bad day" : long(b.context, 52000) ? "context too long" : badTurn(b.turn, READ_ROUNDS) ? "bad look-ups" : null;
     case "review": return !["week", "month"].includes(b.kind) || ![b.from, b.to].every((d) => /^\d{4}-\d{2}-\d{2}$/.test(String(d))) ? "bad review" : long(b.context, 60000) ? "context too long" : null;
-    case "dive": return long(b.context, 60000) ? "context too long" : badTurn(b.turn) ? "bad look-ups" : null;
+    case "dive": return long(b.context, 60000) ? "context too long" : badTurn(b.turn, READ_ROUNDS) ? "bad look-ups" : null;
     case "verdict": return long(b.context, 40000) ? "context too long" : null;
     default: return "unknown task";
   }

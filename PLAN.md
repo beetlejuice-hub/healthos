@@ -2406,3 +2406,21 @@ both reads and the questions. Phases in that order; #152 RPE waits (owner).
        Insights → Training scrolled to the experiments. ExperimentStrip.tsx, lib/ai/experiment experimentStrip; e2e xpstrip.
    - Known: the heavy e2e suites (sleep, heartpage, heart, cafsleep) time out now and then under the full run's load
      (4 at a time here) and pass alone — a different one each run, 21 Oct; CI has been green on every push.
+
+## 22 Oct — the morning read didn't come (his words: "i did not get the morning digest today and i miss it")
+
+161. [x] **A read never fails silently** — not reproducible from here (his account is read-only, Sentry's connector is
+   down), so every way it can fail is covered rather than one guessed:
+   - Found: opening the app at 08:30 sent up to four research calls at once (morning read, week read, first deep dive,
+     last night's read-back — a run on the sample proved it); any that failed returned quietly and wasn't tried again
+     until the app was closed; and the server refused a read's look-up round over 400 kB before spending anything, while
+     the web search results it carries back (each page's encrypted text) can pass that — yesterday's look-ups made this
+     morning the first one that could hit it.
+   - Now (lib/ai/attempts.ts): the research calls go one at a time, the morning read first; a failed one tries again after
+     2, 10 then 30 minutes (not for the day's cap or a missing key); Today says where the read is — "writing it now…",
+     "didn't come through. {why} Trying again at 08:42." with Try again, or before 11:00 "comes once last night is in —
+     rate your sleep to have it now" (ReadPending.tsx); every failure is listed in Settings → AI → Last calls with its
+     time and why. The server's allowance for look-up rounds is 12 MB (worker/ai.ts TURN_MAX_BYTES), the chat's too.
+   - Tests: lib/ai/attempts.test.ts; worker "a read that searched the web before it looked something up goes on" (400
+     without the change); e2e readretry — busy, then failed, then Try again; one call at a time, the morning read first;
+     both failures in Settings. Against the old code it fails 8 checks (4 calls at once, no note, no retry).

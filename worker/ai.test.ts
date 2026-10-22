@@ -231,6 +231,29 @@ describe("/api/ai", () => {
     expect(((await res3.json()) as { error: string }).error).toBe("bad-answer");
   });
 
+  it("a read that searched the web before it looked something up goes on: its turn carries the pages, well past 400 kB (22 Oct)", async () => {
+    // four searches of 8 pages, each page's text encrypted (~20 kB) — as the API sends them back
+    const page = (i: number) => ({ type: "web_search_result", url: `https://pubmed.ncbi.nlm.nih.gov/${i}/`, title: `Study ${i}`, encrypted_content: "E".repeat(20_000), page_age: null });
+    const searched = [0, 1, 2, 3].flatMap((s) => [{ type: "server_tool_use", id: `srv_${s}`, name: "web_search", input: { query: `q${s}` } }, { type: "web_search_tool_result", tool_use_id: `srv_${s}`, content: Array.from({ length: 8 }, (_, i) => page(s * 8 + i)) }]);
+    const turn = [{ role: "assistant", content: [...searched, { type: "tool_use", id: "tu_1", name: "compare", input: {} }] }, { role: "user", content: [{ type: "tool_result", tool_use_id: "tu_1", content: "with: 5.1; without: 7.9 — clear." }] }];
+    expect(JSON.stringify(turn).length).toBeGreaterThan(600_000);
+    const digest = { greeting: "Morning", items: [{ type: "fact", title: "A fact", text: "Words." }] };
+    for (const task of ["digest", "night", "dive"] as const) {
+      const w = world([{ text: JSON.stringify(task === "night" ? { summary: "s", happened: [], notes: "", change: [], remember: [] } : task === "dive" ? { topic: "t", verdict: "v", found: [] } : digest) }]);
+      const res = await handleAi(post({ task, day: "2026-10-01", context: "c", shown: [], turn, final: true }), env, w.deps);
+      expect([task, res.status]).toEqual([task, 200]);
+      expect(w.sent).toHaveLength(1);
+    }
+    // …and a chat message's rounds the same
+    const w = world([{ text: JSON.stringify({ reply: "hi", remember: [] }) }]);
+    expect((await handleAi(post({ task: "chat", messages: [{ role: "user", text: "hi" }], context: "c", turn, final: true }), env, w.deps)).status).toBe(200);
+    // still not without end: refused before anything is spent
+    const huge = [{ role: "assistant", content: [{ type: "text", text: "x".repeat(12_100_000) }] }];
+    const w2 = world([]);
+    expect((await handleAi(post({ task: "digest", context: "c", shown: [], turn: huge }), env, w2.deps)).status).toBe(400);
+    expect(w2.sent).toHaveLength(0);
+  });
+
   it("the weekly deep dive: up to 10 searches and the reads' look-ups; its studies' links checked (PLAN 160)", async () => {
     const good = "https://pubmed.ncbi.nlm.nih.gov/34883514/", gone = "https://journal.example.com/missing";
     const dive = { topic: "Is magnesium doing anything for your sleep?", why: "40 nights on it.", yourData: "6.4 with vs 6.6 without — not clear.", verdict: "Your data can't tell yet.", sure: "weak",
