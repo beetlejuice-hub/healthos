@@ -2479,3 +2479,22 @@ both reads and the questions. Phases in that order; #152 RPE waits (owner).
      (labels and the chain on a phone at 390 and 320; fails 7 checks on the old code).
    - Next: the connections kept as a list in the AI tab with each one's state (found in your data / studies only /
      didn't hold) — after he's seen a few in the reads.
+
+164. [x] **Talk back to the reads, and tell the AI anything** (owner, 22 Oct: "small chat w ai button next to findings,
+   studies, etc at morning and night digest messages so i can ask or say things like, for me its the opposite, or that
+   can u recommend supps or food for this specific issue" · "make sure the notes part on today where i can input notes is
+   just face value, so i can input whatever, a finding, a new supp that makes me feel good, ai can understand everything
+   and make changes/ sort things/ start ivestigating based on what i say").
+   - Every read item, open, has a line to type in and two starters — "For me it's the opposite", "What food or supplement
+     helps with this?" (AskAbout.tsx). It goes to the chat as "Re “title”: …" with the item attached (lib/ai/chat
+     aboutItem): told to check his data when he disagrees and remember it if it holds, so the reads stop saying it; to
+     search and say how sure for foods and supplements. The reply shows under the item; both are in the AI tab's chat.
+   - Today's "Noticed something? — tell the AI anything": kept as a note as before, and read by the AI at once
+     (ABOUT_NOTICE): a supplement or food that helps → an "add to stack" or "log it" card; a protocol → an experiment
+     card; a lasting fact → remembered; something to look into → checked now with a look-up. Its reply under the box.
+   - Default taken: changes wait for his tap (Apply), like every AI change since #98; remembering and looking things up
+     don't. Each message costs about a chat message.
+   - The AI tab's send moved to lib/ai/chat askChat, shared by all three. Found on the way: an answer with no reply text
+     crashed the page — now it says "Got it." (the old notice test's fake caught it).
+   - Tests: e2e askabout (an item's "opposite" → remembered, reply in place; the Noticed line → note kept, magnesium
+     card, nothing changes before Apply, Apply adds it; both in the chat thread — fails on the old code); notice updated.

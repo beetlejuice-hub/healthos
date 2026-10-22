@@ -12,7 +12,8 @@ const calls = [];
   await ctx.route('https://ubfvaewfdbmecowoeuni.supabase.co/**', handle);
   await ctx.route('**/api/ai/usage**', (r) => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ usage: null, cap: 50, on: true }) }));
   await ctx.route('**/api/ai?**', (r) => { const body = r.request().postDataJSON(); calls.push(body);
-    const answer = body.task === 'questions' ? { questions: [] } : body.task === 'night' ? { summary: 'A day.', happened: [], notes: '', change: [], remember: [] } : { greeting: 'Hi', items: [] };
+    // since 22 Oct the box's line goes to the chat too (PLAN 164)
+    const answer = body.task === 'questions' ? { questions: [] } : body.task === 'night' ? { summary: 'A day.', happened: [], notes: '', change: [], remember: [] } : body.task === 'chat' ? { reply: 'Noted — I\'ll look at what the day held around it.', remember: [] } : { greeting: 'Hi', items: [] };
     r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ answer, usage: null, costUsd: 0.01, model: 'opus' }) }); });
   const pg = await ctx.newPage();
   await pg.clock.install({ time: new Date('2026-10-20T15:20:00') });

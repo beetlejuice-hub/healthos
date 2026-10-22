@@ -8,7 +8,7 @@ import { SourceLink } from "./SourceLink";
 import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import { act, getState, newId, useStore, type Experiment } from "../lib/store";
 import { askAi, askRead, bandForRead, chatContext, contextNow, nightContext, refreshAiStatus, useAiStatus } from "../lib/ai/client";
-import { runChatTool, type ChartSpec } from "../lib/ai/chattools";
+import { askChat } from "../lib/ai/chat";
 import { bandNow, bandSettled, onBandSettled, onNights } from "../lib/band-client";
 import { ChatChart } from "./ChatChart";
 import { GoalsAsk } from "./GoalsAsk";
@@ -19,8 +19,7 @@ import { notice } from "../lib/findings";
 import { scout } from "../lib/scout";
 import { currentKg } from "../lib/body";
 import { Proposals } from "./Proposal";
-import type { Proposal } from "../lib/ai/propose";
-import { CHAT_ROUNDS, MODELS, estimateMonthUsd, type ChatTurn, type ModelChoice, type Question, type Tier } from "../lib/ai/tasks";
+import { MODELS, estimateMonthUsd, type ModelChoice, type Question, type Tier } from "../lib/ai/tasks";
 import { askLines, KIND_LABEL, questionKinds, tracking, type Tracked } from "../lib/ai/asking";
 import { savedFollowups } from "../lib/ai/saved";
 import { SavedCard } from "./Saved";
@@ -425,40 +424,8 @@ export function AiScreen() {
     const msg = t.trim();
     if (!msg) return;
     setText(""); setErr(null);
-    act.setAi((a) => ({ chat: [...a.chat, { role: "user" as const, text: msg, at: Date.now() }].slice(-80) }));
-    // The API wants the conversation to start with you: earlier AI-first messages ride along as context.
-    const hist = getState().ai.chat.slice(-20);
-    const first = hist.findIndex((m) => m.role === "user");
-    const messages = hist.slice(first).map((m) => ({ role: m.role, text: m.text }));
-    // built once: every tool round of this message sends it byte for byte (it's cached, and the AI's thinking is tied to it)
-    const context = `${chatContext()}${first > 0 ? `\n\n## Your earlier messages to me\n${hist.slice(0, first).map((m) => m.text).join("\n")}` : ""}`;
-    // The AI may ask the app for exact data (PLAN 67): run its calls here, send the results back, until it answers.
-    let turn: ChatTurn[] = [];
-    const charts: ChartSpec[] = [], looked: string[] = [], learned: string[] = [], proposals: Proposal[] = [];
-    for (let round = 0; ; round++) {
-      const r = await askAi({ task: "chat", messages, context, ...(turn.length ? { turn } : {}), ...(round >= CHAT_ROUNDS ? { final: true } : {}) });
-      if (!r.ok) { setErr(r.message); return; }
-      if (!r.answer.calls?.length || round >= CHAT_ROUNDS) {
-        const at = Date.now();
-        act.setAi((a) => ({
-          chat: [...a.chat, { role: "assistant" as const, text: r.answer.reply, at, ...(charts.length ? { charts: charts.slice(0, 2) } : {}), ...(looked.length ? { looked } : {}), ...(proposals.length ? { proposals } : {}) }].slice(-80),
-          memory: [...a.memory, ...learned.filter((x) => !a.memory.some((m) => m.text.toLowerCase() === x.toLowerCase())).map((x) => ({ id: newId(), text: x, at }))].slice(-40),
-        }));
-        return;
-      }
-      const data = { state: getState(), band: bandNow(), now: Date.now() };
-      const results = r.answer.calls.map((c) => {
-        const out = runChatTool(c, data);
-        if (out.chart) charts.push(out.chart);
-        // the same change twice in one reply is one card
-        if (out.proposal) { if (proposals.some((p) => p.label === out.proposal!.label)) return { type: "tool_result", tool_use_id: c.id, content: "Already proposed in this reply." }; proposals.push(out.proposal); }
-        if (out.remember) learned.push(out.remember);
-        looked.push(c.name);
-        return { type: "tool_result", tool_use_id: c.id, content: out.text, ...(out.error ? { is_error: true } : {}) };
-      });
-      // every result in one message, after the AI's turns exactly as they came
-      turn = [...turn, ...(r.answer.turn ?? []), { role: "user", content: results }];
-    }
+    const r = await askChat(msg);
+    if (!r.ok) setErr(r.message);
   };
 
   const byApp = (y: (typeof thread)[number]) => "n" in y || "r" in y || !!y.m?.unprompted;

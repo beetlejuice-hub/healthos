@@ -693,6 +693,13 @@ a { color: inherit; }
 .mr-chain li + li { margin-top: 18px; position: relative; }
 .mr-chain li + li::before { content: "↓"; position: absolute; top: -17px; left: 14px; color: var(--c-dim); font-size: 13px; }
 .mr-chain .sure { margin: 0; }
+/* talking back (PLAN 164): a read's item and the Noticed box — a line in, the reply under it */
+.ask-about { display: grid; gap: 6px; margin-top: 2px; }
+.ask-about .chips .pill-btn { font-size: 12.5px; padding: 6px 10px; }
+.ask-about .row-add input { font-size: 14px; }
+.ask-reply { display: grid; gap: 6px; padding: 8px 10px; border-radius: 12px; background: #ffffff08; font-size: 14px; line-height: 1.45; color: var(--c-ink); margin: 0; }
+.ask-reply p { margin: 0; }
+.ask-reply.typing { color: var(--c-dim); }
 /* PLAN 159: save a read item for later; the list at the top of the AI tab */
 .mr-acts { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 2px; } .mr-body .mr-acts .pill-btn { margin: 0; }
 .mr-save[aria-pressed="true"] { color: var(--gym); }

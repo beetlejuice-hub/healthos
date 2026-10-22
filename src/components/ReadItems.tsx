@@ -16,6 +16,8 @@ import { isSaved, toggleSaved } from "../lib/ai/saved";
 import type { DigestItem, DigestMeasure, Sure } from "../lib/ai/tasks";
 import { addDays, localDay } from "../lib/time";
 import { DigestChart, MiniChart } from "./DigestChart";
+import { AskAbout } from "./AskAbout";
+import { aboutItem } from "../lib/ai/chat";
 
 const KIND: Record<DigestItem["type"], string> = { fact: "Fun fact", study: "New study", pattern: "Your data", protocol: "Try this", try: "New to try", noticed: "Noticed", connection: "Connection" };
 /** How sure, in words (owner, 22 Oct: "make ai more smarter and cautious"). */
@@ -50,6 +52,9 @@ export function ReadItems({ items, open, onOpen, tip, from, day }: { items: Dige
             {i.tip && <p className="mr-tip"><small>{tip}</small>{i.tip}</p>}
             {i.measure && vals && <DigestChart k={i.measure} vals={vals} today={today} goal={goalOf(i.measure)} />}
             {i.source && <SourceLink s={i.source} />}
+            {/* talk back to it (PLAN 164): "for me it's the opposite", or what food or supplement helps */}
+            <AskAbout key={`${day}:${i.title}`} about={aboutItem(i, from, day)} label={`Re “${i.title}”`} placeholder="Ask or tell the AI about this…"
+              starters={["For me it's the opposite", "What food or supplement helps with this?"]} />
             <div className="mr-acts">
               {i.protocol && (running.includes(i.protocol.name)
                 ? <p className="note">Running — see Insights → Experiments.</p>
