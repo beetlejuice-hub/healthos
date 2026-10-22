@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { bedtimeOn, bedtimeVerdict, CAF_SLEEP, personalSleep, ratedNights, tierOf, tonightsBed, type Night, type Personal } from "./caffeine-sleep";
+import { bedtimeOn, bedtimeVerdict, CAF_SLEEP, chartMax, personalSleep, ratedNights, tierOf, tonightsBed, type Night, type Personal } from "./caffeine-sleep";
 import { rng } from "./bench";
 import { addDays, atMinute } from "./time";
 import type { Entry } from "./types";
@@ -90,5 +90,14 @@ describe("does it seem to affect your sleep (your own nights)", () => {
   it("stays quiet about you until there are enough nights of each kind", () => {
     const p = personalSleep(world(7, 3, 30).slice(0, 8));
     expect(p.state).toBe("learning");
+  });
+});
+
+describe("Today's caffeine chart: its top fits the day (21 Oct review: fixed at 200 mg, a 12 mg morning lay on the floor)", () => {
+  it("the day's peak with a little room, on a round step", () => {
+    expect([0, 12, 36, 39, 80, 95, 190, 250, 380, 900].map(chartMax)).toEqual([40, 40, 40, 60, 100, 100, 200, 300, 400, 1000]);
+  });
+  it("never under 40: the 30 mg line, where an effect on sleep becomes possible, always shows", () => {
+    expect(chartMax(0)).toBeGreaterThan(CAF_SLEEP.lowBelowMg);
   });
 });

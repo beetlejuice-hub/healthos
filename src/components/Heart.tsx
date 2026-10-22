@@ -9,7 +9,7 @@ import { useEffect, useMemo, useState, type MouseEvent, type PointerEvent } from
 import type { BandData, HrMinute, SleepSession, StepBucket } from "../lib/band";
 import { loadBandBefore } from "../lib/band-client";
 import type { Check } from "../lib/feelgraph";
-import { aroundChecks, awakeByDay, dayNumbers, heartOutcomes, loggedAround, raisedStretches, roll, whyRaised, CHECK_MIN_N, type AroundChecks, type AwakeDay, type Raised, type Why } from "../lib/heart";
+import { aroundChecks, awakeByDay, dayNumbers, heartOutcomes, loggedAround, raisedStretches, roll, whyRaised, CHECK_MIN_N, TODAY_NEED_MIN, type AroundChecks, type AwakeDay, type Raised, type Why } from "../lib/heart";
 import { doingOrder, labelOf, tagOf } from "../lib/feel";
 import { act, useStore } from "../lib/store";
 import { afterCoffee, afterWorkouts, usualAt, usualByHour, usualReady, workoutWindows } from "../lib/hrusual";
@@ -162,7 +162,9 @@ function OneDay({ band, data, day, today, now, onDay, w }: { band: BandData; dat
     setHov(best >= 0 && bd <= 20 * MIN ? best : null);
   };
   const prev = addDays(day, -1), next = addDays(day, 1);
-  const above = nums.usualAvg != null;
+  // today, in the first hour awake: nothing to say yet (21 Oct review: "0 h 00 of 0 h 08 awake" at 07:30)
+  const early = isToday && nums.minutes < TODAY_NEED_MIN, soFar = `after 1 h awake · ${Math.round(nums.minutes)} min so far`;
+  const above = nums.usualAvg != null && !early;
   return (
     <section className="hp-day" aria-label={`Heart rate on ${dayLabel(t0)} against your usual`}>
       <div className="sl-bar">
@@ -174,10 +176,10 @@ function OneDay({ band, data, day, today, now, onDay, w }: { band: BandData; dat
       <div className="kpis hp-kpis">
         <div className="kpi"><span className="k">Resting</span><span className="v sh" {...shadeAttrs(rU ? shade(rhr, rU.lo, rU.hi, "down") : NO_SHADE)}>{rhr != null ? Math.round(rhr) : "—"}<small>bpm</small></span><span className="d">{rU ? `usual ${Math.round(rU.lo)}–${Math.round(rU.hi)}` : "your usual after 5 mornings"}</span></div>
         <div className="kpi"><span className="k">HRV</span><span className="v sh" {...shadeAttrs(hU ? shade(hrv, hU.lo, hU.hi, "up") : NO_SHADE)}>{hrv != null ? Math.round(hrv) : "—"}<small>ms</small></span><span className="d">{hU ? `usual ${Math.round(hU.lo)}–${Math.round(hU.hi)}` : "your usual after 5 mornings"}</span></div>
-        <div className="kpi"><span className="k">Awake average</span><span className="v">{nums.avg != null ? Math.round(nums.avg) : "—"}<small>bpm</small></span>
-          <span className="d">{nums.avg != null && nums.usualAvg != null ? `${sgn(nums.avg - nums.usualAvg)} vs usual${isToday ? " so far" : ""}` : "no usual yet"}{workouts.length ? " · workout left out" : ""}</span></div>
+        <div className="kpi"><span className="k">Awake average</span><span className="v">{nums.avg != null && !early ? <>{Math.round(nums.avg)}<small>bpm</small></> : "—"}</span>
+          <span className="d">{early ? soFar : nums.avg != null && nums.usualAvg != null ? `${sgn(nums.avg - nums.usualAvg)} vs usual${isToday ? " so far" : ""}` : "no usual yet"}{workouts.length && !early ? " · workout left out" : ""}</span></div>
         <div className="kpi"><span className="k">Above your usual</span><span className="v">{above ? dur(nums.above) : "—"}</span>
-          <span className="d">{above ? `of ${dur(nums.minutes)} awake · below ${dur(nums.below)}` : "needs 4 days of band data"}</span></div>
+          <span className="d">{early ? soFar : above ? `of ${dur(nums.minutes)} awake · below ${dur(nums.below)}` : "needs 4 days of band data"}</span></div>
       </div>
       <div className="sl-p hp-chart">
         {!pts.length && <p className="hp-none">No heart rate from the band on this day.</p>}

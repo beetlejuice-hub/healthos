@@ -46,6 +46,15 @@ export const CAF_SLEEP = {
 };
 
 export type Tier = "low" | "possible" | "higher";
+/**
+ * The top of Today's caffeine chart: the day's peak with a little room, on a round step — never under 40, so the 30 mg
+ * line where an effect on sleep becomes possible always shows (21 Oct review: fixed at 200, a 12 mg morning lay on the floor).
+ */
+export function chartMax(peak: number): number {
+  const want = peak * 1.05;
+  return [40, 60, 100, 150, 200, 300, 400, 600, 800].find((s) => s >= want) ?? Math.ceil(want / 200) * 200;
+}
+
 export const tierOf = (mg: number): Tier => (mg < CAF_SLEEP.lowBelowMg ? "low" : mg < CAF_SLEEP.higherFromMg ? "possible" : "higher");
 
 /** Bedtime for the night starting on `day`. A bedtime after midnight (00:30) is the next calendar day. */

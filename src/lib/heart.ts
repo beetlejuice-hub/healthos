@@ -25,6 +25,8 @@ import { walked } from "./steps";
 export type Span = { start: number; end: number };
 /** A day's awake average needs this many minutes of it (a day with the band off half of it says nothing). */
 export const AWAKE_NEED_MIN = 8 * 60;
+/** Today's awake average and time above your usual wait for this much awake time: at 07:30, 8 minutes said nothing. */
+export const TODAY_NEED_MIN = 60;
 /** Check-ins measured before the stress chart says anything. */
 export const CHECK_MIN_N = 12;
 

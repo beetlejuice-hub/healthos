@@ -2151,6 +2151,12 @@ Order: A first (113 → 123), then B, then C; D in the chat. (claimed: this sess
 151. [ ] **Then the app, part by part** — "after we done w all my notes, we should take the app part by part and check
    them, update them visualy and backend-wise, the engine behind them. also figure out what can i realistically do w
    this app, how can it improve my day". Plan below (21 Oct); phase 1 (Today) started with the defaults.
+   - **How it's meant (owner, 22 Oct):** "I MEANT WE LOOK AT THE PARTS AND YOU ASK ME QUESTIONS, PERHAPS SHOW NEW
+     VISUALS TO DO, ETC. What u did was u went over some parts and changed what u wanted to, made them smaller and thats
+     it". So from here: one part at a time, together — screenshots of it as it is, what each piece is for, questions for
+     him, new visual options to pick from; nothing redesigned without his say. The phases below were the agent's pass.
+   - **And (owner, 22 Oct, on Mind's "what came before" panel):** "i dont understand this. also jsut a general note, pls
+     make datas more understandable". Every number on screen says in plain words what it means for him, first.
 
 ### 151 — the part-by-part review (plan, 21 Oct)
 
@@ -2220,7 +2226,9 @@ he already finds useless or confusing — default: the five questions find them.
   card asks for what's due, and its "Pick…", the Stack tile and the numbers on top open the card they point at. Today
   at 390 px with the sample: 3,119 → 2,268 px at 07:30, 2,605 → 1,975 at 22:30. Checked: e2e today2 (folded, the line,
   a tap opens one, "Pick…" opens the Stack), and the 13 suites that use those cards; shots looked at.
-- [ ] The caffeine chart's scale is fixed at 200 mg: on a 12 mg morning the line lies on the floor (minor).
+- [x] The caffeine chart's scale is fixed at 200 mg: on a 12 mg morning the line lies on the floor (minor). Done 22 Oct
+  (owner: "do 3"): its top fits the day on a round step, never under 40 so the 30 mg line shows (lib/caffeine-sleep
+  chartMax); drawn before "under 10 mg is none", which on the new scale showed as a 19 px ledge. e2e leftovers.
 - [x] **A sample that can review the rest** (owner picked it: "1"). It had no sleep ratings, so every sleep-linked
   card read "0 of 6 nights". Done (21 Oct): most mornings rated, and known effects planted — caffeine left at 23:00
   (30+ mg) → the night rated 1.6 lower; evening alcohol → a little lower, and less energy and mood next day; late
@@ -2254,8 +2262,11 @@ HR +4, HRV −9, less deep) not shown — only ~4 in 30 nights, under the 5-and-
   (the same six again, explained). Two night lists too (the 14-night cards and the 30-night stages). Proposal: the
   plain-words explanation opens from its score row (tap a row); one night list (the stages list, with the score on each
   night). *Your call.*
-- [ ] Heart: "Above your usual 0 h 00 of 0 h 08 awake" at 07:30 says nothing yet in the morning — fold that tile until
-  you've been awake an hour (small; next pass).
+- [x] Heart: "Above your usual 0 h 00 of 0 h 08 awake" at 07:30 says nothing yet in the morning — fold that tile until
+  you've been awake an hour (small; next pass). Done 22 Oct: today, under an hour awake, it and the awake average say
+  "— after 1 h awake · 8 min so far" (lib/heart TODAY_NEED_MIN); at 15:00 as before. e2e leftovers.
+- [x] Today at 320 px: the weigh-in's "Log kg" stuck out 1 px. Done 22 Oct: the two boxes give way on a narrow phone
+  (64 px each at 320, 90 as before at 390). e2e leftovers checks both widths and that the boxes stay usable.
 
 **Phase 3 — Logging: Food, Drink, Stack, Body (21 Oct).** Sample + fake band, phone 390 px at 13:00.
 - [x] **"Grams (exact)" with a comma** ("100,5") was read as nothing — the portion went to 0 kcal and Done did nothing,

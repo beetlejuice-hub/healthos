@@ -13,8 +13,8 @@ import { notice } from "../lib/findings";
 import { StackAlert } from "../components/StackCheck";
 import { ScoutLine } from "../components/Scout";
 import { AiQuestions, MorningRead, NightRead } from "../components/Ai";
-import { caffeineAt, caffeineInBlood, latestDoseFor } from "../lib/caffeine";
-import { bedtimeVerdict, CAF_SLEEP, personalSleep, ratedNights, tierOf, tonightsBed, type Personal } from "../lib/caffeine-sleep";
+import { bloodMg, caffeineAt, caffeineInBlood, latestDoseFor } from "../lib/caffeine";
+import { bedtimeVerdict, CAF_SLEEP, chartMax, personalSleep, ratedNights, tierOf, tonightsBed, type Personal } from "../lib/caffeine-sleep";
 import { caffeineDoses } from "../lib/insights";
 import { add, byDay, macrosOf, ZERO } from "../lib/nutrition";
 import { atMinute, clock, dayLabel, localDay, MIN, addDays, quarterDown } from "../lib/time";
@@ -216,12 +216,14 @@ function CaffeineCard({ doses, now, bed, halfLife, cafNow, cafComing, cafBed, pe
   const d0 = new Date(now); d0.setHours(6, 0, 0, 0);
   const t0 = d0.getTime(), t1 = t0 + 18 * 60 * MIN;
   const W = 320, H = 110, pl = 26, pr = 6, pt = 18, pb = 16;
-  // the curve is what's in your blood: it rises over the hour after a drink instead of jumping (PLAN 86)
-  const peak = Math.max(...Array.from({ length: 217 }, (_, i) => caffeineInBlood(doses, t0 + i * 5 * MIN, halfLife)));
-  const max = Math.max(200, Math.ceil(peak / 100) * 100);
+  // the curve is what's in your blood: it rises over the hour after a drink instead of jumping (PLAN 86) — drawn before
+  // "under 10 mg is none", so on a light day's scale it fades out rather than dropping off a ledge at 10
+  const blood = (t: number) => bloodMg(doses, t, halfLife);
+  const peak = Math.max(...Array.from({ length: 217 }, (_, i) => blood(t0 + i * 5 * MIN)));
+  const max = chartMax(peak);
   const x = (t: number) => pl + ((t - t0) / (t1 - t0)) * (W - pl - pr), y = (mg: number) => pt + (1 - mg / max) * (H - pt - pb);
   // Always end exactly on `b`, so the solid past meets the "now" dot instead of stopping up to 5 min short.
-  const pts = (a: number, b: number) => { const p: string[] = []; const push = (t: number) => p.push(`${x(t).toFixed(1)},${y(caffeineInBlood(doses, t, halfLife)).toFixed(1)}`); for (let t = a; t < b; t += 5 * MIN) push(t); push(b); return p.join(" "); };
+  const pts = (a: number, b: number) => { const p: string[] = []; const push = (t: number) => p.push(`${x(t).toFixed(1)},${y(blood(t)).toFixed(1)}`); for (let t = a; t < b; t += 5 * MIN) push(t); push(b); return p.join(" "); };
   const cut = Math.min(Math.max(now, t0), t1);
   // Touch or hover anywhere on the curve to read it: "14:20 · 119 mg". A finger lifting "leaves" the curve, so on a phone
   // the reading stays until the next touch — it used to vanish the moment a tap ended.
@@ -232,24 +234,24 @@ function CaffeineCard({ doses, now, bed, halfLife, cafNow, cafComing, cafBed, pe
     const t = t0 + ((vx - pl) / (W - pl - pr)) * (t1 - t0);
     setProbe(Math.round(Math.max(t0, Math.min(t1, t)) / (5 * MIN)) * 5 * MIN);
   };
-  const pmg = probe != null ? Math.round(caffeineInBlood(doses, probe, halfLife)) : 0;
+  const pmg = probe != null ? Math.round(blood(probe)) : 0;
   const px = probe != null ? x(probe) : 0;
   const tier = tierOf(cafBed);
   return (
     <FoldCard id="caffeine" title="Caffeine" read={<>{mgText(cafNow)} now{cafComing >= 10 ? ", rising" : ""} · {mgText(cafBed)} at {clock(bed)}</>}
       more={now < bed ? <><b className={`tier-${tier}`}>{tier === "low" ? "Low" : tier === "possible" ? "Possible effect on sleep" : "Higher chance of an effect on sleep"}</b> at bedtime{cafComing >= 10 ? ` · ${cafComing} mg still going in` : ""}</> : undefined}>
-      <svg viewBox={`0 0 ${W} ${H}`} width="100%" role="img" aria-label={`Caffeine in your body today: ${cafNow} mg now, ${cafBed} mg at your planned bedtime`}
+      <svg viewBox={`0 0 ${W} ${H}`} width="100%" data-max={max} role="img" aria-label={`Caffeine in your body today: ${cafNow} mg now, ${cafBed} mg at your planned bedtime`}
         style={{ touchAction: "pan-y", cursor: "crosshair" }} onPointerMove={onMove} onPointerDown={onMove} onPointerLeave={(e) => { if (e.pointerType !== "touch") setProbe(null); }}>
         {[0, max / 2, max].map((v) => <g key={v}><line x1={pl} x2={W - pr} y1={y(v)} y2={y(v)} stroke="var(--c-track)" /><text x={pl - 4} y={y(v) + 3} textAnchor="end" fontSize="9" fill="var(--c-dim)">{v}</text></g>)}
         {/* Where sleep effects become possible (30 mg) and more likely (100 mg) — CAF_SLEEP, faint. */}
-        {[CAF_SLEEP.lowBelowMg, CAF_SLEEP.higherFromMg].map((v) => <line key={`t${v}`} x1={pl} x2={W - pr} y1={y(v)} y2={y(v)} stroke="var(--caf)" strokeOpacity=".3" strokeDasharray="1 3" />)}
+        {[CAF_SLEEP.lowBelowMg, CAF_SLEEP.higherFromMg].filter((v) => v < max).map((v) => <line key={`t${v}`} x1={pl} x2={W - pr} y1={y(v)} y2={y(v)} stroke="var(--caf)" strokeOpacity=".3" strokeDasharray="1 3" />)}
         {[6, 12, 18, 24].map((h) => <text key={h} x={x(t0 + (h - 6) * 60 * MIN)} y={H - 3} textAnchor="middle" fontSize="9" fill="var(--c-dim)">{String(h % 24).padStart(2, "0")}</text>)}
         <polygon points={`${x(t0)},${y(0)} ${pts(t0, cut)} ${x(cut)},${y(0)}`} fill="var(--caf)" fillOpacity=".18" />
         <polyline points={pts(t0, cut)} fill="none" stroke="var(--caf)" strokeWidth="2.2" />
         <polyline points={pts(cut, t1)} fill="none" stroke="var(--caf)" strokeWidth="2" strokeDasharray="3 3" strokeOpacity=".7" />
         {doses.filter((d) => d.at >= t0 && d.at <= t1).map((d) => <line key={d.at} x1={x(d.at)} x2={x(d.at)} y1={y(0)} y2={y(0) + 4} stroke="var(--caf)" strokeWidth="2" />)}
-        {now >= t0 && now <= t1 && <circle cx={x(now)} cy={y(cafNow)} r="3.5" fill="var(--caf)" />}
-        {bed <= t1 && <circle cx={x(bed)} cy={y(cafBed)} r="3" fill="none" stroke="var(--caf)" strokeWidth="1.5" />}
+        {now >= t0 && now <= t1 && <circle cx={x(now)} cy={y(blood(now))} r="3.5" fill="var(--caf)" />}
+        {bed <= t1 && <circle cx={x(bed)} cy={y(blood(bed))} r="3" fill="none" stroke="var(--caf)" strokeWidth="1.5" />}
         {probe != null && <g pointerEvents="none">
           <line x1={px} x2={px} y1={pt - 4} y2={y(0)} stroke="var(--c-ink)" strokeOpacity=".45" />
           <circle cx={px} cy={y(pmg)} r="3.5" fill="var(--c-bg)" stroke="var(--caf)" strokeWidth="2" />

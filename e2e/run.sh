@@ -12,7 +12,7 @@ ALL=(
   bodyfat hownow push searchpass now cafsleep earlier night slider workoutplus muscles dose labelphoto graph glance
   mind connections body stack top phone plan session checkin today2 polish band heart compare sleep heartpage
   mindpage sleeponce suppamount catchup suppafter steps fixes13 editentry bandbehind camhold explain
-  workoutsets burned tellmore sipped supplog sleepfood tonight sleepneed training trainingb trainingc workoutpick sleepscore readiness inbox energy review questions propose morningread chatfold notthis suppout foodday foodscore variants nightworkout cardio goals notice workoutfix strength repranges guard cardiotraining nightcheck vo2 workoutzones readband readlooks deepdive verdict xpstrip dayscore readretry
+  workoutsets burned tellmore sipped supplog sleepfood tonight sleepneed training trainingb trainingc workoutpick sleepscore readiness inbox energy review questions propose morningread chatfold notthis suppout foodday foodscore variants nightworkout cardio goals notice workoutfix strength repranges guard cardiotraining nightcheck vo2 workoutzones readband readlooks deepdive verdict xpstrip dayscore readretry leftovers
 )
 if [ $# -gt 0 ]; then SUITES=("$@"); else SUITES=("${ALL[@]}"); fi
 JOBS=${E2E_JOBS:-$(nproc)}

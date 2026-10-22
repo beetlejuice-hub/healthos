@@ -586,8 +586,9 @@ a { color: inherit; }
 .hist div { display: grid; grid-template-columns: 88px 1fr auto; gap: 8px; }
 .hist b { color: var(--k-ink); font-weight: 600; font-variant-numeric: tabular-nums; }
 .wnote { display: block; color: var(--k-dim); font-size: 11.5px; }
-.weighin { display: flex; gap: 8px; align-items: center; }
-.weighin input { width: 90px; background: var(--c-card-2); border: 1px solid #ffffff14; border-radius: 12px; color: var(--c-ink); padding: 8px 10px; font-size: 16px; font-variant-numeric: tabular-nums; }
+/* the boxes give way on a narrow phone (320 px: "Log kg" stuck out 1 px), up to 90 px each */
+.weighin { display: flex; gap: 8px; align-items: center; min-width: 0; flex: 1 1 100%; }
+.weighin input { width: 0; flex: 1 1 0; min-width: 0; max-width: 90px; background: var(--c-card-2); border: 1px solid #ffffff14; border-radius: 12px; color: var(--c-ink); padding: 8px 10px; font-size: 16px; font-variant-numeric: tabular-nums; }
 .item.weight .ic { background: color-mix(in srgb, var(--wt) 18%, transparent); color: var(--wt); font-size: 11px; }
 .supp-row em { font-style: normal; color: var(--c-dim); font-size: 13px; }
 .supp-row.paused > span { opacity: .5; }

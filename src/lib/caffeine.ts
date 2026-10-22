@@ -58,11 +58,16 @@ export function caffeineAt(doses: Dose[], t: number, halfLifeMin = DEFAULT_HALF_
   return cleared(mg);
 }
 
-/** mg absorbed and not yet cleared at time `t` — the curve, and "now". */
+/** mg absorbed and not yet cleared at time `t` — "now" (under 10 mg is none). */
 export function caffeineInBlood(doses: Dose[], t: number, halfLifeMin = DEFAULT_HALF_LIFE_MIN): number {
+  return cleared(bloodMg(doses, t, halfLifeMin));
+}
+
+/** The same, before "under 10 mg is none" — for drawing the curve, so it fades out instead of dropping off a ledge at 10. */
+export function bloodMg(doses: Dose[], t: number, halfLifeMin = DEFAULT_HALF_LIFE_MIN): number {
   let mg = 0;
   for (const d of doses) mg += doseCaffeine(d, t, halfLifeMin).blood;
-  return cleared(mg);
+  return mg;
 }
 
 /** The curve (in the blood) from `from` to `to`, one point every `stepMin`. */
