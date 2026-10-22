@@ -10,6 +10,19 @@ import type { GlanceDay } from "../lib/glance";
 import { patterns, type Row, type Side } from "../lib/patterns";
 
 const fmt = (r: Row, v: number) => (r.f.share ? `${Math.round(v * 100)}%` : r.f.dec === 0 ? Math.round(v).toLocaleString("en-GB") : v.toFixed(1));
+/** What the number is: "kcal", "/10", "mg", "of days" (owner, 22 Oct: "it was just not explained enough like whats the percentages"). */
+const unitOf = (r: Row) => (r.f.share ? "of days" : r.f.unit);
+const ICON: Record<string, string> = { sleep: "😴", cafBed: "☕", lateCaf: "☕", drinks: "🍺", trained: "🏋️", trainedBefore: "🏋️", kcalBefore: "🍽" };
+/**
+ * A clear one in a sentence (owner: "i like the sentence idea"), which way first: "Less often: caffeine after 14:00 the day
+ * before — 1 of these 21 days, against 41% of your other days."
+ */
+function say(r: Row): [string, string] {
+  const thing = r.f.name[0].toLowerCase() + r.f.name.slice(1), up = r.group > r.rest;
+  if (r.f.share) return [up ? "More often" : "Less often", `${thing} — ${Math.round(r.group * r.nGroup)} of these ${r.nGroup} days, against ${fmt(r, r.rest)} of your other days.`];
+  const u = r.f.unit === "/10" ? "/10" : ` ${r.f.unit}`;
+  return [up ? "Higher" : "Lower", `${thing} — ${fmt(r, r.group)}${u} on average, against ${fmt(r, r.rest)}${u} on your other days.`];
+}
 
 const pct = (v: number, max: number) => Math.max(0, Math.min(100, (v / max) * 100));
 /** Red when the thing goes with a lower mood (more often before your lowest days, less before your best), green the other way. */
@@ -18,10 +31,14 @@ const toneOf = (kind: "worst" | "best", group: number, rest: number) => ((group 
 function SideCol({ side, kind }: { side: Side; kind: "worst" | "best" }) {
   const rows = side.rows.filter((r) => r.diff);
   const clear = rows.filter((r) => r.diff!.clear);
+  const others = rows.length ? Math.max(...rows.map((r) => r.nRest)) : 0;
   return (
     <div className={`pt-side pt-${kind}`}>
-      <h3>{kind === "worst" ? "Your lowest days" : "Your best days"} <span>mood {kind === "worst" ? "≤" : "≥"} {side.cut.toFixed(1)} · {side.days.length} days · average {side.mood.toFixed(1)}</span></h3>
-      <p className="gp-ans">{clear.length ? <>Clearest: {clear.slice(0, 2).map((r, i) => <span key={r.f.k}>{i ? "; " : ""}<b>{r.f.name.toLowerCase()}</b> {fmt(r, r.group)}{r.f.share ? " of these days" : ""} vs {fmt(r, r.rest)} on other days</span>)}.</> : "Nothing that came before them stands out clearly yet."}</p>
+      <h3>Before your {kind === "worst" ? "lowest" : "best"} days <span>{side.days.length} days with mood {side.cut.toFixed(1)} or {kind === "worst" ? "lower" : "higher"} (average {side.mood.toFixed(1)})</span></h3>
+      {/* what stands out, in words first; the rows below are the same, drawn */}
+      {clear.length ? <ul className="pt-say">{clear.slice(0, 3).map((r) => { const [way, rest] = say(r); return <li key={r.f.k}><span aria-hidden="true">{ICON[r.f.k] ?? "•"}</span><span><b>{way}:</b> {rest}</span></li>; })}</ul>
+        : <p className="gp-ans">Nothing stands out yet — no difference big enough to tell from chance.</p>}
+      <div className="pt-key" aria-hidden="true"><span><i className="t" />these {side.days.length} days</span><span><i className="o" />your other {others} days</span></div>
       <div className="pt-rows">
         {rows.map((r) => {
           const max = Math.max(r.group, r.rest, r.f.share ? 1 : 0) || 1;
@@ -34,8 +51,8 @@ function SideCol({ side, kind }: { side: Side; kind: "worst" | "best" }) {
                 <i className="seg" style={{ left: `${pct(Math.min(r.group, r.rest), max)}%`, width: `${Math.abs(pct(r.group, max) - pct(r.rest, max))}%` }} />
                 <i className="o" style={{ left: `${pct(r.rest, max)}%` }} /><i className="t" style={{ left: `${pct(r.group, max)}%` }} />
               </span>
-              <span className="vals"><b>{fmt(r, r.group)}</b> vs {fmt(r, r.rest)}</span>
-              <span className={`tag ${r.diff!.clear ? "s" : "w"}`}>{r.diff!.clear ? "clear" : "not yet"}</span>
+              <span className="vals"><b>{fmt(r, r.group)}</b> vs {fmt(r, r.rest)} <small>{unitOf(r)}</small></span>
+              <span className={`tag ${r.diff!.clear ? "s" : "w"}`}>{r.diff!.clear ? "clear" : "too early"}</span>
             </div>
           );
         })}
@@ -56,10 +73,10 @@ export function Patterns({ days }: { days: GlanceDay[] }) {
   return (
     <section className="gp gl-patterns" aria-label="Before your best and worst days">
       <header className="gp-h"><div><span className="gp-k">Patterns</span><h2>Before your best and worst days</h2>
-        <p className="gp-ans">Your bottom and top fifth of days by mood, and what came before them — that morning's sleep rating, the evening before, training, food — compared with every other day.</p></div>
+        <p className="gp-ans">Your lowest and best fifth of days by mood, and what came before each — the night's sleep, the evening before, training, food — against all your other days. A % is how many of those days it happened on.</p></div>
         <span className="gp-meta">{p.rated} rated days</span></header>
       <div className="pt-cols"><SideCol side={p.worst} kind="worst" /><SideCol side={p.best} kind="best" /></div>
-      <footer className="gp-f"><span className="lgd"><i className="dot" style={{ background: "var(--i-ink)" }} />these days</span><span className="lgd"><i className="dot" style={{ background: "var(--i-dim)" }} />your other days</span><span className="lgd"><i style={{ background: "var(--sh-r)" }} />goes with a lower mood</span><span className="lgd"><i style={{ background: "var(--sh-g)" }} />with a better one · faint until clear</span><span className="gl-dim">Goes with, not causes: a night out and a bad week can land together. "clear" = the 95% range stays off zero.</span></footer>
+      <footer className="gp-f"><span className="lgd"><i style={{ background: "var(--sh-r)" }} />the gap goes with a lower mood</span><span className="lgd"><i style={{ background: "var(--sh-g)" }} />with a better one</span><span className="gl-dim">Clear: a gap this big is unlikely to be chance. Too early: faint, not enough days to tell yet. Goes with, not causes — a night out and a bad week can land together. Days not logged in full (under 1,000 kcal) are left out of calories.</span></footer>
     </section>
   );
 }

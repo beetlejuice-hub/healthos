@@ -29,7 +29,13 @@ const { chromium, APP, OUT, handle } = require('./harness.cjs');
     })));
     const right = pairs.every(([k, a, b, tone, dc, tc]) => a === b || (tone === ((a > b) === (k === 'worst') ? 'worse' : 'better') && dc === tc));
     check(name + `: each dot pair's colour follows its numbers, strong only when clear (${pairs.length} pairs)`, pairs.length >= 4 && right);
-    check(name + ': patterns compare the lowest and best days with the rest', /Your lowest days/.test(pt) && /Your best days/.test(pt) && /Sleep rating that morning|Drinks the night before|Calories the day before/.test(pt));
+    check(name + ': patterns compare the lowest and best days with the rest', /Before your lowest days/i.test(pt) && /Before your best days/i.test(pt) && /Sleep rating that morning|Drinks the night before|Calories the day before/.test(pt));
+    // in words (owner, 22 Oct: "pls make datas more understandable"): each clear one a sentence, which way first, as many as
+    // clear rows (up to 3); every number says what it is (kcal, /10, mg, of days)
+    const said = await pg.locator('.pt-say li').allInnerTexts(), clearRows = await pg.locator('.pt-side').evaluateAll((cs) => cs.map((c) => Math.min(3, c.querySelectorAll('.pt-row.clear').length)));
+    check(name + `: what stands out, in sentences (${said.length}: ${said.map((t) => t.replace(/\s+/g, ' ')).join(' | ') || 'none'})`, said.length === clearRows.reduce((a, b) => a + b, 0) && said.every((t) => /^\S+\s*(More often|Less often|Higher|Lower): .+ — .+ against .+ (on|of) your other days\.$/.test(t.replace(/\s+/g, ' ').trim())));
+    const units = await pg.locator('.pt-row .vals small').allInnerTexts();
+    check(name + `: every number says what it is (${[...new Set(units)].join(', ')})`, units.length === await pg.locator('.pt-row').count() && units.every((u) => /^(kcal|\/10|mg|of days)$/.test(u)));
     const rh = await pg.locator('.gl-rhythm').innerText();
     check(name + ': rhythm names a best time', /Best: (Mon|Tue|Wed|Thu|Fri|Sat|Sun) \d\d:00–\d\d:00/.test(rh));
     check(name + ': heatmap has 42 cells', await pg.locator('.gl-rhythm rect').count() === 42);

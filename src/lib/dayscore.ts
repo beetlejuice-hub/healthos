@@ -32,6 +32,13 @@ export const DAY_SCORE = {
   minKcal: 1000, coverage: 0.7, mealP: 25, fiberG: 30, plantsG: 400, saltG: 5, satFatPct: 10, sugarG: 90, alcoholG: 30,
 } as const;
 
+/**
+ * A day logged in full: 1,000 kcal or more. Under that it's a day not logged in full, not a day of eating little — and
+ * counting it as one made "calories the day before" look clearly low before his worst days (22 Oct: "most certainly did
+ * not log something").
+ */
+export const loggedInFull = (kcal: number | null | undefined): kcal is number => kcal != null && kcal >= DAY_SCORE.minKcal;
+
 type Zone = "ideal" | "fair" | "poor";
 export type DayPartId = "protein" | "spread" | "kcal" | "fiber" | "plants" | "limits" | "late" | "alcohol";
 export type DayPart = { id: DayPartId; name: string; got: number; max: number; why: string; zone: Zone };

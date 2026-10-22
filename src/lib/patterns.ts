@@ -13,6 +13,7 @@ import type { Entry } from "./types";
 import type { GlanceDay } from "./glance";
 import { difference, mean, quantile, sd, type Range } from "./stats";
 import { localDay } from "./time";
+import { loggedInFull } from "./dayscore";
 
 export type Feature = { k: string; name: string; unit: string; get: (d: GlanceDay, prev: GlanceDay | undefined) => number | null; dec: 0 | 1; share?: boolean };
 
@@ -22,7 +23,8 @@ export const FEATURES: Feature[] = [
   { k: "drinks", name: "Drinks the night before", unit: "% of days", dec: 0, share: true, get: (_, p) => (p?.drinks == null ? null : p.drinks > 0 ? 1 : 0) },
   { k: "trainedBefore", name: "Trained the day before", unit: "% of days", dec: 0, share: true, get: (_, p) => (p && (p.checkins || p.kcal != null) ? (p.trained ? 1 : 0) : null) },
   { k: "trained", name: "Trained that day", unit: "% of days", dec: 0, share: true, get: (d) => (d.checkins || d.kcal != null ? (d.trained ? 1 : 0) : null) },
-  { k: "kcalBefore", name: "Calories the day before", unit: "kcal", dec: 0, get: (_, p) => p?.kcal ?? null },
+  // only days logged in full: a half-logged day isn't a day of eating little (22 Oct)
+  { k: "kcalBefore", name: "Calories the day before", unit: "kcal", dec: 0, get: (_, p) => (loggedInFull(p?.kcal) ? p!.kcal : null) },
   { k: "lateCaf", name: "Caffeine after 14:00 the day before", unit: "% of days", dec: 0, share: true, get: (_, p) => (p?.cafBed == null ? null : p.lateCaffeine ? 1 : 0) },
 ];
 

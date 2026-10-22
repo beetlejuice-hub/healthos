@@ -36,6 +36,25 @@ describe("patterns: before your best and worst days", () => {
     for (let s = 1; s <= 40; s++) { const q = patterns(world(s).days, world(s).entries); if ("worst" in q && q.worst.rows.find((r) => r.f.k === "kcalBefore")!.diff?.clear) clear++; }
     expect(clear / 40).toBeLessThan(0.15);
   });
+  it("a half-logged day isn't a day of eating little (22 Oct: \"most certainly did not log something\")", () => {
+    // planted: the day before each of the worst days, only breakfast was logged (~450 kcal); full days ~2,300. Before the
+    // fix those read as "calories the day before: clear, 450 vs 2,300"
+    const halfLogged = (seed: number) => {
+      const w = world(seed), lo = [...w.days].filter((d) => d.mood != null).map((d) => d.mood!).sort((a, b) => a - b)[Math.floor(w.days.length * 0.2)];
+      return { ...w, days: w.days.map((d, i) => (w.days[i + 1] && w.days[i + 1].mood! <= lo ? { ...d, kcal: 450 } : d)) };
+    };
+    const h = halfLogged(3), q = patterns(h.days, h.entries);
+    if (!("worst" in q)) throw new Error("expected patterns");
+    const k = q.worst.rows.find((r) => r.f.k === "kcalBefore")!;
+    expect(k.diff?.clear ?? false).toBe(false);
+    expect(k.group).not.toBeLessThan(1000); // only the days logged in full are averaged
+    // …and a real low day still counts: 1,300 kcal logged in full the day before the worst days is found
+    const w = world(3), lo = [...w.days].map((d) => d.mood!).sort((a, b) => a - b)[Math.floor(w.days.length * 0.2)];
+    const ate = w.days.map((d, i) => (w.days[i + 1] && w.days[i + 1].mood! <= lo ? { ...d, kcal: 1300 } : d));
+    const q2 = patterns(ate, w.entries);
+    if (!("worst" in q2)) throw new Error("expected patterns");
+    expect(q2.worst.rows.find((r) => r.f.k === "kcalBefore")!.diff!.clear).toBe(true);
+  });
   it("names the words that keep showing up on the worst days, not the everyday ones", () => {
     expect(p.worst.words.map((w) => w.word)).toContain("deadline");
     expect(p.worst.words.map((w) => w.word)).not.toContain("friends");

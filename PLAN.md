@@ -2435,3 +2435,35 @@ both reads and the questions. Phases in that order; #152 RPE waits (owner).
    - Tests: lib/ai/attempts.test.ts; worker "a read that searched the web before it looked something up goes on" (400
      without the change); e2e readretry — busy, then failed, then Try again; one call at a time, the morning read first;
      both failures in Settings. Against the old code it fails 8 checks (4 calls at once, no note, no retry).
+
+162. [x] **Mind's "before your best and worst days", understandable** (owner, 22 Oct, on its screenshot: "i dont understand
+   this … pls make datas more understandable"; then: "1 most certainly did not log something / 2 i like dots and bars,
+   but it was just not explained enough like whats the percentages, etc. but i like the sentence idea").
+   - The "clear" 953 vs 2,037 kcal before his worst days was half-logged days: calories (and the pattern finder's
+     calories and protein) now count only days logged in full — 1,000 kcal or more, the food score's rule
+     (lib/dayscore loggedInFull). Test: half-logged days planted before the worst days aren't found; real 1,300 kcal days are.
+   - What stands out, in sentences first, which way first: "Less often: caffeine after 14:00 the day before — 1 of these
+     21 days, against 41% of your other days." The dots and bars stay, with a key right above them ("● these 21 days ·
+     your other 33 days"), every number with what it is (kcal, /10, mg, of days), names that wrap instead of "…", "too
+     early" for "not yet", and the footer in words ("Clear: a gap this big is unlikely to be chance"). e2e mind.
+
+163. [ ] **The AI: finds connections on its own, careful, more ideas, mind and brain** (claimed 22 Oct — plan, waiting on
+   his answers). Owner, 22 Oct: "is it possible to make ai more smarter and cautious, like i noticed when im drinking, my
+   heart rate variability drops to 20 ms … and looked up that it also is connected to psoriasis flare ups. wondering what
+   else is connected … making the ai come up w connections like this on its own would be cool, and not just psoriasis but
+   everything else, me feeling tired, not focused, etc" · "i want to see more foods suggestions, supplements, protocols,
+   can even sometimes go on reddit or twitter … more interesting/not so medically proven protocols/ideas" · "focsuing
+   more on mental health would be nice, and brain health, and what i mentioned, the affirmations".
+   - **1 · Every claim says how sure it is** — a chip on each read item: *your data* (the app's own test), *strong
+     studies*, *some studies*, *anecdote* (Reddit and the like). Never "causes".
+   - **2 · Connections** — the AI chains what he does → a number the band or the log measures (the app's test on his
+     data) → something he cares about (studies): "Drinking nights: HRV 22 vs 48 ms (your data, clear) · alcohol and low
+     HRV both go with psoriasis flares (studies) · not tested on you — you don't log flares." Outcomes: his conditions
+     (About me), tiredness, focus, mood, sleep. In the reads' turn, and kept as a list in the AI tab with each one's
+     state: found in your data / studies only — can be tested / didn't hold for you.
+   - **3 · More ideas** — a daily "new to try" (food, supplement, protocol, community idea in turn); community ones from
+     Reddit labelled anecdote. X/Twitter mostly can't be read by the AI's search — Reddit, blogs and podcasts can.
+   - **4 · Mind and brain** — new angles (brain health: sleep, training, omega-3, alcohol; mental-health practices) and
+     the affirmations: his lines each morning with a receipt from his data ("Strong — squat up 12% in 6 weeks").
+   - Open (his calls): log psoriasis flares to test connections on him? how often community ideas? affirmations where,
+     his lines or drafted? Budget stays $20/month unless he says otherwise.

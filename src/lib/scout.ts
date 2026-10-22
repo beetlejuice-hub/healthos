@@ -19,6 +19,7 @@ import { suppDay, type DayFacts } from "./insights";
 import type { Supplement } from "./types";
 import { pTwoSided } from "./regress";
 import { mean, median } from "./stats";
+import { loggedInFull } from "./dayscore";
 
 export type Signal = {
   id: string;
@@ -45,9 +46,10 @@ export type Signal = {
 export function signals(supplements: Supplement[]): Signal[] {
   const logged = (f: (d: DayFacts) => number) => (d: DayFacts) => (d.logged ? f(d) : null);
   const s: Signal[] = [
-    { id: "kcal", family: "food", name: "calories", plural: true, unit: "kcal", get: (d) => d.kcal, lane: "kcal", drinks: "with-drinks" },
+    // a day's calories and protein only from days logged in full — a half-logged day isn't a day of eating little (22 Oct)
+    { id: "kcal", family: "food", name: "calories", plural: true, unit: "kcal", get: (d) => (loggedInFull(d.kcal) ? d.kcal : null), lane: "kcal", drinks: "with-drinks" },
     { id: "bigMeal", family: "food", name: "biggest meal", unit: "kcal", get: (d) => d.bigMealKcal, lane: "meals" },
-    { id: "protein", family: "food", name: "protein", unit: "g", get: (d) => d.proteinG, lane: "meals", drinks: "with-drinks" },
+    { id: "protein", family: "food", name: "protein", unit: "g", get: (d) => (loggedInFull(d.kcal) ? d.proteinG : null), lane: "meals", drinks: "with-drinks" },
     { id: "lateEat", family: "food", name: "late eating", yes: "late-eating", get: (d) => (d.kcal == null ? null : d.lateEat ? 1 : 0), lane: "meals" },
     { id: "caffeine", family: "caf", name: "caffeine", unit: "mg", get: logged((d) => d.caffeineMg), lane: "caf", drinks: "drink" },
     { id: "lateCaf", family: "caf", name: "caffeine after 14:00", unit: "mg", get: logged((d) => d.lateCaffeineMg), lane: "caf", drinks: "drink" },
