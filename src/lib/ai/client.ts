@@ -55,13 +55,18 @@ export async function refreshAiStatus() {
 
 export type AiResult<T> = { ok: true; answer: T; costUsd: number } | { ok: false; error: string; message: string };
 
+/** A call that hasn't answered in 5 minutes is given up (and a read tried again): one that hung held up the ones behind it. */
+export const AI_TIMEOUT_MS = 5 * 60_000;
+
 export async function askAi<T extends Task>(req: Extract<AiRequest, { task: T }>): Promise<AiResult<AiAnswer<T>>> {
   set({ busy: status.busy + 1 });
+  const stop = new AbortController(), timer = setTimeout(() => stop.abort(), AI_TIMEOUT_MS);
   try {
     const r = await fetch(`/api/ai?tz=${encodeURIComponent(tz())}`, {
       method: "POST",
       headers: { "content-type": "application/json", ...(await auth()) },
       body: JSON.stringify({ ...req, models: getState().ai.models }),
+      signal: stop.signal,
     });
     const b = (await r.json().catch(() => ({}))) as { answer?: AiAnswer<T>; usage?: UsageDoc; costUsd?: number; error?: string; message?: string };
     if (b.usage) set({ usage: b.usage });
@@ -70,8 +75,10 @@ export async function askAi<T extends Task>(req: Extract<AiRequest, { task: T }>
     set({ on: true });
     return { ok: true, answer: b.answer, costUsd: b.costUsd ?? 0 };
   } catch {
+    if (stop.signal.aborted) return { ok: false, error: "timeout", message: "The AI took over 5 minutes." };
     return { ok: false, error: "network", message: "Couldn't reach the AI — are you online?" };
   } finally {
+    clearTimeout(timer);
     set({ busy: Math.max(0, status.busy - 1) });
   }
 }

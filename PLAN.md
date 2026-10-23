@@ -2498,3 +2498,13 @@ both reads and the questions. Phases in that order; #152 RPE waits (owner).
      crashed the page — now it says "Got it." (the old notice test's fake caught it).
    - Tests: e2e askabout (an item's "opposite" → remembered, reply in place; the Noticed line → note kept, magnesium
      card, nothing changes before Apply, Apply adds it; both in the chat thread — fails on the old code); notice updated.
+
+165. [x] **The night read didn't come at 23:47** (owner, 22 Oct: "Opened the app at 23;47 - no night digest so far…i miss
+   it"). Reproduced on the sample with an evening logged: the weekly deep dive was due too, went first in the one line
+   of research calls (#161), and the night read waited behind it — up to 10 searches, minutes — with nothing on Today.
+   Now: the reads (morning, night, and the questions that ride on them) have their own line, the week read, deep dive
+   and verdicts the other — a read never waits for an extra, at most two calls at once; the night read is asked for
+   right after the morning's; Today says "Your day, read back — writing it now…" or "didn't come through. {why} Trying
+   again at 23:49." with Try again (ReadPending NightPending); a call that hasn't answered in 5 minutes is given up and
+   tried again (client AI_TIMEOUT_MS) instead of holding up the ones behind it. Tests: attempts.test (a read while the
+   deep dive is still going), e2e nightlane (fails 4 checks on the old code), readretry updated to the two lines.

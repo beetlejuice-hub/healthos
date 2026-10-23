@@ -52,6 +52,21 @@ describe("a failed background call is tried again", () => {
     expect(attemptOf("digest:d")).toMatchObject({ done: true });
   });
 
+  it("a read never waits behind an extra (22 Oct, 23:47: the night read sat behind the deep dive)", async () => {
+    const order: string[] = [];
+    let release!: () => void;
+    const dive = attempt("dive:w", () => new Promise((ok) => { release = () => { order.push("dive done"); ok({ ok: true }); }; }));
+    const night = attempt("night:d:", async () => { order.push("night"); return { ok: true }; }, { lane: "read" });
+    await night;
+    expect(order).toEqual(["night"]); // written while the deep dive is still going
+    release(); await dive;
+    // …and two reads still go one at a time, in order
+    const both: string[] = [];
+    await Promise.all([attempt("digest:d", async () => { both.push("digest"); await new Promise((ok) => setTimeout(ok, 5)); both.push("digest done"); return { ok: true }; }, { lane: "read" }),
+      attempt("night:e:", async () => { both.push("night"); return { ok: true }; }, { lane: "read" })]);
+    expect(both).toEqual(["digest", "digest done", "night"]);
+  });
+
   it("an error thrown in the app is a failure like any other, not a stuck queue", async () => {
     await attempt("a", async () => { throw new Error("boom"); });
     expect(attemptOf("a")).toMatchObject({ fails: 1, error: "app", message: "boom" });

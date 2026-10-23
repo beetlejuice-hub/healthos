@@ -25,7 +25,7 @@ import { savedFollowups } from "../lib/ai/saved";
 import { SavedCard } from "./Saved";
 import { DeepDive } from "./DeepDive";
 import { Looked } from "./Looked";
-import { ReadPending } from "./ReadPending";
+import { NightPending, ReadPending } from "./ReadPending";
 import { DIVE, diveBrief, diveDue } from "../lib/ai/dive";
 import { RESULT_WORDS, verdictLines, verdictsDue } from "../lib/ai/experiment";
 import { judge } from "../lib/ai/apply";
@@ -61,7 +61,7 @@ const keepFail = (task: string) => (r: { error: string; message: string }) =>
  * (lib/ai/attempts). `now`: "Try again" (a tap — it goes now, the waits forgotten).
  */
 export const makeDigest = (day: string, now = false) =>
-  now ? tryNow(`digest:${day}`, () => writeDigest(day), keepFail("digest")) : attempt(`digest:${day}`, () => writeDigest(day), { onFail: keepFail("digest") });
+  now ? tryNow(`digest:${day}`, () => writeDigest(day), keepFail("digest")) : attempt(`digest:${day}`, () => writeDigest(day), { lane: "read", onFail: keepFail("digest") });
 
 async function writeDigest(day: string) {
   const ai = getState().ai;
@@ -130,8 +130,9 @@ const makeVerdict = (x: Experiment, v: Parameters<typeof verdictLines>[1]) => at
 /** Anything logged in that day's evening-to-04:00 window (#107: a beer at 00:40 is that evening's). */
 const loggedOn = (day: string) => { const [from, to] = dayWindow(day); return getState().entries.some((e) => e.at >= from && e.at < to); };
 
-/** `force`: "read it again" (a tap — it goes now). */
-const makeNight = (day: string, force = false) => attempt(`night:${day}:${force ? Date.now() : ""}`, () => writeNight(day, force), { queued: !force, onFail: keepFail("night") });
+/** `force`: "read it again" (a tap — it goes now); `now`: "Try again" after it failed (the waits forgotten). */
+export const makeNight = (day: string, force = false, now = false) => now ? tryNow(`night:${day}:`, () => writeNight(day, false), keepFail("night"))
+  : attempt(`night:${day}:${force ? Date.now() : ""}`, () => writeNight(day, force), { queued: !force, lane: "read", onFail: keepFail("night") });
 
 async function writeNight(day: string, force: boolean) {
   // its three and its questions (PLAN 156–157): tonight's "try" kind, the question kinds, what this morning suggested
@@ -213,7 +214,8 @@ const makeQuestions = (day: string) => attempt(`questions:${day}`, async () => {
   const list = keepNew(r.answer.questions, `${day}:q`), at = Date.now();
   if (list.length) act.setAi((a) => ({ questions: { day, list, from: "fallback" as const, at }, asked: [...a.asked, ...list.map((q) => q.text)].slice(-60), daily: tracked(a.daily, list) }));
   return r;
-}, { onFail: keepFail("questions") });
+  // behind the reads, in their line: one that brings questions makes this call unneeded
+}, { lane: "read", onFail: keepFail("questions") });
 
 
 /**
@@ -233,6 +235,10 @@ export function useAiAuto(userId: string | undefined) {
       const rated = getState().entries.some((e) => e.kind === "sleep" && e.rating != null && localDay(e.at) === today);
       const target = digestDue(now.getTime(), ai.digest, nightIn(bandNow()?.sleep, rated, now.getTime()));
       if (target) void makeDigest(target);
+      // Your day, read back: tonight from 21:00 (past midnight still tonight, until 04:00); or the next morning if the app
+      // wasn't opened that evening (lib/ai/nightread). Asked for second, in the reads' own line (22 Oct).
+      const back = nightDue(now.getTime(), ai.night?.day, loggedOn);
+      if (back) void makeNight(back);
       // the reads bring the questions; only a day without any gets them from the cheap call (PLAN 156)
       if (h >= 13 && h < 21 && ai.questions?.day !== today) void makeQuestions(today);
       // The week just gone from Monday 06:00, the month just gone from the 1st (PLAN 65).
@@ -244,10 +250,6 @@ export function useAiAuto(userId: string | undefined) {
       const st = getState();
       if (ai.experiments.some((x) => !x.verdict && addDays(x.start, x.days) <= (x.ended ?? today)))
         for (const d of verdictsDue(ai.experiments, dailyFacts(st.entries, st.workouts, st.settings, addDays(today, -120), addDays(today, -1)), today)) void makeVerdict(d.x, d.v);
-      // Your day, read back: tonight from 21:00 (past midnight still tonight, until 04:00); or the next morning if the app
-      // wasn't opened that evening (lib/ai/nightread).
-      const back = nightDue(now.getTime(), ai.night?.day, loggedOn);
-      if (back) void makeNight(back);
     };
     tick();
     const t = setInterval(tick, 10 * 60_000);
@@ -317,8 +319,9 @@ export function NightRead() {
   // collapsed and i read it first time, now its just sitting there taking up space")
   const [open, setOpenState] = useState(false);
   const now = Date.now(), tonight = n ? eveningOf(now) === n.day : false;
-  // until the next morning read replaces it, and never past noon (PLAN 155; lib/ai/morning nightShown)
-  if (!n || !nightShown(n, morning, now)) return null;
+  // until the next morning read replaces it, and never past noon (PLAN 155; lib/ai/morning nightShown); not on Today:
+  // being written, or didn't come and why (22 Oct)
+  if (!n || !nightShown(n, morning, now)) return <NightPending onRetry={(day) => void makeNight(day, false, true)} />;
   // still that evening (to 04:00): logged more since → read it again; at 00:40 it's still "tonight" (#107)
   const newer = tonight && entries.some((e) => e.at > n.at && e.at >= dayWindow(n.day)[0] && e.at < dayWindow(n.day)[1]);
   const fresh = unseen(n);

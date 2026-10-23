@@ -27,15 +27,16 @@ const RATED = { id: 'sl', kind: 'sleep', at: NOW - H, rating: 7 };
   const b = await chromium.launch(); const errs = [];
   const check = (label, ok) => { console.log((ok ? 'PASS ' : 'FAIL ') + label); if (!ok) process.exitCode = 1; };
   async function open(entries) {
-    const calls = [], st = { open: 0, most: 0, digests: 0 };
+    const calls = [], st = { open: 0, most: 0, digests: 0, reads: 0, readsMost: 0 };
     const ctx = await b.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true });
     await ctx.route('https://ubfvaewfdbmecowoeuni.supabase.co/**', handle);
     await ctx.route('**/api/ai/usage**', (r) => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ usage: null, cap: 50, on: true }) }));
     await ctx.route('**/api/ai?**', async (r) => {
       const body = r.request().postDataJSON(); calls.push(body.task);
-      st.open++; st.most = Math.max(st.most, st.open);
+      const read = body.task === 'digest' || body.task === 'night';
+      st.open++; st.most = Math.max(st.most, st.open); if (read) { st.reads++; st.readsMost = Math.max(st.readsMost, st.reads); }
       await new Promise((ok) => setTimeout(ok, 250)); // a call takes a while: one sent meanwhile would overlap
-      st.open--;
+      st.open--; if (read) st.reads--;
       if (body.task === 'digest') {
         const f = FAILS[st.digests++];
         if (f) return r.fulfill({ status: f.status, contentType: 'application/json', body: JSON.stringify(f.body) });
@@ -55,7 +56,7 @@ const RATED = { id: 'sl', kind: 'sleep', at: NOW - H, rating: 7 };
     await pg.goto(APP + '#today'); await pg.reload(); await pg.waitForSelector('#feel');
     return { ctx, pg, calls, st };
   }
-  const note = (pg) => pg.locator('.mr-pending');
+  const note = (pg) => pg.locator('.mr-pending[aria-label="Morning read"]');
   // not a locator's 30 s wait when there's none (the old app had none)
   const state = async (pg) => ((await note(pg).count()) ? note(pg).getAttribute('data-state') : null);
   const text = async (pg) => ((await note(pg).count()) ? note(pg).innerText() : '');
@@ -75,7 +76,8 @@ const RATED = { id: 'sl', kind: 'sleep', at: NOW - H, rating: 7 };
   // 1. the first try: busy. One at a time, the morning read first; then the rest, still one at a time
   await until(async () => (await state(pg)) === 'failed');
   await until(async () => calls.length >= 4 && st.open === 0);
-  check(`the research calls go one at a time, the morning read first (${calls.join(', ')}; at most ${st.most} at once)`, calls[0] === 'digest' && st.most === 1 && ['review', 'dive', 'night'].every((t) => calls.includes(t)));
+  // the reads in their own line, one at a time, the morning read first; the week read and the deep dive in the other (22 Oct)
+  check(`the morning read goes first; the reads one at a time; at most two calls at once (${calls.join(', ')}; ${st.most} at once, reads ${st.readsMost})`, calls[0] === 'digest' && st.readsMost === 1 && st.most <= 2 && ['review', 'dive', 'night'].every((t) => calls.includes(t)));
   const t1 = await text(pg);
   check(`Today says it didn't come, why, and when it tries again (${t1.replace(/\n/g, ' · ')})`, /^Morning read\s+didn't come through\. The AI is busy — try again in a minute\. Trying again at 08:32\.\s*Try again$/i.test(t1));
   check(`fits the phone (${await pg.evaluate(() => document.documentElement.scrollWidth)} px)`, await pg.evaluate(() => document.documentElement.scrollWidth) <= 390);

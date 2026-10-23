@@ -42,22 +42,29 @@ export function useAttempt(key: string): Attempt | undefined {
 const wakers = new Set<() => void>();
 export function onRetryDue(f: () => void): () => void { wakers.add(f); return () => { wakers.delete(f); }; }
 
-let queue: Promise<unknown> = Promise.resolve();
+/**
+ * Two lines (22 Oct, 23:47: the night read waited behind the weekly deep dive — 10 searches, minutes — and didn't come):
+ * the reads, morning and night, in their own; the week read, the deep dive, verdicts and questions in the other. At most
+ * two research calls at once, and a read never waits for an extra.
+ */
+export type Lane = "read" | "extra";
+const lanes: Record<Lane, Promise<unknown>> = { read: Promise.resolve(), extra: Promise.resolve() };
 
 type Failed = { ok: false; error: string; message: string };
 /**
  * Run a background call under `key`: skipped while one runs, once it's done, or while its wait isn't over. `f` returns null
- * when there turned out to be nothing to do, or the call's result. `queued`: behind the others (false for a tap — it goes now).
+ * when there turned out to be nothing to do, or the call's result. `queued`: behind the others in its `lane` (false for a tap
+ * — it goes now).
  * `onFail`: keep the failure (Settings → AI).
  */
-export async function attempt(key: string, f: () => Promise<{ ok: true } | Failed | null>, { queued = true, onFail }: { queued?: boolean; onFail?: (r: Failed) => void } = {}): Promise<Failed | null> {
+export async function attempt(key: string, f: () => Promise<{ ok: true } | Failed | null>, { queued = true, lane = "extra", onFail }: { queued?: boolean; lane?: Lane; onFail?: (r: Failed) => void } = {}): Promise<Failed | null> {
   const a = attempts.get(key);
   if (!mayTry(a, Date.now())) return null;
   attempts.set(key, { fails: a?.fails ?? 0, at: Date.now(), running: true });
   changed();
   const run = async () => { try { return await f(); } catch (e) { return { ok: false as const, error: "app", message: e instanceof Error ? e.message : String(e) }; } };
-  const p = queued ? queue.then(run) : run();
-  if (queued) queue = p;
+  const p = queued ? lanes[lane].then(run) : run();
+  if (queued) lanes[lane] = p;
   const r = await p;
   if (!r || r.ok) { attempts.set(key, { fails: a?.fails ?? 0, at: Date.now(), done: true }); changed(); return null; }
   const next: Attempt = { fails: (a?.fails ?? 0) + 1, at: Date.now(), error: r.error, message: r.message };
@@ -78,4 +85,4 @@ export function tryNow(key: string, f: Parameters<typeof attempt>[1], onFail?: (
 }
 
 /** For tests: a fresh session. */
-export function resetAttempts() { attempts.clear(); queue = Promise.resolve(); changed(); }
+export function resetAttempts() { attempts.clear(); lanes.read = Promise.resolve(); lanes.extra = Promise.resolve(); changed(); }
