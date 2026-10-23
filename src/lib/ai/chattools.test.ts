@@ -55,7 +55,7 @@ describe("the chat's tools answer from the app's data (PLAN 67)", () => {
   });
   it("find: every time a word shows up, newest first, accents ignored", () => {
     const t = run("find", { text: "pizza" }).text;
-    expect(t).toMatch(/^"pizza": 2 times on 2 days in the last 180 days, newest first:\n- 2026-10-14 Wed 13:00 food: Pizza diavola \(800 kcal\)\n- 2026-10-11 Sun 19:00 food: Pizza margherita/);
+    expect(t).toMatch(/^"pizza": 2 times on 2 days in the last 180 days, newest first:\n- 2026-10-14 Wed 13:00 food: Pizza diavola \(800 kcal\) \[id:k5\]\n- 2026-10-11 Sun 19:00 food: Pizza margherita \(900 kcal\) \[id:k4\]/);
     expect(run("find", { text: "palinka" }).text).toContain("drink: Pálinka");
     expect(run("find", { text: "ciorba" }).text).toContain("food: Ciorbă");
     expect(run("find", { text: "deadline" }).text).toContain('note: "deadline at work"');

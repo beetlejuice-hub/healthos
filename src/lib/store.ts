@@ -281,6 +281,11 @@ export const act = {
   removeEntry(id: string) {
     commit({ ...state, entries: state.entries.filter((e) => e.id !== id) });
   },
+  /** A deleted entry back exactly as it was (the AI's delete card: "Put it back"). */
+  restoreEntry(e: Entry) {
+    if (state.entries.some((x) => x.id === e.id)) return;
+    commit({ ...state, entries: [...state.entries, e].sort(byTime) });
+  },
   /** Save a food so it's offered again next time — owner: "if I once add a food it should be saved". */
   rememberFood(f: Food) {
     // The newest 500, plus every food saved with a barcode (a scan of it must keep finding it).

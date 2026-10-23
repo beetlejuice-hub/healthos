@@ -2508,3 +2508,29 @@ both reads and the questions. Phases in that order; #152 RPE waits (owner).
    again at 23:49." with Try again (ReadPending NightPending); a call that hasn't answered in 5 minutes is given up and
    tried again (client AI_TIMEOUT_MS) instead of holding up the ones behind it. Tests: attempts.test (a read while the
    deep dive is still going), e2e nightlane (fails 4 checks on the old code), readretry updated to the two lines.
+
+166. [x] **Delete entries from the chat** (owner, 22 Oct: "can u make it able to delete entries? i asked to delete 2
+   entries, it found them but cant delete them. please allow to delete entries"). The chat's look-ups (day, find) show
+   each entry's [id:…]; propose has delete_entry — a card "Delete Coffee (95 mg caffeine) · Wed 21 Oct 16:30" with
+   Delete and Not now; Delete removes it, "Put it back" restores it exactly (store restoreEntry) and the card can Delete
+   again. Found on the way: the chat never passed the log to its proposals (a delete would always have said "no
+   entry"), and a card under a read's item or the Noticed box kept showing Apply after it was applied — both fixed.
+   Tests: propose.test (ids in day/find, the card through the chat's own tool, gone already), e2e chatdelete (the fake
+   AI finds them with the real tool and reads the ids back), askabout (the card says it's done).
+
+167. [x] **The AI's voice: a friend, sometimes funny, sometimes mean** (owner, 22 Oct: "make ai talking style a bit more
+   fun … let it be a bit more wild, it can land funny/harmless jokes too or joke like friends, it shouldnt be afraid to
+   hurt my feelings. jut make it more like a person, sometimes funny, somtimes mean, etc. but should land the info/data
+   clearly"). VOICE, shared by every task: teases like a mate (roasts choices — the third coffee at 16:00, the "one
+   beer" that was four), dry and blunt when it fits, varied, no hearts or wellness-speak; the number, finding and next
+   step always land; never about his body, looks or worth, and never a joke about a health worry (the line drawn by the
+   agent — his call to move it). brief.test pins it in every task.
+
+168. [x] **Heart-rate asks on Today, high and low** (owner, 22 Oct: "App can ask about the unusually high or low heart bpm
+   too like what were you doing in this time frame and it can connect event to it and track. In the today page"). Low
+   stretches found like raised ones (lib/heart loweredStretches: 8+ bpm under your usual for 20+ minutes awake; only
+   what you said you were doing explains one — whyLow); the app asks about them as it does raised ones (inbox
+   "Heart rate down 15:20–16:00"), and Today shows the newest open ask with the same answers (HeartAsk.tsx). The answer
+   is saved as what you were doing in the stretch's middle — so it explains it on the Heart page, in the grids, for the
+   AI — and it's answered in the AI tab too. Tests: heart.test (a planted −12 dip found, controls: flat, raised, a −5
+   wobble — none), e2e heartask (both asks on Today, answers in their middles, the control day asks nothing).

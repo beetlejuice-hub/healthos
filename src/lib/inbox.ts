@@ -48,6 +48,12 @@ export function askable(r: Raised, why: Why[], latest: number, now: number): boo
 
 export function raisedNotice(r: Raised, now: number): Notice {
   const day = localDay(r.start) === localDay(now) ? "" : "yesterday ";
+  // under your usual (owner, 22 Oct: "ask about the unusually high or low heart bpm too")
+  if (r.low) return {
+    id: `lowered:${r.start}`, kind: "raised", at: now, span: { start: r.start, end: r.end },
+    title: `Heart rate down ${day}${clock(r.start)}–${clock(r.end)}`,
+    text: `−${Math.round(r.excess)} bpm under your usual for then${r.level === "very" ? `, lowest ${Math.round(r.peak)}` : ""}, awake, and nothing logged around it. What were you doing?`,
+  };
   return {
     id: `raised:${r.start}`, kind: "raised", at: now, span: { start: r.start, end: r.end },
     title: `Heart rate up ${day}${clock(r.start)}–${clock(r.end)}`,

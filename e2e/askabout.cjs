@@ -73,6 +73,9 @@ const PROPOSE = { id: 'p1', name: 'propose', input: { change: 'add_supplement', 
   await box.locator('.proposals').getByRole('button', { name: /Apply/ }).first().click(); await pg.waitForTimeout(200);
   const after = await stored((s) => s.supplements.map((x) => `${x.name} ${x.dose}`), (v) => v.length > 0);
   check(`Apply puts it in the stack (${after.join(', ')})`, after.length === 1 && /Magnesium glycinate 400 mg/.test(after[0]));
+  // …and the card says so (it kept showing Apply: the card under the box isn't re-read from the chat — 22 Oct)
+  const card = await box.locator('.propose').innerText();
+  check(`the card says it's done, no Apply left (${card.replace(/\s+/g, ' ')})`, /✓ Added Magnesium glycinate/.test(card) && await box.locator('.propose').getByRole('button', { name: 'Apply' }).count() === 0);
 
   // both exchanges are in the AI tab's chat
   const thread = await stored((s) => s.ai.chat.map((m) => `${m.role}: ${m.text.slice(0, 40)}`), (v) => v.length >= 4);

@@ -181,3 +181,30 @@ describe("goal cards show from → to", () => {
     expect(ok(makeProposal({ change: "goals", kcal: 2300, protein: 160, why: "" }, setup(), "g")).label).toBe("Calorie goal 2,600 → 2,300 kcal · Protein goal 160 g");
   });
 });
+
+// owner, 22 Oct: "can u make it able to delete entries? i asked to delete 2 entries, it found them but cant delete them"
+describe("deleting an entry", () => {
+  const coffee = { id: "e-cof", kind: "drink" as const, at: new Date("2026-10-15T16:30:00").getTime(), name: "Coffee", ml: 250, caffeineMg: 95, alcoholG: 0, kcal: 2 };
+  const lunch = { id: "e-lun", kind: "food" as const, at: new Date("2026-10-16T09:00:00").getTime(), name: "Chicken and rice", grams: 400, macros: { kcal: 650, p: 45, c: 70, f: 18 } };
+  const state = { ...setup({ entries: [coffee, lunch] }), entries: [coffee, lunch], workouts: [], foods: [] } as never;
+  it("the look-ups show each entry's id — what the AI deletes by", () => {
+    const day = runChatTool({ id: "t", name: "day", input: { date: "2026-10-15" } }, { state, band: null, now: NOW }).text;
+    expect(day).toMatch(/16:30 drank Coffee \(95 mg caffeine\) \[id:e-cof\]/);
+    const found = runChatTool({ id: "t", name: "find", input: { text: "chicken" } }, { state, band: null, now: NOW }).text;
+    expect(found).toMatch(/food: Chicken and rice \(650 kcal\) \[id:e-lun\]/);
+  });
+  it("is a card worded with what and when, made through the chat's own tool; nothing goes before Delete", () => {
+    const out = runChatTool({ id: "p", name: "propose", input: { change: "delete_entry", entry: "[id:e-cof]", why: "you said it was logged twice" } }, { state, band: null, now: NOW });
+    expect(out.error).toBeFalsy();
+    expect(out.proposal).toMatchObject({ change: "delete_entry", label: "Delete Coffee (95 mg caffeine) · Thu 15 Oct 16:30", entry: { id: "e-cof" } });
+    expect(ok(makeProposal({ change: "delete_entry", entry: "e-lun", why: "" }, setup({ entries: [coffee, lunch] }), "p", NOW)).label).toBe("Delete Chicken and rice (650 kcal) · today 09:00");
+  });
+  it("an id that isn't there is sent back to the AI with how to find it", () => {
+    expect(makeProposal({ change: "delete_entry", entry: "nope", why: "" }, setup({ entries: [coffee] }), "p", NOW)).toMatch(/no entry with id nope — look it up with day or find/);
+  });
+  it("Delete removes it; deleted already says so", () => {
+    const p = ok(makeProposal({ change: "delete_entry", entry: "e-cof", why: "" }, setup({ entries: [coffee, lunch] }), "p", NOW));
+    expect(done(applyProposal(p, setup({ entries: [coffee, lunch] }), NOW, "x"))).toEqual({ remove: "e-cof", text: "Deleted Coffee (95 mg caffeine)." });
+    expect(applyProposal(p, setup({ entries: [lunch] }), NOW, "x")).toBe("It's already gone.");
+  });
+});

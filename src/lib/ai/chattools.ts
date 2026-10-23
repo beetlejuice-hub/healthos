@@ -76,13 +76,16 @@ function day(input: Record<string, unknown>, d: ToolData): ToolOut {
   const avg = row ? ([["mood", row.mood], ["energy", row.energy], ["focus", row.focus], ["stress", row.stress], ["sleep", row.sleep], ["kcal", row.kcal], ["protein", row.protein], ["cafBed", row.cafBed], ["drinks", row.drinks], ["weight", row.weight]] as [SeriesKey, number | null][]).filter(([, v]) => v != null).map(([k, v]) => `${MEASURE[k].name} ${fmtMeasure(k, v!)}`) : [];
   const steps = stepsByDay(d.band).get(x), b = d.band;
   const band = [b?.rhr[x] != null && `resting heart rate ${Math.round(b.rhr[x])} bpm`, b?.hrv[x] != null && `HRV ${Math.round(b.hrv[x])} ms`, steps != null && `${steps.toLocaleString("en-GB")} steps`, b?.kcal?.[x] != null && `${Math.round(b.kcal[x]).toLocaleString("en-GB")} kcal burned`].filter(Boolean);
-  const lines = dayTimeline(d.state, x);
+  const lines = dayTimeline(d.state, x, true);
+  // supplements taken, each with its [id:…] — the timeline leaves them out
+  const supps = d.state.entries.filter((e) => e.kind === "supp" && e.status !== "skipped" && localDay(e.at) === x).map((e) => (e.kind === "supp" ? `${clock(e.at)} took ${sup.get(e.suppId) ?? "a supplement"}${e.amount ? ` (${e.amount})` : ""} [id:${e.id}]` : ""));
   return { text: [
     `${name(x)} (${x})${x === today ? " — today, so far" : ""}`,
     avg.length ? `Averages: ${avg.join(", ")}` : "No check-ins, food or weigh-ins that day.",
     ...(row?.taken?.length ? [`Supplements taken: ${row.taken.map((id) => sup.get(id) ?? id).join(", ")}`] : []),
     ...(band.length ? [`Band: ${band.join(", ")}`] : []),
     ...(lines.length ? ["In order:", ...lines.map((l) => `- ${l}`)] : []),
+    ...(supps.length ? ["Supplement logs:", ...supps.map((l) => `- ${l}`)] : []),
   ].join("\n") };
 }
 
@@ -119,9 +122,11 @@ function find(input: Record<string, unknown>, d: ToolData): ToolOut {
   // a plate's parts too: "chicken" finds the chicken-and-rice plate (20 Oct)
   const parts = new Map((d.state.foods ?? []).filter((f) => f.parts?.length).map((f) => [f.id, f.parts!.map((p) => p.name)]));
   const hits: { at: number; line: string }[] = [];
-  const hit = (at: number, what: string, ...texts: (string | undefined)[]) => { if (texts.some((t) => t && fold(t).includes(q))) hits.push({ at, line: what }); };
+  let id = "";
+  const hit = (at: number, what: string, ...texts: (string | undefined)[]) => { if (texts.some((t) => t && fold(t).includes(q))) hits.push({ at, line: `${what}${id}` }); };
   for (const e of d.state.entries) {
     if (e.at < since || e.at > d.now) continue;
+    id = ` [id:${e.id}]`;
     if (e.kind === "food") hit(e.at, `food: ${e.name} (${Math.round(e.macros.kcal)} kcal)${e.foodId && parts.has(e.foodId) ? ` — made of ${parts.get(e.foodId)!.join(", ")}` : ""}`, e.name, ...(e.foodId ? parts.get(e.foodId) ?? [] : []));
     else if (e.kind === "drink") hit(e.at, `drink: ${e.name}`, e.name);
     else if (e.kind === "supp") hit(e.at, `supplement ${e.status}: ${sup.get(e.suppId) ?? e.suppId}`, sup.get(e.suppId), e.suppId);
@@ -130,6 +135,7 @@ function find(input: Record<string, unknown>, d: ToolData): ToolOut {
     else if (e.kind === "notice") hit(e.at, `noticed: "${e.text}"`, e.text);
     else if (e.kind === "sleep") hit(e.at, `about last night: ${(e.tags ?? []).join(", ")}`, ...(e.tags ?? []));
   }
+  id = "";
   for (const w of d.state.workouts) if (w.startedAt >= since) hit(w.startedAt, `workout: ${w.template ?? "workout"}`, w.template);
   hits.sort((a, b) => b.at - a.at);
   if (!hits.length) return { text: `"${input.text}" doesn't show up in the last ${FIND_DAYS} days.` };
@@ -228,9 +234,10 @@ function remember(input: Record<string, unknown>, d: ToolData): ToolOut {
 
 /** A change for the user to apply (lib/ai/propose): checked here, shown as a card, made only when they tap Apply. */
 function propose(call: ToolCall, d: ToolData): ToolOut {
-  const { supplements, settings, ai, goals } = d.state;
+  const { supplements, settings, ai, goals, entries } = d.state;
   if (!goals) return { text: "goals unavailable", error: true };
-  const p = makeProposal(call.input ?? {}, { supplements, settings, goals, ai }, call.id, d.now);
+  // the entries too: a delete names one by its id (22 Oct)
+  const p = makeProposal(call.input ?? {}, { supplements, settings, goals, ai, entries }, call.id, d.now);
   if (typeof p === "string") return { text: p, error: true };
   return { text: `Shown under your reply as a card: "${p.label}". Nothing changes until they tap Apply — say it's waiting for them, not that it's done.`, proposal: p };
 }

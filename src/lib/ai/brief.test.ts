@@ -123,3 +123,15 @@ describe("the evening's picks", () => {
     expect(eveningBrief([]).some((l) => l.startsWith("## Already shown"))).toBe(false);
   });
 });
+
+// owner, 22 Oct: "make ai talking style a bit more fun … sometimes funny, somtimes mean, etc. but should land the info/data clearly"
+describe("the AI's voice", () => {
+  it("every task is a friend who teases — choices, never body — and the data still lands", () => {
+    for (const t of ["digest", "night", "chat", "questions", "dive", "review"] as const) {
+      expect(SYSTEM[t]).toMatch(/Tease them like a mate would/);
+      expect(SYSTEM[t]).toMatch(/The joke never hides the point/);
+      expect(SYSTEM[t]).toMatch(/Roast choices, never their body, looks or worth/);
+      expect(SYSTEM[t]).not.toMatch(/a sharp, warm friend with a dry sense of humour/);
+    }
+  });
+});

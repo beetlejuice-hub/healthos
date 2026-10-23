@@ -11,7 +11,7 @@ import type { AiState, Experiment, State } from "../store";
 import { SLOTS, SUPP_STATUS_PATCH, slotOf, slotTime, suppStatus, type Entry, type Goals, type Slot, type Supplement } from "../types";
 import { changeDose, doseAt } from "../dose";
 import { DEFAULT_ENERGY, PACES, withKcal, type Energy } from "../energy";
-import { atMinute, clock, localDay, minuteOfDay } from "../time";
+import { atMinute, clock, dayLabel, localDay, minuteOfDay } from "../time";
 import { logIntake, type Intake } from "../supplog";
 import { resolve } from "../stackcheck/check";
 import { EXPERIMENT_MEASURES, PACE_NAMES, PROPOSE_CHANGES, type ProposeChange } from "./tasks";
@@ -30,13 +30,32 @@ export type Proposal = {
   experiment?: { name: string; how: string; days: number; measure: string };
   /** log_supplement: when it was taken, and how much when they said. */
   log?: { at: number; amount?: string };
+  /** delete_entry: the entry, kept on the card so "Put it back" can restore it. */
+  entry?: Entry;
+  /** When "Put it back" restored a deleted entry. */
+  restored?: number;
   /** When you tapped Apply, or Not now. */
   applied?: number;
   dismissed?: number;
 };
 
 export type Setup = Pick<State, "supplements" | "goals" | "settings"> & { ai: Pick<AiState, "experiments">; entries?: Entry[] };
-export type Applied = { supplements?: Supplement[]; goals?: Goals; energy?: Energy; experiments?: Experiment[]; intake?: Intake; text: string };
+export type Applied = { supplements?: Supplement[]; goals?: Goals; energy?: Energy; experiments?: Experiment[]; intake?: Intake; /** delete_entry: the entry to delete. */ remove?: string; text: string };
+
+/** An entry in a few words, for a delete card: "Coffee (95 mg caffeine)", "check-in: mood 6", "weigh-in 82.4 kg". */
+export function entryWords(e: Entry, supplements: Supplement[]): string {
+  switch (e.kind) {
+    case "food": return `${e.name} (${Math.round(e.macros.kcal)} kcal)`;
+    case "drink": return `${e.name}${e.caffeineMg ? ` (${e.caffeineMg} mg caffeine)` : e.alcoholG ? ` (${e.alcoholG} g alcohol)` : ""}`;
+    case "supp": return `${supplements.find((s) => s.id === e.suppId)?.name ?? "a supplement"} ${e.status === "skipped" ? "skipped" : "taken"}`;
+    case "feel": return `check-in${(["mood", "energy", "focus", "stress"] as const).filter((k) => e[k] != null).map((k) => ` ${k} ${e[k]}`).slice(0, 2).join(",")}`;
+    case "weight": return `weigh-in ${e.kg} kg`;
+    case "sleep": return e.rating != null ? `sleep rating ${e.rating}/10` : "a note about last night";
+    case "notice": return `note "${e.text.slice(0, 40)}${e.text.length > 40 ? "…" : ""}"`;
+    case "answer": return `answer "${e.answer.slice(0, 40)}"`;
+    default: return e.kind;
+  }
+}
 
 const fold = (s: string) => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/\bvit\b\.?/g, "vitamin").replace(/\s+/g, " ").trim();
 const str = (x: unknown, max: number) => (typeof x === "string" && x.trim() && x.trim().length <= max ? x.trim() : null);
@@ -118,6 +137,14 @@ export function makeProposal(input: Record<string, unknown>, s: Setup, id: strin
     return { id, change, why, supp: { id: found.id, name: found.name, status }, label: `${found.name}: ${status === "taking" ? "taking it again" : status === "stopped" ? "stop it" : "mark it ran out"}` };
   }
 
+  // owner, 22 Oct: "i asked to delete 2 entries, it found them but cant delete them" — by the [id:…] the look-ups show
+  if (change === "delete_entry") {
+    const ref = typeof input.entry === "string" ? input.entry.trim().replace(/^\[?id:/, "").replace(/\]$/, "") : "";
+    const e = (s.entries ?? []).find((x) => x.id === ref);
+    if (!e) return ref ? `no entry with id ${ref} — look it up with day or find and use the [id:…] shown after it` : "entry: the [id:…] the day or find look-up shows after it";
+    return { id, change, why, entry: e, label: `Delete ${entryWords(e, s.supplements)} · ${localDay(e.at) === localDay(now) ? "today" : dayLabel(e.at)} ${clock(e.at)}` };
+  }
+
   if (change === "goals") {
     const kcal = input.kcal == null ? undefined : int(input.kcal, ...GOAL_RANGE.kcal);
     const p = input.protein == null ? undefined : int(input.protein, ...GOAL_RANGE.p);
@@ -181,6 +208,10 @@ export function applyProposal(p: Proposal, s: Setup, now: number, id: string): A
     if (g.p != null) goals = { ...goals, p: g.p };
     const nextEnergy = g.pace != null ? { ...energy, mode: "burn" as const, pace: g.pace } : g.kcal != null && energy.mode === "burn" ? { ...energy, mode: "fixed" as const } : undefined;
     return { ...(goals !== s.goals ? { goals } : {}), ...(nextEnergy ? { energy: nextEnergy } : {}), text: "Goals updated." };
+  }
+  if (p.change === "delete_entry") {
+    const e = (s.entries ?? []).find((x) => x.id === p.entry!.id);
+    return e ? { remove: e.id, text: `Deleted ${entryWords(e, s.supplements)}.` } : "It's already gone.";
   }
   const x = p.experiment!;
   if (s.ai.experiments.some((e) => !e.ended && fold(e.name) === fold(x.name))) return `${x.name} is already running.`;

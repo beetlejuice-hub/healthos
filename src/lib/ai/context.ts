@@ -43,20 +43,23 @@ const feelText = (e: Extract<State["entries"][number], { kind: "feel" }>) =>
  * One day in order — what was eaten and drunk, the gym, every check-in with what you were up to and
  * the note you wrote. The nightly read-back is built on it; notes are quoted exactly.
  */
-export function dayTimeline(state: Pick<State, "entries" | "workouts"> & { foods?: State["foods"] }, day: string): string[] {
-  return timeline(state, atMinute(day, 0), atMinute(addDays(day, 1), 0));
+export function dayTimeline(state: Pick<State, "entries" | "workouts"> & { foods?: State["foods"] }, day: string, ids = false): string[] {
+  return timeline(state, atMinute(day, 0), atMinute(addDays(day, 1), 0), undefined, ids);
 }
 
 /**
  * Everything logged from `from` up to `to`, in time order (not by the clock's text: 00:40 comes after 22:00), one line
  * each. `mark` adds a word after the time — "(after midnight)" in an evening that runs past it.
  */
-export function timeline(state: Pick<State, "entries" | "workouts"> & { foods?: State["foods"] }, from: number, to: number, mark: (at: number) => string = () => ""): string[] {
+export function timeline(state: Pick<State, "entries" | "workouts"> & { foods?: State["foods"] }, from: number, to: number, mark: (at: number) => string = () => "",
+  /** Each entry's [id:…], for the chat's look-ups — so it can propose deleting one (22 Oct). */ ids = false): string[] {
   const foods = new Map((state.foods ?? []).map((f) => [f.id, f]));
   const es = state.entries.filter((e) => e.at >= from && e.at < to);
   const rows: [number, string][] = [];
-  const push = (at: number, line: string) => rows.push([at, line]);
+  let id = "";
+  const push = (at: number, line: string) => rows.push([at, `${line}${id}`]);
   for (const e of es) {
+    id = ids ? ` [id:${e.id}]` : "";
     const t = clock(e.at) + mark(e.at);
     if (e.kind === "food") push(e.at, `${t} ate ${e.name} (${Math.round(e.macros.kcal)} kcal, P ${Math.round(e.macros.p)} g)${madeOf(e.foodId ? foods.get(e.foodId) : undefined, e.grams)}`);
     // a drink's protein too (PLAN 149; owner, 21 Oct: the AI "said it cant see how much protein the protein coffee had")
@@ -68,6 +71,7 @@ export function timeline(state: Pick<State, "entries" | "workouts"> & { foods?: 
     else if (e.kind === "supp" && e.status === "skipped") push(e.at, `${t} skipped a supplement`);
     else if (e.kind === "notice") push(e.at, `${t} noticed about myself: "${e.text}"`);
   }
+  id = "";
   for (const w of state.workouts ?? []) if (w.startedAt >= from && w.startedAt < to) push(w.startedAt, w.kind === "cardio"
     // PLAN 130: a cardio session of its own, by name and minutes
     ? `${clock(w.startedAt)}${mark(w.startedAt)} cardio: ${w.cardio?.what || "cardio"} (${w.endedAt ? `${Math.round((w.endedAt - w.startedAt) / 60_000)} min` : "going now"})`

@@ -157,9 +157,25 @@ export function roll(vals: (number | null)[], k = 7, need = 4): (number | null)[
  * Asleep, training and the hour after are left out: those are known. "Very" when it averages VERY_BPM or more above.
  */
 export const RAISED_BPM = 5, VERY_BPM = 15, RAISED_MIN = 20;
-export type Raised = { start: number; end: number; excess: number; peak: number; level: "slightly" | "very" };
+/**
+ * `excess`: how far from your usual, always positive; `low`: under it, not over (then `peak` is the lowest). Owner, 22 Oct:
+ * "App can ask about the unusually high or low heart bpm too like what were you doing in this time frame".
+ */
+export type Raised = { start: number; end: number; excess: number; peak: number; level: "slightly" | "very"; low?: true };
+/** Under your usual, awake, by this much for 20+ minutes: calm (reading, a sauna's cool-down, breathing) — or the band slipping. */
+export const LOW_BPM = 8;
 
 export function raisedStretches(hr: HrMinute[], sleep: Pick<SleepSession, "start" | "end">[], workouts: Span[], usual: Usual | null, from: number, to: number): Raised[] {
+  return stretches(hr, sleep, workouts, usual, from, to, 1);
+}
+
+/** The same, under your usual: LOW_BPM or more below it for 20+ minutes awake (asleep, training and the hour after left out). */
+export function loweredStretches(hr: HrMinute[], sleep: Pick<SleepSession, "start" | "end">[], workouts: Span[], usual: Usual | null, from: number, to: number): Raised[] {
+  return stretches(hr, sleep, workouts, usual, from, to, -1);
+}
+
+function stretches(hr: HrMinute[], sleep: Pick<SleepSession, "start" | "end">[], workouts: Span[], usual: Usual | null, from: number, to: number, sign: 1 | -1): Raised[] {
+  const over = sign === 1 ? RAISED_BPM : LOW_BPM;
   const B = 5 * MIN, buckets = new Map<number, number[]>();
   for (const [t, v] of awakeMinutes(hr.filter((m) => m[0] >= from && m[0] < to), sleep, workouts)) { const k = Math.floor(t / B), a = buckets.get(k); if (a) a.push(v); else buckets.set(k, [v]); }
   const ks = [...buckets.keys()].sort((a, b) => a - b), out: Raised[] = [];
@@ -168,7 +184,7 @@ export function raisedStretches(hr: HrMinute[], sleep: Pick<SleepSession, "start
   const close = () => {
     if (run && run.ks.length * 5 >= RAISED_MIN) {
       const excess = mean(run.ex);
-      out.push({ start: run.ks[0] * B, end: (run.ks.at(-1)! + 1) * B, excess, peak: Math.max(...run.vals), level: excess >= VERY_BPM ? "very" : "slightly" });
+      out.push({ start: run.ks[0] * B, end: (run.ks.at(-1)! + 1) * B, excess, peak: sign === 1 ? Math.max(...run.vals) : Math.min(...run.vals), level: excess >= VERY_BPM ? "very" : "slightly", ...(sign === -1 ? { low: true as const } : {}) });
     }
     run = null; dip = 0;
   };
@@ -176,8 +192,8 @@ export function raisedStretches(hr: HrMinute[], sleep: Pick<SleepSession, "start
     const vals = buckets.get(k)!, m = mean(vals), u = usualAt(usual, k * B + B / 2);
     if (i && k !== ks[i - 1] + 1) close(); // the band was off (or asleep, training) in between
     if (!u) { close(); return; }
-    const ex = m - u.mid;
-    if (ex >= RAISED_BPM) { if (!run) run = { ks: [], ex: [], vals: [] }; run.ks.push(k); run.ex.push(ex); run.vals.push(m); dip = 0; return; }
+    const ex = sign * (m - u.mid);
+    if (ex >= over) { if (!run) run = { ks: [], ex: [], vals: [] }; run.ks.push(k); run.ex.push(ex); run.vals.push(m); dip = 0; return; }
     if (run && dip === 0) { dip = 1; return; } // one 5-minute dip doesn't end it…
     close(); // …two do
   });
@@ -206,6 +222,9 @@ const SLEEP_WORDS = /^(sleep|sleeping|slept|asleep|bed|nap|napping|napped|woke|w
  * about), coffee in the 2 hours before, drinks in the 3, a meal in the 90 minutes, what you said you were doing or a
  * stressful check-in around it.
  */
+/** What explains a low stretch: only what you said you were doing — coffee, a meal or waking don't lower it. */
+export const whyLow = (r: Pick<Raised, "start" | "end">, entries: { kind: string; at: number; [k: string]: unknown }[]): Why[] => whyRaised(r, entries).filter((w) => w.kind === "said");
+
 export function whyRaised(r: Pick<Raised, "start" | "end">, entries: { kind: string; at: number; [k: string]: unknown }[], steps: StepBucket[] = [], sleep: Pick<SleepSession, "start" | "end">[] = []): Why[] {
   const out: Why[] = [];
   // the stretch's 5-minute buckets can start up to 5 minutes before the minute you woke

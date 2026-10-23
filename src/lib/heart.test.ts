@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { HrMinute } from "./band";
 import { rng } from "./bench";
 import type { Check } from "./feelgraph";
-import { aroundChecks, awakeByDay, dayNumbers, heartOutcomes, raisedStretches, roll, whyRaised, type AwakeDay } from "./heart";
+import { aroundChecks, awakeByDay, dayNumbers, heartOutcomes, loweredStretches, raisedStretches, roll, whyLow, whyRaised, type AwakeDay } from "./heart";
 import { usualByHour } from "./hrusual";
 import { FACTORS, goesWith, type Evening, type Night } from "./sleep";
 import { addDays, atMinute, HOUR, MIN } from "./time";
@@ -170,6 +170,24 @@ describe("raised stretches", () => {
   it("30 minutes at +7: slightly; 15 minutes at +8: too short to say", () => {
     expect(find(day((h) => (h >= 10 && h < 10.5 ? 67 : 60)))).toEqual([expect.objectContaining({ level: "slightly", start: T(D0, 10), end: T(D0, 10.5) })]);
     expect(find(day((h) => (h >= 10 && h < 10.25 ? 68 : 60)))).toEqual([]);
+  });
+  // owner, 22 Oct: "App can ask about the unusually high or low heart bpm too"
+  const low = (hr: HrMinute[]) => loweredStretches(hr, [], [], usual, T(D0, 0), T(D0, 24));
+  it("40 minutes at −12, awake: one low stretch, where it was, its lowest; the raised finder doesn't see it", () => {
+    const hr = day((h) => (h >= 15.5 && h < 15.5 + 40 / 60 ? 48 : 60));
+    const r = low(hr);
+    expect(r).toEqual([expect.objectContaining({ start: T(D0, 15.5), end: T(D0, 15.5 + 40 / 60), level: "slightly", low: true, peak: 48 })]);
+    expect(r[0].excess).toBeCloseTo(12, 6);
+    expect(find(hr)).toEqual([]);
+    // …and the control: a flat day, a raised one, and a dip only 5 under (inside your usual's wobble) have none
+    expect(low(day(() => 60))).toEqual([]);
+    expect(low(day((h) => (h >= 14 && h < 15 ? 80 : 60)))).toEqual([]);
+    expect(low(day((h) => (h >= 15.5 && h < 16.5 ? 55 : 60)))).toEqual([]);
+  });
+  it("a low stretch is explained only by what you said you were doing — not coffee, a meal or waking", () => {
+    const r = { start: T(D0, 15.5), end: T(D0, 16.2) };
+    expect(whyLow(r, [{ kind: "drink", at: T(D0, 15), caffeineMg: 95, alcoholG: 0 }, { kind: "food", at: T(D0, 15.2), macros: { kcal: 700 } }])).toEqual([]);
+    expect(whyLow(r, [{ kind: "feel", at: T(D0, 15.8), doing: ["reading"] }]).map((w) => w.kind)).toEqual(["said"]);
   });
   it("one 5-minute dip doesn't end a stretch; two do", () => {
     const one = find(day((h) => (h >= 15 && h < 15 + 50 / 60 && !(h >= 15 + 20 / 60 && h < 15 + 25 / 60) ? 72 : 60)));

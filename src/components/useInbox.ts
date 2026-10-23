@@ -7,7 +7,7 @@
 
 import { useEffect, useRef } from "react";
 import { bandFrom, bandLatest, bandNow, loadBandBefore, useBand } from "../lib/band-client";
-import { awakeByDay, heartOutcomes, loggedAround, raisedStretches, whyRaised } from "../lib/heart";
+import { awakeByDay, heartOutcomes, loggedAround, loweredStretches, raisedStretches, whyLow, whyRaised } from "../lib/heart";
 import { usualByHour } from "../lib/hrusual";
 import { askable, findings, pickNew, raisedNotice, readinessNotice, type Notice } from "../lib/inbox";
 import { AFTER_FACTORS, AFTER_OUTCOMES, afterDays } from "../lib/aftertraining";
@@ -57,6 +57,12 @@ export function scanAsks(now: number) {
     for (const r of raisedStretches(band.hr, band.sleep, data.workouts, u, t0, Math.min(t1, now))) {
       const why = whyRaised(r, logged, band.steps ?? [], band.sleep);
       if (why.length) explained.add(`raised:${r.start}`);
+      if (askable(r, why, latest, now)) cands.push(raisedNotice(r, now));
+    }
+    // and unusually low, awake (22 Oct)
+    for (const r of loweredStretches(band.hr, band.sleep, data.workouts, u, t0, Math.min(t1, now))) {
+      const why = whyLow(r, logged);
+      if (why.length) explained.add(`lowered:${r.start}`);
       if (askable(r, why, latest, now)) cands.push(raisedNotice(r, now));
     }
   }

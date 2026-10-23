@@ -12,7 +12,7 @@ import { clock, dayLabel, localDay } from "../lib/time";
 
 const WHERE: Record<Proposal["change"], [string, string]> = {
   add_supplement: ["#log/stack", "Stack"], dose: ["#log/stack", "Stack"], supplement_status: ["#log/stack", "Stack"], log_supplement: ["#today", "Today"],
-  goals: ["#settings", "Settings"], experiment: ["#insights/training", "Insights → Training"],
+  goals: ["#settings", "Settings"], experiment: ["#insights/training", "Insights → Training"], delete_entry: ["#log", "Log"],
 };
 
 /** Mark one card on one chat message. */
@@ -29,6 +29,7 @@ function applyNow(at: number, p: Proposal, onAdded?: (s: Supplement) => void): {
   if (r.energy) act.setSettings({ energy: r.energy });
   if (r.intake?.op === "add") act.addEntry(r.intake.entry);
   else if (r.intake) act.updateEntry(r.intake.id, r.intake.patch as Partial<Entry>);
+  if (r.remove) act.removeEntry(r.remove);
   mark(at, p.id, { applied: now, dismissed: undefined }, r.experiments ? { experiments: r.experiments } : {});
   const added = p.change === "add_supplement" ? r.supplements?.at(-1) : undefined;
   if (added && onAdded) onAdded(added);
@@ -37,22 +38,31 @@ function applyNow(at: number, p: Proposal, onAdded?: (s: Supplement) => void): {
 
 export function Proposals({ at, list, now, onAdded }: { at: number; list: Proposal[]; now: number; onAdded?: (s: Supplement) => void }) {
   const [said, setSaid] = useState<Record<string, { text: string; bad?: boolean }>>({});
-  const apply = (p: Proposal) => { const r = applyNow(at, p, onAdded); setSaid((x) => ({ ...x, [p.id]: r })); };
+  // what was tapped here too: a card under a read's item or the Noticed box isn't re-read from the chat (22 Oct: it kept
+  // showing Apply after it was applied)
+  const [mine, setMine] = useState<Record<string, Partial<Proposal>>>({});
+  const tap = (p: Proposal, patch: Partial<Proposal>) => { mark(at, p.id, patch); setMine((x) => ({ ...x, [p.id]: { ...x[p.id], ...patch } })); };
+  const apply = (p: Proposal) => { const r = applyNow(at, p, onAdded); setSaid((x) => ({ ...x, [p.id]: r })); if (!r.bad) setMine((x) => ({ ...x, [p.id]: { ...x[p.id], applied: Date.now(), restored: undefined } })); };
+  // a deleted entry, back as it was
+  // a deleted entry, back as it was — and the card back to Delete, in case
+  const putBack = (p: Proposal) => { if (p.entry && !getState().entries.some((e) => e.id === p.entry!.id)) act.restoreEntry(p.entry); tap(p, { applied: undefined, restored: Date.now() }); setSaid((x) => ({ ...x, [p.id]: { text: "Put back." } })); };
   return (
     <div className="proposals">
-      {list.map((p) => {
-        const s = said[p.id], [href, where] = WHERE[p.change];
+      {list.map((q) => {
+        const p = { ...q, ...mine[q.id] }, s = said[p.id], [href, where] = WHERE[p.change];
         return (
           <div key={p.id} className="propose" data-state={p.applied ? "applied" : p.dismissed ? "dismissed" : "open"}>
             <b>{p.label}</b>
             {p.why && !p.applied && !p.dismissed && <small className="pr-why">{p.why}</small>}
-            {p.applied ? <small className="pr-done">✓ {s && !s.bad ? s.text : `Applied ${localDay(p.applied) === localDay(now) ? clock(p.applied) : dayLabel(p.applied)}`} · <a href={href}>see it in {where}</a></small>
+            {p.applied && p.change === "delete_entry" ? <small className="pr-done">✓ {s && !s.bad ? s.text : `Deleted ${localDay(p.applied) === localDay(now) ? clock(p.applied) : dayLabel(p.applied)}`} · <button type="button" className="linkish" onClick={() => putBack(p)}>Put it back</button></small>
+              : p.applied ? <small className="pr-done">✓ {s && !s.bad ? s.text : `Applied ${localDay(p.applied) === localDay(now) ? clock(p.applied) : dayLabel(p.applied)}`} · <a href={href}>see it in {where}</a></small>
               : <div className="pr-acts">
-                  <button type="button" className="pill-btn pri" onClick={() => apply(p)}>{p.change === "log_supplement" ? "Log it" : "Apply"}</button>
-                  {!p.dismissed && <button type="button" className="pill-btn" onClick={() => mark(at, p.id, { dismissed: now })}>Not now</button>}
+                  <button type="button" className={`pill-btn pri${p.change === "delete_entry" ? " danger" : ""}`} onClick={() => apply(p)}>{p.change === "log_supplement" ? "Log it" : p.change === "delete_entry" ? "Delete" : "Apply"}</button>
+                  {!p.dismissed && <button type="button" className="pill-btn" onClick={() => tap(p, { dismissed: now })}>Not now</button>}
                   {p.dismissed && <small className="pr-skip">not applied</small>}
                 </div>}
             {s?.bad && <small className="err">{s.text}</small>}
+            {!p.applied && p.restored && s?.text === "Put back." && <small className="pr-done">Put back.</small>}
           </div>
         );
       })}
