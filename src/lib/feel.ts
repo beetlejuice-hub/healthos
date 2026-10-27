@@ -56,13 +56,21 @@ export const OPEN_MS = JOIN_MS;
 export const ASK_AGAIN_MS = 2 * 60 * MIN;
 
 /** Your own tag: one word, lower case, letters/digits/dashes, up to 16 characters; null if nothing usable. */
-export function tagOf(word: string): string | null {
-  const t = word.trim().toLowerCase().split(/\s+/)[0]?.replace(/[^\p{L}\p{N}-]/gu, "").slice(0, 16) ?? "";
-  return t.length >= 2 ? t : null;
+/**
+ * Your own words as tags, every word kept (owner, 27 Oct: "i wrote one drink and work but it cut off" — it kept the first
+ * word only, "one"): split on commas, "and", "&", "+" and "/", each part's words joined by "-" — "one drink and work" is
+ * one-drink and work.
+ */
+export function tagsOf(text: string): string[] {
+  const parts = text.toLowerCase().split(/,|;|&|\+|\/|\band\b|\bés\b|\bsi\b/u);
+  const tags = parts.map((p) => p.replace(/[^\p{L}\p{N}\s-]/gu, " ").trim().split(/\s+/).filter(Boolean).join("-").slice(0, 24).replace(/-+$/, "")).filter((t) => t.length >= 2);
+  return [...new Set(tags)];
 }
+/** The first of them, for a box that takes one. */
+export const tagOf = (text: string): string | null => tagsOf(text)[0] ?? null;
 
-export const phraseOf = (tag: string) => DOING.find((d) => d.tag === tag)?.phrase ?? tag;
-export const labelOf = (tag: string) => DOING.find((d) => d.tag === tag)?.label ?? tag;
+export const phraseOf = (tag: string) => DOING.find((d) => d.tag === tag)?.phrase ?? tag.replace(/-/g, " ");
+export const labelOf = (tag: string) => DOING.find((d) => d.tag === tag)?.label ?? tag.replace(/-/g, " ");
 
 /**
  * Tags in the order to show them: the ones you use most first (last 60 days), then the built-in

@@ -145,7 +145,7 @@ export default {
   async fetch(req: Request, env: Env, ctx: Ctx): Promise<Response> {
     const url = new URL(req.url);
     if (url.pathname === "/api/food") return handleFood(req, env, ctx);
-    if (url.pathname === "/api/ai" || url.pathname === "/api/ai/usage") return handleAi(req, env);
+    if (url.pathname === "/api/ai" || url.pathname === "/api/ai/usage") return handleAi(req, env, undefined, ctx);
     if (url.pathname.startsWith("/api/push/")) return handlePush(req, env);
     if (url.pathname.startsWith("/api/band/") || url.pathname === "/api/google/callback") return handleBand(req, env);
     if (url.pathname === "/now" || url.pathname === "/now/") {

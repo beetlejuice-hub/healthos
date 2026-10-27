@@ -10,7 +10,7 @@
 
 import Anthropic from "@anthropic-ai/sdk";
 import {
-  DAILY_CAP, MODELS, MONTHLY_USD, RECENT_CALLS, SCHEMAS, logOf, SYSTEM, TIER, checkChat, modelFor, checkDescribe, checkDigest, checkNight, checkQuestions, checkReview, checkSupplement, costUsd, jsonFrom, DESCRIBE_SHAPE, CHAT_TOOLS, CHAT_ROUNDS, READ_ROUNDS, READ_TOOLS, checkReadCalls, checkDive, checkVerdict, type ChatTurn,
+  AI_ERRORS, type AiError, type Usage, DAILY_CAP, MODELS, MONTHLY_USD, RECENT_CALLS, SCHEMAS, logOf, SYSTEM, TIER, checkChat, modelFor, checkDescribe, checkDigest, checkNight, checkQuestions, checkReview, checkSupplement, costUsd, jsonFrom, DESCRIBE_SHAPE, CHAT_TOOLS, CHAT_ROUNDS, READ_ROUNDS, READ_TOOLS, checkReadCalls, checkDive, checkVerdict, type ChatTurn,
   type AiRequest, type DigestAnswer, type DiveAnswer, type VerdictAnswer, type ModelChoice, type NightAnswer, type SupplementAnswer, type Task, type UsageDoc,
 } from "../src/lib/ai/tasks";
 import { checkFoundLinks, checkReadLinks, checkSupplementLinks } from "./links";
@@ -36,21 +36,45 @@ export async function whoIs(req: Request, env: AiEnv, deps: Deps): Promise<{ id:
 
 const EMPTY = (day: string): UsageDoc => ({ day, calls: 0, dayUsd: 0, month: day.slice(0, 7), monthUsd: 0, byModel: {} });
 
-async function readUsage(user: { token: string }, env: AiEnv, deps: Deps, day: string): Promise<UsageDoc> {
+async function readDoc(user: { token: string }, env: AiEnv, deps: Deps): Promise<UsageDoc | null> {
   const r = await deps.fetch(`${env.SUPABASE_URL ?? SB_URL}/rest/v1/docs?key=eq.ai_usage&select=value`, { headers: { apikey: env.SUPABASE_KEY ?? SB_KEY, authorization: `Bearer ${user.token}` } });
   const rows = r.ok ? ((await r.json()) as { value: UsageDoc }[]) : [];
-  const u = rows[0]?.value;
-  if (!u) return EMPTY(day);
-  // A new day resets the count; a new month resets the month's total.
-  return { ...u, ...(u.day !== day ? { day, calls: 0, dayUsd: 0 } : {}), ...(u.month !== day.slice(0, 7) ? { month: day.slice(0, 7), monthUsd: 0, byModel: {} } : {}) };
+  return rows[0]?.value ?? null;
 }
+// A new day resets the count; a new month resets the month's total.
+const asOf = (u: UsageDoc | null, day: string): UsageDoc => !u ? EMPTY(day)
+  : { ...u, ...(u.day !== day ? { day, calls: 0, dayUsd: 0 } : {}), ...(u.month !== day.slice(0, 7) ? { month: day.slice(0, 7), monthUsd: 0, byModel: {} } : {}) };
+const readUsage = async (user: { token: string }, env: AiEnv, deps: Deps, day: string) => asOf(await readDoc(user, env, deps), day);
 
-async function writeUsage(user: { id: string; token: string }, env: AiEnv, deps: Deps, value: UsageDoc) {
-  await deps.fetch(`${env.SUPABASE_URL ?? SB_URL}/rest/v1/docs?on_conflict=user_id,key`, {
+async function writeUsage(user: { id: string; token: string }, env: AiEnv, deps: Deps, value: UsageDoc, onlyNew = false) {
+  return deps.fetch(`${env.SUPABASE_URL ?? SB_URL}/rest/v1/docs?on_conflict=user_id,key`, {
     method: "POST",
-    headers: { apikey: env.SUPABASE_KEY ?? SB_KEY, authorization: `Bearer ${user.token}`, "content-type": "application/json", prefer: "resolution=merge-duplicates,return=minimal" },
+    headers: { apikey: env.SUPABASE_KEY ?? SB_KEY, authorization: `Bearer ${user.token}`, "content-type": "application/json", prefer: `resolution=${onlyNew ? "ignore" : "merge"}-duplicates,return=representation` },
     body: JSON.stringify([{ user_id: user.id, key: "ai_usage", value }]),
   });
+}
+
+/**
+ * Add a call's spend to the total. Read just before writing, and written only if no other call wrote since (its `rev`
+ * the same) — else read again. Owner, 27 Oct: "App says we spent 11 bucks, in reality we spent 18": each call read the
+ * total when it started and wrote that plus its own cost when it ended, so a deep dive that searched for minutes wrote
+ * over every read and chat that finished meanwhile.
+ */
+async function addSpend(user: { id: string; token: string }, env: AiEnv, deps: Deps, day: string, f: (u: UsageDoc) => UsageDoc): Promise<UsageDoc> {
+  let next = EMPTY(day);
+  for (let i = 0; i < 5; i++) {
+    const old = await readDoc(user, env, deps);
+    next = { ...f(asOf(old, day)), rev: (old?.rev ?? 0) + 1 };
+    const r = !old ? await writeUsage(user, env, deps, next, true)
+      : await deps.fetch(`${env.SUPABASE_URL ?? SB_URL}/rest/v1/docs?user_id=eq.${user.id}&key=eq.ai_usage&value->>rev=${old.rev == null ? "is.null" : `eq.${old.rev}`}`, {
+        method: "PATCH",
+        headers: { apikey: env.SUPABASE_KEY ?? SB_KEY, authorization: `Bearer ${user.token}`, "content-type": "application/json", prefer: "return=representation" },
+        body: JSON.stringify({ value: next }),
+      });
+    if (r.ok && ((await r.json().catch(() => [])) as unknown[]).length) return next;
+  }
+  await writeUsage(user, env, deps, next); // lost five times in a row: kept rather than lost
+  return next;
 }
 
 /**
@@ -104,7 +128,18 @@ function messagesFor(b: AiRequest, today: string): Anthropic.Beta.BetaMessagePar
 // Joined as they are: a cited search answer arrives as several text blocks, split anywhere — even inside a JSON string.
 const textOf = (content: Anthropic.Beta.BetaContentBlock[]) => content.filter((c): c is Anthropic.Beta.BetaTextBlock => c.type === "text").map((c) => c.text).join("");
 
-export async function callModel(b: AiRequest, choice: ModelChoice, apiKey: string, deps: Deps, today: string) {
+/** A web search that failed (not one that hit its own cap): "unavailable", "too_many_requests"… */
+const searchFails = (content: Anthropic.Beta.BetaContentBlock[]) => content.flatMap((c) => {
+  const r = c as { type: string; content?: { type?: string; error_code?: string } };
+  return r.type === "web_search_tool_result" && r.content?.type === "web_search_tool_result_error" && r.content.error_code !== "max_uses_exceeded" ? [r.content.error_code ?? "error"] : [];
+});
+
+/** What a call has spent so far, kept as each response comes, so a call that fails after the AI answered is still paid for. */
+type Totals = { input_tokens: number; output_tokens: number; cache_read_input_tokens: number; cache_creation_input_tokens: number; server_tool_use: { web_search_requests: number } };
+export type Spent = { usd: number; usage: Totals; webFailed: string[]; /** The total once this call's cost is added. */ next?: UsageDoc };
+export const nothingSpent = (): Spent => ({ usd: 0, usage: { input_tokens: 0, output_tokens: 0, cache_read_input_tokens: 0, cache_creation_input_tokens: 0, server_tool_use: { web_search_requests: 0 } }, webFailed: [] });
+
+export async function callModel(b: AiRequest, choice: ModelChoice, apiKey: string, deps: Deps, today: string, spent: Spent = nothingSpent()) {
   const task: Task = b.task, m = MODELS[choice];
   // A typed name the food lists didn't know may be looked up on the web (two searches at most); search and
   // structured output don't mix, so that answer is parsed from text like the research tasks'.
@@ -118,7 +153,7 @@ export async function callModel(b: AiRequest, choice: ModelChoice, apiKey: strin
   // The data block is large and the same across a chat's messages: cached, so a reply costs ~10% for it.
   if (b.task === "chat") system.push({ type: "text", text: `Context — the user's data right now:\n${b.context}`, cache_control: { type: "ephemeral" } });
   let messages = messagesFor(b, today);
-  const usage = { input_tokens: 0, output_tokens: 0, cache_read_input_tokens: 0, cache_creation_input_tokens: 0, server_tool_use: { web_search_requests: 0 } };
+  const usage = spent.usage;
   let res: Anthropic.Beta.BetaMessage | null = null;
   // The chat's own tools (the app runs them) and web search for outside facts; the last round may not call any.
   // the reads may ask the app for exact numbers too (PLAN 160): its read-only look-ups, beside web search
@@ -140,6 +175,9 @@ export async function callModel(b: AiRequest, choice: ModelChoice, apiKey: strin
       ...(final ? { tool_choice: { type: "none" as const } } : {}),
       ...(choice !== "haiku" ? { betas: ["server-side-fallback-2026-07-01"], fallbacks: "default" as const } : {}),
     } as Anthropic.Beta.MessageCreateParamsNonStreaming);
+    // each response priced as it comes, at the rates of the model that answered (a fallback bills at its own — 27 Oct)
+    spent.usd += costUsd(choice, res.usage as Usage);
+    spent.webFailed.push(...searchFails(res.content));
     usage.input_tokens += res.usage.input_tokens; usage.output_tokens += res.usage.output_tokens;
     usage.cache_read_input_tokens += res.usage.cache_read_input_tokens ?? 0; usage.cache_creation_input_tokens += res.usage.cache_creation_input_tokens ?? 0;
     usage.server_tool_use.web_search_requests += res.usage.server_tool_use?.web_search_requests ?? 0;
@@ -171,7 +209,10 @@ export async function callModel(b: AiRequest, choice: ModelChoice, apiKey: strin
   return { refused: false as const, answer, usage };
 }
 
-export async function handleAi(req: Request, env: AiEnv, deps: Deps = { fetch: (...a) => fetch(...a), now: Date.now }): Promise<Response> {
+/** A failure as its code and plain words (AI_ERRORS), with any detail after: "… (ai-error 400: …)". */
+const fail = (code: AiError, status: number, extra: object = {}, detail?: string) => json({ error: code, message: `${AI_ERRORS[code]} (${code}${detail ? ` ${detail}` : ""})`, ...extra }, status);
+
+export async function handleAi(req: Request, env: AiEnv, deps: Deps = { fetch: (...a) => fetch(...a), now: Date.now }, ctx?: { waitUntil: (p: Promise<unknown>) => void }): Promise<Response> {
   const url = new URL(req.url);
   const user = await whoIs(req, env, deps);
   if (!user) return json({ error: "sign in first" }, 401);
@@ -182,7 +223,7 @@ export async function handleAi(req: Request, env: AiEnv, deps: Deps = { fetch: (
   const budget = Number(env.AI_MONTHLY_USD) || MONTHLY_USD;
   if (req.method === "GET" && url.pathname === "/api/ai/usage") return json({ usage: await readUsage(user, env, deps, today), cap, budget, on: !!env.ANTHROPIC_API_KEY });
   if (req.method !== "POST" || url.pathname !== "/api/ai") return json({ error: "not found" }, 404);
-  if (!env.ANTHROPIC_API_KEY) return json({ error: "no-key", message: "The AI is off: add ANTHROPIC_API_KEY in Cloudflare." }, 503);
+  if (!env.ANTHROPIC_API_KEY) return fail("no-key", 503);
 
   let body: AiRequest & { models?: { everyday?: ModelChoice; research?: ModelChoice } };
   try { body = await req.json(); } catch { return json({ error: "bad json" }, 400); }
@@ -192,23 +233,49 @@ export async function handleAi(req: Request, env: AiEnv, deps: Deps = { fetch: (
   const usage = await readUsage(user, env, deps, today);
   // a chat message's tool rounds count as the one call it is (priced and logged each)
   const more = (body.task === "chat" || body.task === "digest" || body.task === "night" || body.task === "dive") && !!body.turn?.length;
-  if (usage.calls >= cap && !more) return json({ error: "cap", message: `Daily AI limit reached (${cap}). It resets at midnight.`, usage }, 429);
+  if (usage.calls >= cap && !more) return fail("cap", 429, { usage }, String(cap));
 
   // yours for the task's tier; past the month's budget, the cheapest until the 1st
   const choice: ModelChoice = modelFor(body.task, body.models, usage.monthUsd, budget);
-  try {
-    const out = await callModel(body, choice, env.ANTHROPIC_API_KEY, deps, today);
-    const cost = costUsd(choice, out.usage);
-    const next: UsageDoc = { ...usage, calls: usage.calls + (more ? 0 : 1), dayUsd: usage.dayUsd + cost, monthUsd: usage.monthUsd + cost, byModel: { ...usage.byModel, [choice]: (usage.byModel[choice] ?? 0) + cost },
-      recent: [...(usage.recent ?? []), logOf(deps.now(), body.task, choice, out.usage, cost)].slice(-RECENT_CALLS) };
-    await writeUsage(user, env, deps, next);
-    if (out.refused) return json({ error: "refused", message: "The AI declined this one.", usage: next, costUsd: cost }, 422);
-    return json({ answer: out.answer, usage: next, costUsd: cost, model: choice });
-  } catch (e) {
-    if (e instanceof Anthropic.AuthenticationError) return json({ error: "bad-key", message: "The Anthropic key was rejected — check ANTHROPIC_API_KEY in Cloudflare." }, 502);
-    if (e instanceof Anthropic.RateLimitError) return json({ error: "busy", message: "The AI is busy — try again in a minute." }, 429);
-    if (e instanceof Anthropic.APIError) return json({ error: "ai-error", message: `The AI service failed (${e.status ?? "network"}).` }, 502);
-    if (e instanceof SyntaxError) return json({ error: "bad-answer", message: "The AI's answer didn't come back in the right shape — try again." }, 502);
-    throw e;
+  const spent = nothingSpent();
+  // Called and paid for in one piece: if the app stops waiting, Cloudflare cancels the request but lets this run on (for
+  // 30 s), so a call that was nearly done still adds its cost.
+  const run = (async () => {
+    try { return { out: await callModel(body, choice, env.ANTHROPIC_API_KEY!, deps, today, spent) }; } catch (e) { return { e }; } finally {
+      // whatever was spent is added, even when the call then failed (an answer in the wrong shape is still paid for)
+      // (if Supabase can't be reached the answer still goes back; only the total misses it)
+      if (spent.usd > 0) spent.next = await addSpend(user, env, deps, today, (u) => ({ ...u, calls: u.calls + (more ? 0 : 1), dayUsd: u.dayUsd + spent.usd, monthUsd: u.monthUsd + spent.usd,
+        byModel: { ...u.byModel, [choice]: (u.byModel[choice] ?? 0) + spent.usd }, recent: [...(u.recent ?? []), logOf(deps.now(), body.task, choice, spent.usage, spent.usd)].slice(-RECENT_CALLS) })).catch(() => undefined);
+    }
+  })();
+  ctx?.waitUntil(run);
+  const { out, e } = await run, next = spent.next ?? usage, cost = spent.usd;
+  const web = spent.webFailed.length ? { webFailed: [...new Set(spent.webFailed)] } : {};
+  if (out?.refused) return fail("refused", 422, { usage: next, costUsd: cost });
+  if (out) return json({ answer: out.answer, usage: next, costUsd: cost, model: choice, ...web });
+  const [code, status, detail] = whyFailed(e);
+  return fail(code, status, { usage: next, costUsd: cost, ...web }, detail);
+}
+
+/**
+ * What went wrong, as one of AI_ERRORS (owner, 27 Oct: "we need error codes for stuff… i should know what caused"). The
+ * API's own words decide between the cases its status alone can't: credit gone and a spend limit both come as a 400.
+ */
+export function whyFailed(e: unknown): [AiError, number, string?] {
+  if (e instanceof SyntaxError) return ["bad-answer", 502];
+  if (e instanceof Anthropic.APIConnectionTimeoutError) return ["ai-timeout", 504];
+  if (e instanceof Anthropic.APIConnectionError) return ["no-network", 502];
+  if (e instanceof Anthropic.APIError) {
+    // the API's own words ("Your credit balance is too low…"), not the SDK's "400 {json}"
+    const said = (e.error as { error?: { message?: string } } | undefined)?.error?.message ?? e.message ?? "", st = e.status;
+    if (/credit balance/i.test(said)) return ["no-credit", 402];
+    if (/usage limit|spend limit|spending limit/i.test(said)) return ["spend-limit", 402];
+    if (st === 401 || st === 403) return ["bad-key", 502];
+    if (st === 429) return ["busy", 429];
+    if (st === 529 || /overloaded/i.test(said)) return ["overloaded", 503];
+    if (st === 413 || /too long|too large|prompt is too long/i.test(said)) return ["too-big", 413];
+    if (st != null && st >= 500) return ["ai-down", 502, String(st)];
+    return ["ai-error", 502, `${st ?? "?"}: ${said.replace(/\s+/g, " ").slice(0, 120)}`];
   }
+  return ["server-error", 500, e instanceof Error ? e.message.slice(0, 120) : String(e).slice(0, 120)];
 }

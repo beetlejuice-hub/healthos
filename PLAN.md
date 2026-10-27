@@ -2534,3 +2534,35 @@ both reads and the questions. Phases in that order; #152 RPE waits (owner).
    is saved as what you were doing in the stretch's middle — so it explains it on the Heart page, in the grids, for the
    AI — and it's answered in the AI tab too. Tests: heart.test (a planted −12 dip found, controls: flat, raised, a −5
    wobble — none), e2e heartask (both asks on Today, answers in their middles, the control day asks nothing).
+
+## 27 Oct — owner's "HEALTHOS IDEAS" list (his words)
+
+169. [x] **A typed answer kept whole** (owner, 27 Oct, a heart-down ask: "i wrote one drink and work but it cut off" — to
+   "one"). Typed answers were cut to their first word (feel tagOf). Now tagsOf: split on commas, "and", "&", "+", "/",
+   "és", "și"; each part kept whole as one tag ("one drink and work" → one-drink, work). Same in every typed box: the
+   heart asks (Today and the AI tab), How now's "your own words", the night's. Tests: feel.test, e2e heartask (typed
+   "one drink and work", saved "one-drink,work", shown "one drink, work"), hownow.
+
+170. [x] **What the AI cost, counted right** (owner, 27 Oct: "App says we spent 11 bucks, in reality we spent 18"). Found
+   by reading the server: (1) each call read the month's total when it started and wrote total + its own cost when it
+   ended, so a deep dive searching for minutes wrote over every read and chat that finished meanwhile — the big one;
+   (2) a fallback answer (Opus 5.5 declined, Opus 5 answered) was priced as Opus 5.5 and the declined attempt not at
+   all; (3) an answer in the wrong shape was paid for but not counted; (4) a call the phone stopped waiting for (5
+   min) was cancelled before its cost was written. Now: each response priced as it comes, at the rates of the model
+   that answered (usage.iterations); the cost added with a compare-and-set (the doc's rev — written only if no other
+   call wrote since, else read again); spend recorded even when the call then fails; the call runs in waitUntil so
+   Cloudflare lets it finish writing for 30 s after the phone gives up. Opus 5.5's cached reads were over-priced (0.1×
+   → 0.05×, the other way). Not checked: the real console figures (no access) — if the key is shared with anything
+   else (Tempo?), the console counts that too. Tests: ai.test — two overlapping calls both count, a fallback at its
+   own rates, a wrong-shape answer still paid; each fails on the old code.
+
+171. [x] **Error codes: what made it fail, in words** (owner, 27 Oct: "we need error codes for stuff, like if ai cant
+   access the internet, and for this reason cant write the digest, i should know what caused"). AI_ERRORS: one plain
+   sentence per cause, the code after it — out of credit (no-credit), the console's spend limit (spend-limit), key
+   rejected, today's cap, rate-limited (busy), overloaded, Anthropic's own failure, request turned down (with the
+   API's words), Anthropic didn't answer, server couldn't reach Anthropic, too big, wrong shape, declined, a bug in
+   the app's server, phone offline, server unreachable, no answer in 5 minutes. Out of credit, spend limit and too big
+   aren't retried (it can't help). A web search that failed doesn't fail the read, so the read says so under it: "The
+   web search failed (the search service was down · unavailable), so this is from your data and what the AI already
+   knew — no new studies." Shown on Today's "didn't come through" note, Settings → AI's failed list, and the chat.
+   Tests: ai.test (each cause from the API's own error, nothing charged), e2e readretry (the web note on the read).

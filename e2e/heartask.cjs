@@ -55,17 +55,20 @@ function world(plant) {
     await ask.waitFor({ timeout: plant ? 15000 : 6000 }).catch(() => {});
     if (!plant) { check(`${tag}: nothing planted, nothing asked`, await ask.count() === 0); await ctx.close(); continue; }
     const titles = [];
-    for (const word of ['reading', 'stairs']) {
+    // the first answer as he typed it (27 Oct: "i wrote one drink and work but it cut off" — to "one")
+    for (const word of ['one drink and work', 'stairs']) {
       const t = (await ask.locator('b').first().innerText().catch(() => '')).trim();
       titles.push(t);
       await ask.locator('input').fill(word);
-      if (word === 'reading') await ask.screenshot({ path: OUT + 'heartask-today.png' }).catch(() => {});
+      if (word === 'stairs') await ask.screenshot({ path: OUT + 'heartask-today.png' }).catch(() => {});
       await ask.getByRole('button', { name: /^Send/ }).click();
       await pg.waitForTimeout(300);
     }
     check(`${tag}: Today asks about both — the low one and the raised one (${titles.join(' | ')})`, titles.includes('Heart rate down 15:20–16:00') && titles.includes('Heart rate up 14:10–14:50'));
     const said = await stored((s) => s.entries.filter((e) => e.kind === 'feel').map((e) => `${new Date(e.at).toTimeString().slice(0, 5)} ${e.doing.join(',')}`).sort(), (v) => v.length === 2);
-    check(`${tag}: each answer saved as what you were doing in the middle of its stretch (${said.join(' | ')})`, said.join('|') === '14:30 stairs|15:40 reading' || said.join('|') === '14:30 reading|15:40 stairs');
+    check(`${tag}: each answer saved as what you were doing in the middle of its stretch, every word kept (${said.join(' | ')})`, said.join('|') === '14:30 stairs|15:40 one-drink,work' || said.join('|') === '14:30 one-drink,work|15:40 stairs');
+    const replies = await stored((s) => (s.ai.inbox || []).map((n) => n.reply?.text).filter(Boolean), (v) => v.length === 2);
+    check(`${tag}: …and shown as typed (${replies.join(' | ')})`, replies.includes('one drink, work'));
     check(`${tag}: …and the card's gone once both are answered`, await ask.count() === 0);
     const inbox = await stored((s) => (s.ai.inbox || []).map((n) => `${n.id.split(':')[0]}:${n.reply ? 'answered' : 'open'}`), () => true);
     check(`${tag}: answered in the AI tab too (${inbox.join(', ')})`, inbox.length === 2 && inbox.every((x) => x.endsWith('answered')) && inbox.some((x) => x.startsWith('lowered')));

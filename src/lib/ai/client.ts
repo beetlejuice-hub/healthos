@@ -2,7 +2,7 @@
  * The app's side of the AI: send a request to the Worker with your session, keep the latest usage
  * (calls today, cost) for Settings, and build the context the AI is told — on demand, at call time.
  */
-import { MONTHLY_USD, READ_ROUNDS, isLooks } from "./tasks";
+import { AI_ERRORS, MONTHLY_USD, READ_ROUNDS, isLooks, type AiError } from "./tasks";
 import { runChatTool } from "./chattools";
 import { gridLines, todayLines, trainingLines } from "./sections";
 import { readiness } from "../readiness";
@@ -53,7 +53,10 @@ export async function refreshAiStatus() {
   } catch { set({ on: false }); }
 }
 
-export type AiResult<T> = { ok: true; answer: T; costUsd: number } | { ok: false; error: string; message: string };
+/** `webFailed`: the web searches that failed, by code ("unavailable"…) — the answer came from the data alone. */
+export type AiResult<T> = { ok: true; answer: T; costUsd: number; webFailed?: string[] } | { ok: false; error: string; message: string };
+/** The app's own failures, worded like the server's: plain words, then the code. */
+const failed = (error: AiError, detail?: string) => ({ ok: false as const, error, message: `${AI_ERRORS[error]} (${error}${detail ? ` ${detail}` : ""})` });
 
 /** A call that hasn't answered in 5 minutes is given up (and a read tried again): one that hung held up the ones behind it. */
 export const AI_TIMEOUT_MS = 5 * 60_000;
@@ -68,15 +71,16 @@ export async function askAi<T extends Task>(req: Extract<AiRequest, { task: T }>
       body: JSON.stringify({ ...req, models: getState().ai.models }),
       signal: stop.signal,
     });
-    const b = (await r.json().catch(() => ({}))) as { answer?: AiAnswer<T>; usage?: UsageDoc; costUsd?: number; error?: string; message?: string };
+    const b = (await r.json().catch(() => ({}))) as { answer?: AiAnswer<T>; usage?: UsageDoc; costUsd?: number; error?: string; message?: string; webFailed?: string[] };
     if (b.usage) set({ usage: b.usage });
-    if (r.status === 503) set({ on: false });
-    if (!r.ok || !b.answer) return { ok: false, error: b.error ?? String(r.status), message: b.message ?? b.error ?? "The AI couldn't answer right now." };
+    if (r.status === 503 && b.error === "no-key") set({ on: false });
+    // no words from the server: it crashed (500, Cloudflare's own page), or Cloudflare couldn't get to it (502–504)
+    if (!r.ok || !b.answer) return b.message || b.error ? { ok: false, error: b.error ?? String(r.status), message: b.message ?? b.error! } : failed(r.status > 500 ? "no-server" : "server-error", String(r.status));
     set({ on: true });
-    return { ok: true, answer: b.answer, costUsd: b.costUsd ?? 0 };
+    return { ok: true, answer: b.answer, costUsd: b.costUsd ?? 0, ...(b.webFailed?.length ? { webFailed: b.webFailed } : {}) };
   } catch {
-    if (stop.signal.aborted) return { ok: false, error: "timeout", message: "The AI took over 5 minutes." };
-    return { ok: false, error: "network", message: "Couldn't reach the AI — are you online?" };
+    if (stop.signal.aborted) return failed("timeout");
+    return failed(typeof navigator !== "undefined" && navigator.onLine === false ? "offline" : "no-server");
   } finally {
     clearTimeout(timer);
     set({ busy: Math.max(0, status.busy - 1) });
@@ -91,9 +95,12 @@ export async function askAi<T extends Task>(req: Extract<AiRequest, { task: T }>
 export async function askRead<T extends "digest" | "night" | "dive">(req: Extract<AiRequest, { task: T }>): Promise<AiResult<AiAnswer<T> & { looked?: string[] }>> {
   let turn: ChatTurn[] = [];
   const looked: string[] = [];
+  // a web search that failed is said with the read: "web:unavailable" (owner, 27 Oct: "if ai cant access the internet… i should know")
+  const web = (r: AiResult<unknown>) => { if (r.ok) for (const f of r.webFailed ?? []) if (!looked.includes(`web:${f}`)) looked.push(`web:${f}`); };
   for (let round = 0; ; round++) {
     const r = await askAi<T>({ ...req, ...(turn.length ? { turn } : {}), ...(round >= READ_ROUNDS ? { final: true } : {}) } as Extract<AiRequest, { task: T }>);
     if (!r.ok) return r;
+    web(r);
     const a: unknown = r.answer;
     if (!isLooks(a)) return { ...r, answer: { ...r.answer, ...(looked.length ? { looked } : {}) } };
     if (round >= READ_ROUNDS) return { ok: false, error: "bad-answer", message: "The read kept looking things up — try again." };

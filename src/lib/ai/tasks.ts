@@ -38,13 +38,32 @@ export function modelFor(task: Task, models: Partial<Models> | undefined, monthU
   return pick && pick in MODELS ? pick : DEFAULT_MODELS[TIER[task]];
 }
 
-export type Usage = { input_tokens: number; output_tokens: number; cache_read_input_tokens?: number | null; cache_creation_input_tokens?: number | null; server_tool_use?: { web_search_requests?: number } | null };
+/** One sampling attempt's tokens; a `fallback_message` names the model that ran it (a refusal's server-side fallback). */
+export type Iteration = { type: string; model?: string | null; input_tokens: number; output_tokens: number; cache_read_input_tokens?: number | null; cache_creation_input_tokens?: number | null };
+export type Usage = { input_tokens: number; output_tokens: number; cache_read_input_tokens?: number | null; cache_creation_input_tokens?: number | null; server_tool_use?: { web_search_requests?: number } | null; iterations?: Iteration[] | null };
 
-/** What a call cost, at list prices. Cache reads are ~0.1×, cache writes ~1.25× the input price. */
+/**
+ * List prices per million tokens, cache reads as their own price (Opus 5.5's are $0.20 — 0.05×, not 0.1×). The models a
+ * refusal falls back to are here too: they bill at their own rates (claude-api pricing, checked 27 Oct).
+ */
+export const PRICES: Record<string, { in: number; out: number; read: number }> = {
+  "claude-opus-5-5": { in: 4, out: 20, read: 0.2 }, "claude-sonnet-5-5": { in: 2, out: 10, read: 0.2 }, "claude-haiku-5-5": { in: 0.1, out: 0.5, read: 0.01 },
+  "claude-opus-5": { in: 5, out: 25, read: 0.5 }, "claude-opus-4-8": { in: 5, out: 25, read: 0.5 }, "claude-sonnet-5": { in: 2, out: 10, read: 0.2 },
+};
+const tokensUsd = (p: { in: number; out: number; read: number }, t: Omit<Iteration, "type">) =>
+  (t.input_tokens * p.in + (t.cache_read_input_tokens ?? 0) * p.read + 1.25 * (t.cache_creation_input_tokens ?? 0) * p.in + t.output_tokens * p.out) / 1e6;
+
+/**
+ * What a call cost, at list prices. Cache writes are 1.25× the input price. With a server-side fallback the top-level
+ * usage covers only the attempt that answered — the declined one is billed too — so then each attempt in `iterations`
+ * is priced at its own model (27 Oct: the app said $11 where the account said $18).
+ */
 export function costUsd(model: ModelChoice, u: Usage): number {
-  const m = MODELS[model];
-  const input = u.input_tokens + 0.1 * (u.cache_read_input_tokens ?? 0) + 1.25 * (u.cache_creation_input_tokens ?? 0);
-  return (input * m.inUsd + u.output_tokens * m.outUsd) / 1e6 + (u.server_tool_use?.web_search_requests ?? 0) * WEB_SEARCH_USD;
+  const own = PRICES[MODELS[model].id] ?? PRICES["claude-opus-5"], searches = (u.server_tool_use?.web_search_requests ?? 0) * WEB_SEARCH_USD;
+  const its = u.iterations ?? [];
+  if (its.some((i) => i.type === "fallback_message"))
+    return its.reduce((a, i) => a + (i.type === "message" ? tokensUsd(own, i) : i.type === "fallback_message" ? tokensUsd(PRICES[i.model ?? ""] ?? PRICES["claude-opus-5"], i) : 0), 0) + searches;
+  return tokensUsd(own, u) + searches;
 }
 
 /* ------------------------------------------------------------------ answers */
@@ -391,7 +410,7 @@ export function checkDescribe(a: DescribeAnswer): { items: DescribedItem[]; drop
 
 const VERDICTS = ["avoid", "caution", "timing", "may-help", "none"];
 export function checkSupplement(a: SupplementAnswer): SupplementAnswer {
-  if (!a || typeof a.name !== "string" || typeof a.what !== "string") throw new Error("supplement answer is missing its name");
+  if (!a || typeof a.name !== "string" || typeof a.what !== "string") throw new SyntaxError("supplement answer is missing its name");
   const sources = (a.sources ?? []).filter((s) => typeof s?.url === "string" && /^https?:\/\//.test(s.url));
   return {
     ...a,
@@ -522,12 +541,42 @@ export type AiRequest =
 
 export type AiAnswer<T extends Task> = T extends "describe" ? { items: DescribedItem[]; dropped: string[] } : T extends "supplement" ? SupplementAnswer : T extends "chat" ? ChatAnswer : T extends "questions" ? QuestionsAnswer : T extends "night" ? NightAnswer : T extends "review" ? ReviewAnswer : T extends "dive" ? DiveAnswer : T extends "verdict" ? VerdictAnswer : DigestAnswer;
 
+/**
+ * Why an AI call failed, in plain words, each with its code (owner, 27 Oct: "we need error codes for stuff, like if ai cant
+ * access the internet, and for this reason cant write the digest, i should know what caused"). The code goes after the
+ * words — "(no-credit)" — so a screenshot says exactly which.
+ */
+export const AI_ERRORS = {
+  "no-credit": "The Anthropic account is out of credit — top it up in the Anthropic console, under Billing. Nothing AI works until then.",
+  "spend-limit": "The spend limit set in the Anthropic console is reached — raise it there, under Limits.",
+  "bad-key": "The Anthropic key was rejected — check ANTHROPIC_API_KEY in Cloudflare.",
+  "no-key": "The AI is off: add ANTHROPIC_API_KEY in Cloudflare.",
+  cap: "Today's AI limit is reached. It resets at midnight.",
+  busy: "Too many AI calls in a minute — Anthropic asked to slow down.",
+  overloaded: "Anthropic's servers are overloaded right now.",
+  "ai-down": "Anthropic's service failed on its side.",
+  "ai-error": "Anthropic turned this request down.",
+  "ai-timeout": "Anthropic didn't answer in time.",
+  "no-network": "The app's server couldn't reach Anthropic.",
+  "too-big": "This was too much for the AI to read in one go.",
+  "bad-answer": "The AI's answer came back in the wrong shape.",
+  refused: "The AI declined this one.",
+  "server-error": "The app's server hit a bug on this one.",
+  // the app's own, when the server didn't answer
+  offline: "Your phone is offline.",
+  "no-server": "Couldn't reach the app's server.",
+  timeout: "No answer in 5 minutes, so the app stopped waiting.",
+} as const;
+export type AiError = keyof typeof AI_ERRORS;
+
 /** What the Worker keeps per account (doc "ai_usage", written only by the Worker). */
 /** One call, as billed: what it was, on which model, its tokens (cached reads and cache writes apart) and its cost. */
 export type CallLog = { at: number; task: Task; model: ModelChoice; in: number; cached: number; written: number; out: number; searches: number; usd: number };
 export type UsageDoc = { day: string; calls: number; dayUsd: number; month: string; monthUsd: number; byModel: Partial<Record<ModelChoice, number>>;
   /** The last calls, newest last (owner, 15 Oct: "i feel like u are waay underestimating cost" — so the estimate is made from these). */
-  recent?: CallLog[] };
+  recent?: CallLog[];
+  /** Bumped on every write: a call adds its cost only if no other call wrote since it read (27 Oct, the $11 vs $18). */
+  rev?: number };
 /** Calls kept in the log. */
 export const RECENT_CALLS = 120;
 export const logOf = (at: number, task: Task, model: ModelChoice, u: Usage, usd: number): CallLog => ({

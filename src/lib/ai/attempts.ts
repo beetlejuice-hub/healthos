@@ -8,7 +8,7 @@
 
 import { useSyncExternalStore } from "react";
 
-export const RETRY = { afterMin: [2, 10, 30], never: ["cap", "no-key", "bad-key"] } as const;
+export const RETRY = { afterMin: [2, 10, 30], never: ["cap", "no-key", "bad-key", "no-credit", "spend-limit", "too-big"] } as const;
 
 /** `fails`: failed tries so far this session; `at`: when the last one ended. */
 export type Attempt = { fails: number; at: number; running?: boolean; done?: boolean; error?: string; message?: string };

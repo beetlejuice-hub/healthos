@@ -6,7 +6,7 @@
  */
 
 import { useMemo, useState } from "react";
-import { doingOrder, labelOf, tagOf } from "../lib/feel";
+import { doingOrder, labelOf, tagsOf } from "../lib/feel";
 import type { Notice } from "../lib/inbox";
 import { nightLabel, nightTagOrder } from "../lib/lastnight";
 import { act, getState, useStore } from "../lib/store";
@@ -42,7 +42,7 @@ export function InboxCard({ n, now, first }: { n: Notice; now: number; first?: b
   // pick, your own word joins them, Send saves them together
   const [picked, setPicked] = useState<string[]>([]);
   const pick = (t: string) => setPicked((p) => (p.includes(t) ? p.filter((x) => x !== t) : [...p, t]));
-  const tags = [...picked, ...(own.trim() && tagOf(own) && !picked.includes(tagOf(own)!) ? [tagOf(own)!] : [])];
+  const tags = [...new Set([...picked, ...tagsOf(own)])];
   const when = `${localDay(n.at) === localDay(now) ? "" : `${dayLabel(n.at)} `}${clock(n.at)}`;
   const said = (ts: string[]) => {
     if (!ts.length || !n.span) return;
@@ -67,14 +67,14 @@ export function InboxCard({ n, now, first }: { n: Notice; now: number; first?: b
         {n.kind === "raised" && waiting && (
           <div className="hn-tags ib-tags">
             {doings.map((t) => <button key={t} type="button" aria-pressed={picked.includes(t)} onClick={() => pick(t)}>{labelOf(t)}</button>)}
-            <input aria-label="What you were doing, in your words" placeholder="own word" value={own} onChange={(e) => setOwn(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") said(tags); }} />
+            <input aria-label="What you were doing, in your words" placeholder="your words" value={own} onChange={(e) => setOwn(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") said(tags); }} />
             {sendBtn(said)}
           </div>
         )}
         {n.kind === "readiness" && waiting && (
           <div className="hn-tags ib-tags">
             {nightTags.map((t) => <button key={t} type="button" aria-pressed={picked.includes(t)} onClick={() => pick(t)}>{nightLabel(t)}</button>)}
-            <input aria-label="What happened, in your words" placeholder="own word" value={own} onChange={(e) => setOwn(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") tagged(tags); }} />
+            <input aria-label="What happened, in your words" placeholder="your words" value={own} onChange={(e) => setOwn(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") tagged(tags); }} />
             {sendBtn(tagged)}
             <a className="linkish ib-log" href="#log">Drinks or food not logged? Log them →</a>
           </div>

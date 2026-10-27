@@ -40,7 +40,8 @@ const RATED = { id: 'sl', kind: 'sleep', at: NOW - H, rating: 7 };
       if (body.task === 'digest') {
         const f = FAILS[st.digests++];
         if (f) return r.fulfill({ status: f.status, contentType: 'application/json', body: JSON.stringify(f.body) });
-        return r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ answer: READ, usage: null, costUsd: 0.1, model: 'opus' }) });
+        // it came, but its web search was down (27 Oct: "if ai cant access the internet… i should know what caused")
+        return r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ answer: READ, usage: null, costUsd: 0.1, model: 'opus', webFailed: ['unavailable'] }) });
       }
       if (!ANSWERS[body.task]) return r.fulfill({ status: 500, contentType: 'application/json', body: '{"error":"not in this test"}' });
       r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ answer: ANSWERS[body.task](body), usage: null, costUsd: 0.1, model: 'opus' }) });
@@ -98,6 +99,10 @@ const RATED = { id: 'sl', kind: 'sleep', at: NOW - H, rating: 7 };
   await pg.waitForSelector('section.morning:not(.mr-pending)', { timeout: 5000 }).catch(() => {});
   const card = await pg.locator('section.morning').first().innerText({ timeout: 2000 }).catch(() => '');
   check(`Try again brings it, there and then (${card.split('\n').slice(0, 3).join(' · ')})`, calls.filter((c) => c === 'digest').length === 3 && /7 h and a calm night/.test(card) && await note(pg).count() === 0);
+  await pg.locator('section.morning .mr-head').click({ timeout: 2000 }).catch(() => {});
+  const web = await pg.locator('section.morning .mr-webfail').innerText({ timeout: 2000 }).catch(() => '');
+  check(`…and says its web search failed, and why (${web})`, /^The web search failed \(the search service was down · unavailable\), so this is from your data and what the AI already knew — no new studies\.$/.test(web));
+  await pg.locator('section.morning').first().screenshot({ path: OUT + 'readretry-webfail.png', timeout: 2000 }).catch(() => {});
 
   // 4. Settings → AI: both failures, in among the calls, with why
   await pg.goto(APP + '#settings'); await pg.waitForSelector('#ai');

@@ -10,7 +10,7 @@ import type { BandData, HrMinute, SleepSession, StepBucket } from "../lib/band";
 import { loadBandBefore } from "../lib/band-client";
 import type { Check } from "../lib/feelgraph";
 import { aroundChecks, awakeByDay, dayNumbers, heartOutcomes, loggedAround, raisedStretches, roll, whyRaised, CHECK_MIN_N, TODAY_NEED_MIN, type AroundChecks, type AwakeDay, type Raised, type Why } from "../lib/heart";
-import { doingOrder, labelOf, tagOf } from "../lib/feel";
+import { doingOrder, labelOf, tagsOf } from "../lib/feel";
 import { act, useStore } from "../lib/store";
 import { afterCoffee, afterWorkouts, usualAt, usualByHour, usualReady, workoutWindows } from "../lib/hrusual";
 import type { Lanes } from "../lib/insights";
@@ -247,7 +247,7 @@ function RaisedList({ raised, data, steps, sleep, isToday, now }: { raised: Rais
   const [own, setOwn] = useState<Record<number, string>>({});
   // What's logged, in the shape whyRaised reads.
   const logged = useMemo(() => loggedAround(data), [data]);
-  const say = (r: Raised, tag: string | null) => { if (tag) act.addEntry({ kind: "feel", at: Math.round((r.start + r.end) / 2), doing: [tag] }); };
+  const say = (r: Raised, tags: string[]) => { if (tags.length) act.addEntry({ kind: "feel", at: Math.round((r.start + r.end) / 2), doing: tags }); };
   if (!raised.length) return <p className="sl-note hp-raised-none">{isToday ? "No stretch above your usual so far today" : "No stretch above your usual this day"} — raised means 20+ minutes at 5+ bpm over it, training aside.</p>;
   return (
     <div className="sl-p hp-raised" aria-label="Raised stretches">
@@ -260,9 +260,9 @@ function RaisedList({ raised, data, steps, sleep, isToday, now }: { raised: Rais
             {why.length ? <p className="hp-raised-why">{whyText(why)}</p> : <>
               <p className="hp-raised-why q">Nothing logged around it — what were you doing?</p>
               <div className="hn-tags hp-raised-tags">
-                {tags.map((t) => <button key={t} type="button" onClick={() => say(r, t)}>{labelOf(t)}</button>)}
+                {tags.map((t) => <button key={t} type="button" onClick={() => say(r, [t])}>{labelOf(t)}</button>)}
                 <input aria-label={`What you were doing ${clock(r.start)}–${clock(r.end)}`} placeholder="own word" value={own[r.start] ?? ""} onChange={(e) => setOwn({ ...own, [r.start]: e.target.value })}
-                  onKeyDown={(e) => { if (e.key === "Enter") { say(r, tagOf(own[r.start] ?? "")); setOwn({ ...own, [r.start]: "" }); } }} />
+                  onKeyDown={(e) => { if (e.key === "Enter") { say(r, tagsOf(own[r.start] ?? "")); setOwn({ ...own, [r.start]: "" }); } }} />
               </div></>}
           </div>
         );

@@ -2,7 +2,7 @@
  * How now? — the check-in, at the top of Today. One tap per feeling on a 1–10 row (the slider's
  * detail without the dragging), then optionally what you were up to since the last one. It stays
  * open while you're answering, shrinks to one line once you've rated, and asks again after ~2 hours.
- * Owner, 2 Oct: keep the slider's detail; one word of your own; the small reward; not cluttered.
+ * Owner, 2 Oct: keep the slider's detail; your own words (since 27 Oct every word kept, several at once); the small reward; not cluttered.
  */
 
 import { useMemo, useRef, useState } from "react";
@@ -11,7 +11,7 @@ import type { Entry } from "../lib/types";
 import { clock, stamp } from "../lib/time";
 import {
   ASK_AGAIN_MS, DOING_SHOWN, FEEL_KEYS, OPEN_MS, doingOrder, feelChange, feelState, inferredDoing, labelOf, latestFeel,
-  phraseOf, previousCheckIn, sinceLast, tagOf, type FeelKey,
+  phraseOf, previousCheckIn, sinceLast, tagOf, tagsOf, type FeelKey,
 } from "../lib/feel";
 import { BETWEEN, gaps } from "../lib/detectors/between";
 import { CAF_SLEEP } from "../lib/caffeine-sleep";
@@ -74,7 +74,12 @@ export function HowNow({ now, always = false }: { now: number; always?: boolean 
     const cur = open.doing ?? [];
     act.updateEntry(open.id, { doing: cur.includes(tag) ? cur.filter((t) => t !== tag) : [...cur, tag] } as Partial<Entry>);
   };
-  const addOwn = () => { const t = tagOf(own); if (t && open) { if (!(open.doing ?? []).includes(t)) toggle(t); setOwn(""); } };
+  // every word kept, several tags at once (27 Oct: "one drink and work" became "one")
+  const addOwn = () => {
+    const cur = open?.doing ?? [], ts = tagsOf(own).filter((t) => !cur.includes(t));
+    if (open && ts.length) act.updateEntry(open.id, { doing: [...cur, ...ts] } as Partial<Entry>);
+    if (open) setOwn("");
+  };
 
   // Mornings: last night's sleep, one entry per night (re-tapping changes it). It's what tells the app
   // whether caffeine at bedtime goes with worse sleep for you (caffeine-sleep.ts).
@@ -92,7 +97,7 @@ export function HowNow({ now, always = false }: { now: number; always?: boolean 
   const nightOrder = useMemo(() => nightTagOrder(entries, now), [entries, now]);
   const nightTags = night?.tags ?? [];
   const toggleNight = (t: string) => rateSleep({ tags: nightTags.includes(t) ? nightTags.filter((x) => x !== t) : [...nightTags, t] });
-  const addNightOwn = () => { const t = tagOf(nightOwn ?? ""); if (t && !nightTags.includes(t)) toggleNight(t); setNightOwn(null); };
+  const addNightOwn = () => { const ts = tagsOf(nightOwn ?? "").filter((t) => !nightTags.includes(t)); if (ts.length) rateSleep({ tags: [...nightTags, ...ts] }); setNightOwn(null); };
 
   const order = useMemo(() => doingOrder(entries, now), [entries, now]);
   // Last night's minutes to fall asleep from the band, when it has the night (PLAN 77) — no need to ask then.
@@ -144,7 +149,7 @@ export function HowNow({ now, always = false }: { now: number; always?: boolean 
           {nightOwn == null && <button type="button" className="hn-more" onClick={() => setNightOwn("")}>+ your own</button>}
         </div>
         {nightOwn != null && <form className="hn-own" onSubmit={(e) => { e.preventDefault(); addNightOwn(); }}>
-          <input autoFocus value={nightOwn} onChange={(e) => setNightOwn(e.target.value)} placeholder="one word: sauna, argument, gaming…" aria-label="Last night, your own word" maxLength={24} />
+          <input autoFocus value={nightOwn} onChange={(e) => setNightOwn(e.target.value)} placeholder="sauna, argument, one drink and gaming…" aria-label="Last night, your own word" maxLength={80} />
           <button type="submit" className="pill-btn" disabled={!tagOf(nightOwn)}>Add</button>
         </form>}
         {/* owner, 13 Oct: "a question in the morning … estimated time of phone before bed … 0 to like an hour or more" */}
@@ -170,7 +175,7 @@ export function HowNow({ now, always = false }: { now: number; always?: boolean 
           {!more && <button type="button" className="hn-more" onClick={() => setMore(true)}>{hidden.length ? `+ ${hidden.length} more / your own` : "+ your own"}</button>}
         </div>
         {more && <form className="hn-own" onSubmit={(e) => { e.preventDefault(); addOwn(); }}>
-          <input value={own} onChange={(e) => setOwn(e.target.value)} placeholder="one word: sauna, reading…" aria-label="Your own, one word" maxLength={24} />
+          <input value={own} onChange={(e) => setOwn(e.target.value)} placeholder="sauna, reading, one drink and work…" aria-label="Your own words" maxLength={80} />
           <button type="submit" className="pill-btn" disabled={!tagOf(own)}>Add</button>
         </form>}
       </div>}

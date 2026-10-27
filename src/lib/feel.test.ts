@@ -34,12 +34,17 @@ describe("feelings: only what you touch", () => {
 });
 
 describe("How now? helpers", async () => {
-  const { tagOf, doingOrder, inferredDoing, sinceLast, DOING } = await import("./feel");
+  const { tagOf, tagsOf, labelOf, doingOrder, inferredDoing, sinceLast, DOING } = await import("./feel");
   const T = (h: number, m = 0) => new Date(2026, 9, 2, h, m).getTime();
 
   it("your own tag: one word, tidied", () => {
     expect(tagOf("  Reading ")).toBe("reading");
-    expect(tagOf("deep work")).toBe("deep");
+    // every word kept (owner, 27 Oct: "i wrote one drink and work but it cut off" — it was "one")
+    expect(tagOf("deep work")).toBe("deep-work");
+    expect(tagsOf("one drink and work")).toEqual(["one-drink", "work"]);
+    expect(tagsOf("Gym, sauna & a long walk / friends")).toEqual(["gym", "sauna", "a-long-walk", "friends"]);
+    expect(tagsOf("work and work")).toEqual(["work"]);
+    expect(labelOf("one-drink")).toBe("one drink");
     expect(tagOf("x")).toBeNull();
     expect(tagOf("sauna!!")).toBe("sauna");
     expect(tagOf("úszás")).toBe("úszás");

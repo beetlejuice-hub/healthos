@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { handleAi } from "./ai";
+import Anthropic from "@anthropic-ai/sdk";
+import { handleAi, whyFailed } from "./ai";
 
 /** A fake Supabase (one user, the docs table) and a fake Anthropic API, behind one fetch. */
 function world(answers: unknown[], opts: { usage?: object; /** Pages the cited links open (PLAN 160); any other site answers 403, as one that blocks robots. */ pages?: Record<string, { status?: number; html?: string } | "no-such-site"> } = {}) {
@@ -11,15 +12,31 @@ function world(answers: unknown[], opts: { usage?: object; /** Pages the cited l
     const url = new URL(req.url);
     if (url.pathname === "/auth/v1/user") return req.headers.get("authorization") === "Bearer good" ? Response.json({ id: "u1" }) : new Response("no", { status: 401 });
     if (url.pathname === "/rest/v1/docs") {
-      if (req.method === "POST") { for (const r of (await req.json()) as { key: string; value: unknown }[]) docs.set(r.key, r.value); return new Response(null, { status: 201 }); }
+      // PostgREST as the Worker uses it: an upsert (or an insert that skips an existing row), and an update only where the
+      // stored rev still matches (`value->>rev=eq.3` / `is.null`) — what keeps two overlapping calls from losing a cost
+      if (req.method === "POST") {
+        const skip = /ignore-duplicates/.test(req.headers.get("prefer") ?? ""), rows = (await req.json()) as { key: string; value: unknown }[];
+        const put = rows.filter((r) => !(skip && docs.has(r.key)));
+        for (const r of put) docs.set(r.key, r.value);
+        return Response.json(put, { status: 201 });
+      }
+      if (req.method === "PATCH") {
+        const want = url.searchParams.get("value->>rev"), cur = docs.get("ai_usage") as { rev?: number } | undefined;
+        if (!cur || (want === "is.null" ? cur.rev != null : want !== `eq.${cur.rev}`)) return Response.json([]);
+        const { value } = (await req.json()) as { value: unknown };
+        docs.set("ai_usage", value); return Response.json([{ value }]);
+      }
       const v = docs.get("ai_usage"); return Response.json(v ? [{ value: v }] : []);
     }
     if (url.hostname === "api.anthropic.com") {
       const body = (await req.json()) as Record<string, unknown>;
       sent.push({ url: req.url, body, headers: Object.fromEntries(req.headers) });
-      const a = answers.shift() as { text: string; stop?: string; searches?: number; blocks?: string[]; content?: unknown[] };
+      // a reply's own `usage`, its `ms` (a deep dive searches for minutes), or the API's `error` as it sends one
+      const a = answers.shift() as { text: string; stop?: string; searches?: number; blocks?: string[]; content?: unknown[]; usage?: object; ms?: number; error?: { status: number; type: string; message: string } };
+      if (a.ms) await new Promise((ok) => setTimeout(ok, a.ms));
+      if (a.error) return Response.json({ type: "error", error: { type: a.error.type, message: a.error.message } }, { status: a.error.status });
       return Response.json({ id: "msg_1", type: "message", role: "assistant", model: body.model, content: a.content ?? (a.blocks ?? [a.text]).map((text) => ({ type: "text", text })), stop_reason: a.stop ?? "end_turn", stop_sequence: null,
-        usage: { input_tokens: 1000, output_tokens: 500, cache_read_input_tokens: 0, cache_creation_input_tokens: 0, server_tool_use: { web_search_requests: a.searches ?? 0 } } });
+        usage: a.usage ?? { input_tokens: 1000, output_tokens: 500, cache_read_input_tokens: 0, cache_creation_input_tokens: 0, server_tool_use: { web_search_requests: a.searches ?? 0 } } });
     }
     if (url.protocol === "https:" && !/supabase|anthropic/.test(url.hostname)) {
       const p = opts.pages?.[req.url];
@@ -322,5 +339,79 @@ describe("/api/ai", () => {
     expect((await handleAi(post({ task: "describe", text: "x".repeat(3000) }), env, w.deps)).status).toBe(400);
     expect((await handleAi(post({ task: "nope" }), env, w.deps)).status).toBe(400);
     expect(w.sent).toHaveLength(0);
+  });
+
+  // Owner, 27 Oct: "App says we spent 11 bucks, in reality we spent 18"
+  it("two calls at once both count: a deep dive that searches for a while doesn't write over a chat that ended meanwhile", async () => {
+    const dive = { topic: "Does a late dinner cost you sleep?", why: "w", yourData: "d", verdict: "v", sure: "weak", found: [] };
+    const w = world([
+      { text: JSON.stringify(dive), ms: 60, usage: { input_tokens: 10_000, output_tokens: 2000, cache_read_input_tokens: 0, cache_creation_input_tokens: 0, server_tool_use: { web_search_requests: 5 } } },
+      { text: "Sure." },
+    ], { usage: { day: "2026-10-01", calls: 3, dayUsd: 1, month: "2026-10", monthUsd: 10, byModel: { opus: 10 } } });
+    const slow = handleAi(post({ task: "dive", context: "c" }), env, w.deps);
+    while (!w.sent.length) await new Promise((ok) => setTimeout(ok, 1)); // the dive is with the AI…
+    const quick = await handleAi(post({ task: "chat", messages: [{ role: "user", text: "hi" }], context: "c" }), env, w.deps); // …when a chat comes and goes
+    expect(quick.status).toBe(200);
+    expect((await slow).status).toBe(200);
+    const diveUsd = (10_000 * 4 + 2000 * 20) / 1e6 + 5 * 0.01, chatUsd = (1000 * 4 + 500 * 20) / 1e6;
+    const u = w.docs.get("ai_usage") as { calls: number; dayUsd: number; monthUsd: number; byModel: { opus: number }; recent: { task: string }[]; rev: number };
+    expect(u.calls).toBe(5);
+    expect(u.dayUsd).toBeCloseTo(1 + diveUsd + chatUsd, 6);
+    expect(u.monthUsd).toBeCloseTo(10 + diveUsd + chatUsd, 6);
+    expect(u.byModel.opus).toBeCloseTo(10 + diveUsd + chatUsd, 6);
+    expect(u.recent.map((r) => r.task)).toEqual(["chat", "dive"]);
+    expect(u.rev).toBe(2);
+  });
+
+  it("a fallback is paid at its own model's rates, the attempt before it too (usage.iterations)", async () => {
+    // Opus 5.5 declined (2,000 tokens read, nothing written); Opus 5 answered — the top-level usage is only Opus 5's
+    const usage = { input_tokens: 1000, output_tokens: 500, cache_read_input_tokens: 0, cache_creation_input_tokens: 0, server_tool_use: { web_search_requests: 0 },
+      iterations: [{ type: "message", input_tokens: 2000, output_tokens: 0 }, { type: "fallback_message", model: "claude-opus-5", input_tokens: 1000, output_tokens: 500 }] };
+    const w = world([{ text: "Sure.", usage }]);
+    const body = (await (await handleAi(post({ task: "chat", messages: [{ role: "user", text: "hi" }], context: "c" }), env, w.deps)).json()) as { costUsd: number };
+    expect(body.costUsd).toBeCloseTo((2000 * 4) / 1e6 + (1000 * 5 + 500 * 25) / 1e6, 6);
+    expect((w.docs.get("ai_usage") as { dayUsd: number }).dayUsd).toBeCloseTo(body.costUsd, 6);
+  });
+
+  it("an answer in the wrong shape is still paid for, and says why it failed", async () => {
+    const w = world([{ text: JSON.stringify({ summary: "", happened: [], notes: "", change: [] }) }], { usage: { day: "2026-10-01", calls: 3, dayUsd: 1, month: "2026-10", monthUsd: 10, byModel: {} } });
+    const res = await handleAi(post({ task: "night", day: "2026-10-01", context: "c" }), env, w.deps);
+    const body = (await res.json()) as { error: string; message: string; costUsd: number };
+    expect([res.status, body.error]).toEqual([502, "bad-answer"]);
+    expect(body.message).toBe("The AI's answer came back in the wrong shape. (bad-answer)");
+    expect(w.docs.get("ai_usage")).toMatchObject({ calls: 4, dayUsd: 1 + body.costUsd, recent: [{ task: "night" }] });
+    expect(body.costUsd).toBeGreaterThan(0);
+  });
+
+  // Owner, 27 Oct: "we need error codes for stuff… i should know what caused"
+  it("each failure says its cause and code: credit gone, a spend limit, the key, overloaded; nothing is charged for them", async () => {
+    const said = async (error: { status: number; type: string; message: string }, n = 1) => {
+      const w = world(Array.from({ length: n }, () => ({ text: "", error })));
+      const res = await handleAi(post({ task: "describe", text: "x" }), env, w.deps);
+      const b = (await res.json()) as { error: string; message: string };
+      expect(w.docs.get("ai_usage")).toBeUndefined();
+      return [res.status, b.error, b.message];
+    };
+    expect(await said({ status: 400, type: "invalid_request_error", message: "Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing to upgrade or purchase credits." }))
+      .toEqual([402, "no-credit", "The Anthropic account is out of credit — top it up in the Anthropic console, under Billing. Nothing AI works until then. (no-credit)"]);
+    expect((await said({ status: 400, type: "invalid_request_error", message: "You have reached your specified workspace API usage limits. You will regain access on 2026-11-01." }))[1]).toBe("spend-limit");
+    expect((await said({ status: 401, type: "authentication_error", message: "invalid x-api-key" }))[1]).toBe("bad-key");
+    expect((await said({ status: 400, type: "invalid_request_error", message: "messages.0: something odd" }))[2]).toBe("Anthropic turned this request down. (ai-error 400: messages.0: something odd)");
+    expect(whyFailed(new Anthropic.InternalServerError(529, { type: "overloaded_error" }, "Overloaded", new Headers()))).toEqual(["overloaded", 503]);
+    expect(whyFailed(new Anthropic.APIConnectionError({ message: "fetch failed" }))).toEqual(["no-network", 502]);
+    expect(whyFailed(new Anthropic.APIConnectionTimeoutError())).toEqual(["ai-timeout", 504]);
+    expect(whyFailed(new TypeError("x is undefined"))).toEqual(["server-error", 500, "x is undefined"]);
+  });
+
+  it("a web search that failed is said with the answer (owner: \"if ai cant access the internet… i should know\")", async () => {
+    const digest = { greeting: "Morning!", items: [{ type: "fact", title: "Protein first", text: "…", measure: "protein" }] };
+    const fail = { type: "web_search_tool_result", tool_use_id: "s1", content: { type: "web_search_tool_result_error", error_code: "unavailable" } };
+    const capped = { type: "web_search_tool_result", tool_use_id: "s2", content: { type: "web_search_tool_result_error", error_code: "max_uses_exceeded" } };
+    const w = world([{ text: "", content: [{ type: "server_tool_use", id: "s1", name: "web_search", input: { query: "q" } }, fail, capped, { type: "text", text: JSON.stringify(digest) }] }]);
+    const body = (await (await handleAi(post({ task: "digest", context: "c", shown: [] }), env, w.deps)).json()) as { answer: { greeting: string }; webFailed?: string[] };
+    expect(body.answer.greeting).toBe("Morning!");
+    expect(body.webFailed).toEqual(["unavailable"]); // its own cap reached isn't a failure
+    const ok = world([{ text: JSON.stringify(digest) }]);
+    expect(((await (await handleAi(post({ task: "digest", context: "c", shown: [] }), env, ok.deps)).json()) as { webFailed?: string[] }).webFailed).toBeUndefined();
   });
 });
