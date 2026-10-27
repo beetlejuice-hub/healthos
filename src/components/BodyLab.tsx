@@ -14,6 +14,7 @@ import { SMOKE_LABEL } from "../lib/smoke";
 import { DAY, localDay } from "../lib/time";
 import type { Entry } from "../lib/types";
 import { useWidth } from "./useWidth";
+import { CoinLab } from "./Coins";
 
 const DAYS = 90;
 const HR = "#ef7d6d", HRV = "#9fd7c7", CAF = "var(--caf)";
@@ -32,9 +33,9 @@ export function BodyLab({ band, entries, now, active }: { band: BandData | null;
   const drink = useMemo(() => drinkDose(ls), [ls]), smoke = useMemo(() => smokeCompare(ls), [ls]), caf = useMemo(() => lateCaffeine(ls), [ls]);
   const month = useMemo(() => smokeMonth(entries, today), [entries, today]);
   const [ref, w] = useWidth<HTMLDivElement>();
-  if (!ls.length && !month.answered) return <div data-sec="lab" />;
   return (
     <div className="bl" data-sec="lab" ref={ref} data-nights={ls.length}>
+      <CoinLab now={now} />
       {ls.length > 0 && <Drinks d={drink} w={w} nights={ls.length} />}
       {(ls.length > 0 || month.answered > 0) && <section className="sl-p bl-card" aria-label="Cigarettes and your heart" data-card="smoke">
         <span className="cmp-k">Cigarettes{smoke ? ` · ${SURE[best(smoke.rows.map((r) => r.fit))]}` : ""}</span>

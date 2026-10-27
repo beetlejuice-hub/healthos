@@ -1910,3 +1910,31 @@ span.fd-score[data-band="none"] { background: none; min-width: 34px; }
 .bl-legend { display: flex; flex-wrap: wrap; gap: 4px 6px; align-items: center; font-size: 11.5px; color: var(--i-ink-2); }
 .bl-legend i { display: inline-block; width: 12px; height: 12px; border-radius: 3px; margin-left: 6px; }
 .bl-legend i:first-child { margin-left: 0; }
+/* coin-flip experiments (PLAN 177, body lab 1) */
+.coin { display: grid; gap: 10px; }
+.coin .k { font-size: 11.5px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--c-ink-2); }
+.coin-top { display: flex; gap: 14px; align-items: center; }
+.coin-top > div { display: grid; gap: 3px; min-width: 0; }
+.coin-face { flex: none; }
+.coin-face .cf-o { fill: var(--c-card-2); stroke: var(--supp); stroke-width: 3; }
+.coin-face .cf-i { fill: none; stroke: var(--supp); stroke-width: 1.2; stroke-dasharray: 2 3; }
+.coin-face text { fill: var(--supp); font: 700 24px var(--f-cond); }
+.coin-say { font: 600 24px/1.1 var(--f-cond); color: var(--c-ink); }
+.coin-q, .coin-log, .coin-seal { margin: 0; font-size: 13.5px; line-height: 1.45; color: var(--c-ink-2); }
+.coin-log { color: var(--c-ink); }
+.coin-seal b { color: var(--c-ink); font-weight: 600; }
+.coin-y { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 6px 10px; font-size: 13.5px; padding-top: 8px; border-top: 1px solid var(--c-track); }
+.coin-days { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 5px; }
+.coin-days i { height: 24px; border-radius: 6px; display: grid; place-items: center; font: 700 13px var(--f-cond); font-style: normal; }
+.coin-days i.heads { background: var(--supp); color: #1b1b1b; }
+.coin-days i.tails { background: var(--c-card-2); color: var(--c-ink-2); }
+.coin-days i.off { opacity: .4; text-decoration: line-through; }
+.coin-days i.today { box-shadow: 0 0 0 2px var(--c-ink) inset; }
+.coin-days i.today.heads { box-shadow: 0 0 0 2px var(--c-ink); }
+.coin-days i.future { border: 1px dashed var(--c-track); }
+.coin-start { display: grid; gap: 6px; }
+.coin-start .ibtn { display: grid; gap: 2px; text-align: left; padding: 8px 10px; background: transparent; color: var(--i-ink); min-height: 44px; }
+.coin-start .ibtn span { font-size: 12px; color: var(--i-ink-2); }
+.coin-res { display: grid; gap: 6px; padding-top: 10px; border-top: 1px solid var(--i-line); }
+.coin-res-h { margin: 0; font-size: 13.5px; color: var(--i-ink); } .coin-res-h em { font-style: normal; font-weight: 600; }
+.bl .linkish { color: var(--i-ink-2); font-size: inherit; padding: 0; }

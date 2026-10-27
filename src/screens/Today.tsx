@@ -32,6 +32,7 @@ import { SuppQuick } from "../components/SuppQuick";
 import { Tonight } from "../components/Tonight";
 import { Readiness } from "../components/Readiness";
 import { RecoveryCard } from "../components/RecoveryCard";
+import { CoinCard } from "../components/Coins";
 import { extrasOn } from "../lib/supplog";
 import { CatchUp } from "../components/CatchUp";
 import { DataCard, EveningRead, NowCard, Pad, Status, UsualPicker, useStackCount } from "../components/TodayParts";
@@ -158,6 +159,7 @@ export function Today() {
         <HeartAsk now={now} />
         <FoodGapAsk now={now} />
         <SmokeAsk now={now} />
+        <CoinCard now={now} />
         <ExperimentStrip now={now} />
         <WorkoutRunning now={now} />
         <CheckInCard now={now} />

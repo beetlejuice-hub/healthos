@@ -2732,3 +2732,20 @@ both reads and the questions. Phases in that order; #152 RPE waits (owner).
      e2e bodylab (each found near size, how sure, calendar counts, 390 / 320 px; control world: no claims).
      Found on the way: the Sleep page's Regularity bar (300 px) widened every Insights page to 329 px on a 320 px phone —
      its grid column now shrinks.
+   - [~] Coin-flips (27 Oct). Plan — why: "goes with" can't rule out that good days and coffee cutoffs come together
+     for some other reason; a coin deciding each day can. Phase 1 (daily coins, built): lib/coin + components/Coins. Start
+     one on Insights → Body lab — coffee cutoff (heads: no coffee after 13:00; tails: one between 13:00 and 16:00 — tails
+     is a real coffee, or there's nothing to compare), screens off at 22:30, or any evening supplement in the stack. One
+     at a time, 21 days, heads and tails balanced over the run in an order nobody can guess (seeded when started, synced).
+     Today (in the Now card): today's coin and what it says; the why only on the first two days; coffee read from the log
+     (after 16:00 → the day doesn't count), a supplement's Took it / Skipped it goes into the stack's log (the stack then
+     doesn't nag), screens by Followed / Didn't; yesterday asked if missed; the days so far, never tomorrow's; "Result
+     sealed until …". The day runs to 04:00 (a supplement at 00:30 is last night's — found re-reading the diff). At the
+     end: heads nights against tails nights on what the run measures (the first decides: e.g. falling asleep for screens),
+     only days the coin was followed, how sure by re-dealing the coins 5,000 times; "worked for you" / "went the wrong
+     way" / "no clear change"; Today shows it until opened. Tests: coin.test (balance, no day leans, the log decides,
+     after midnight, sealed, planted −8 min found the right way in 17+/20 and the wrong way called worse, control claims
+     ≤2/20, not-followed left out, ended early → no verdict, energy next day), e2e coins (start, Today day 1–3, missed
+     day asked, "No" struck, magnesium logged, a finished run planted → worked / control → no clear change, 320 px).
+     Phase 2 (next): slow supplements — the coin picks 3 weeks on or off, twice (12 weeks), the first days after each
+     switch left out; the test on week-long stretches, so it can only ever say "likely" at best, and says so.
