@@ -2749,12 +2749,22 @@ both reads and the questions. Phases in that order; #152 RPE waits (owner).
      day asked, "No" struck, magnesium logged, a finished run planted → worked / control → no clear change, 320 px).
      Phase 2 (next): slow supplements — the coin picks 3 weeks on or off, twice (12 weeks), the first days after each
      switch left out; the test on week-long stretches, so it can only ever say "likely" at best, and says so.
-     Asked the owner (27 Oct) whether phase 2 is still wanted, given his "not sure for these" and that ceiling.
-   - [ ] Fitness age — blocked (27 Oct): the HUNT reference table (Loe et al. 2013, PLoS ONE 8:e64319, Table 2) can't be
-     read from this session (journals.plos.org, pmc.ncbi.nlm.nih.gov, www.ebi.ac.uk, doi.org all refused by the network
-     policy); a search showed the values without their age labels and two sources disagree on the rows — not built on
-     that. Also needs men's / women's norms, which the app doesn't store (one tap, asked on the card). Asked the owner to
-     allow journals.plos.org.
+     Asked the owner (27 Oct) whether phase 2 is still wanted, given his "not sure for these" and that ceiling — "nah": dropped.
+   - [x] Fitness age built (27 Oct): Insights → Body lab, lib/fitage + components/FitAgeCard. Unblocked when the owner
+     allowed journals.plos.org; Table 2 read from the article's XML (HUNT 3, Loe et al. 2013: 1,929 men, 1,881 women,
+     treadmill-tested, 20–90). Owner, 27 Oct: "men" — a setting (Settings → "Fitness age, set against"), asked once on the
+     card with one tap; never guessed, and the AI gets nothing until it's set.
+     How: a least-squares line through each decade's mean at its middle year (men 3.7 a decade, women 3.0 — the paper
+     says "approximately 3.5"), not the means joined up (they wobble: men's 30s 49.1, 40s 47.2 would make a point worth
+     5 years at 40 and 2 at 30). Fitness age = where your VO2 max (lib/vo2's week median) sits on it; outside 20–90 it
+     says "under 20" / "over 90". Each +1 of VO2 max ≈ 2.7 years (men). Weekly dots for 12 weeks; what moved it over 8
+     weeks split as lib/vo2 splits it — fitness at the same weight and the kilos, in whole years that add up to the ages
+     shown; resting heart rate and cardio minutes alongside, without years (they go with it, no more). Under 1 point of
+     VO2 max either way is "steady", no years — measured on 500 steady fake people: ± 0.3 a day → all steady; ± 0.8 →
+     95 %, at most 4 years. Tests: known answers from the table, planted fitness / kilos / both, the control, the AI line
+     only once the norms are set (fails with the guard taken out); e2e/fitage at 390 and 320.
+     Worth knowing: HUNT's volunteers were fit and healthy, so it's a high bar — Fitbit's "very good for your age" at
+     VO2 max 46 is a fitness age of ~46 here. The card says so and leans on the trend.
    - [x] Nervous-system heatmap built (27 Oct): Insights → Body lab, lib/wound + components/WoundHeat. Minutes your heart
      was 10+ above your usual for that quarter hour (lib/hrusual) while the band counted no steps that minute — sleep,
      training and the hour after left out (lib/heart awakeMinutes) — by weekday × hour over 4 weeks, as minutes an hour.

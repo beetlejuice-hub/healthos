@@ -17,6 +17,7 @@ import { useWidth } from "./useWidth";
 import { CoinLab } from "./Coins";
 import { WoundHeat } from "./WoundHeat";
 import { BodyClockCard } from "./BodyClockCard";
+import { FitAgeCard } from "./FitAgeCard";
 
 const DAYS = 90;
 const HR = "#ef7d6d", HRV = "#9fd7c7", CAF = "var(--caf)";
@@ -38,6 +39,7 @@ export function BodyLab({ band, entries, now, active }: { band: BandData | null;
   return (
     <div className="bl" data-sec="lab" ref={ref} data-nights={ls.length}>
       <CoinLab now={now} />
+      <FitAgeCard band={band} now={now} w={w} />
       {ls.length > 0 && <Drinks d={drink} w={w} nights={ls.length} />}
       {(ls.length > 0 || month.answered > 0) && <section className="sl-p bl-card" aria-label="Cigarettes and your heart" data-card="smoke">
         <span className="cmp-k">Cigarettes{smoke ? ` · ${SURE[best(smoke.rows.map((r) => r.fit))]}` : ""}</span>

@@ -1949,6 +1949,25 @@ span.fd-score[data-band="none"] { background: none; min-width: 34px; }
 .wh-legend { display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: center; font: 10.5px var(--f-mono); color: var(--i-ink-2); }
 .wh-legend span { display: inline-flex; gap: 4px; align-items: center; }
 .wh-legend i { display: inline-block; width: 14px; height: 10px; border-radius: 2px; }
+/* your heart's fitness age (PLAN 177, body lab 4) */
+.fa-top { display: flex; gap: 12px; align-items: center; }
+.fa-top > div { display: grid; gap: 3px; min-width: 0; }
+.fa-n { font: 700 54px/0.9 var(--f-cond); color: var(--i-ink); }
+.fa-y { font-size: 15px; color: var(--i-ink); }
+.fa-sub { font: 11.5px var(--f-mono); color: var(--i-ink-2); }
+.fa-fig { margin: 0; display: grid; gap: 4px; min-width: 0; }
+.fa-fig svg { max-width: 100%; height: auto; touch-action: pan-y; }
+.fa-ref { stroke: var(--i-ink-2); stroke-width: 1; stroke-dasharray: 3 4; }
+.fa-cap { font-size: 11.5px; color: var(--i-ink-2); min-height: 1.45em; }
+.fa-rows { display: grid; gap: 6px; padding-top: 10px; border-top: 1px solid var(--i-line); }
+.fa-k { font-size: 11px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--i-ink-2); }
+.fa-rows p { margin: 0; display: flex; justify-content: space-between; align-items: baseline; gap: 4px 12px; font-size: 14px; color: var(--i-ink); }
+.fa-rows p span { min-width: 0; }
+.fa-rows p b { font: 600 15px var(--f-mono); white-space: nowrap; }
+.fa-rows .fa-along { display: block; font-size: 12.5px; color: var(--i-ink-2); }
+.fa-per { margin: 0; font-size: 13px; color: var(--i-ink-2); }
+.fa-ask { display: flex; gap: 8px; }
+.fa-ask .ibtn { flex: 1; min-height: 44px; font-size: 15px; }
 /* your body clock (PLAN 177, body lab 6) */
 .bc-dial { align-self: center; max-width: 100%; height: auto; }
 .bc-track { stroke: #1a2226; }

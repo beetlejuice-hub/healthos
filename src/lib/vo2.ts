@@ -32,8 +32,8 @@ export function kgByDay(entries: Entry[]): Record<string, number> {
 /** Google's level ("VERY_GOOD") in words ("very good"); null for none. */
 export const levelWords = (l?: string | null) => (l && l !== "CARDIO_FITNESS_LEVEL_UNSPECIFIED" ? l.toLowerCase().replace(/_/g, " ") : null);
 
-/** The median of the values in the 7 days ending `end`, with how many there were. */
-function week(rec: Record<string, Vo2Day>, end: string): { v: number; n: number } | null {
+/** The median of the values in the 7 days ending `end`, with how many there were; null under 3. */
+export function vo2Week(rec: Record<string, Vo2Day>, end: string): { v: number; n: number } | null {
   const from = addDays(end, -(VO2.days - 1));
   const v = Object.entries(rec).filter(([d, x]) => d >= from && d <= end && x.v > 10 && x.v < 100).map(([, x]) => x.v);
   return v.length >= VO2.min ? { v: median(v), n: v.length } : null;
@@ -46,13 +46,13 @@ function kgNear(kg: Record<string, number>, day: string): number | null {
 
 /** Where your cardio fitness stands on `today` and how it moved over 4 and 8 weeks; null under 3 values in the last week. */
 export function vo2Trend(rec: Record<string, Vo2Day> | undefined, today: string, kg: Record<string, number> = {}): Vo2Trend | null {
-  const all = rec ?? {}, cur = week(all, today);
+  const all = rec ?? {}, cur = vo2Week(all, today);
   if (!cur) return null;
   const lastDay = Object.keys(all).filter((d) => d <= today).sort().at(-1)!, last = all[lastDay];
   const kNow = kgNear(kg, addDays(today, -3));
   const changes: Vo2Change[] = [];
   for (const weeks of [4, 8] as const) {
-    const end = addDays(today, -7 * weeks), was = week(all, end);
+    const end = addDays(today, -7 * weeks), was = vo2Week(all, end);
     if (!was) continue;
     const delta = cur.v - was.v, kThen = kgNear(kg, addDays(end, -3));
     // the same oxygen a minute over the old weight: what's left of the change once the kilos are taken out

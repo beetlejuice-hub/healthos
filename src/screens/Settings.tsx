@@ -65,6 +65,10 @@ export function Settings({ tester, email }: { tester: boolean; email: string }) 
           <label className="field">Age<input inputMode="numeric" aria-label="Age" value={st.age ?? ""} placeholder="for heart-rate zones" onChange={(e) => act.setSettings({ age: num(e.target.value) || undefined })} /></label>
           <label className="field">Max heart rate<input inputMode="numeric" aria-label="Max heart rate" value={st.maxHr ?? ""} placeholder={st.age ? `about ${Math.round(208 - 0.7 * st.age)} from your age` : "if you know it"} onChange={(e) => act.setSettings({ maxHr: num(e.target.value) || undefined })} /></label>
         </div>
+        {/* whose norms the fitness age on Insights → Body lab is set against (lib/fitage) */}
+        <label className="field">Fitness age, set against<select aria-label="Fitness age, set against" value={st.sex ?? ""} onChange={(e) => act.setSettings({ sex: (e.target.value || undefined) as "male" | "female" | undefined })}>
+          <option value="">not set — asked on the card</option><option value="male">men's norms</option><option value="female">women's norms</option>
+        </select></label>
         <p className="note">Planned bedtime is what caffeine is measured against for now; your real bedtime will come from the wearable. Body weight (your latest weigh-in) sets how fast alcohol clears. How fast you clear caffeine and how much bothers your sleep aren't settings: they'll be learned from your own data.</p>
       </div>
 

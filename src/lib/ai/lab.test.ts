@@ -1,13 +1,13 @@
 // PLAN 177 — the body lab's numbers reach the AI, only what's clear or likely (owner, 15 Oct: "make sure app sees all data").
 import { describe, expect, it } from "vitest";
-import { labLines, type Lab } from "./lab";
+import { labLines, labNow, type Lab } from "./lab";
 import { buildContext } from "./context";
 import type { Slope } from "../sessionfacts";
-import { atMinute } from "../time";
+import { addDays, atMinute } from "../time";
 
 const now = atMinute("2026-10-27", 10 * 60);
 const fit = (slope: number, sure: Slope["sure"]): Slope => ({ pts: [], slope, p: sure === "clear" ? 0.001 : sure === "likely" ? 0.01 : 0.3, sure });
-const none: Lab = { recovery: null, drink: null, smoke: null, caf: null, heat: null, clock: null, coins: [] };
+const none: Lab = { recovery: null, drink: null, smoke: null, caf: null, heat: null, clock: null, coins: [], fit: null };
 
 describe("the body lab, as the AI is told (PLAN 177)", () => {
   it("found: each drink, smoking days, late caffeine, the wound-up hour, the body clock, a coin-flip — with the numbers the app shows", () => {
@@ -53,5 +53,13 @@ describe("the body lab, as the AI is told (PLAN 177)", () => {
       expect(c).toContain("## Body lab — the app's own tested numbers, only what's clear or likely (goes with, not causes)\n- Every 100 mg");
     }
     expect(buildContext({ state, now, days: [], findings: [], patterns: [], lab: [] })).not.toContain("## Body lab");
+  });
+  it("fitness age reaches the AI only once you've said whose norms — never a guess at men's or women's", () => {
+    const vo2: Record<string, { v: number }> = {};
+    for (let k = 0; k < 60; k++) vo2[addDays("2026-10-27", -k)] = { v: 46 };
+    const band = { hr: [], sleep: [], rhr: {}, hrv: {}, steps: [], vo2 } as never;
+    const state = (sex?: "male") => ({ entries: [], workouts: [], supplements: [], settings: { halfLifeMin: 300, bedMinute: 1380, coffeeMg: 95, bodyKg: 78, usualDrink: null, age: 28, sex }, ai: { memory: [], experiments: [] } }) as never;
+    expect(labNow(state(), band, now).some((l) => l.startsWith("Fitness age"))).toBe(false);
+    expect(labNow(state("male"), band, now)).toContain("Fitness age 46 (age 28) — the age at which the average healthy man in Norway's HUNT study has this VO2 max (46.0 this week, the band's estimate: trust the trend more than the number). Steady over 8 weeks (VO2 max 46.0 → 46.0).");
   });
 });

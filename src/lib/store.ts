@@ -93,6 +93,8 @@ export type Settings = {
   bodyKg: number;
   /** For heart-rate zones (lib/cardio maxHrOf): his age, or a max heart rate he knows — this one wins. */
   age?: number; maxHr?: number;
+  /** Whose norms your fitness age is set against (lib/fitage; owner, 27 Oct: "men"). Unset: the card asks once. */
+  sex?: "male" | "female";
   /** The drink the one-tap button logs. Chosen on Today; ✕ clears it. */
   usualDrink: Drink | null;
   /** Which reminders to send, once notifications are on (Settings → Notifications). */
