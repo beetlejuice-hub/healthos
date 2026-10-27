@@ -11,6 +11,7 @@ import { caffeineAt, cleared, doseCaffeine, type Dose } from "./caffeine";
 import { bedtimeOn } from "./caffeine-sleep";
 import type { Check } from "./feelgraph";
 import { alcoholCurve, type AlcoholDose } from "./alcohol";
+import { bodyWords } from "./bodywords";
 import { currentKg } from "./body";
 import { atMinute, localDay, minuteOfDay, addDays, startOfDay, DAY, MIN } from "./time";
 import { correlation, difference, mean, median, sd, type Range } from "./stats";
@@ -130,6 +131,14 @@ export type DayFacts = {
   bigMealKcal: number | null;
   /** The sleep rating given that morning (last night's), if any. */
   sleep: number | null;
+  /**
+   * Body words in that day's check-in notes (lib/bodywords: "weak", "tired", "headache"…); null on a day without a
+   * check-in — a day nobody asked isn't a day you felt fine (owner, 27 Oct: "feeling weak and what I've been doing").
+   */
+  felt?: string[] | null;
+  /** From the band (lib/daysband withBand): minutes asleep the night that ended this morning, and the day's steps. */
+  asleepMin?: number | null;
+  steps?: number | null;
 };
 
 /** Food entries within 45 minutes of each other are one meal; the largest meal's kcal. */
@@ -188,6 +197,7 @@ export function dailyFacts(entries: Entry[], workouts: Workout[], settings: Sett
       volumeKg: volume(of(es, "set")),
       weekend: [0, 6].includes(new Date(atMinute(day, 12 * 60)).getDay()),
       sleep: sleepBy.get(day) ?? null,
+      felt: feel.length ? [...new Set(feel.flatMap((f) => bodyWords(f.note)))] : null,
     });
   }
   return out;

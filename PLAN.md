@@ -2798,3 +2798,35 @@ both reads and the questions. Phases in that order; #152 RPE waits (owner).
      on the cards; chance never reaches the AI as a finding. A body-lab error leaves the section out, never the read.
      Tests: lab.test (found → exact lines; not clear / too few / no hour → nothing; the morning after; lands in the
      full and the chat context under its heading, none → no heading).
+
+178. [~] **Connections with how your body felt** (owner, 27 Oct: "I just want to track a bunch of things and come up w things
+   that could improve me physically or mentally" · "Make sure it can find connections between things i log like feeling
+   weak amd what I've been doing and also things like" — the message ended there; asked what else). Also: "men" (fitness
+   age norms — still blocked on the network, journals.plos.org) and coin-flips for slow supplements "nah" (dropped).
+   - What it already did: between check-ins (lib/detectors/between) — what you did between two check-ins (gym, meals,
+     coffee, alcohol, supplements, your "doing" ticks) against how energy / mood / focus / stress changed; the Leads —
+     food, caffeine, alcohol, cigarettes, gym, supplements against the next day's feelings. Missing: "feeling weak" as data
+     (only a note, never read), and sleep and steps in the Leads.
+   - [x] Phase 1 built (27 Oct): lib/bodywords — body words in check-in notes (weak, tired, headache, sore, dizzy,
+     bloated, nausea, ill, brain fog; whole words, "not tired" / "sick of work" don't count) → DayFacts.felt (a day
+     without a check-in unknown); lib/daysband withBand — the band's minutes asleep (filed under the morning) and steps;
+     the pattern finder (lib/scout) has sleep, your sleep rating, steps, and each body word once it's on 4+ days — words
+     only ever the outcome, never against energy / mood (one feeling said two ways). Said plainly: "With more alcohol, you
+     felt weak the next day more often", "On the day after a smoking day, you felt weak more often (60 % of days vs
+     12 %)". Wired into Leads, their charts, today's lead, the AI's context and the month review; "Test it" for sleep
+     ("30 min more sleep") and steps ("8,000+ steps a day").
+   - Chance kept where it was: more signals tested more pairs — chance patterns doubled (22 % → 45 % of people) and
+     chance leads nearly doubled. Now each p is scaled by pairs tested over the 186 the bars were calibrated on, applied to
+     whichever bar binds (at ~75 days |r| ≥ 0.35 is the stricter): with the old signals nothing changes (43/200 and 5/200,
+     same as before); with the new ones strict leads 2/200, chance "early" patterns 57/200 (more kinds of pairs to report;
+     early ones are labelled and re-checked on new days). Leads cards and the AI now show the corrected p.
+   - Power, measured: drinks → weak next day 27+/30; an hour more sleep → energy 27+/30; "the less you sleep, the likelier
+     you feel weak" 17/30 at 90 days (test bar 15); only under 6 h (~7 such nights in 90 days) ~half. Tests:
+     bodyconnections.test, e2e feltweak (the card in plain words, drawn, no Test it; control: random "weak" → none), e2e
+     scout's "Not interesting" now checks the card goes (with more patterns the next one moves up).
+   - Speed: computing nights for every Leads card's chart made Insights slow — withBand is worked out once per band
+     load and skips the heart rate (minutes asleep don't need it).
+   - Phase 2 (canvas first): one-tap body chips on the check-in (weak, tired, sore, headache… and your own) so it's not
+     only notes; "Test it" for body words once an experiment can measure them.
+   - Seen on the way: e2e heartpage's phone notes check fails since ~18:00 UTC on 6c3ecb1 too (not this change) —
+     suggested as its own task.

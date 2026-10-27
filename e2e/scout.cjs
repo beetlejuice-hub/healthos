@@ -31,9 +31,11 @@ const { chromium, APP, OUT, handle } = require('./harness.cjs');
   await pg.goto(APP + '#today'); await pg.waitForTimeout(300);
   check('seen on Insights → gone from Today and the dot', await pg.locator('.noticed-line').filter({ hasText: /New lead/i }).count() === 0 && await pg.locator('.tabdot').count() === 0);
   await pg.goto(APP + '#insights/connections'); await pg.waitForTimeout(500);
-  const before = await pg.locator('.scard').count();
+  // the card itself goes (Leads show 5 at most: the next one may move up, so the count can stay the same)
+  const gone = (await pg.locator('.scard').first().locator('h3').innerText().catch(() => '')).trim();
   await pg.locator('.scard').first().getByRole('button', { name: 'Not interesting' }).click(); await pg.waitForTimeout(300);
-  check('Not interesting removes it', await pg.locator('.scard').count() === before - 1);
+  const titles = (await pg.locator('.scard h3').allInnerTexts()).map((x) => x.trim());
+  check(`Not interesting removes it (${gone})`, !!gone && !titles.includes(gone));
   console.log('errors:', JSON.stringify(errs));
   await b.close();
 })().catch(e => { console.log('CRASH', e.message); process.exit(1); });

@@ -20,6 +20,7 @@ import type { Supplement } from "./types";
 import { pTwoSided } from "./regress";
 import { mean, median } from "./stats";
 import { loggedInFull } from "./dayscore";
+import { BODY_WORDS } from "./bodywords";
 
 export type Signal = {
   id: string;
@@ -38,12 +39,23 @@ export type Signal = {
   /** Only ever the cause: what you take is your choice, not something a gym day does to you (owner, 20 Oct, on "On the
    *  day after a gym day, L-theanine tends to be higher": "makes not much sense..?? more l theanine on gym days??"). */
   causeOnly?: boolean;
+  /** Only ever the outcome: how your body felt (lib/bodywords) is what something goes with, never a cause the finder tests. */
+  outcomeOnly?: boolean;
+  /** Families it isn't paired with: "feeling weak" against energy is one feeling said two ways, not a connection. */
+  notWith?: string[];
+  /** A yes/no outcome said as you'd say it: "you felt weak". */
+  say?: string;
   /** "drink": it's counted from drinks (caffeine, alcohol). "with-drinks": a day's total that counts drinks too (calories,
    *  protein). Same day, the two are partly one number — a beer is 215 kcal — so that pair isn't a pattern (PLAN 151). */
   drinks?: "drink" | "with-drinks";
 };
 
-export function signals(supplements: Supplement[]): Signal[] {
+/**
+ * Every signal. `facts` adds your body words (lib/bodywords) — each once it's in your check-in notes on 4+ days; a day
+ * with a check-in that doesn't say it counts as a day without, a day without a check-in as unknown. `allWords`: every body
+ * word (a chart drawing a lead found on 90 days looks at fewer).
+ */
+export function signals(supplements: Supplement[], facts: DayFacts[] = [], allWords = false): Signal[] {
   const logged = (f: (d: DayFacts) => number) => (d: DayFacts) => (d.logged ? f(d) : null);
   const s: Signal[] = [
     // a day's calories and protein only from days logged in full — a half-logged day isn't a day of eating little (22 Oct)
@@ -59,6 +71,10 @@ export function signals(supplements: Supplement[]): Signal[] {
     // as answered each night (lib/smoke, PLAN 177): a day not answered is unknown, not smoke-free
     // (a smoking day leads its sentence like a supplement day does: without a "yes" the same-day swap rules went round in circles)
     { id: "smoke", family: "smoke", name: "cigarettes", plural: true, yes: "a smoking day", get: (d) => d.cigs ?? null, causeOnly: true },
+    // the band's sleep, filed under the morning it ended (lib/daysband): same day it's the night before, next day the night after
+    { id: "asleep", family: "sleep", name: "sleep", unit: "h", get: (d) => (d.asleepMin != null ? d.asleepMin / 60 : null) },
+    { id: "sleepRating", family: "sleep", name: "your sleep rating", get: (d) => d.sleep },
+    { id: "steps", family: "move", name: "steps", plural: true, unit: "steps", get: (d) => d.steps ?? null },
     { id: "gym", family: "gym", name: "gym", yes: "a gym day", get: (d) => (d.trained ? 1 : 0), lane: "gym" },
     { id: "volume", family: "gym", name: "training volume", unit: "kg", get: (d) => d.volumeKg, lane: "gym" },
     { id: "energy", family: "feel", name: "energy", get: (d) => d.energy, lane: "energy" },
@@ -66,13 +82,24 @@ export function signals(supplements: Supplement[]): Signal[] {
     { id: "focus", family: "feel", name: "focus", get: (d) => d.focus, lane: "focus" },
     { id: "stress", family: "feel", name: "stress", get: (d) => d.stress, lane: "stress" },
   ];
+  for (const w of BODY_WORDS) {
+    if (!allWords && facts.filter((d) => d.felt?.includes(w.id)).length < SCOUT.minWordDays) continue;
+    s.push({ id: `felt-${w.id}`, family: "body", name: w.name, yes: w.yes, say: w.say, outcomeOnly: true, notWith: ["feel"], get: (d) => (d.felt == null ? null : d.felt.includes(w.id) ? 1 : 0) });
+  }
   for (const x of supplements) {
     s.push({ id: `supp-${x.id}`, family: `supp-${x.id}`, name: x.name, yes: `a ${x.name} day`, get: (d) => { const had = suppDay(d, x.id); return had == null ? null : had ? 1 : 0; }, lane: "supps", causeOnly: true });
   }
   return s;
 }
 
-export const SCOUT = { minDays: 14, minR: 0.35, maxP: 0.005, show: 5 };
+/** minWordDays: a body word joins once it's in your notes on this many days. */
+/**
+ * minWordDays: a body word joins once it's in your notes on this many days. basePairs: pairs tested on the bench world
+ * (lib/bench feelWorld, 90 days, no supplements) the bars below were calibrated on (PLAN 176, 27 Oct).
+ */
+export const SCOUT = { minDays: 14, minR: 0.35, maxP: 0.005, show: 5, minWordDays: 4, basePairs: 186 };
+/** How many pairs scout tested last (for calibration and tests). */
+export let lastTested = 0;
 
 /** Ranks (ties averaged), then centred separately on weekend and weekday days. */
 function rankCentred(v: number[], weekend: boolean[]): number[] {
@@ -97,6 +124,8 @@ export type Pattern = {
   id: string;
   a: Signal; b: Signal; lag: 0 | 1;
   r: number; p: number; n: number;
+  /** p scaled for how many pairs were tested (scout): what the bars are checked against. */
+  q?: number;
   /** +1 move the same way, −1 opposite ways. */
   sign: 1 | -1;
   /** How often it held: on the "yes" (or highest-a) days, b was on the expected side of usual. */
@@ -114,8 +143,10 @@ const fmt = (v: number, unit?: string) => (unit === "kcal" || unit === "mg" || u
 export function pair(a: Signal, b: Signal, lag: 0 | 1, facts: DayFacts[]): Pattern | null {
   // a beer's own kcal make "alcohol and calories, same day" true by arithmetic; the next day is a real question
   if (lag === 0 && a.drinks && b.drinks && a.drinks !== b.drinks) return null;
+  // How your body felt is only ever the outcome: same day it follows the sentence; the next day it can't be a cause.
+  if (a.outcomeOnly) return lag === 0 && !b.outcomeOnly ? pair(b, a, 0, facts) : null;
   // Same day, a yes/no thing leads the sentence: "On a gym day, calories…", not "Calories and gym…".
-  if (lag === 0 && b.yes && !a.yes) return pair(b, a, 0, facts);
+  if (lag === 0 && b.yes && !a.yes && !b.outcomeOnly) return pair(b, a, 0, facts);
   // A supplement is never the outcome: same day it leads the sentence instead; the next day, or next to another
   // supplement (one stack, taken together), there's nothing to say.
   if (b.causeOnly) return lag === 0 && !a.causeOnly ? pair(b, a, 0, facts) : null;
@@ -156,10 +187,15 @@ export function pair(a: Signal, b: Signal, lag: 0 | 1, facts: DayFacts[]): Patte
   }
   const next = lag ? "the next day" : "that day";
   const bName = b.family === "feel" ? `your ${b.name}` : b.name;
-  const text = a.yes
+  const pct = (v: number) => `${Math.round(v * 100)} %`;
+  const text = a.yes && b.say
+    ? `On ${next === "that day" ? "" : "the day after "}${a.yes}${a.yes.startsWith("a ") ? "" : " days"}, ${b.say} ${sign > 0 ? "more" : "less"} often (${pct(onAvg!)} of days vs ${pct(offAvg!)})`
+    : a.yes
     ? `On ${next === "that day" ? "" : "the day after "}${a.yes}${a.yes.startsWith("a ") ? "" : " days"}, ${bName} ${b.plural ? "tend" : "tends"} to be ${sign > 0 ? "higher" : "lower"} (${fmt(onAvg!, b.unit)} vs ${fmt(offAvg!, b.unit)})`
+    : b.say
+      ? `With more ${a.name}, ${b.say} ${next} ${sign > 0 ? "more" : "less"} often`
     : b.yes
-      ? `When ${a.name} is higher, the next day is ${sign > 0 ? "more" : "less"} often ${b.yes}`
+      ? `When ${a.name} is higher, ${next} is ${sign > 0 ? "more" : "less"} often ${b.yes}`
       : `${cap(a.name)} and ${lag ? `next-day ${b.name}` : b.name} move ${sign > 0 ? "the same way" : "opposite ways"}`;
   return { id: `${a.id}>${b.id}@${lag}`, a, b, lag, r, p, n, sign, held, of, onAvg, offAvg, days, text };
 }
@@ -167,17 +203,25 @@ const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
 /** Every cross-family pair, same day and next day; the strongest few that clear the bar. */
 export function scout(facts: DayFacts[], supplements: Supplement[], skip: (id: string) => boolean = () => false): Pattern[] {
-  const sig = signals(supplements);
+  const sig = signals(supplements, facts);
   const all: Pattern[] = [];
   for (let i = 0; i < sig.length; i++) for (let j = 0; j < sig.length; j++) {
-    if (i === j || sig[i].family === sig[j].family) continue;
+    if (i === j || sig[i].family === sig[j].family || sig[i].notWith?.includes(sig[j].family) || sig[j].notWith?.includes(sig[i].family)) continue;
     if (j > i) { const p0 = pair(sig[i], sig[j], 0, facts); if (p0) all.push(p0); }
     const p1 = pair(sig[i], sig[j], 1, facts); if (p1) all.push(p1);
   }
+  // More pairs tested, more chance matches: each p is scaled by how many more pairs were tested than the set the bars
+  // were calibrated on (SCOUT.basePairs) — adding sleep, steps and body words (27 Oct) doubled chance patterns otherwise
+  lastTested = all.length;
+  const scale = Math.max(1, all.length / SCOUT.basePairs);
+  for (const p of all) p.q = Math.min(1, p.p * scale);
   // The strongest per pair (same-day or next-day, either direction).
   const best = new Map<string, Pattern>();
+  // the bar a pattern clears: p under 0.005 and |r| at least 0.35 — at ~75 days the r bar is the stricter (p ≈ 0.002), so
+  // the scaling applies to whichever binds: with the calibrated pairs nothing changes, with more both tighten together
+  const bar = (n: number) => Math.min(SCOUT.maxP, pTwoSided(SCOUT.minR * Math.sqrt((n - 2) / (1 - SCOUT.minR ** 2)), n - 2));
   for (const p of all) {
-    if (Math.abs(p.r) < SCOUT.minR || p.p >= SCOUT.maxP) continue;
+    if (Math.abs(p.r) < SCOUT.minR || p.q! >= bar(p.n)) continue;
     // One per pair of *families*: "caffeine" and "late caffeine" vs mood are the same story —
     // so the family pair is also the pattern's id (what you dismiss, and what's remembered).
     const key = [p.a.family, p.b.family].sort().join("~");

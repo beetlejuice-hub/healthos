@@ -6,6 +6,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { act, useStore } from "../lib/store";
 import { dailyFacts } from "../lib/insights";
+import { withBand } from "../lib/daysband";
+import { useBand } from "../lib/band-client";
 import { scout, since, verdict, type Pattern, type ScoutMemo } from "../lib/scout";
 import { addDays, dayLabel, atMinute, localDay } from "../lib/time";
 import type { GraphFocus } from "./MasterGraph";
@@ -26,7 +28,9 @@ export function useScout(): Scouted[] {
   const memo = useStore((s) => s.scout);
   const today = localDay(Date.now());
   // Today isn't over, so it's left out; 90 days back, like the effect engine.
-  const facts = useMemo(() => dailyFacts(entries, workouts, settings, addDays(today, -90), addDays(today, -1)), [entries, workouts, settings, today]);
+  // with the band's sleep and steps (lib/daysband; owner, 27 Oct: connections with "feeling weak")
+  const band = useBand().data;
+  const facts = useMemo(() => withBand(dailyFacts(entries, workouts, settings, addDays(today, -90), addDays(today, -1)), band, today), [entries, workouts, settings, today, band]);
   return useMemo(() => scout(facts, supplements, (id) => !!memo[id]?.dismissed)
     .map((p) => { const m = memo[p.id]; const s = m ? since(p, m, facts) : null; return { p, memo: m, since: s, verdict: verdict(s) }; })
     .filter((x) => x.verdict !== "faded"), [facts, supplements, memo]);
@@ -67,7 +71,7 @@ export function WorthALook({ items, onShow }: { items: Scouted[]; onShow: (f: Gr
             <p className="held">Held on <b>{p.held} of {p.of}</b> {p.a.yes ? `${p.a.yes.replace(/^a /, "")}${p.a.yes.startsWith("a ") ? "s" : " days"}` : `of your highest-${p.a.name} days`}{p.lag ? ", looking at the next day" : ""}</p>
             {s && m && <p className="since">Since {dayLabel(atMinute(m.first, 12 * 60))}: held on <b>{s.held} of {s.of}</b> new days{v === "confirmed" ? " — it keeps holding" : ""}</p>}
             <LeadChart lead={leadRef(p)} days={28} />
-            <p className="ev">{p.n} days · correlation {p.r >= 0 ? "+" : "−"}{Math.abs(p.r).toFixed(2)} · weekends compared separately · p {p.p < 0.0001 ? "< 0.0001" : p.p.toFixed(4)}{strong ? " · chance gets this ~1 in 30" : ""}</p>
+            <p className="ev">{p.n} days · correlation {p.r >= 0 ? "+" : "−"}{Math.abs(p.r).toFixed(2)} · weekends compared separately · p {(p.q ?? p.p) < 0.0001 ? "< 0.0001" : (p.q ?? p.p).toFixed(4)}{strong ? " · chance gets this ~1 in 30" : ""}</p>
             <div className="sacts">
               <button type="button" className="ibtn" aria-expanded={asking === p.id} onClick={() => setAsking(asking === p.id ? null : p.id)}>Ask why</button>
               {test && (running.includes(test.name)

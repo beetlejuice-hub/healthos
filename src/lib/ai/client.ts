@@ -26,6 +26,7 @@ import { addDays, atMinute, localDay } from "../time";
 import { nightsForAi } from "./nights";
 import { bandNow, type BandData } from "../band-client";
 import { labNow } from "./lab";
+import { withBand } from "../daysband";
 import { buildContext, onTodayLines, timeline, totalsLine } from "./context";
 import { dayWindow, dayWord } from "./nightread";
 import { plateLines } from "../foodscore";
@@ -135,7 +136,7 @@ export function bandForRead(state: State = getState(), now = Date.now()): { nigh
 /** The text the AI is told about you right now (also shown in Settings → AI → What the AI sees). */
 /** Today's lead for the morning read (PLAN 176): the strongest tested link in the last 90 days not featured in 3 weeks. */
 export function leadNow(state: State = getState(), now = Date.now()) {
-  const today = localDay(now), days = dailyFacts(state.entries, state.workouts, state.settings, addDays(today, -90), addDays(today, -1));
+  const today = localDay(now), days = withBand(dailyFacts(state.entries, state.workouts, state.settings, addDays(today, -90), addDays(today, -1)), bandNow(), today);
   return pickLead(scout(days, state.supplements, (id) => !!state.scout[id]?.dismissed), state.ai.leads, today);
 }
 
@@ -143,7 +144,7 @@ export function contextNow(state: State = getState(), now = Date.now(), { slim =
   // the chat sees what Today shows from the AI: it isn't posted in the chat any more (owner, 16 Oct)
   const onToday = slim ? onTodayLines(state.ai, now) : [];
   const today = localDay(now), from = addDays(today, -90), to = addDays(today, -1);
-  const days = dailyFacts(state.entries, state.workouts, state.settings, from, to);
+  const days = withBand(dailyFacts(state.entries, state.workouts, state.settings, from, to), bandNow(), today);
   const report = notice(state.entries, state.goals, now, currentKg(state.entries, state.settings.bodyKg, now), { workouts: state.workouts, supplements: state.supplements, settings: state.settings });
   const patterns = scout(days, state.supplements, (id) => !!state.scout[id]?.dismissed);
   const t = weightTrend(bodyDays(state.entries, addDays(today, -27), today));

@@ -9,6 +9,8 @@ import { useMemo, useState } from "react";
 import { useStore } from "../lib/store";
 import { dailyFacts } from "../lib/insights";
 import { signals } from "../lib/scout";
+import { withBand } from "../lib/daysband";
+import { useBand } from "../lib/band-client";
 import { leadSeries, type LeadRef } from "../lib/ai/lead";
 import { median } from "../lib/stats";
 import { addDays, atMinute, dayLabel, localDay } from "../lib/time";
@@ -18,7 +20,9 @@ const show = (v: number | null, unit?: string, yes?: boolean) => (v == null ? "â
 export function LeadChart({ lead, days = 14 }: { lead: LeadRef; days?: number }) {
   const entries = useStore((s) => s.entries), workouts = useStore((s) => s.workouts), settings = useStore((s) => s.settings), supps = useStore((s) => s.supplements);
   const yesterday = addDays(localDay(Date.now()), -1);
-  const s = useMemo(() => leadSeries(lead, dailyFacts(entries, workouts, settings, addDays(yesterday, -days - 1), yesterday), signals(supps), yesterday, days), [lead, entries, workouts, settings, supps, yesterday, days]);
+  // the band's sleep and steps too (lib/daysband): a lead on sleep or steps draws them
+  const band = useBand().data;
+  const s = useMemo(() => leadSeries(lead, withBand(dailyFacts(entries, workouts, settings, addDays(yesterday, -days - 1), yesterday), band, localDay(Date.now())), signals(supps, [], true), yesterday, days), [lead, entries, workouts, settings, supps, yesterday, days, band]);
   const [pick, setPick] = useState<number | null>(null);
   if (!s) return null;
   const n = s.days.length, as = s.a.vals.filter((v): v is number => v != null), bs = s.b.vals.filter((v): v is number => v != null);

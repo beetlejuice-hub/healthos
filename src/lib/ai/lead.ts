@@ -28,7 +28,7 @@ export const leadStrength = (p: Pattern) => Math.abs(p.r) * (p.of ? p.held / p.o
 /** The strongest tested link not featured in the last three weeks, or null. */
 export function pickLead(patterns: Pattern[], featured: LeadMark[] = [], today: string): Pattern | null {
   const resting = new Set(featured.filter((f) => f.day > addDays(today, -LEAD.rest)).map((f) => f.id));
-  return [...patterns].filter((p) => p.p < LEAD.maxP && !resting.has(p.id)).sort((x, y) => leadStrength(y) - leadStrength(x))[0] ?? null;
+  return [...patterns].filter((p) => (p.q ?? p.p) < LEAD.maxP && !resting.has(p.id)).sort((x, y) => leadStrength(y) - leadStrength(x))[0] ?? null;
 }
 
 export const leadRef = (p: Pattern): LeadRef => ({ id: p.id, a: p.a.id, b: p.b.id, lag: p.lag });
@@ -41,7 +41,7 @@ export function leadLines(p: Pattern): string[] {
   return [
     "## Today's lead — a link the app found and tested in their own data (the morning's \"pattern\" item is about THIS one, as a \"connection\")",
     `- ${p.text}`,
-    `- How strong: rank correlation ${p.r.toFixed(2)} over ${p.n} days (p ${p.p < 0.0001 ? "< 0.0001" : p.p.toFixed(4)}), weekdays and weekends compared apart; it held on ${p.held} of ${p.of} days${avgs}. ${p.lag ? `${p.a.name} one day, ${p.b.name} the next.` : "The same day."} The app checks ~200 pairs and only leads with one this strong — chance alone gets there about 1 time in 30, so "sure": "yours", but say it's their data, not a study.`,
+    `- How strong: rank correlation ${p.r.toFixed(2)} over ${p.n} days (p ${(p.q ?? p.p) < 0.0001 ? "< 0.0001" : (p.q ?? p.p).toFixed(4)}, allowing for how many pairs were checked), weekdays and weekends compared apart; it held on ${p.held} of ${p.of} days${avgs}. ${p.lag ? `${p.a.name} one day, ${p.b.name} the next.` : "The same day."} The app checks ~200 pairs and only leads with one this strong — chance alone gets there about 1 time in 30, so "sure": "yours", but say it's their data, not a study.`,
     `- The item: say it plainly with these numbers ("goes with", never "causes"; "sure": "yours"). Search the web for WHY it might happen — a mechanism or a study — and cite it as its "source". Give the "chain" from ${p.a.name} to ${p.b.name}, each link with how sure it is. The "tip" tests it: what to do (or skip) on the next days, and that the app is watching ${p.b.name}. Leave "measure" out — the app draws both, ${p.a.name} over ${p.b.name}, for 14 days.`,
   ];
 }
@@ -69,7 +69,7 @@ export function withLead<T extends { type: string; lead?: LeadRef }>(items: T[],
 }
 
 /** "strong" clears the lead bar; "early" is scout's own flag — could be chance (a fluke this strong comes up often). */
-export const leadGrade = (p: Pattern): "strong" | "early" => (p.p < LEAD.maxP ? "strong" : "early");
+export const leadGrade = (p: Pattern): "strong" | "early" => ((p.q ?? p.p) < LEAD.maxP ? "strong" : "early");
 
 /** What a change to `a` is, in words, for the ones a person can choose to change (never "drink more", never "train less"). */
 const CHANGE: Record<string, { less?: [string, string]; more?: [string, string] }> = {
@@ -81,6 +81,8 @@ const CHANGE: Record<string, { less?: [string, string]; more?: [string, string] 
   bigMeal: { less: ["No meal over 800 kcal", "Split the biggest meal — none over 800 kcal"] },
   protein: { more: ["Protein at every meal", "30 g of protein or more at every meal"] },
   gym: { more: ["Train 4 days a week", "Lift or do cardio on 4 days each week"] },
+  asleep: { more: ["30 min more sleep", "In bed 30 minutes earlier every night"] },
+  steps: { more: ["8,000+ steps a day", "Walk to 8,000 steps or more every day"] },
 };
 const GOOD_UP: Record<string, boolean> = { mood: true, energy: true, focus: true, stress: false };
 
