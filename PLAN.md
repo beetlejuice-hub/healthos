@@ -2669,3 +2669,20 @@ both reads and the questions. Phases in that order; #152 RPE waits (owner).
      calories 0 — fails on the old code; ties counted), mdlite.test (links, javascript: stays text), e2e leads (the
      planted link first and strong, 28 days drawn with the drinking days lit, Ask why with the link and a real link in
      the reply, Test it starts the experiment and says it's running), scout (unchanged, "New lead").
+
+177. [ ] **What the data can do — the body lab** (owner, 27 Oct: "just want some ideas what i can do w all the data its
+   collecting, wearable data, and everything else. some super creative and exciting stuff" — then picked: coin-flip
+   experiments "like this", what-if sliders "interesting, not sure if needed, would use", dose-response cards "yes",
+   fitness age "yes", nervous-system heatmap "yes", body clock "yea", recovery clock after a night out "YES", ghost
+   logging "okay?"; people & places "nah"; Wrapped and ghost race not picked). (claimed: agent, 27 Oct — canvas first)
+   - Canvas first (CLAUDE.md): each at phone size in the app's colours, where it lives, then he picks the look.
+   - Order (default, his YES first): 8 recovery clock → 3 dose-response cards → 1 coin-flip experiments → 4 fitness age
+     → 5 heatmap → 6 body clock + slump ping → 2 what-if → 9 ghost logging.
+   - Each is the app's own maths (pure functions, planted effects + controls); the AI only explains.
+   - Smoking (owner, 27 Oct, mid-way: "we could implement a small tick that says cigarettes...or like a better way to track
+     smoking days and not"): two directions on the canvas — A a Today tile, +1 per cigarette with Undo; B one question at
+     night (None / 1–2 / 3–5 / 6+, asked in the morning catch-up if missed) and a month calendar. Either feeds the
+     dose-response cards (smoking days vs not: resting HR, HRV, sleep) and the Leads. Never preachy — numbers only.
+   - **Canvas (27 Oct): https://claude.ai/artifact/UzvHnzEw7gf6z8SoidHn6d** — On Today: recovery clock, coin-flip
+     experiment, what-if (sliders work), ghost logging, smoking A and B. Insights → Body lab: dose-response (beer,
+     cigarettes, late caffeine), fitness age, nervous-system heatmap, body clock + slump ping. Sample numbers only.
