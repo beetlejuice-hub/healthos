@@ -11,7 +11,7 @@ import { useEffect, useState } from "react";
  */
 export const TABS: [string, string][] = [
   ["week", "Overview"], ["timeline", "Timeline"], ["heart", "Heart"], ["sleep", "Sleep"], ["mind", "Mind"],
-  ["intake", "Food & body"], ["training", "Training"], ["connections", "Findings"], ["data", "Data"],
+  ["intake", "Food & body"], ["training", "Training"], ["connections", "Findings"], ["lab", "Body lab"], ["data", "Data"],
 ];
 
 /** Pages with something in them. A page is there when any of its [data-sec] blocks has content — not

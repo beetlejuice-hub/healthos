@@ -20,6 +20,7 @@ import { Tip } from "../components/Tip";
 import { Top } from "../components/Top";
 import { Coverage, Methods, SuppMatrix, TrainingLoad } from "../components/Stack";
 import { TrainingPage } from "../components/TrainingPage";
+import { BodyLab } from "../components/BodyLab";
 import { AiCheckLabel, HiddenByYou } from "../components/AiCheck";
 import { glanceDays } from "../lib/glance";
 import { LineChart } from "../components/Charts";
@@ -47,6 +48,7 @@ const PAGE_SUB: Record<string, string> = {
   intake: "What you ate and drank, and your weight.",
   training: "What you trained, and what you took.",
   connections: "What goes with better or worse days — with how sure each one is.",
+  lab: "What a dose of something has gone with in your own nights — each drink, a smoking day, late caffeine.",
   data: "How complete the picture is, and how the numbers are made.",
 };
 /** The period switch matters on these pages only. */
@@ -189,6 +191,7 @@ export function Insights() {
       {!nothing && <Mind days={gdays} now={now} period={period} />}
       {!nothing && <Connections days={gdays} />}
       {!nothing && <div data-sec="connections" className="sec-wrap"><Noticed report={report} /><WorthALook items={scouted} onShow={showOnGraph} /></div>}
+      {!nothing && <BodyLab band={band} entries={s.entries} now={now} active={shown === "lab" || !shown} />}
       {!nothing && <SleepNights data={data} band={band} now={now} entries={s.entries} halfLifeMin={s.settings.halfLifeMin} />}
       {!nothing && <Body days={gdays} period={period} now={now} bandNights={bandNights} />}
       {!nothing && (has.sets || has.cardio) && <TrainingPage now={now} />}

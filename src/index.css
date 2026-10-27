@@ -1292,7 +1292,8 @@ a { color: inherit; }
 .sl-a { display: grid; gap: 12px; }
 .sl-a-top { display: grid; gap: 12px; grid-template-columns: minmax(0, 1fr); }
 .sl-a-top.wide { grid-template-columns: minmax(0, 1fr) 360px; }
-.sl-typical, .sl-reg { padding: 14px 16px; display: grid; gap: 8px; align-content: start; }
+/* minmax(0, 1fr): the regularity bar (300 wide) shrinks to a 320 px phone instead of widening the page (27 Oct) */
+.sl-typical, .sl-reg { padding: 14px 16px; display: grid; gap: 8px; align-content: start; grid-template-columns: minmax(0, 1fr); }
 .sl-typical p { margin: 0; font-size: 15.5px; line-height: 1.5; color: var(--i-ink); }
 .sl-chips { display: flex; flex-wrap: wrap; gap: 4px 14px; font: 400 12px var(--f-mono); color: var(--i-ink-2); }
 .sl-chips b { color: var(--i-ink); font-weight: 500; }
@@ -1876,3 +1877,36 @@ span.fd-score[data-band="none"] { background: none; min-width: 34px; }
 .rc .rc-faster p { margin: 0; display: flex; justify-content: space-between; align-items: baseline; gap: 4px 12px; flex-wrap: wrap; font-size: 14px; }
 .rc .rc-faster p b { font-weight: 600; }
 .rc .rc-faster p span { font-size: 12.5px; color: var(--ok); }
+/* Insights → Body lab (PLAN 177): dose-response and the month of cigarettes */
+.bl { display: grid; gap: 12px; min-width: 0; }
+.bl-card { display: grid; gap: 8px; padding: 14px; }
+.bl-card h3 { margin: 0; font-size: 15.5px; font-weight: 600; line-height: 1.4; color: var(--i-ink); }
+.bl-card h3 b { font-weight: 600; }
+.bl-need, .bl-foot { margin: 0; font: 400 11.5px/1.45 var(--f-mono); color: var(--i-ink-2); }
+.bl-two { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.bl-fig { margin: 0; display: grid; gap: 2px; min-width: 0; }
+.bl-fig figcaption { font-size: 11.5px; color: var(--i-ink-2); }
+.bl-zero { stroke: var(--i-line-2); stroke-width: 1; }
+.bl-tick { fill: var(--i-ink-2); font: 10.5px var(--f-mono); }
+.bl-val { fill: var(--i-ink); font: 11px var(--f-mono); }
+.bl-fit { stroke: var(--i-ink); stroke-width: 1.5; }
+.bl-tab { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 8px 14px; font-size: 13px; align-items: baseline; }
+.bl-tab [role=row] { display: contents; }
+.bl-tab .hd span { font: 11px var(--f-mono); color: var(--i-ink-2); }
+.bl-tab b, .bl-tab .v { font: 500 13px var(--f-mono); text-align: right; }
+.bl-tab .hd span { text-align: right; }
+.bl-tab .nm { min-width: 0; }
+.bl-tab em { display: block; font: normal 11px var(--f-mono); color: var(--i-dim); margin-top: 1px; }
+.bl-tab [data-sure="clear"] em, .bl-tab [data-sure="likely"] em { color: var(--i-ink); }
+.bl-caf { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px 12px; align-items: center; }
+.bl-caf h3 { flex: 1 1 190px; }
+.bl-sc { flex: none; }
+.bl-month { display: grid; gap: 8px; padding-top: 10px; border-top: 1px solid var(--i-line); }
+.bl-cal { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 5px; }
+.bl-cal i, .bl-legend i { display: block; height: 26px; border-radius: 5px; }
+.bl-cal i.none, .bl-legend i.none { border: 1.5px solid var(--i-line-2); }
+.bl-cal i.unknown, .bl-legend i.unknown { border: 1.5px dashed var(--i-line); }
+.bl-cal i.future { opacity: 0; }
+.bl-legend { display: flex; flex-wrap: wrap; gap: 4px 6px; align-items: center; font-size: 11.5px; color: var(--i-ink-2); }
+.bl-legend i { display: inline-block; width: 12px; height: 12px; border-radius: 3px; margin-left: 6px; }
+.bl-legend i:first-child { margin-left: 0; }

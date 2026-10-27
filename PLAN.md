@@ -2718,3 +2718,17 @@ both reads and the questions. Phases in that order; #152 RPE waits (owner).
      unknown ≠ zero), e2e recovery (390 / 320 px; quiet Saturday and 20:00 show nothing; not-back-yet case).
      Not built from the canvas: "Remind me to walk at 11:00" (needs the push reminder wiring — next to body clock's
      slump ping, 6).
+   - [x] Dose-response built (27 Oct): Insights → Body lab (a new page, after Findings), lib/bodylab + components/BodyLab,
+     three months of the band's nights loaded when it's open. Drinks that evening (as logged, noon to bed; 0 / 1 / 2 / 3 /
+     4+) against heart rate asleep and HRV: each column's middle night and middle half against your no-drink nights, the
+     per-drink slope and how sure (the app's shuffle test). Cigarettes: smoking days against days you said none — only
+     days answered, and nights with 2+ drinks left out of both sides (smoking mostly shares a night with drinks; with them
+     in, the drinks' effect was pinned on the cigarettes — the control test fails that way) — resting HR next morning, HRV
+     that night, heart rate asleep, each with how sure; and the month of answers as SmokeB's calendar (not answered shown
+     dashed, never as smoke-free; "5 of your 8 smoking days were Sat–Sun" only with 4+ and when two weekdays hold most).
+     Caffeine after 14:00 (mg drunk, 14:00 to bed) against deep sleep, per 100 mg. A card with too little says what it
+     needs. Tests: bodylab.test (planted: per drink +2.5 bpm / −5 ms, smoking +4 bpm, −9 min per 100 mg — each found near
+     its size in 19+ of 20 worlds; controls: chance-only "clear" in ≤1 of 20; smoking-on-drinking-nights not blamed),
+     e2e bodylab (each found near size, how sure, calendar counts, 390 / 320 px; control world: no claims).
+     Found on the way: the Sleep page's Regularity bar (300 px) widened every Insights page to 329 px on a 320 px phone —
+     its grid column now shrinks.
