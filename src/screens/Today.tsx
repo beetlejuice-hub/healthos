@@ -6,6 +6,7 @@ import { AUTO_END } from "../lib/training";
 import { NoticeBox } from "../components/NoticeBox";
 import { HeartAsk } from "../components/HeartAsk";
 import { FoodGapAsk } from "../components/FoodGapAsk";
+import { GhostCard } from "../components/GhostCard";
 import { SmokeAsk } from "../components/SmokeAsk";
 import { GuardBox } from "../components/GuardBox";
 import { checkWeight, type Guard } from "../lib/sanity";
@@ -157,6 +158,7 @@ export function Today() {
         <MorningRead />
         <AiQuestions />
         <HeartAsk now={now} />
+        <GhostCard now={now} />
         <FoodGapAsk now={now} />
         <SmokeAsk now={now} />
         <CoinCard now={now} />

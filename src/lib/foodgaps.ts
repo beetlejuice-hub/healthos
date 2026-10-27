@@ -54,15 +54,16 @@ export const ateEntries = (days: string[], ate: Ate) => days.map((d) => ({ kind:
 
 /**
  * For Today's question: the latest run of days not logged in the week before today, none of them answered yet. Null when
- * there's none, or no usual day to judge by (under 7 fully logged days in four weeks).
+ * there's none, or no usual day to judge by (under 7 fully logged days in four weeks). `answered`: keep days already
+ * answered here (ghost logging drafts them either way — saying "ate as usual" doesn't log the coffee).
  */
-export function openGap(entries: Entry[], today: string): { days: string[]; usual: number; kcal: (number | null)[] } | null {
+export function openGap(entries: Entry[], today: string, opts: { answered?: boolean } = {}): { days: string[]; usual: number; kcal: (number | null)[] } | null {
   const usual = usualBefore(entries, today);
   if (usual == null) return null;
   const from = addDays(today, -GAP.lookBack), days = bodyDays(entries, from, addDays(today, -1)), said = ateSaid(entries);
   const run: typeof days = [], yday = addDays(today, -1);
   for (let i = days.length - 1; i >= 0; i--) {
-    const d = days[i], gap = isGap(d.kcal, usual) && !said.has(d.day);
+    const d = days[i], gap = isGap(d.kcal, usual) && (opts.answered || !said.has(d.day));
     if (!run.length && d.day === yday && gap && (d.kcal ?? 0) >= usual * GAP.meal) continue; // the catch-up's, this morning
     if (gap) run.unshift(d);
     else if (run.length) break;

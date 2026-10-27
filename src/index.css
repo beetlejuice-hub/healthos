@@ -1964,3 +1964,14 @@ span.fd-score[data-band="none"] { background: none; min-width: 34px; }
 .bc-legend .v { font: 12px var(--f-mono); color: var(--i-ink-2); }
 .bc-ping { display: flex; gap: 10px; align-items: center; min-height: 44px; font-size: 14px; }
 .bc-ping b { font-weight: 600; } .bc-ping small { display: block; color: var(--i-ink-2); font-size: 12px; }
+/* ghost logging: days not logged, drafted (PLAN 177, body lab 9) */
+.ghost { display: grid; gap: 8px; }
+.ghost .gh-title { font-size: 17px; font-weight: 700; color: var(--c-ink); }
+.ghost .gh-why { margin: 0; font-size: 13px; line-height: 1.4; color: var(--c-ink-2); }
+.ghost .gh-day { display: grid; gap: 6px; }
+.ghost .gh-dh { font-size: 12px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--c-ink-2); margin-top: 4px; }
+.ghost .gh-item { display: flex; gap: 10px; align-items: flex-start; font-size: 14px; min-height: 40px; }
+.ghost .gh-item input { margin-top: 3px; width: 18px; height: 18px; flex: none; }
+.ghost .gh-item span { display: grid; gap: 1px; min-width: 0; }
+.ghost .gh-item b { font-weight: 600; }
+.ghost .gh-item small { font-size: 12px; color: var(--c-ink-2); }

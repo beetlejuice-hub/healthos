@@ -2778,3 +2778,16 @@ both reads and the questions. Phases in that order; #152 RPE waits (owner).
      switch kept and "notifications are off on this device", 390 / 320, control: nothing named, no switch), e2e push
      (four kinds, the slump one off by default). Not from the canvas: "an 8-minute walk halved your dip on 7 of 9 days"
      in the ping — not computed, so not said.
+   - [x] Ghost logging, phase 1 built (27 Oct): lib/ghost + components/GhostCard on Today (before "how did you eat?").
+     On days not logged (lib/foodgaps' run, its last 3 days — also when "how did you eat?" was answered: that doesn't log
+     the coffee), drafts of what repeats: an item on 7 in 10 of your recent logged days, or on 3+ of your last same
+     weekdays (≥ 75 %), at its usual time; the 2nd coffee on its own; supplements one line per slot; only what's missing
+     that day. Food you vary never qualifies (owner: "i eat different stuff"). Untick what didn't happen, "Keep the N
+     ticked" or "None of it"; each day answered once (ghost:<day>), Undo. A logged day is one whose food isn't a gap — not
+     "has 3+ entries": that counted mostly the days the coffee was on (the control test caught 11 of 21 days reading as 11
+     of 15). When yesterday was a whole day not logged, the morning catch-up leaves its stack and coffee rows to the
+     drafts (before and after they're answered) — not asked twice. Tests: ghost.test (planted daily / 2nd coffee / stack
+     / Saturday-only, varied food never, already logged not again, answered days, control under 70 % none, too few days
+     none), e2e ghost (the weekend drafted, untick one + keep → exactly those, "how did you eat?" still asks, Undo, None of
+     it, Sat–Mon with the catch-up quiet, 390 / 320). Phase 2 (when wanted): what the band saw — a meal-like rise, a late
+     night out with "drinks?" — the canvas's guesses; not built, they'd be guesses about what happened, not repeats.

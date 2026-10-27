@@ -9,6 +9,7 @@ import { useMemo, useState } from "react";
 import { act, offerUndo, useStore } from "../lib/store";
 import { yesterdayGaps, type Gap, type Meal } from "../lib/catchup";
 import { openGap } from "../lib/foodgaps";
+import { ghostDrafts, ghostKey } from "../lib/ghost";
 import { go, LOG_FOR_KEY } from "../lib/nav";
 import { addDays, localDay } from "../lib/time";
 
@@ -23,7 +24,12 @@ export function CatchUp({ now }: { now: number }) {
   const [no, setNo] = useState<string[]>(readNo);
   // a whole day not logged is asked about once, by FoodGapAsk — not meal by meal here
   const dayGap = useMemo(() => openGap(entries, today)?.days.includes(addDays(today, -1)) ?? false, [entries, today]);
-  const gaps = useMemo(() => yesterdayGaps(entries, supplements, today), [entries, supplements, today]).filter((g) => !no.includes(g.key) && !(dayGap && g.kind === "meal"));
+  // …and its usual coffee and stack by ghost logging (PLAN 177), drafted or already answered there — not asked twice
+  const ghostDay = useMemo(() => {
+    const y = addDays(today, -1);
+    return entries.some((e) => e.kind === "answer" && e.key === ghostKey(y)) || (ghostDrafts(entries, supplements, today)?.drafts.some((d) => d.day === y) ?? false);
+  }, [entries, supplements, today]);
+  const gaps = useMemo(() => yesterdayGaps(entries, supplements, today), [entries, supplements, today]).filter((g) => !no.includes(g.key) && !(dayGap && g.kind === "meal") && !(ghostDay && g.kind !== "meal"));
   if (hour < 5 || hour >= 14 || !gaps.length) return null;
   const yday = addDays(today, -1);
   const dismiss = (keys: string[]) => {
