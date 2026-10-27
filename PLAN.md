@@ -2791,3 +2791,10 @@ both reads and the questions. Phases in that order; #152 RPE waits (owner).
      none), e2e ghost (the weekend drafted, untick one + keep → exactly those, "how did you eat?" still asks, Undo, None of
      it, Sat–Mon with the catch-up quiet, 390 / 320). Phase 2 (when wanted): what the band saw — a meal-like rise, a late
      night out with "drinks?" — the canvas's guesses; not built, they'd be guesses about what happened, not repeats.
+   - [x] The AI sees the body lab (27 Oct; owner, 15 Oct: "make sure app sees all data, organized"): lib/ai/lab, a
+     "Body lab" section in what the reads and the chat are told — the morning after a night out (the hit, when back,
+     what got you back faster, the lifts), each drink / smoking days / late caffeine, the wound-up hour, the body clock,
+     coin-flips finished in the last 60 days — only what the app's tests call clear or likely, with the numbers shown
+     on the cards; chance never reaches the AI as a finding. A body-lab error leaves the section out, never the read.
+     Tests: lab.test (found → exact lines; not clear / too few / no hour → nothing; the morning after; lands in the
+     full and the chat context under its heading, none → no heading).

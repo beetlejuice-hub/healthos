@@ -195,13 +195,16 @@ export type ContextInput = {
   onToday?: string[];
   /** Today's own entries so far, in order (dayTimeline) — "Last 14 days" ends yesterday (16 Oct: the AI took yesterday for today). */
   todaySoFar?: string[];
+  /** The body lab's tested numbers (PLAN 177, lib/ai/lab) — only what's clear or likely. */
+  lab?: string[];
 };
 
 export function buildContext(input: ContextInput): string {
   const { state, now } = input;
   const base = baseContext(input);
   const engines = moodEngines({ ...state, workouts: state.workouts ?? [] }, now);
-  const eng = engines.length ? `\n## Mood engines (tested numbers)\n${engines.map((l) => `- ${l}`).join("\n")}` : "";
+  const eng = (engines.length ? `\n## Mood engines (tested numbers)\n${engines.map((l) => `- ${l}`).join("\n")}` : "")
+    + (input.lab?.length ? `\n## Body lab — the app's own tested numbers, only what's clear or likely (goes with, not causes)\n${input.lab.map((l) => `- ${l}`).join("\n")}` : "");
   if (input.slim) return `${base}${eng}\n${ASK_MORE}`;
   const extra = eng
     + (input.nights?.length ? `\n## My nights from the band, newest last (the band's measures, then the evening before)\n${input.nights.map((l) => `- ${l}`).join("\n")}` : "");

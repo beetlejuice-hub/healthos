@@ -25,6 +25,7 @@ import { bodyDays, weightTrend } from "../tdee";
 import { addDays, atMinute, localDay } from "../time";
 import { nightsForAi } from "./nights";
 import { bandNow, type BandData } from "../band-client";
+import { labNow } from "./lab";
 import { buildContext, onTodayLines, timeline, totalsLine } from "./context";
 import { dayWindow, dayWord } from "./nightread";
 import { plateLines } from "../foodscore";
@@ -152,7 +153,7 @@ export function contextNow(state: State = getState(), now = Date.now(), { slim =
   const sets = state.entries.filter((e): e is EntryOf<"set"> => e.kind === "set") as LoggedSet[];
   const ready = band ? readinessNow(state, band, now) : null;
   const ss = sessions(state.workouts, sets);
-  return buildContext({ state, now, days, findings: report.found, patterns, weight: t ? { kg: t.nowKg, perWeek: t.perDay * 7 } : null, nights: nightsSeen,
+  return buildContext({ state, now, days, findings: report.found, patterns, weight: t ? { kg: t.nowKg, perWeek: t.perDay * 7 } : null, nights: nightsSeen, lab: labNow(state, band, now),
     // last night's skin temperature, breathing and blood oxygen against your usual, and the night check's line (PLAN 52)
     today: [...todayLines(ready), ...(band && ready ? nightCheckLines(nightCheck(today, band, heartSigns(ready))) : []),
       // yesterday's food as a whole day, out of 100 (lib/dayscore)
