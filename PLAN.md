@@ -2749,3 +2749,18 @@ both reads and the questions. Phases in that order; #152 RPE waits (owner).
      day asked, "No" struck, magnesium logged, a finished run planted → worked / control → no clear change, 320 px).
      Phase 2 (next): slow supplements — the coin picks 3 weeks on or off, twice (12 weeks), the first days after each
      switch left out; the test on week-long stretches, so it can only ever say "likely" at best, and says so.
+     Asked the owner (27 Oct) whether phase 2 is still wanted, given his "not sure for these" and that ceiling.
+   - [ ] Fitness age — blocked (27 Oct): the HUNT reference table (Loe et al. 2013, PLoS ONE 8:e64319, Table 2) can't be
+     read from this session (journals.plos.org, pmc.ncbi.nlm.nih.gov, www.ebi.ac.uk, doi.org all refused by the network
+     policy); a search showed the values without their age labels and two sources disagree on the rows — not built on
+     that. Also needs men's / women's norms, which the app doesn't store (one tap, asked on the card). Asked the owner to
+     allow journals.plos.org.
+   - [x] Nervous-system heatmap built (27 Oct): Insights → Body lab, lib/wound + components/WoundHeat. Minutes your heart
+     was 10+ above your usual for that quarter hour (lib/hrusual) while the band counted no steps that minute — sleep,
+     training and the hour after left out (lib/heart awakeMinutes) — by weekday × hour over 4 weeks, as minutes an hour.
+     An hour is named only when it's wound up (5+ minutes) on 60 % of its weeks and at least 3; else "no hour stands
+     out". Without steps from the band nothing is counted (a walk can't be told from sitting). Tests: wound.test
+     (planted Tuesday 15:00 named 4 of 4, also under daily noise 20/20; control noise-only names an hour ≤3/20; walks
+     never count; no steps → nothing; a workout hides it), e2e wound (named, cell marked, noon walks 0, 390 / 320 px,
+     walks-only control). Not built from the canvas: "what brings you down fastest" (walk / gym / coffee after a
+     wound-up stretch) — next to it when wanted.

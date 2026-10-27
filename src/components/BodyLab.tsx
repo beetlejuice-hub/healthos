@@ -15,6 +15,7 @@ import { DAY, localDay } from "../lib/time";
 import type { Entry } from "../lib/types";
 import { useWidth } from "./useWidth";
 import { CoinLab } from "./Coins";
+import { WoundHeat } from "./WoundHeat";
 
 const DAYS = 90;
 const HR = "#ef7d6d", HRV = "#9fd7c7", CAF = "var(--caf)";
@@ -59,6 +60,7 @@ export function BodyLab({ band, entries, now, active }: { band: BandData | null;
         </div> : <p className="bl-need">Needs {LAB.minNights} nights with deep sleep, {LAB.minSide} of them with caffeine after 14:00 and {LAB.minSide} without.</p>}
         {caf && <p className="bl-foot">{caf.fit.pts.length} nights · {caf.late} with caffeine after 14:00 · mg drunk from 14:00 to bed</p>}
       </section>}
+      {band && ls.length > 0 && <WoundHeat band={band} now={now} />}
     </div>
   );
 }
