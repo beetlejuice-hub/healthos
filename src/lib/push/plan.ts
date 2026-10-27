@@ -10,9 +10,11 @@
 import type { Entry, Supplement } from "../types";
 import { SLOTS, answerSlot, slotsOf } from "../types";
 import { atMinute, localDay, addDays } from "../time";
+import { slumpOf } from "../bodyclock";
 
 export type Reminder = { at: number; title: string; body: string; url: string; tag: string };
-export type NotifyPrefs = { checkins: boolean; supps: boolean; weigh: boolean };
+/** `slump` (PLAN 177): 15 minutes before your afternoon dip, once your check-ins show one — off unless you turn it on. */
+export type NotifyPrefs = { checkins: boolean; supps: boolean; weigh: boolean; slump?: boolean };
 export const DEFAULT_NOTIFY: NotifyPrefs = { checkins: true, supps: true, weigh: true };
 
 export const PLAN = {
@@ -25,6 +27,8 @@ export const PLAN = {
   /** A slot's reminder comes this long after its time, if anything in it is still unticked. */
   suppAfterMin: 30,
   weighAt: 9 * 60 + 30,
+  /** The slump ping comes this long before the slump hour; skipped if you rated in the hour before it. */
+  slumpEarly: 15,
   mergeMin: 30,
   perDay: 6,
 };
@@ -35,6 +39,8 @@ export function plan(c: Ctx): Reminder[] {
   const out: Reminder[] = [];
   const today = localDay(c.now);
   const end = c.now + PLAN.horizonH * 3_600_000;
+  // the afternoon slump from your energy check-ins (lib/bodyclock), only when it's at least likely
+  const slump = c.prefs.slump ? slumpOf(c.entries, today) : null;
   for (let i = 0; i <= 2; i++) {
     const day = addDays(today, i);
     const at = (min: number) => atMinute(day, min);
@@ -55,6 +61,12 @@ export function plan(c: Ctx): Reminder[] {
     }
 
     if (c.prefs.weigh && !todays.some((e) => e.kind === "weight")) add(PLAN.weighAt, { title: "Morning weigh-in", body: "Before food, after the toilet, same as always.", url: "/#today", tag: "weigh" });
+
+    if (slump) {
+      const m = slump.from * 60 - PLAN.slumpEarly, t = at(m), hh = (h: number) => String(h).padStart(2, "0");
+      if (!c.entries.some((e) => e.kind === "feel" && e.at > t - 60 * 60_000 && e.at <= t))
+        add(m, { title: "Slump in 15 min", body: `Your energy usually dips ${hh(slump.from)}:00–${hh(slump.to)}:00 (${slump.mean.toFixed(1)} vs ${slump.rest.toFixed(1)} the rest of the day).`, url: "/#insights/lab", tag: "slump" });
+    }
   }
 
   // Quiet hours: nothing before 08:00 or from 15 min before bedtime (a bedtime after midnight counts for the evening before).

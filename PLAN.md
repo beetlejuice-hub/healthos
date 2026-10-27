@@ -2764,3 +2764,17 @@ both reads and the questions. Phases in that order; #152 RPE waits (owner).
      never count; no steps → nothing; a workout hides it), e2e wound (named, cell marked, noon walks 0, 390 / 320 px,
      walks-only control). Not built from the canvas: "what brings you down fastest" (walk / gym / coffee after a
      wound-up stretch) — next to it when wanted.
+   - [x] Body clock + slump ping built (27 Oct): lib/bodyclock + components/BodyClockCard on Body lab; the ping in
+     lib/push/plan. Last 30 days, your own numbers: sleep (median falling asleep / waking, the middle), the night low
+     (median time of the lowest 5-minute heart rate), weekends' shift (lib/sleep weekendShift); the 2 hours your focus
+     is best and the afternoon hour (12–19) your energy dips, from check-ins — each the best of many windows, so checked
+     by shuffling which check-in had which rating and asking how often the best (or worst) window does as well; named
+     only when clear or likely. No "night owl" label from the canvas: that needs population norms this app can't check.
+     The ping: a fourth notification kind, off until switched on (on the card or in Settings → Notifications), 15 min
+     before the slump hour, skipped when you rated in the hour before, only while the slump is likely or clear; the
+     planner's quiet hours, merging and 6-a-day cap still apply. Tests: bodyclock.test (sleep/low/shift planted; focus
+     10–12 found 19+/20, control ≤2/20; slump 15:00 found 18+/20, control none 18+/20; too few → nothing), plan.test
+     (14:45 ping when on, none when off, skipped after a check-in, next day's kept), e2e bodyclock (dial and rows, ping
+     switch kept and "notifications are off on this device", 390 / 320, control: nothing named, no switch), e2e push
+     (four kinds, the slump one off by default). Not from the canvas: "an 8-minute walk halved your dip on 7 of 9 days"
+     in the ping — not computed, so not said.

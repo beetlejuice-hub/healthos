@@ -39,7 +39,9 @@ const { chromium, APP, OUT, handle, rate } = require('./harness.cjs');
   const card = pg.locator('.card.notif');
   await card.getByRole('button', { name: 'Turn on' }).click();
   await pg.waitForFunction(() => document.querySelector('.card.notif')?.textContent?.includes('on for this device'), null, { timeout: 8000 }).catch(() => {});
-  check('turned on: card says so, kinds shown', /on for this device/.test(await card.innerText()) && await card.locator('input[type=checkbox]').count() === 3);
+  // four kinds since the slump ping (PLAN 177) — that one off until you turn it on
+  check('turned on: card says so, kinds shown', /on for this device/.test(await card.innerText()) && await card.locator('input[type=checkbox]').count() === 4);
+  check('the slump ping is off by default', !(await card.locator('.notif-kind', { hasText: 'Before your afternoon slump' }).locator('input').isChecked()));
   check('asked for permission from the tap', await pg.evaluate(() => window.__asked === true));
   check('service worker registered for real', await pg.evaluate(async () => !!(await navigator.serviceWorker.getRegistration('/sw.js'))));
   check('subscribed with the server\'s key', await pg.evaluate(() => window.__subOpts?.userVisibleOnly === true && window.__subOpts.applicationServerKey?.byteLength === 65));

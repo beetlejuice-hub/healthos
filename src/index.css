@@ -1949,3 +1949,18 @@ span.fd-score[data-band="none"] { background: none; min-width: 34px; }
 .wh-legend { display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: center; font: 10.5px var(--f-mono); color: var(--i-ink-2); }
 .wh-legend span { display: inline-flex; gap: 4px; align-items: center; }
 .wh-legend i { display: inline-block; width: 14px; height: 10px; border-radius: 2px; }
+/* your body clock (PLAN 177, body lab 6) */
+.bc-dial { align-self: center; max-width: 100%; height: auto; }
+.bc-track { stroke: #1a2226; }
+.bc-low { stroke: var(--i-panel); }
+.bc-tick { fill: var(--i-ink-2); font: 11px var(--f-mono); }
+.bc-mid { fill: var(--i-ink); font-size: 15px; font-weight: 600; }
+.bc-sub { fill: var(--i-ink-2); font-size: 12px; }
+.bc-legend { display: grid; grid-template-columns: 14px minmax(0, 1fr) auto; gap: 7px 9px; align-items: center; font-size: 13px; }
+.bc-legend i { width: 12px; height: 12px; border-radius: 3px; }
+.bc-legend i.dot { border-radius: 50%; }
+.bc-legend i.none { border: 1px dashed var(--i-line-2); }
+.bc-legend em { font: normal 11px var(--f-mono); color: var(--i-dim); margin-left: 4px; }
+.bc-legend .v { font: 12px var(--f-mono); color: var(--i-ink-2); }
+.bc-ping { display: flex; gap: 10px; align-items: center; min-height: 44px; font-size: 14px; }
+.bc-ping b { font-weight: 600; } .bc-ping small { display: block; color: var(--i-ink-2); font-size: 12px; }

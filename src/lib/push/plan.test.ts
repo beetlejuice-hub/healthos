@@ -62,4 +62,17 @@ describe("reminder plan", () => {
     for (const d of [2, 3, 4]) expect(rs.filter((r) => new Date(r.at).getDate() === d).length).toBeLessThanOrEqual(6);
     expect(at(rs, 4).length).toBeGreaterThan(0);
   });
+  it("the slump ping (PLAN 177): 14:45 when your energy dips 15:00–16:00 and it's on; off by default; not after a check-in in the hour before", () => {
+    // 30 days of check-ins, energy 4 at 15:00–16:00 and 6–7 otherwise
+    const es: Entry[] = [];
+    for (let d = 1; d <= 26; d++) for (const [h, e] of [[9, 7], [11, 6], [15, 4], [15, 4], [18, 7], [20, 6]] as const) es.push({ id: `f${d}-${h}-${es.length}`, kind: "feel", at: T(d, h, 20), energy: e + (d % 3 === 0 ? 0.5 : 0) } as Entry);
+    const off = plan(ctx(T(27, 7), es));
+    expect(off.some((r) => r.tag.includes("slump"))).toBe(false);
+    const on = plan(ctx(T(27, 7), es, { ...DEFAULT_NOTIFY, slump: true }));
+    expect(at(on, 27)).toContain("14:45 Slump in 15 min");
+    expect(on.find((r) => r.tag === "slump")!.body).toMatch(/^Your energy usually dips 15:00–16:00 \(4\.\d vs 6\.\d the rest of the day\)\.$/);
+    const rated = plan(ctx(T(27, 7), [...es, { id: "now", kind: "feel", at: T(27, 14, 10), energy: 6 } as Entry], { ...DEFAULT_NOTIFY, slump: true }));
+    expect(at(rated, 27)).not.toContain("14:45 Slump in 15 min");
+    expect(at(rated, 28)).toContain("14:45 Slump in 15 min");
+  });
 });
