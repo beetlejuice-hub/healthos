@@ -30,6 +30,8 @@ import { convert, cookKind, cookState, WORD, type CookState } from "../lib/cooke
 import { findBarcode, type Lookup } from "../lib/barcode";
 import { ScanButton, Scanner } from "../components/Scanner";
 import { EntryEdit } from "../components/EntryEdit";
+import { SMOKE_LABEL, type SmokeBand } from "../lib/smoke";
+import { ATE, type Ate } from "../lib/foodgaps";
 import { ScoreChip, ScoreWhy } from "../components/FoodScore";
 import { foodFor, foodScore, itemScore, type ItemScore } from "../lib/foodscore";
 import { NoteField } from "../components/HowNow";
@@ -989,7 +991,8 @@ const describe = (e: Entry, supps: Supplement[]): [string, string] => {
     // a note or a tag on its own reads cleanly too ("“head hurts”", not " — “head hurts”")
     case "feel": { const r = [...(["energy", "mood", "focus", "stress", "anxiety"] as const).filter((k) => e[k] != null).map((k) => `${k} ${e[k]}`), ...(e.doing?.length ? [e.doing.map(labelOf).join(", ")] : [])].join(" · ");
       return ["Feeling", [r, e.note ? `“${e.note}”` : ""].filter(Boolean).join(" — ") || "nothing rated"]; }
-    case "answer": return [e.question, e.answer];
+    // the night's cigarettes (PLAN 177) and a day not logged (PLAN 174) in words, not keys
+    case "answer": return e.key.startsWith("smoke:") ? ["Cigarettes", SMOKE_LABEL[e.answer as SmokeBand] ?? e.answer] : e.key.startsWith("ate:") ? ["A day not logged", ATE[e.answer as Ate]?.said ?? e.answer] : [e.question, e.answer];
     case "notice": return ["Noticed", `“${e.text}”`];
     case "sleep": return ["Last night's sleep", `${e.rating != null ? `${e.rating} / 10` : "not rated"}${e.slow ? " · slow to fall asleep" : ""}${e.tags?.length ? ` · ${e.tags.map(nightLabel).join(", ")}` : ""}${e.phoneMin != null ? ` · ${phoneLabel(e.phoneMin)}` : ""}`];
   }

@@ -2676,8 +2676,13 @@ both reads and the questions. Phases in that order; #152 RPE waits (owner).
    fitness age "yes", nervous-system heatmap "yes", body clock "yea", recovery clock after a night out "YES", ghost
    logging "okay?"; people & places "nah"; Wrapped and ghost race not picked). (claimed: agent, 27 Oct — canvas first)
    - Canvas first (CLAUDE.md): each at phone size in the app's colours, where it lives, then he picks the look.
-   - Order (default, his YES first): 8 recovery clock → 3 dose-response cards → 1 coin-flip experiments → 4 fitness age
-     → 5 heatmap → 6 body clock + slump ping → 2 what-if → 9 ghost logging.
+   - His picks on the canvas (27 Oct): "Super cool, like all" — what-if "delete this" (gone); cigarettes "lets do B" ("i may
+     not log them immediately"); coin-flips: "some supps work when taken all day, for longer. not sure for these its a
+     good idea" → default: daily coins only for what acts within a day (coffee cutoff, gym time, screens, a sleep supp
+     taken that night); slow supplements get blocks — the coin picks 3 weeks on or off, twice, the first days after
+     each switch left out (they build up and wear off); "others look good".
+   - Order: cigarettes B (small, and the comparisons need weeks of data — start collecting now) → 8 recovery clock →
+     3 dose-response → 1 coin-flips → 4 fitness age → 5 heatmap → 6 body clock + slump ping → 9 ghost logging.
    - Each is the app's own maths (pure functions, planted effects + controls); the AI only explains.
    - Smoking (owner, 27 Oct, mid-way: "we could implement a small tick that says cigarettes...or like a better way to track
      smoking days and not"): two directions on the canvas — A a Today tile, +1 per cigarette with Undo; B one question at
@@ -2686,3 +2691,13 @@ both reads and the questions. Phases in that order; #152 RPE waits (owner).
    - **Canvas (27 Oct): https://claude.ai/artifact/UzvHnzEw7gf6z8SoidHn6d** — On Today: recovery clock, coin-flip
      experiment, what-if (sliders work), ghost logging, smoking A and B. Insights → Body lab: dose-response (beer,
      cigarettes, late caffeine), fitness age, nervous-system heatmap, body clock + slump ping. Sample numbers only.
+   - [x] Cigarettes B built (27 Oct): lib/smoke — one question on Today from 20:00 ("Cigarettes · today?": None / 1–2 /
+     3–5 / 6+), past midnight still for the evening ending, and in the morning (until 14:00) about yesterday if it was
+     missed; never in the afternoon, never twice; Undo. Kept as an answer on that day (smoke:<day>, at 21:00), counted
+     at the band's middle in the day's facts (cigs; a day not answered is unknown, not smoke-free); the AI's day lines
+     say "cigarettes 3–5" / "no cigarettes"; the pattern finder has "a smoking day" (it leads its sentence, like a
+     supplement day — found a loop on the way: without a yes/no form the same-day swap rules went round forever); Test
+     it says "No cigarettes — does energy lift?". Logged today says "Cigarettes · None", and a day not logged reads in
+     words too. Tests: smoke.test (when it asks, never twice, after midnight, unknown vs none, the AI's words; planted:
+     smoking → lower next-day energy found 17+ of 20 and Test it named; control ≤2), e2e smoke (21:30 ask, 3–5 kept,
+     Undo, words on Log, no morning re-ask; a missed night asked the next morning; nothing in the afternoon).

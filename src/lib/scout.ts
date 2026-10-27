@@ -56,6 +56,9 @@ export function signals(supplements: Supplement[]): Signal[] {
     { id: "caffeine", family: "caf", name: "caffeine", unit: "mg", get: logged((d) => d.caffeineMg), lane: "caf", drinks: "drink" },
     { id: "lateCaf", family: "caf", name: "caffeine after 14:00", unit: "mg", get: logged((d) => d.lateCaffeineMg), lane: "caf", drinks: "drink" },
     { id: "alcohol", family: "alc", name: "alcohol", unit: "g", get: logged((d) => d.alcoholG), lane: "alc", drinks: "drink" },
+    // as answered each night (lib/smoke, PLAN 177): a day not answered is unknown, not smoke-free
+    // (a smoking day leads its sentence like a supplement day does: without a "yes" the same-day swap rules went round in circles)
+    { id: "smoke", family: "smoke", name: "cigarettes", plural: true, yes: "a smoking day", get: (d) => d.cigs ?? null, causeOnly: true },
     { id: "gym", family: "gym", name: "gym", yes: "a gym day", get: (d) => (d.trained ? 1 : 0), lane: "gym" },
     { id: "volume", family: "gym", name: "training volume", unit: "kg", get: (d) => d.volumeKg, lane: "gym" },
     { id: "energy", family: "feel", name: "energy", get: (d) => d.energy, lane: "energy" },

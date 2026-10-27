@@ -13,6 +13,7 @@ import type { Entry } from "../types";
 import { macrosOf } from "../nutrition";
 import type { DayFacts } from "../insights";
 import { ATE, ateSaid, isGap, usualBefore, type Ate } from "../foodgaps";
+import { SMOKE_BANDS, SMOKE_LABEL, SMOKE_MID } from "../smoke";
 import type { Finding } from "../findings";
 import type { Pattern } from "../scout";
 import { addDays, atMinute, clock, dayLabel, localDay } from "../time";
@@ -166,6 +167,8 @@ export function dayLine(d: DayFacts, suppNames: Map<string, string>, gaps?: { us
       : `${d.logged ? "food not logged" : "nothing logged"} (they still ate — just didn't log it)${saidWords}`,
     d.caffeineMg ? `caffeine ${d.caffeineMg} mg (last ${d.lastCaffeineMin != null ? clock(new Date(2000, 0, 1, 0, d.lastCaffeineMin).getTime()) : "?"})` : "",
     d.alcoholG ? `alcohol ${d.alcoholG} g` : "",
+    // as answered that night (PLAN 177); not asked or not answered: nothing said
+    d.cigs != null ? (d.cigs ? `cigarettes ${SMOKE_LABEL[SMOKE_BANDS.find((b) => SMOKE_MID[b] === d.cigs) ?? "1-2"]}` : "no cigarettes") : "",
     d.trained ? `gym (${Math.round(d.volumeKg)} kg volume)` : "",
     d.lateEat ? "ate after 21:00" : "",
     d.stackAnswered ? `took: ${[...d.taken].map((t) => suppNames.get(t) ?? t).join(", ") || "none"}` : "",

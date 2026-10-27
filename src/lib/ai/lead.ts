@@ -74,6 +74,7 @@ export const leadGrade = (p: Pattern): "strong" | "early" => (p.p < LEAD.maxP ? 
 /** What a change to `a` is, in words, for the ones a person can choose to change (never "drink more", never "train less"). */
 const CHANGE: Record<string, { less?: [string, string]; more?: [string, string] }> = {
   alcohol: { less: ["No alcohol", "No alcohol at all — not even one"] },
+  smoke: { less: ["No cigarettes", "No cigarettes at all"] },
   caffeine: { less: ["Caffeine under 200 mg", "Keep caffeine under 200 mg a day"] },
   lateCaf: { less: ["No caffeine after 14:00", "Last coffee before 14:00"] },
   lateEat: { less: ["Done eating by 21:00", "Finish eating by 21:00"] },
