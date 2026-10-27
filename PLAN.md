@@ -2701,3 +2701,20 @@ both reads and the questions. Phases in that order; #152 RPE waits (owner).
      words too. Tests: smoke.test (when it asks, never twice, after midnight, unknown vs none, the AI's words; planted:
      smoking → lower next-day energy found 17+ of 20 and Test it named; control ≤2), e2e smoke (21:30 ask, 3–5 kept,
      Undo, words on Log, no morning re-ask; a missed night asked the next morning; nothing in the afternoon).
+   - [x] Recovery clock built (27 Oct): lib/recovery + components/RecoveryCard, on Today under Readiness the morning after
+     a night out, until 20:00. A night out: 2+ drinks (28 g alcohol, noon to bed), or a smoking day with bed 2 h+ past your
+     usual. "Back to usual": HRV and resting HR where 8 in 10 of your ordinary mornings are (10th / 90th percentile of the
+     last 30 nights that weren't a night out or one of the 2 after — quartiles left half of ordinary mornings "never
+     back"). Back by = bed + the hours your past nights out took (2+ needed; the lower middle, so it's a time one of them
+     actually took — the plain median of 29.5 h and 53.5 h was an evening no morning was ever back on). The ring is how
+     far along that is; already back → "Back already"; usually back by the first morning but not this one → said in
+     words, no ring at 100 %. The night's heart asleep against your usual nights (middle half, nights out left out, a
+     3-slot rolling median so the minute of waking doesn't spike it), HRV / deep sleep / drinks as logged (4 beers are 4,
+     not 5.7 standard drinks — found in the e2e) / cigarettes. "Got you back faster": a walk before noon (2,000+ steps,
+     only when the band was worn), 30 g+ protein before 11:00, last coffee by 13:00 — named only with 2+ nights each side
+     and 3+ h sooner. Lifts the day after against your other sessions (2+ each). Loads 90 days of the band only on such
+     mornings; other mornings look at last night alone. Tests: recovery.test (planted hit, typical, walk gain 24 h,
+     lifts −6 %; controls: no night out, one beer, shrugged off; first nights out; inputs: drinks after bed left out,
+     unknown ≠ zero), e2e recovery (390 / 320 px; quiet Saturday and 20:00 show nothing; not-back-yet case).
+     Not built from the canvas: "Remind me to walk at 11:00" (needs the push reminder wiring — next to body clock's
+     slump ping, 6).
