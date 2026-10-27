@@ -11,7 +11,8 @@
  */
 
 import type { Entry } from "./types";
-import type { State } from "./store";
+import type { AiState, State } from "./store";
+import { MODELS_V, modelsNow } from "./ai/tasks";
 
 export const DOC_KEYS = ["foods", "drinks", "supplements", "templates", "workouts", "goals", "settings", "profile", "scout", "ai"] as const;
 export type DocKey = (typeof DOC_KEYS)[number];
@@ -67,6 +68,8 @@ export function mergePull(state: State, entries: EntryRow[], docs: DocRow[], pen
     if (!(DOC_KEYS as readonly string[]).includes(d.key) || pendingDoc.has(d.key as DocKey)) continue;
     const key = d.key as DocKey;
     next = { ...next, [key]: key === "goals" || key === "settings" || key === "profile" || key === "scout" || key === "ai" ? { ...(next[key] as object), ...(d.value as object) } : d.value } as State;
+    // an older device's AI doc: its model picks moved like this one's were (27 Oct, the reads on Sonnet)
+    if (key === "ai") { const v = d.value as Partial<AiState>; next = { ...next, ai: { ...next.ai, models: modelsNow(next.ai.models, v.models ? v.modelsV : MODELS_V), modelsV: MODELS_V } }; }
   }
   return next;
 }

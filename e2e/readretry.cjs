@@ -32,7 +32,7 @@ const RATED = { id: 'sl', kind: 'sleep', at: NOW - H, rating: 7 };
     await ctx.route('https://ubfvaewfdbmecowoeuni.supabase.co/**', handle);
     await ctx.route('**/api/ai/usage**', (r) => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ usage: null, cap: 50, on: true }) }));
     await ctx.route('**/api/ai?**', async (r) => {
-      const body = r.request().postDataJSON(); calls.push(body.task);
+      const body = r.request().postDataJSON(); calls.push(body.task); st.models = st.models || {}; st.models[body.task] = body.models;
       const read = body.task === 'digest' || body.task === 'night';
       st.open++; st.most = Math.max(st.most, st.open); if (read) { st.reads++; st.readsMost = Math.max(st.readsMost, st.reads); }
       await new Promise((ok) => setTimeout(ok, 250)); // a call takes a while: one sent meanwhile would overlap
@@ -53,7 +53,8 @@ const RATED = { id: 'sl', kind: 'sleep', at: NOW - H, rating: 7 };
     await pg.goto(APP);
     await pg.fill('input[type=email]', 'lukacsarnold9+healthtest@gmail.com'); await pg.fill('input[type=password]', 'secret123');
     await pg.getByRole('button', { name: 'Sign in' }).click(); await pg.waitForSelector('text=Settings');
-    await pg.evaluate(([k, es]) => { const s = JSON.parse(localStorage.getItem(k) || '{}'); s.entries = es; s.workouts = []; s.ai = { ...(s.ai || {}), digest: null, night: null, dive: null, reviews: [], chat: [], failed: [] }; localStorage.setItem(k, JSON.stringify(s)); }, [KEY, entries]);
+    // the owner's model picks as they were saved before 27 Oct: Opus for the chat and for everything with research
+    await pg.evaluate(([k, es]) => { const s = JSON.parse(localStorage.getItem(k) || '{}'); s.entries = es; s.workouts = []; s.ai = { ...(s.ai || {}), digest: null, night: null, dive: null, reviews: [], chat: [], failed: [], models: { light: 'haiku', everyday: 'opus', research: 'opus' } }; delete s.ai.modelsV; localStorage.setItem(k, JSON.stringify(s)); }, [KEY, entries]);
     await pg.goto(APP + '#today'); await pg.reload(); await pg.waitForSelector('#feel');
     return { ctx, pg, calls, st };
   }
@@ -113,6 +114,13 @@ const RATED = { id: 'sl', kind: 'sleep', at: NOW - H, rating: 7 };
   const rows = await calls4.locator('li.ai-failed').allInnerTexts();
   check(`…each with when and why (${rows.map((r) => r.replace(/\n/g, ' ')).join(' | ')})`, rows.length === 2 && /^08:32 · morning read · failed\s+The AI service failed \(500\)\./.test(rows[0]) && /^08:30 · morning read · failed\s+The AI is busy/.test(rows[1]));
   await calls4.screenshot({ path: OUT + 'readretry-settings.png', timeout: 2000 }).catch(() => {});
+
+  // 27 Oct ("4 ok"): the reads and the chat moved to Sonnet, the deep dive kept on Opus — his saved picks moved once
+  const sel = async (label) => pg.locator('#ai label.field', { hasText: label }).locator('select').inputValue({ timeout: 2000 }).catch(() => '');
+  const picks = [await sel('Chat'), await sel('Daily reads'), await sel('Research')];
+  check(`Settings → AI: chat and the daily reads on Sonnet, research on Opus (${picks.join(', ')})`, picks.join() === 'sonnet,sonnet,opus');
+  check(`…and the calls say so: the morning read asked for Sonnet, the deep dive for Opus (${st.models.digest?.reads}, ${st.models.dive?.research})`, st.models.digest?.reads === 'sonnet' && st.models.dive?.research === 'opus');
+  await pg.locator('#ai').screenshot({ path: OUT + 'readretry-models.png', timeout: 2000 }).catch(() => {});
   console.log('errors:', JSON.stringify(errs));
   check('no page errors', errs.length === 0);
   await b.close();

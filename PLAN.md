@@ -2566,3 +2566,12 @@ both reads and the questions. Phases in that order; #152 RPE waits (owner).
    web search failed (the search service was down · unavailable), so this is from your data and what the AI already
    knew — no new studies." Shown on Today's "didn't come through" note, Settings → AI's failed list, and the chat.
    Tests: ai.test (each cause from the API's own error, nothing charged), e2e readretry (the web note on the read).
+
+172. [x] **The daily reads and the chat on Sonnet, the deep dive on Opus** (owner, 27 Oct: "ai is in fact spending around
+   50 cent to 1 dollar a day so we can tune it down just a liitle bit or make cheaper models run more often" — then "4
+   ok - I like the study shows, the new things to try, so we can keep these"). A tier of their own for the reads
+   (morning, night, week): Sonnet 5.5, half Opus's price, same web search, so the studies and things to try stay. The
+   chat on Sonnet too; Opus kept for the deep dive, verdicts and supplement look-ups. His saved picks (Opus for chat and
+   research) move once (modelsV 2), here and when an older device's AI doc syncs in; a pick made after stays. Settings
+   → AI has the new "Daily reads" choice. Tests: ai.test (which task runs where, the move, an old app's request),
+   sync.test (an older device's doc), e2e readretry (his old picks → Sonnet, Sonnet, Opus; the calls ask for them).

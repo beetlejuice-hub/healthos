@@ -2,7 +2,7 @@ import type { Finding } from "../findings";
 import { describe, expect, it } from "vitest";
 import { fromDescribed, judge } from "./apply";
 import { ASK_MORE, CONTEXT_MAX, buildContext, onTodayLines, dayTimeline, feelByTime, moodJournal } from "./context";
-import { checkAsk, checkDescribe, checkDigest, checkNight, checkQuestions, costUsd, estimateMonthUsd, jsonFrom, SYSTEM, type CallLog } from "./tasks";
+import { checkAsk, checkDescribe, checkDigest, checkNight, checkQuestions, costUsd, estimateMonthUsd, jsonFrom, modelFor, modelsNow, SYSTEM, type CallLog } from "./tasks";
 import { parseItem } from "../quickadd";
 import { mealFood } from "../units";
 import { runChatTool } from "./chattools";
@@ -209,7 +209,7 @@ describe("the month's estimate (owner, 15 Oct: \"i feel like u are waay underest
     const usage = { input_tokens: u.in, cache_read_input_tokens: u.cached ?? 0, cache_creation_input_tokens: u.written ?? 0, output_tokens: u.out, server_tool_use: { web_search_requests: u.searches ?? 0 } };
     return { at, task, model, in: u.in, cached: u.cached ?? 0, written: u.written ?? 0, out: u.out, searches: u.searches ?? 0, usd: costUsd(model, usage) };
   };
-  const models = { light: "haiku", everyday: "sonnet", research: "opus" } as const;
+  const models = { light: "haiku", everyday: "sonnet", reads: "opus", research: "opus" } as const;
   it("a first guess before any call: a chat carries the ~11k data summary — five a day on Sonnet ≈ $6, not the old ≈ $1", () => {
     const e = estimateMonthUsd(models);
     expect(e.everyday).toBeCloseTo(150 * (14000 * 2 + 1200 * 10) / 1e6, 6); // $6.00
@@ -227,7 +227,7 @@ describe("the month's estimate (owner, 15 Oct: \"i feel like u are waay underest
     expect(spent).toBeGreaterThan(0.2); expect(spent).toBeLessThan(0.3);
     const e = estimateMonthUsd({ ...models, light: "sonnet" }, rec);
     // a day of the typical mix at these real sizes: the morning read alone ≈ $0.18 a day — the month lands past $15
-    expect(e.measured).toBe(4); expect(e.research).toBeGreaterThan(5); expect(e.total).toBeGreaterThan(15);
+    expect(e.measured).toBe(4); expect(e.reads).toBeGreaterThan(5); expect(e.total).toBeGreaterThan(15);
     // the same calls priced at Haiku for questions: the light tier costs a fraction
     expect(estimateMonthUsd(models, rec).light).toBeLessThan(e.light / 10);
   });
@@ -235,6 +235,19 @@ describe("the month's estimate (owner, 15 Oct: \"i feel like u are waay underest
     const t0 = Date.parse("2026-10-01T09:00:00");
     const rec = Array.from({ length: 41 }, (_, i) => call(t0 + i * (D / 10), "chat", "sonnet", { in: 14000, out: 1200 }));
     expect(estimateMonthUsd(models, rec).everyday).toBeCloseTo(30 * (41 / 4) * (14000 * 2 + 1200 * 10) / 1e6, 6); // 41 calls over 4 days: 10.25 a day, ≈ $12.30
+  });
+});
+
+describe("models (owner, 27 Oct: \"tune it down just a liitle bit or make cheaper models run more often\" — \"4 ok\")", () => {
+  it("the daily reads and the chat on Sonnet, the deep dive, verdicts and supplement look-ups on Opus", () => {
+    const m = modelsNow(undefined, undefined);
+    expect((["digest", "night", "review", "chat", "dive", "verdict", "supplement", "describe"] as const).map((t) => modelFor(t, m, 0))).toEqual(["sonnet", "sonnet", "sonnet", "sonnet", "opus", "opus", "opus", "haiku"]);
+  });
+  it("picks saved before move once — his were Opus for chat and research — and a pick made after stays", () => {
+    expect(modelsNow({ light: "haiku", everyday: "opus", research: "opus" }, undefined)).toEqual({ light: "haiku", everyday: "sonnet", reads: "sonnet", research: "opus" });
+    expect(modelsNow({ light: "sonnet", everyday: "opus", reads: "opus", research: "haiku" }, 2)).toEqual({ light: "sonnet", everyday: "opus", reads: "opus", research: "haiku" });
+    // an old app version's request (no reads tier) still gets the reads on Sonnet
+    expect(modelFor("digest", { light: "haiku", everyday: "opus", research: "opus" }, 0)).toBe("sonnet");
   });
 });
 

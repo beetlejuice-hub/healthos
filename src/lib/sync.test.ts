@@ -56,6 +56,14 @@ describe("mergePull", () => {
   it("returns the same object when nothing changed", () => {
     expect(mergePull(base, [], [], [])).toBe(base);
   });
+
+  // owner, 27 Oct ("4 ok"): the reads and the chat on Sonnet; an older device's doc must not put them back on Opus
+  it("an older device's AI doc: its model picks move like this one's did; a pick made since stays", () => {
+    const old = mergePull(base, [], [{ key: "ai", value: { models: { light: "haiku", everyday: "opus", research: "opus" }, memory: [] }, updated_at: "x" }], []);
+    expect(old.ai.models).toEqual({ light: "haiku", everyday: "sonnet", reads: "sonnet", research: "opus" });
+    const mine = mergePull(base, [], [{ key: "ai", value: { models: { light: "haiku", everyday: "opus", reads: "sonnet", research: "opus" }, modelsV: 2 }, updated_at: "x" }], []);
+    expect(mine.ai.models.everyday).toBe("opus");
+  });
 });
 
 describe("rowsFor", () => {

@@ -14,7 +14,7 @@ import { DEFAULT_GOALS, slotOf, slotsOf, slotTime } from "./types";
 import { tidyWorkouts } from "./training";
 import type { ScoutMemo } from "./scout";
 import type { Energy } from "./energy";
-import type { DigestItem, ModelChoice, NightAnswer, Question, ReviewAnswer, SupplementAnswer, DiveAnswer, DiveStudy } from "./ai/tasks";
+import { DEFAULT_MODELS, MODELS_V, modelsNow, type DigestItem, type Models, type NightAnswer, type Question, type ReviewAnswer, type SupplementAnswer, type DiveAnswer, type DiveStudy } from "./ai/tasks";
 import type { Due, ReviewRow } from "./review";
 import type { ChartSpec } from "./ai/chattools";
 import type { Proposal } from "./ai/propose";
@@ -23,8 +23,8 @@ import type { Check } from "./overall";
 
 /** Everything the in-app AI keeps for you, synced like the rest (doc "ai"). */
 export type AiState = {
-  /** Which model answers: everyday (food, chat, questions) and research (supplements, morning read). */
-  models: { light: ModelChoice; everyday: ModelChoice; research: ModelChoice };
+  /** Which model answers each tier (tasks.ts TIER); `modelsV` 2 once picks saved before the reads tier have moved. */
+  models: Models; modelsV?: number;
   /** "What the AI knows about me": lines it added (you can delete any). */
   memory: { id: string; text: string; at: number }[];
   /** charts: what the AI asked to show under its reply (PLAN 67) — drawn from the app's data when shown. looked: the tools it used. */
@@ -71,7 +71,7 @@ export type Experiment = { id: string; name: string; how: string; days: number; 
   /** When it ended (PLAN 160): the AI's words on the app's result, what to do next, studies it leaned on. */
   verdict?: { at: number; state: "better" | "worse" | "no-clear-change"; text: string; next: string; found: DiveStudy[]; /** You opened it from Today. */ seen?: number };
   /** An ended one's line on Today was tapped (PLAN 160). */ seen?: number };
-export const EMPTY_AI: AiState = { models: { light: "haiku", everyday: "opus", research: "opus" }, memory: [], chat: [], digest: null, night: null, shown: [], questions: null, daily: [], asked: [], research: {}, experiments: [], seenAt: 0 };
+export const EMPTY_AI: AiState = { models: DEFAULT_MODELS, modelsV: MODELS_V, memory: [], chat: [], digest: null, night: null, shown: [], questions: null, daily: [], asked: [], research: {}, experiments: [], seenAt: 0 };
 
 /**
  * What the calculations need. Only `bedMinute` (planned bedtime) and `usualDrink` are asked of you;
@@ -175,7 +175,7 @@ function load(): State {
     lastSeen = raw;
     if (!raw) return EMPTY;
     const s = JSON.parse(raw) as Partial<State>;
-    return { ...EMPTY, ...s, templates: upgradeStarter(s.templates ?? EMPTY.templates), supplements: normalizeStack(s.supplements ?? EMPTY.supplements), settings: { ...DEFAULT_SETTINGS, ...s.settings }, goals: { ...DEFAULT_GOALS, ...s.goals }, profile: { ...EMPTY_PROFILE, ...s.profile }, scout: s.scout ?? {}, ai: { ...EMPTY_AI, ...s.ai, models: { ...EMPTY_AI.models, ...s.ai?.models } } };
+    return { ...EMPTY, ...s, templates: upgradeStarter(s.templates ?? EMPTY.templates), supplements: normalizeStack(s.supplements ?? EMPTY.supplements), settings: { ...DEFAULT_SETTINGS, ...s.settings }, goals: { ...DEFAULT_GOALS, ...s.goals }, profile: { ...EMPTY_PROFILE, ...s.profile }, scout: s.scout ?? {}, ai: { ...EMPTY_AI, ...s.ai, models: modelsNow(s.ai?.models, s.ai?.modelsV), modelsV: MODELS_V } };
   } catch {
     return EMPTY;
   }

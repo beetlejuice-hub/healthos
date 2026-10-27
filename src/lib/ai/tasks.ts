@@ -11,11 +11,12 @@
 export type Task = "describe" | "supplement" | "chat" | "questions" | "digest" | "night" | "review" | "dive" | "verdict";
 export type ModelChoice = "opus" | "sonnet" | "haiku";
 /**
- * Light = food, photos and quick questions (many small calls); everyday = the chat; research = supplement look-ups and
- * the morning and nightly reads (few, with web search). Owner, 15 Oct: "for harder or more important request can leave a
- * better model but for food or simple everyday things can add a cheaper one - $20 should be enough for around a month".
+ * Light = food, photos and quick questions (many small calls); everyday = the chat; reads = the morning and night reads
+ * and the week read; research = the deep dive, verdicts and supplement look-ups. Owner, 15 Oct: "for harder or more
+ * important request can leave a better model but for food or simple everyday things can add a cheaper one - $20 should
+ * be enough for around a month".
  */
-export type Tier = "light" | "everyday" | "research";
+export type Tier = "light" | "everyday" | "reads" | "research";
 
 export const MODELS: Record<ModelChoice, { id: string; label: string; inUsd: number; outUsd: number; web: "web_search_20260209" | "web_search_20250305"; thinking: boolean }> = {
   opus: { id: "claude-opus-5-5", label: "Claude Opus 5.5", inUsd: 4, outUsd: 20, web: "web_search_20260209", thinking: true },
@@ -25,10 +26,21 @@ export const MODELS: Record<ModelChoice, { id: string; label: string; inUsd: num
 /** Web search is billed per search on top of tokens. */
 export const WEB_SEARCH_USD = 0.01;
 
-export const TIER: Record<Task, Tier> = { describe: "light", chat: "everyday", questions: "light", supplement: "research", digest: "research", night: "research", review: "research", dive: "research", verdict: "research" };
+export const TIER: Record<Task, Tier> = { describe: "light", chat: "everyday", questions: "light", supplement: "research", digest: "reads", night: "reads", review: "reads", dive: "research", verdict: "research" };
 export type Models = Record<Tier, ModelChoice>;
-/** Cheap where it's simple, the strongest where it matters. */
-export const DEFAULT_MODELS: Models = { light: "haiku", everyday: "opus", research: "opus" };
+/**
+ * Cheap where it's simple, the strongest where it matters. Owner, 27 Oct ("ai is in fact spending around 50 cent to 1
+ * dollar a day so we can tune it down just a liitle bit or make cheaper models run more often" — then "4 ok"): the daily
+ * reads and the chat on Sonnet 5.5, half Opus's price, studies and things to try kept; Opus for the weekly deep dive,
+ * verdicts and supplement look-ups.
+ */
+export const DEFAULT_MODELS: Models = { light: "haiku", everyday: "sonnet", reads: "sonnet", research: "opus" };
+/** Picks saved before the reads had their own (v1) move once: the chat and the reads to the new default, the rest kept. */
+export const MODELS_V = 2;
+export function modelsNow(m: Partial<Models> | undefined, v: number | undefined): Models {
+  if ((v ?? 1) >= MODELS_V) return { ...DEFAULT_MODELS, ...m };
+  return { ...DEFAULT_MODELS, ...(m?.light ? { light: m.light } : {}), ...(m?.research ? { research: m.research } : {}) };
+}
 /** A month's spend after which every task runs on the cheapest model until the 1st (the 50-a-day stop still holds). */
 export const MONTHLY_USD = 20;
 /** The model a task runs on: yours for its tier (older synced docs have no light tier — its default then), Haiku past the month's budget. */
@@ -615,7 +627,7 @@ function perCall(task: Task, recent: CallLog[]): Usage {
 /** A month at these models: each task's average call × how often it comes (yours once the log spans 3+ days). */
 export function estimateMonthUsd(models: Models, recent: CallLog[] = []): Record<Tier, number> & { total: number; measured: number } {
   const span = recent.length ? (recent[recent.length - 1].at - recent[0].at) / 86_400_000 : 0;
-  const out = { light: 0, everyday: 0, research: 0, total: 0, measured: recent.length };
+  const out = { light: 0, everyday: 0, reads: 0, research: 0, total: 0, measured: recent.length };
   for (const t of TASKS) {
     const perDay = span >= 3 ? recent.filter((c) => c.task === t).length / span : TYPICAL[t].perDay;
     const usd = 30 * perDay * costUsd(models[TIER[t]], perCall(t, recent));

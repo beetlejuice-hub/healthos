@@ -84,7 +84,7 @@ describe("/api/ai", () => {
     expect((await handleAi(post({ task: "chat", messages: msgs, context: "ctx" }), env, w.deps)).status).toBe(429);
   });
 
-  it("review: the week read on the research model, the enforced shape, a bad request refused (PLAN 65)", async () => {
+  it("review: the week read on the reads' model (Sonnet since 27 Oct), the enforced shape, a bad request refused (PLAN 65)", async () => {
     const ans = { title: "Better mood, short on protein", summary: "Mood **7.5** against a usual 6.", notices: [{ title: "Mood up", text: "7.5 all week.", measure: "mood" }, { title: "", text: "dropped", measure: "" }], next: [{ what: "Protein at lunch", why: "0 of 7 days at goal" }], remember: [] };
     const w = world([{ text: JSON.stringify(ans) }]);
     const res = await handleAi(post({ task: "review", kind: "week", from: "2026-10-12", to: "2026-10-18", context: "## The week 12 Oct–18 Oct" }), env, w.deps);
@@ -93,7 +93,7 @@ describe("/api/ai", () => {
     expect(body.answer.title).toBe("Better mood, short on protein");
     expect(body.answer.notices).toEqual([{ title: "Mood up", text: "7.5 all week.", measure: "mood" }]); // an empty notice left out
     const sent = w.sent[0].body;
-    expect(sent.model).toBe("claude-opus-5-5");
+    expect(sent.model).toBe("claude-sonnet-5-5");
     expect((sent.output_config as { format: { type: string } }).format.type).toBe("json_schema");
     expect(sent.tools).toBeUndefined();
     expect(JSON.stringify(sent.messages)).toContain("Write my week read: 2026-10-12 to 2026-10-18");
@@ -164,7 +164,8 @@ describe("/api/ai", () => {
     expect(await run({ task: "describe", text: "coffee" })).toBe("claude-haiku-5-5");
     expect(await run({ task: "describe", text: "coffee", models: { everyday: "opus", research: "opus" } })).toBe("claude-haiku-5-5");
     expect(await run({ task: "chat", messages: [{ role: "user", text: "yo" }], context: "c", models: { everyday: "opus", research: "opus" } })).toBe("claude-opus-5-5");
-    expect(await run({ task: "chat", messages: [{ role: "user", text: "yo" }], context: "c" })).toBe("claude-opus-5-5");
+    // 27 Oct ("4 ok"): the chat's default is Sonnet now; a pick of Opus (above) still goes
+    expect(await run({ task: "chat", messages: [{ role: "user", text: "yo" }], context: "c" })).toBe("claude-sonnet-5-5");
   });
 
   it("past the month's $20, everything on Haiku 5.5 until the 1st; the usage says the budget", async () => {
@@ -206,7 +207,7 @@ describe("/api/ai", () => {
     const body = (await res.json()) as { answer: { items: { title: string }[] }; costUsd: number };
     expect(w.sent).toHaveLength(2);
     expect(body.answer.items.map((i) => i.title)).toEqual(["Creatine and sleep"]); // a fact without a source isn't shown
-    expect(body.costUsd).toBeCloseTo((2000 * 4 + 1000 * 20) / 1e6 + 0.03, 6);
+    expect(body.costUsd).toBeCloseTo((2000 * 2 + 1000 * 10) / 1e6 + 0.03, 6); // the reads on Sonnet 5.5
   });
 
   it("the read's links are opened before you see it: a dead one's item goes, a matching one is marked (PLAN 160)", async () => {
@@ -353,12 +354,13 @@ describe("/api/ai", () => {
     const quick = await handleAi(post({ task: "chat", messages: [{ role: "user", text: "hi" }], context: "c" }), env, w.deps); // …when a chat comes and goes
     expect(quick.status).toBe(200);
     expect((await slow).status).toBe(200);
-    const diveUsd = (10_000 * 4 + 2000 * 20) / 1e6 + 5 * 0.01, chatUsd = (1000 * 4 + 500 * 20) / 1e6;
-    const u = w.docs.get("ai_usage") as { calls: number; dayUsd: number; monthUsd: number; byModel: { opus: number }; recent: { task: string }[]; rev: number };
+    const diveUsd = (10_000 * 4 + 2000 * 20) / 1e6 + 5 * 0.01, chatUsd = (1000 * 2 + 500 * 10) / 1e6; // the dive on Opus, the chat on Sonnet
+    const u = w.docs.get("ai_usage") as { calls: number; dayUsd: number; monthUsd: number; byModel: { opus: number; sonnet: number }; recent: { task: string }[]; rev: number };
     expect(u.calls).toBe(5);
     expect(u.dayUsd).toBeCloseTo(1 + diveUsd + chatUsd, 6);
     expect(u.monthUsd).toBeCloseTo(10 + diveUsd + chatUsd, 6);
-    expect(u.byModel.opus).toBeCloseTo(10 + diveUsd + chatUsd, 6);
+    expect(u.byModel.opus).toBeCloseTo(10 + diveUsd, 6);
+    expect(u.byModel.sonnet).toBeCloseTo(chatUsd, 6);
     expect(u.recent.map((r) => r.task)).toEqual(["chat", "dive"]);
     expect(u.rev).toBe(2);
   });
@@ -368,7 +370,7 @@ describe("/api/ai", () => {
     const usage = { input_tokens: 1000, output_tokens: 500, cache_read_input_tokens: 0, cache_creation_input_tokens: 0, server_tool_use: { web_search_requests: 0 },
       iterations: [{ type: "message", input_tokens: 2000, output_tokens: 0 }, { type: "fallback_message", model: "claude-opus-5", input_tokens: 1000, output_tokens: 500 }] };
     const w = world([{ text: "Sure.", usage }]);
-    const body = (await (await handleAi(post({ task: "chat", messages: [{ role: "user", text: "hi" }], context: "c" }), env, w.deps)).json()) as { costUsd: number };
+    const body = (await (await handleAi(post({ task: "chat", messages: [{ role: "user", text: "hi" }], context: "c", models: { everyday: "opus" } }), env, w.deps)).json()) as { costUsd: number };
     expect(body.costUsd).toBeCloseTo((2000 * 4) / 1e6 + (1000 * 5 + 500 * 25) / 1e6, 6);
     expect((w.docs.get("ai_usage") as { dayUsd: number }).dayUsd).toBeCloseTo(body.costUsd, 6);
   });

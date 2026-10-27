@@ -584,7 +584,8 @@ export function AiSettings() {
       {/* owner, 15 Oct: "for harder or more important request can leave a better model but for food or simple everyday things can add a cheaper one" */}
       <label className="field">Food, photos and quick questions<select value={ai.models.light} onChange={(e) => pick("light", e.target.value as ModelChoice)}>{option("light")}</select></label>
       <label className="field">Chat (your questions about your data)<select value={ai.models.everyday} onChange={(e) => pick("everyday", e.target.value as ModelChoice)}>{option("everyday")}</select></label>
-      <label className="field">Research (morning and nightly reads, supplement look-ups — with web search)<select value={ai.models.research} onChange={(e) => pick("research", e.target.value as ModelChoice)}>{option("research")}</select></label>
+      <label className="field">Daily reads (morning, night and the week read — with web search)<select value={ai.models.reads} onChange={(e) => pick("reads", e.target.value as ModelChoice)}>{option("reads")}</select></label>
+      <label className="field">Research (the weekly deep dive, experiment verdicts, supplement look-ups)<select value={ai.models.research} onChange={(e) => pick("research", e.target.value as ModelChoice)}>{option("research")}</select></label>
       <p className="note">Estimate for a month with these: ≈ {usd(est.total)} — {est.measured ? `from your last ${est.measured} call${est.measured > 1 ? "s" : ""}` : "a first guess until you've used it"}. Past {usd(budget)} in a month everything drops to {MODELS.haiku.label} until the 1st; hard stop at {cap} calls a day.</p>
       {(recent.length > 0 || failed.length > 0) && <details className="ai-calls"><summary>Last calls — what each cost{failed.length ? `, and ${failed.length} that failed` : ""}</summary>
         {/* the ones that failed in among them, with why (22 Oct: the morning read didn't come, and nothing said why) */}
