@@ -122,12 +122,18 @@ describe("goals", () => {
     expect(p.label).toBe("Calorie goal 2,300 kcal (set by hand — stops following your burn) · Protein goal 160 → 170 g");
     const r = done(applyProposal(p, burn, NOW, "x"));
     expect(r.goals).toEqual({ kcal: 2300, p: 170, c: 300 - 75, f: 80 }); // −300 kcal = −75 g carbs
-    expect(r.energy).toEqual({ mode: "fixed", pace: 0.5, offset: -150 });
+    expect(r.energy).toEqual({ mode: "fixed", pace: 0.5, offset: -150, moved: true }); // a pick: the move to "what you eat" won't undo it
   });
   it("a pace switches the calorie goal to follow your burn, at that pace", () => {
     const p = ok(makeProposal({ change: "goals", pace: "fast", why: "" }, setup(), "g"));
     expect(p.label).toBe("Fat-loss pace Fast, 0.65 kg a week (the calorie goal follows your burn)");
-    expect(done(applyProposal(p, setup(), NOW, "x"))).toEqual({ energy: { mode: "burn", pace: 0.65, offset: 0 }, text: "Goals updated." });
+    expect(done(applyProposal(p, setup(), NOW, "x"))).toEqual({ energy: { mode: "burn", pace: 0.65, offset: 0, moved: true }, text: "Goals updated." });
+  });
+  it("from what you eat (PLAN 173): a goal by hand says it stops following it", () => {
+    const eat = setup({ settings: { ...DEFAULT_SETTINGS, energy: { mode: "eat", pace: 0.5, offset: 0, since: "2026-10-26", moved: true } } });
+    const p = ok(makeProposal({ change: "goals", kcal: 2300, why: "" }, eat, "g"));
+    expect(p.label).toBe("Calorie goal 2,300 kcal (set by hand — stops following what you eat)");
+    expect(done(applyProposal(p, eat, NOW, "x")).energy).toMatchObject({ mode: "fixed" });
   });
   it("out of range, both kcal and pace, nothing, or no change: refused", () => {
     expect(makeProposal({ change: "goals", kcal: 900, why: "" }, setup(), "g")).toMatch(/^kcal: a whole number, 1200–5000/);

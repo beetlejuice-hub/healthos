@@ -2575,3 +2575,20 @@ both reads and the questions. Phases in that order; #152 RPE waits (owner).
    research) move once (modelsV 2), here and when an older device's AI doc syncs in; a pick made after stays. Settings
    → AI has the new "Daily reads" choice. Tests: ai.test (which task runs where, the move, an old app's request),
    sync.test (an older device's doc), e2e readretry (his old picks → Sonnet, Sonnet, Opus; the calls ask for them).
+
+173. [x] **The calorie goal from what you eat, nudged down** (owner, 27 Oct: "the calorie goal of 1500 kcal … sounds way too
+   low for me. i want it to change dynamically, and smartly so it adjusts to how much i actually eat and tries to slowly
+   nudge it down" — then "1a keep lowering but also learn what i actually eat and try to help do a managable goal"). Why
+   1,500: it was the floor. The goal was the burn − the deficit, the burn measured as what you logged against your
+   weight — food not logged made the burn look low. Now "From what you eat" (lib/energy eatGoal), once a week on Monday,
+   from the weeks before: what you usually eat = the middle of your fully logged days in the two weeks before (a day
+   under half of that is a gap, not a fast — 7 days at least); the scale = the weight trend over 4 weeks; losing
+   0.3–0.7 kg a week (his rule) holds, less (or no trend) steps 50 lower, faster goes 100 up; never more than 150 under
+   what you eat (one you can hit) nor 100 over it (it follows what you really eat); never under 1,500. Burn-mode
+   settings move to it once (moved); a pick after stays. The two-week check-in stands down in this mode (the weekly step
+   is the check-in). Settings says what you usually eat, this week's step and why, the weeks so far, the next step.
+   The AI is told how it works. Tests: energy.test (planted: flat scale → 2,400, 2,350, 2,300, 2,250, kept; control:
+   losing 0.5 → holds; losing 1 → up, kept 100 over; eating to it → follows down; weekends not logged or a coffee →
+   same as logging every day; floor; starts on the first week with data; a week with nothing holds), propose.test,
+   e2e eatgoal (his case: burn floored at 1,500, weekends unlogged → 2,300; three weeks on → 2,150; a later pick of
+   the burn stays; 320 px), energy (unchanged).

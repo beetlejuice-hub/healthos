@@ -30,14 +30,19 @@ export function useEnergyPlan(): EnergyPlan & { today: string } {
   return { ...plan, today };
 }
 
-/** In the shell: writes the goal while the mode is "from what you burn". */
+/** In the shell: writes the goal while it's from what you eat or burn. */
 export function useEnergyGoal(): void {
   const energy = useStore((s) => s.settings.energy);
   const plan = useEnergyPlan();
   const done = useRef("");
-  const on = energy?.mode === "burn";
-  const key = on && plan.goal && plan.burn ? `${plan.today}|${energy.pace}|${energy.offset}|${plan.burn.from}` : "";
-  const kcal = plan.goal?.kcal;
+  // owner, 27 Oct, "1a": the goal from what you eat instead of the burn — moved once; a later pick of the burn stays
+  useEffect(() => {
+    if (energy?.mode === "burn" && !energy.moved) act.setSettings({ energy: { ...energy, mode: "eat", since: plan.today, moved: true } });
+  }, [energy, plan.today]);
+  const key = energy?.mode === "eat" && plan.eat ? `${plan.today}|eat|${energy.since}`
+    // not while the move above is still to come (it wrote the burn's goal first, then this one — carbs moved twice)
+    : energy?.mode === "burn" && energy.moved && plan.goal && plan.burn ? `${plan.today}|${energy.pace}|${energy.offset}|${plan.burn.from}` : "";
+  const kcal = energy?.mode === "eat" ? plan.eat?.kcal : plan.goal?.kcal;
   useEffect(() => {
     if (!key || kcal == null || done.current === key) return;
     done.current = key;

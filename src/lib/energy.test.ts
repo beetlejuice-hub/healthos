@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { Entry } from "./types";
 import { atMinute, addDays } from "./time";
-import { bandBurn, energyPlan, goalFrom, measuredBurn, withKcal, DEFAULT_ENERGY } from "./energy";
+import { bandBurn, eatGoal, energyPlan, goalFrom, measuredBurn, mondayOf, usualIntake, withKcal, DEFAULT_ENERGY } from "./energy";
 
 const TODAY = "2026-10-15";
 let n = 0;
@@ -68,5 +68,74 @@ describe("the calorie goal from what you burn (PLAN 95)", () => {
     const none = energyPlan(few, undefined, TODAY, DEFAULT_ENERGY);
     expect(none.goal).toBeNull();
     expect(none.need).toContain("(1 and 1 so far)");
+  });
+});
+
+// owner, 27 Oct: "1500 … sounds way too low for me. i want it to change dynamically, and smartly so it adjusts to how much i
+// actually eat and tries to slowly nudge it down" — "1a keep lowering but also learn what i actually eat and try to help do a
+// managable goal"
+describe("the calorie goal from what you eat (PLAN 173)", () => {
+  const SINCE = "2026-09-07", END = "2026-10-15"; // a Monday; a Thursday six weeks on
+  const weekdays = (d: string) => new Date(`${d}T12:00:00`).getDay() % 6 !== 0;
+  /** Food each day from 4 weeks before SINCE (`kcal(day)`, null: nothing logged), weighed every morning on a line of `perWeek`. */
+  function eats(kcal: (day: string) => number | null, perWeek: number): Entry[] {
+    const out: Entry[] = [];
+    for (let d = addDays(SINCE, -35), i = 0; d <= END; d = addDays(d, 1), i++) {
+      const k = kcal(d);
+      if (k != null && d < END) out.push(food(d, k));
+      out.push(weigh(d, 85 - (perWeek / 7) * i + [0.4, -0.3, 0.1, -0.4, 0.2, 0, -0.1][i % 7]));
+    }
+    return out;
+  }
+  const kcals = (e: Entry[]) => eatGoal(e, SINCE, END)!.weeks.map((w) => w.kcal);
+
+  it("weeks start on Monday", () => {
+    expect([mondayOf("2026-10-15"), mondayOf("2026-10-12"), mondayOf("2026-10-18")]).toEqual(["2026-10-12", "2026-10-12", "2026-10-12"]);
+  });
+  it("planted: eating 2,400 and the scale not moving — it starts at 2,400 and steps 50 a week, never more than 150 under what you eat", () => {
+    const g = eatGoal(eats(() => 2400, 0), SINCE, END)!;
+    expect(g.weeks.map((w) => w.kcal)).toEqual([2400, 2350, 2300, 2250, 2250, 2250]);
+    expect(g.weeks.map((w) => w.move)).toEqual(["start", "down", "down", "down", "down", "down"]);
+    expect(g.weeks.at(-1)).toMatchObject({ usual: 2400, kept: "under" });
+    expect(Math.abs(g.weeks[1].loss!)).toBeLessThan(0.1);
+  });
+  it("control: losing 0.5 kg a week on the same food — your rule's middle, so it holds", () => {
+    expect(kcals(eats(() => 2400, 0.5))).toEqual([2400, 2400, 2400, 2400, 2400, 2400]);
+  });
+  it("losing 1 kg a week — faster than your 0.7 — it comes up, but not past 100 over what you eat", () => {
+    const g = eatGoal(eats(() => 2400, 1), SINCE, END)!;
+    expect(g.weeks.map((w) => w.kcal)).toEqual([2400, 2500, 2500, 2500, 2500, 2500]);
+    expect(g.weeks[2]).toMatchObject({ move: "up", kept: "over" });
+  });
+  it("as you eat to it, what you eat comes down and it follows — 50 a week, past the 150", () => {
+    // he eats each week's goal: 2,400 before, then 50 less every Monday
+    const goalOn = (d: string) => (d < SINCE ? 2400 : 2400 - 50 * Math.floor((Date.parse(d) - Date.parse(SINCE)) / (7 * 86_400_000)));
+    expect(kcals(eats(goalOn, 0))).toEqual([2400, 2350, 2300, 2250, 2200, 2150]);
+  });
+  it("a weekend not logged isn't a weekend of fasting: what you usually eat, and the goal, are the same as logging every day", () => {
+    const all = eats(() => 2400, 0), gaps = eats((d) => (weekdays(d) ? 2400 : null), 0), coffee = eats((d) => (weekdays(d) ? 2400 : 5), 0);
+    expect(usualIntake(gaps, "2026-08-24", "2026-09-06")).toEqual({ kcal: 2400, full: 10 });
+    expect(usualIntake(coffee, "2026-08-24", "2026-09-06")).toEqual({ kcal: 2400, full: 10 }); // a black coffee is a gap too
+    expect(kcals(gaps)).toEqual(kcals(all));
+    expect(kcals(coffee)).toEqual(kcals(all));
+  });
+  it("never under 1,500", () => {
+    const g = eatGoal(eats(() => 1500, 0), SINCE, END)!;
+    expect(g.weeks.map((w) => w.kcal)).toEqual([1500, 1500, 1500, 1500, 1500, 1500]);
+    expect(g.weeks[1].kept).toBe("floor");
+  });
+  it("it starts on the first week with 7 full days; before that it says what it needs", () => {
+    const late = eats((d) => (d >= "2026-09-21" ? 2400 : null), 0);
+    const g = eatGoal(late, SINCE, END)!;
+    expect(g.weeks[0]).toMatchObject({ from: "2026-09-28", move: "start", kcal: 2400 });
+    const plan = energyPlan(late.filter((e) => e.kind !== "food" || e.at < Date.parse("2026-09-25T00:00:00")), undefined, END, { ...DEFAULT_ENERGY, mode: "eat", since: SINCE });
+    expect(plan.eat).toBeNull();
+    expect(plan.need).toBe("7 fully logged days in the two weeks before Monday (0 so far)");
+  });
+  it("a week with too little logged holds the goal where it was", () => {
+    const g = eatGoal(eats((d) => (d >= "2026-09-21" && d < "2026-10-05" ? null : 2400), 0), SINCE, END)!;
+    // nothing logged 21 Sep–4 Oct: the week of 5 Oct has nothing in its two weeks before
+    expect(g.weeks.map((w) => w.move)).toEqual(["start", "down", "down", "down", "no-data", "down"]);
+    expect(g.weeks[4].kcal).toBe(g.weeks[3].kcal);
   });
 });

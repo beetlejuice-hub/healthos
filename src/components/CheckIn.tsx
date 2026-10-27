@@ -20,7 +20,8 @@ export function CheckInCard({ now }: { now: number }) {
     // water from creatine, or muscle the scale's body fat can see, isn't read as fat (PLAN 134)
     return checkIn(weights, sets, now, goals.kcal, last, { creatineFrom: creatineFrom(entries, supps), fat: bodyFat(entries, now).change });
   }, [entries, goals.kcal, now, last, supps]);
-  if (!c.due || "need" in c) return null;
+  // from what you eat, the weekly step is the check-in (PLAN 173)
+  if (!c.due || "need" in c || settings.energy?.mode === "eat") return null;
   // a held cut (PLAN 134: creatine's water or muscle on the scale) is still his to make
   const answer = (apply: boolean) => {
     const step = c.delta || c.held || 0, kcalAfter = apply ? c.kcal + step : c.kcal;

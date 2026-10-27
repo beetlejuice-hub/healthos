@@ -154,10 +154,10 @@ export function makeProposal(input: Record<string, unknown>, s: Setup, id: strin
     if (input.pace != null && !pace) return `pace: ${PACE_NAMES.join(", ")}`;
     if (kcal == null && p == null && !pace) return "goals: give kcal, protein or pace";
     if (kcal != null && pace) return "either kcal (set by hand) or pace (follows the burn), not both";
-    const burn = s.settings.energy?.mode === "burn";
-    if ((kcal == null || (kcal === s.goals.kcal && !burn)) && (p == null || p === s.goals.p) && (!pace || (burn && pace.kg === s.settings.energy?.pace))) return "those are already the goals";
+    const burn = s.settings.energy?.mode === "burn", auto = burn || s.settings.energy?.mode === "eat";
+    if ((kcal == null || (kcal === s.goals.kcal && !auto)) && (p == null || p === s.goals.p) && (!pace || (burn && pace.kg === s.settings.energy?.pace))) return "those are already the goals";
     const parts = [
-      kcal != null && `Calorie goal ${burn ? "" : `${kcalText(s.goals.kcal)} → `}${kcalText(kcal)} kcal${burn ? " (set by hand — stops following your burn)" : ""}`,
+      kcal != null && `Calorie goal ${auto ? "" : `${kcalText(s.goals.kcal)} → `}${kcalText(kcal)} kcal${auto ? ` (set by hand — stops following ${burn ? "your burn" : "what you eat"})` : ""}`,
       pace && `Fat-loss pace ${pace.name}, ${pace.kg} kg a week${burn ? "" : " (the calorie goal follows your burn)"}`,
       p != null && `Protein goal ${p === s.goals.p ? "" : `${s.goals.p} → `}${p} g`,
     ].filter(Boolean);
@@ -206,7 +206,7 @@ export function applyProposal(p: Proposal, s: Setup, now: number, id: string): A
     let goals = s.goals;
     if (g.kcal != null) goals = withKcal(goals, g.kcal) ?? { ...goals, kcal: g.kcal };
     if (g.p != null) goals = { ...goals, p: g.p };
-    const nextEnergy = g.pace != null ? { ...energy, mode: "burn" as const, pace: g.pace } : g.kcal != null && energy.mode === "burn" ? { ...energy, mode: "fixed" as const } : undefined;
+    const nextEnergy = g.pace != null ? { ...energy, mode: "burn" as const, pace: g.pace, moved: true } : g.kcal != null && energy.mode !== "fixed" ? { ...energy, mode: "fixed" as const, moved: true } : undefined;
     return { ...(goals !== s.goals ? { goals } : {}), ...(nextEnergy ? { energy: nextEnergy } : {}), text: "Goals updated." };
   }
   if (p.change === "delete_entry") {

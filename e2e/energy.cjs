@@ -64,7 +64,7 @@ const bandOf = (kcal, days) => Object.fromEntries([...Array(days)].map((_, i) =>
   await pg.goto(APP + '#today'); await pg.waitForSelector('#fuel');
   check(`Today's Food card uses it (${(await pg.locator('#fuel h3').innerText()).replace(/\s+/g, ' ')})`, /goal 2,030 kcal/.test(await pg.locator('#fuel h3').innerText()));
   await pg.goto(APP + '#settings'); await pg.waitForSelector('.card.en');
-  await card(pg).getByRole('button', { name: 'Set by hand' }).click(); await pg.waitForTimeout(300);
+  await card(pg).getByRole('button', { name: 'By hand' }).click(); await pg.waitForTimeout(300);
   await card(pg).getByLabel('kcal').fill('2400'); await pg.waitForTimeout(300);
   await pg.reload(); await pg.waitForSelector('.card.en'); await pg.waitForTimeout(900);
   check('back to by hand: the box is yours again and the burn leaves it alone', (await st(pg)).goals.kcal === 2400);

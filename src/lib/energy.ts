@@ -8,11 +8,13 @@
  */
 
 import type { Entry, Goals } from "./types";
-import { bodyDays, realBurn, BURN_MIN, KCAL_PER_KG, TREND_MIN, type Burn } from "./tdee";
+import { bodyDays, realBurn, weightTrend, BURN_MIN, KCAL_PER_KG, TREND_MIN, type Burn } from "./tdee";
 import { median, mean } from "./stats";
 import { addDays } from "./time";
 
-export type Energy = { mode: "fixed" | "burn"; /** kg a week */ pace: number; /** kcal the check-ins added (+) or cut (−) */ offset: number };
+export type Energy = { mode: "fixed" | "burn" | "eat"; /** kg a week */ pace: number; /** kcal the check-ins added (+) or cut (−) */ offset: number;
+  /** "eat": the day it was turned on — its weeks count from that Monday. */ since?: string;
+  /** Moved from "burn" to "eat" once (27 Oct, his "1a"); a later pick of "burn" stays. */ moved?: boolean };
 
 /** Paces inside the owner's 0.3–0.7 kg/week rule, with room either side so the check-in doesn't fire on noise. */
 export const PACES = [
@@ -80,10 +82,71 @@ export function withKcal(goals: Goals, kcal: number): Goals | null {
   return { ...goals, kcal, c: Math.max(0, goals.c + carbsG(delta)) };
 }
 
-export type EnergyPlan = { burn: BurnNow | null; goal: Goal | null; need: string | null };
+/**
+ * The goal from what you eat (PLAN 173; owner, 27 Oct: the goal "1500 kcal … sounds way too low for me. i want it to change
+ * dynamically, and smartly so it adjusts to how much i actually eat and tries to slowly nudge it down" — then "1a keep
+ * lowering but also learn what i actually eat and try to help do a managable goal"). 1,500 was the floor: the burn is
+ * measured as what you logged against your weight, so food you didn't log made it look low. This starts from what you
+ * really eat instead, and moves once a week, on Monday, from what came before:
+ *   - what you usually eat: the middle of your fully logged days in the two weeks before (a day under half of that is a
+ *     gap in the log, not a fast, and is left out); 7 of them at least;
+ *   - the scale: your weight trend over the 4 weeks before (kg a week);
+ *   - losing 0.3–0.7 kg a week (your rule): it holds; less, or no trend: 50 lower; faster: 100 higher;
+ *   - never more than 150 under what you usually eat, so it's one you can hit, nor 100 over it, so it follows what you
+ *     really eat — and as you eat to it, that comes down and it follows. Never under 1,500.
+ * Weeks count from the Monday of `since`. Pure.
+ */
+export const EAT = { window: 14, minFull: 7, trendDays: 28, down: 50, up: 100, under: 150, over: 100, hold: [0.3, 0.7] as const };
+
+export type EatWeek = {
+  /** The Monday it starts. */ from: string;
+  /** What you usually ate in the two weeks before, from `full` fully logged days (null: under 7). */ usual: number | null; full: number;
+  /** kg a week, + losing (null: not enough weigh-ins). */ loss: number | null;
+  move: "start" | "hold" | "down" | "up" | "no-data";
+  kcal: number;
+  /** Kept to one you can hit (150 under what you eat), to what you eat (100 over), or to the floor. */ kept?: "under" | "over" | "floor";
+};
+
+/** Monday of a day's week. */
+export const mondayOf = (day: string) => addDays(day, -((new Date(`${day}T12:00:00`).getDay() + 6) % 7));
+
+/** What you usually eat in [from, to]: the median of fully logged days, and how many there were. */
+export function usualIntake(entries: Entry[], from: string, to: string): { kcal: number | null; full: number } {
+  const logged = bodyDays(entries, from, to).map((d) => d.kcal).filter((k): k is number => k != null && k > 0);
+  if (!logged.length) return { kcal: null, full: 0 };
+  const mid = median(logged), full = logged.filter((k) => k >= mid * 0.5);
+  return { kcal: full.length >= EAT.minFull ? Math.round(median(full) / 10) * 10 : null, full: full.length };
+}
+
+/** Each week's goal from `since` to today's week; null until the first has what you usually eat. */
+export function eatGoal(entries: Entry[], since: string, today: string): { kcal: number; weeks: EatWeek[] } | null {
+  const weeks: EatWeek[] = [];
+  for (let m = mondayOf(since); m <= today; m = addDays(m, 7)) {
+    const u = usualIntake(entries, addDays(m, -EAT.window), addDays(m, -1));
+    const t = weightTrend(bodyDays(entries, addDays(m, -EAT.trendDays), addDays(m, -1)));
+    const loss = t ? Math.round(-t.perDay * 7 * 100) / 100 : null, prev = weeks.at(-1);
+    // it starts on the first week that has what you usually eat
+    if (!prev) { if (u.kcal == null) continue; weeks.push({ from: m, usual: u.kcal, full: u.full, loss, move: "start", kcal: Math.max(ENERGY.floor, u.kcal) }); continue; }
+    if (u.kcal == null) { weeks.push({ from: m, usual: null, full: u.full, loss, move: "no-data", kcal: prev.kcal }); continue; }
+    const move = loss != null && loss > EAT.hold[1] ? "up" : loss != null && loss >= EAT.hold[0] ? "hold" : "down";
+    let kcal = prev.kcal + (move === "up" ? EAT.up : move === "down" ? -EAT.down : 0), kept: EatWeek["kept"];
+    if (kcal < u.kcal - EAT.under) { kcal = u.kcal - EAT.under; kept = "under"; }
+    if (kcal > u.kcal + EAT.over) { kcal = u.kcal + EAT.over; kept = "over"; }
+    if (kcal < ENERGY.floor) { kcal = ENERGY.floor; kept = "floor"; }
+    weeks.push({ from: m, usual: u.kcal, full: u.full, loss, move, kcal, ...(kept ? { kept } : {}) });
+  }
+  return weeks.length ? { kcal: weeks.at(-1)!.kcal, weeks } : null;
+}
+
+export type EnergyPlan = { burn: BurnNow | null; goal: Goal | null; need: string | null; eat?: { kcal: number; weeks: EatWeek[] } | null };
 
 /** Everything the Settings card and the goal writer need. `need` says what's missing while there's no burn. */
 export function energyPlan(entries: Entry[], bandKcal: Record<string, number> | undefined, today: string, e: Energy): EnergyPlan {
+  if (e.mode === "eat") {
+    const eat = eatGoal(entries, e.since ?? today, today);
+    const u = usualIntake(entries, addDays(mondayOf(today), -EAT.window), addDays(mondayOf(today), -1));
+    return { burn: null, goal: null, eat, need: eat ? null : `${EAT.minFull} fully logged days in the two weeks before Monday (${u.full} so far)` };
+  }
   const m = measuredBurn(entries, today);
   const b = m ? null : bandBurn(bandKcal, today);
   const burn: BurnNow | null = m ? { from: "measured", kcal: m.kcal, burn: m } : b ? { from: "band", kcal: b.kcal, days: b.days } : null;
