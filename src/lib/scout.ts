@@ -47,7 +47,9 @@ export function signals(supplements: Supplement[]): Signal[] {
   const logged = (f: (d: DayFacts) => number) => (d: DayFacts) => (d.logged ? f(d) : null);
   const s: Signal[] = [
     // a day's calories and protein only from days logged in full — a half-logged day isn't a day of eating little (22 Oct)
-    { id: "kcal", family: "food", name: "calories", plural: true, unit: "kcal", get: (d) => (loggedInFull(d.kcal) ? d.kcal : null), lane: "kcal", drinks: "with-drinks" },
+    // …and without the alcoholic drinks' own calories: on beer nights calories rose with the alcohol and borrowed its
+    // next-day effect — "calories and next-day mood move opposite ways" when it was the beers (27 Oct, e2e leads)
+    { id: "kcal", family: "food", name: "calories", plural: true, unit: "kcal", get: (d) => (loggedInFull(d.kcal) ? d.kcal - (d.alcKcal ?? 0) : null), lane: "kcal", drinks: "with-drinks" },
     { id: "bigMeal", family: "food", name: "biggest meal", unit: "kcal", get: (d) => d.bigMealKcal, lane: "meals" },
     { id: "protein", family: "food", name: "protein", unit: "g", get: (d) => (loggedInFull(d.kcal) ? d.proteinG : null), lane: "meals", drinks: "with-drinks" },
     { id: "lateEat", family: "food", name: "late eating", yes: "late-eating", get: (d) => (d.kcal == null ? null : d.lateEat ? 1 : 0), lane: "meals" },
@@ -139,8 +141,10 @@ export function pair(a: Signal, b: Signal, lag: 0 | 1, facts: DayFacts[]): Patte
     days = dayOf.filter((_, i) => xs[i] > 0);
   } else {
     // Your highest third of days vs the rest: "on your 8 biggest-meal days, mood was below your other days 6 times".
-    const cut = [...xs].sort((u, v) => u - v)[Math.floor(n * 2 / 3)];
-    const isTop = (x: number) => x >= cut && x > 0;
+    // With ties at the cut (most days the same 2,200 kcal), "≥ cut" took every day and left nothing to compare against —
+    // "held on 0 of 89" (27 Oct): then only the days above it count.
+    const cut = [...xs].sort((u, v) => u - v)[Math.floor(n * 2 / 3)], tied = xs.filter((x) => x >= cut).length > n / 2;
+    const isTop = (x: number) => (tied ? x > cut : x >= cut) && x > 0;
     // "Usual" = your other days (when most days are 0 — no late coffee — that's the 0 days).
     const usual = mean(ys.filter((_, i) => !isTop(xs[i])));
     const top = xs.map((x, i) => [x, i] as const).filter(([x]) => isTop(x));

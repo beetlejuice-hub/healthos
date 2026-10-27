@@ -15,10 +15,10 @@ import { addDays, atMinute, dayLabel, localDay } from "../lib/time";
 
 const show = (v: number | null, unit?: string, yes?: boolean) => (v == null ? "—" : yes ? (v ? "yes" : "no") : `${Math.abs(v) >= 100 ? Math.round(v).toLocaleString("en-GB") : Math.round(v * 10) / 10}${unit ? ` ${unit}` : ""}`);
 
-export function LeadChart({ lead }: { lead: LeadRef }) {
+export function LeadChart({ lead, days = 14 }: { lead: LeadRef; days?: number }) {
   const entries = useStore((s) => s.entries), workouts = useStore((s) => s.workouts), settings = useStore((s) => s.settings), supps = useStore((s) => s.supplements);
   const yesterday = addDays(localDay(Date.now()), -1);
-  const s = useMemo(() => leadSeries(lead, dailyFacts(entries, workouts, settings, addDays(yesterday, -15), yesterday), signals(supps), yesterday), [lead, entries, workouts, settings, supps, yesterday]);
+  const s = useMemo(() => leadSeries(lead, dailyFacts(entries, workouts, settings, addDays(yesterday, -days - 1), yesterday), signals(supps), yesterday, days), [lead, entries, workouts, settings, supps, yesterday, days]);
   const [pick, setPick] = useState<number | null>(null);
   if (!s) return null;
   const n = s.days.length, as = s.a.vals.filter((v): v is number => v != null), bs = s.b.vals.filter((v): v is number => v != null);
@@ -32,14 +32,14 @@ export function LeadChart({ lead }: { lead: LeadRef }) {
   return (
     <div className="dc lc" aria-label={`${s.a.name} and ${s.b.name}${next}, last ${n} days`}>
       <p className="dc-head"><b>{s.a.name}</b> on top · <b>{s.b.name}</b>{next} under it · last {n} days</p>
-      <div className="dc-plot bars lc-a" role="img" aria-label={`${s.a.name}: ${s.a.vals.map((v) => show(v, s.a.unit, s.a.yes)).join(", ")}`}>
+      <div className="dc-plot bars lc-a" style={{ gridTemplateColumns: `repeat(${n}, 1fr)` }} role="img" aria-label={`${s.a.name}: ${s.a.vals.map((v) => show(v, s.a.unit, s.a.yes)).join(", ")}`}>
         {s.a.vals.map((v, i) => (
           <button type="button" key={i} className="dc-day" data-lit={lit[i] || undefined} data-pick={pick === i || undefined} aria-label={`${label(i)}: ${s.a.name} ${show(v, s.a.unit, s.a.yes)}`} onClick={() => setPick(pick === i ? null : i)}>
             {v != null && (s.a.yes ? <i className={`lc-yes${v ? " on" : ""}`} /> : <i className="dc-bar" style={{ height: `max(2px, ${(v / aHi) * 100}%)` }} />)}
           </button>
         ))}
       </div>
-      <div className="dc-plot level lc-b" role="img" aria-label={`${s.b.name}${next}: ${s.b.vals.map((v) => show(v, s.b.unit)).join(", ")}`}>
+      <div className="dc-plot level lc-b" style={{ gridTemplateColumns: `repeat(${n}, 1fr)` }} role="img" aria-label={`${s.b.name}${next}: ${s.b.vals.map((v) => show(v, s.b.unit)).join(", ")}`}>
         {line && <svg className="dc-line" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"><polyline points={line} /></svg>}
         {s.b.vals.map((v, i) => (
           <button type="button" key={i} className="dc-day" data-lit={lit[i] || undefined} data-pick={pick === i || undefined} aria-label={`${label(i)}: ${s.b.name}${next} ${show(v, s.b.unit)}`} onClick={() => setPick(pick === i ? null : i)}>

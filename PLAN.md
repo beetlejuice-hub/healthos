@@ -2653,3 +2653,19 @@ both reads and the questions. Phases in that order; #152 RPE waits (owner).
      test it. Tests: lead.test (planted found across 30 people, control ≤5 in 100 with the bar — ~50 without, rests 3
      weeks, the chart's days line up, the item gets the lead, the brief, the prompts), e2e lead (90 days of beers →
      next-day mood: sent with its numbers, drawn with the drinking days lit, rests; control sends none).
+   - Phase 2 as built (27 Oct, owner: "1 do"): Insights → Findings → **Leads** (was "Worth a look"; Today's line says
+     "New lead"): every tested link, strongest first, each labelled "strong · tested" (clears the lead bar — chance ~1 in
+     30) or "early · could be chance" / "watching" / "holding up"; both things drawn over 4 weeks with the days it was on
+     lit; **Ask why** — the talk-back chat on that one link (it's handed the link, its numbers, how sure, and how to
+     answer why / is it real / what to do); **Test it** — 14 days of the change the link points to, measured on the
+     feeling ("No alcohol — does mood lift?"; never "drink more" or "train less"; none when the outcome isn't a feeling
+     or the cause can't be chosen), then "Testing — see Experiments". Found on the way, both in lib/scout: (1) calories
+     counted the alcoholic drinks' own kcal, so on beer nights calories rose with the alcohol and borrowed its next-day
+     effect — the top "strong" card read "Calories and next-day mood move opposite ways"; the scout's calories leave
+     those drinks out now; (2) with most days tied at the cut (the same 2,200 kcal), "your highest third" took every day
+     — "held on 0 of 89"; then only the days above it count. And the chat's links ("[Study](https://…)" showed as typed —
+     the chat cites studies now): mdlite draws [text](https://…) and bare https links, http(s) only. Tests: lead.test
+     (grade, Test it both ways and never the wrong way, Ask why's context), scout.test (beers: alcohol found 18+ of 20,
+     calories 0 — fails on the old code; ties counted), mdlite.test (links, javascript: stays text), e2e leads (the
+     planted link first and strong, 28 days drawn with the drinking days lit, Ask why with the link and a real link in
+     the reply, Test it starts the experiment and says it's running), scout (unchanged, "New lead").

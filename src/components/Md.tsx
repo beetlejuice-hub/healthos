@@ -1,9 +1,10 @@
-/** The AI's reply with its bits of Markdown drawn (lib/mdlite): bold, italic, lists. Text only — never HTML. */
+/** The AI's reply with its bits of Markdown drawn (lib/mdlite): bold, italic, lists, http(s) links. Text only — never HTML. */
 
 import { Fragment } from "react";
 import { blocks, type Span } from "../lib/mdlite";
 
-const line = (ss: Span[]) => ss.map((s, i) => (s.b && s.i ? <b key={i}><i>{s.text}</i></b> : s.b ? <b key={i}>{s.text}</b> : s.i ? <i key={i}>{s.text}</i> : <Fragment key={i}>{s.text}</Fragment>));
+const line = (ss: Span[]) => ss.map((s, i) => (s.href ? <a key={i} href={s.href} target="_blank" rel="noopener noreferrer">{s.text} ↗</a>
+  : s.b && s.i ? <b key={i}><i>{s.text}</i></b> : s.b ? <b key={i}>{s.text}</b> : s.i ? <i key={i}>{s.text}</i> : <Fragment key={i}>{s.text}</Fragment>));
 
 export function Md({ text }: { text: string }) {
   return (

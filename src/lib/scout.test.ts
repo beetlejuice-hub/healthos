@@ -106,3 +106,37 @@ describe("scout", () => {
     expect(verdict({ held: 2, of: 6 })).toBe("faded");
   });
 });
+
+// 27 Oct (Insights → Leads, e2e leads): 90 days of beers on ~30% of evenings and a lower mood the day after, food the same
+// 2,200 kcal every day. The top "strong" link was "Calories and next-day mood move opposite ways — held on 0 of 89".
+describe("beers in the calories, and ties at the cut", () => {
+  function beerWorld(seed: number): DayFacts[] {
+    const f = feelWorld({ seed, days: 90 });
+    const { r } = rng(seed + 77);
+    let drank = false;
+    for (const d of f) {
+      if (drank && d.mood != null) d.mood = Math.max(1, d.mood - 2.5);
+      drank = r() < 0.3;
+      d.alcoholG = drank ? 40 : 0; d.alcKcal = drank ? 430 : 0;
+      d.kcal = 2200 + d.alcKcal; d.bigMealKcal = 900; d.lateEat = false; d.lateCaffeineMg = 0; d.caffeineMg = 190;
+    }
+    return f;
+  }
+  it("the beers are the link — calories don't borrow it from their own alcohol", () => {
+    let alcohol = 0, calories = 0;
+    for (let seed = 1; seed <= 20; seed++) {
+      const ps = scout(beerWorld(seed), []);
+      if (ps.some((p) => p.a.id === "alcohol" && p.b.id === "mood" && p.lag === 1)) alcohol++;
+      if (ps.some((p) => p.a.id === "kcal" && p.b.id === "mood")) calories++;
+    }
+    expect(alcohol).toBeGreaterThanOrEqual(18);
+    expect(calories).toBe(0);
+  });
+  it("most days tied at the cut: only the days above it are 'highest', so 'held' counts something", () => {
+    const f = beerWorld(3).map((d) => ({ ...d, alcKcal: 0 })); // as if the 430 were food: calories then really are the high days
+    const p = pair(sig("kcal"), sig("mood"), 1, f)!;
+    const high = f.slice(0, -1).filter((d, i) => d.kcal === 2630 && f[i + 1].mood != null).length; // with a rated next day
+    expect(p.of).toBe(high);
+    expect(p.held / p.of).toBeGreaterThan(0.7);
+  });
+});

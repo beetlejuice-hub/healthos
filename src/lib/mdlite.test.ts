@@ -24,4 +24,11 @@ describe("the AI's bits of Markdown in chat (owner, 15 Oct: \"make sure it can m
     expect(blocks("☀️ Morning\n• one\n• two")[1]).toEqual({ kind: "ul", items: [[{ text: "one" }], [{ text: "two" }]] });
     expect(blocks("<b>hi</b> <script>x</script>")).toEqual([{ kind: "p", lines: [[{ text: "<b>hi</b> <script>x</script>" }]] }]);
   });
+  // 27 Oct: the chat cites studies with their links now — "[Study](https://…)" showed as typed
+  it("links: [text](https://…) and bare https://…; http(s) only — a javascript: one stays text", () => {
+    expect(spans("See [Alcohol and REM](https://pubmed.ncbi.nlm.nih.gov/123/), strong.")).toEqual([{ text: "See " }, { text: "Alcohol and REM", href: "https://pubmed.ncbi.nlm.nih.gov/123/" }, { text: ", strong." }]);
+    expect(spans("Source: https://www.example.org/study.")).toEqual([{ text: "Source: " }, { text: "example.org/study", href: "https://www.example.org/study" }, { text: "." }]);
+    expect(spans("[x](javascript:alert(1))").some((s) => s.href)).toBe(false);
+    expect(spans("**bold** and [a](http://a.org)")).toEqual([{ text: "bold", b: true }, { text: " and " }, { text: "a", href: "http://a.org" }]);
+  });
 });

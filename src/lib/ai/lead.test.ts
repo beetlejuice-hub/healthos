@@ -4,7 +4,8 @@ import { describe, expect, it } from "vitest";
 import { feelWorld, rng } from "../bench";
 import { scout, signals } from "../scout";
 import type { DayFacts } from "../insights";
-import { LEAD, leadLines, leadSeries, pickLead, withLead } from "./lead";
+import { LEAD, aboutLead, leadGrade, leadLines, leadSeries, leadTest, pickLead, withLead } from "./lead";
+import type { Pattern } from "../scout";
 import { addDays } from "../time";
 import { morningBrief } from "./brief";
 import { SYSTEM, type DigestItem } from "./tasks";
@@ -86,5 +87,39 @@ describe("never the obvious; the chat goes deep (PLAN 176)", () => {
     expect(SYSTEM.chat).not.toContain("Keep replies under 120 words unless they ask for detail");
     expect(SYSTEM.chat).toMatch(/gets a real one, 150–350 words/);
     expect(SYSTEM.chat).toMatch(/search the web — cite 1–3 with their links/);
+  });
+});
+
+// owner, 27 Oct: "1 do" — Insights → Leads: every tested link, with "Ask why" and "Test it"
+describe("a lead's card (PLAN 176 phase 2)", () => {
+  const sig = (id: string, name: string, yes?: string) => ({ id, family: id, name, ...(yes ? { yes } : {}), get: () => null });
+  const link = (a: ReturnType<typeof sig>, b: ReturnType<typeof sig>, sign: 1 | -1, p = 0.00001): Pattern =>
+    ({ id: `${a.id}~${b.id}`, a, b, lag: 1, r: 0.6 * sign, p, n: 80, sign, held: 20, of: 24, days: [], text: "t" }) as Pattern;
+  const alcohol = sig("alcohol", "alcohol"), mood = sig("mood", "mood"), stress = sig("stress", "stress"), gym = sig("gym", "gym", "a gym day"), lateCaf = sig("lateCaf", "caffeine after 14:00");
+  const saffron = sig("supp-saf", "Saffron", "a Saffron day"), kcal = sig("kcal", "calories");
+
+  it("strong when it clears the lead bar, early otherwise", () => {
+    expect([leadGrade(link(alcohol, mood, -1, 0.00001)), leadGrade(link(alcohol, mood, -1, 0.003))]).toEqual(["strong", "early"]);
+  });
+  it("Test it: the change the link points to, 14 days, measured on the feeling", () => {
+    expect(leadTest(link(alcohol, mood, -1))).toEqual({ name: "No alcohol — does mood lift?", how: "No alcohol at all — not even one", days: 14, measure: "mood" });
+    expect(leadTest(link(lateCaf, stress, 1))).toMatchObject({ name: "No caffeine after 14:00 — does stress ease?", measure: "stress" });
+    expect(leadTest(link(gym, mood, 1))).toMatchObject({ name: "Train 4 days a week — does mood lift?" });
+    expect(leadTest(link(saffron, mood, 1))).toMatchObject({ name: "Saffron every day — does mood lift?", how: "Take Saffron every day" });
+    expect(leadTest(link(saffron, mood, -1))).toMatchObject({ name: "Pause Saffron — does mood lift?" });
+  });
+  it("…never the wrong way round: no 'drink more', no 'train less'; nothing to test when the outcome isn't a feeling or the cause can't be chosen", () => {
+    expect(leadTest(link(alcohol, mood, 1))).toBeNull(); // alcohol goes with better mood: not a test to suggest
+    expect(leadTest(link(gym, mood, -1))).toBeNull();
+    expect(leadTest(link(kcal, mood, -1))).toBeNull();
+    expect(leadTest(link(mood, alcohol, -1))).toBeNull();
+  });
+  it("Ask why: the AI gets the link, its numbers, how sure, and how to answer why / is it real / what to do", () => {
+    const a = aboutLead(link(alcohol, mood, -1));
+    expect(a).toMatch(/^## The link this message is about \(Insights → Leads/);
+    expect(a).toContain("held on 20 of 24 days");
+    expect(a).toContain("strong — the app checks ~200 pairs and chance gets one this strong about 1 time in 30");
+    expect(aboutLead(link(alcohol, mood, -1, 0.003))).toContain("early — strong enough to flag, not to trust");
+    expect(a).toContain("offer a 14-day experiment");
   });
 });

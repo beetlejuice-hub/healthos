@@ -67,3 +67,42 @@ export function withLead<T extends { type: string; lead?: LeadRef }>(items: T[],
   const k = items.findIndex((i) => i.type === "connection") >= 0 ? items.findIndex((i) => i.type === "connection") : items.findIndex((i) => i.type === "pattern");
   return k < 0 ? items : items.map((i, n) => (n === k ? { ...i, lead: leadRef(p) } : i));
 }
+
+/** "strong" clears the lead bar; "early" is scout's own flag — could be chance (a fluke this strong comes up often). */
+export const leadGrade = (p: Pattern): "strong" | "early" => (p.p < LEAD.maxP ? "strong" : "early");
+
+/** What a change to `a` is, in words, for the ones a person can choose to change (never "drink more", never "train less"). */
+const CHANGE: Record<string, { less?: [string, string]; more?: [string, string] }> = {
+  alcohol: { less: ["No alcohol", "No alcohol at all — not even one"] },
+  caffeine: { less: ["Caffeine under 200 mg", "Keep caffeine under 200 mg a day"] },
+  lateCaf: { less: ["No caffeine after 14:00", "Last coffee before 14:00"] },
+  lateEat: { less: ["Done eating by 21:00", "Finish eating by 21:00"] },
+  bigMeal: { less: ["No meal over 800 kcal", "Split the biggest meal — none over 800 kcal"] },
+  protein: { more: ["Protein at every meal", "30 g of protein or more at every meal"] },
+  gym: { more: ["Train 4 days a week", "Lift or do cardio on 4 days each week"] },
+};
+const GOOD_UP: Record<string, boolean> = { mood: true, energy: true, focus: true, stress: false };
+
+/**
+ * "Test it" (PLAN 176 phase 2): 14 days of changing the first thing the way the link says helps, measured on the second
+ * (the app compares the 14 days before with the 14 during). Null when the second isn't a feeling the app can measure, or
+ * the change isn't one to suggest.
+ */
+export function leadTest(p: Pattern): { name: string; how: string; days: number; measure: string } | null {
+  if (!(p.b.id in GOOD_UP)) return null;
+  const better = (p.sign > 0) === GOOD_UP[p.b.id];
+  const c = p.a.id.startsWith("supp-") ? { more: [`${p.a.name} every day`, `Take ${p.a.name} every day`] as [string, string], less: [`Pause ${p.a.name}`, `Don't take ${p.a.name}`] as [string, string] } : CHANGE[p.a.id];
+  const pick = better ? c?.more : c?.less;
+  return pick ? { name: `${pick[0]} — does ${p.b.name} ${p.b.id === "stress" ? "ease" : "lift"}?`, how: pick[1], days: 14, measure: p.b.id } : null;
+}
+
+/** For the talk-back chat on a lead's card: the link, its numbers, and how to answer "why", "is it real", "what do I do". */
+export function aboutLead(p: Pattern): string {
+  const grade = leadGrade(p);
+  return [
+    "## The link this message is about (Insights → Leads: the app found and tested it in their own data)",
+    ...leadLines(p).slice(1, 3),
+    `- How sure: ${grade === "strong" ? "strong — the app checks ~200 pairs and chance gets one this strong about 1 time in 30" : "early — strong enough to flag, not to trust: across ~200 pairs, a fluke this strong turns up for about half of people; it's re-checked on every new day"}.`,
+    "- \"Why?\": search the web for the mechanism and 1–3 studies (links, how strong). \"Is it real?\": explain the test in plain words and check it with compare or series look-ups. \"What do I do?\": one or two specific things, and offer a 14-day experiment (propose it).",
+  ].join("\n");
+}

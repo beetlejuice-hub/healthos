@@ -98,6 +98,8 @@ export type DayFacts = {
   alcoholAtBed: number;
   trained: boolean;
   kcal: number | null;
+  /** Of `kcal`, what came from drinks with alcohol in them (a beer's 215) — the scout leaves it out (PLAN 176). */
+  alcKcal?: number;
   proteinG: number | null;
   energy: number | null;
   mood: number | null;
@@ -168,6 +170,7 @@ export function dailyFacts(entries: Entry[], workouts: Workout[], settings: Sett
       trained: trainedDays.has(day),
       // food and drinks, as Today's Fuel card counts them (a beer is 215 kcal); a day counts once food is logged
       kcal: foods.length ? es.reduce((a, e) => a + (macrosOf(e)?.kcal ?? 0), 0) : null,
+      alcKcal: of(es, "drink").filter((d) => d.alcoholG > 0).reduce((a, d) => a + d.kcal, 0),
       proteinG: foods.length ? es.reduce((a, e) => a + (macrosOf(e)?.p ?? 0), 0) : null,
       energy: avg("energy"), mood: avg("mood"), focus: avg("focus"), stress: avg("stress"),
       taken: new Set([...(suppsBy.get(day) ?? [])].filter(([, took]) => took).map(([id]) => id)),
