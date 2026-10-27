@@ -17,7 +17,8 @@ import type { Entry, EntryOf, Workout } from "./types";
 import type { Settings } from "./store";
 import { dailyFacts, type DayFacts } from "./insights";
 import { addDays, localDay } from "./time";
-import { mean, quantile } from "./stats";
+import { mean, median, quantile } from "./stats";
+import { isGap } from "./foodgaps";
 
 export type GlanceDay = {
   day: string;
@@ -48,10 +49,14 @@ export function glanceDays(entries: Entry[], workouts: Workout[], settings: Sett
   for (const e of of(entries, "sleep")) if (e.rating != null && !sleep.has(localDay(e.at))) sleep.set(localDay(e.at), e.rating);
   for (const w of of(entries, "weight")) { const d = localDay(w.at), cur = weight.get(d); if (!cur || w.at > cur.at) weight.set(d, { at: w.at, kg: w.kg }); }
   for (const f of of(entries, "feel")) { const d = localDay(f.at); checks.set(d, (checks.get(d) ?? 0) + 1); if (f.note?.trim()) notes.add(d); }
+  // a day with under half your usual food logged is a gap in the log, not a day you ate little (owner, 27 Oct: "im still
+  // eating, and living just not logging") — its calories and protein left out of the averages; today is still going
+  const today = localDay(Date.now()), past = facts.filter((f) => f.day < today && f.kcal != null && f.kcal > 0).map((f) => f.kcal!);
+  const usual = past.length ? median(past) : null, gap = (f: DayFacts) => f.day < today && usual != null && isGap(f.kcal, usual);
   return facts.map((f: DayFacts) => ({
     day: f.day, mood: f.mood, energy: f.energy, focus: f.focus, stress: f.stress,
     sleep: sleep.get(f.day) ?? null,
-    kcal: f.kcal, protein: f.proteinG,
+    kcal: gap(f) ? null : f.kcal, protein: gap(f) ? null : f.proteinG,
     cafBed: f.logged ? f.caffeineAtBed : null,
     drinks: f.logged ? f.alcoholG / 14 : null,
     weight: weight.get(f.day)?.kg ?? null,

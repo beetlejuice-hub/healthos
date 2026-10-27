@@ -12,6 +12,7 @@ import type { State } from "../store";
 import type { Entry } from "../types";
 import { macrosOf } from "../nutrition";
 import type { DayFacts } from "../insights";
+import { ATE, ateSaid, isGap, usualBefore, type Ate } from "../foodgaps";
 import type { Finding } from "../findings";
 import type { Pattern } from "../scout";
 import { addDays, atMinute, clock, dayLabel, localDay } from "../time";
@@ -151,10 +152,18 @@ export function moodEngines(state: Pick<State, "entries" | "workouts" | "supplem
   return out;
 }
 
-export function dayLine(d: DayFacts, suppNames: Map<string, string>): string {
+/**
+ * `gaps`: your usual day and what you said about days you didn't log (lib/foodgaps) — so a day with nothing or a coffee
+ * logged reads as not logged, never as a fast (owner, 27 Oct: "im still eating, and living just not logging").
+ */
+export function dayLine(d: DayFacts, suppNames: Map<string, string>, gaps?: { usual: number | null; said: Map<string, Ate> }): string {
+  const said = gaps?.said.get(d.day), saidWords = said ? ` — they said: ${ATE[said].said}` : "";
+  const partial = d.kcal != null && gaps?.usual != null && isGap(d.kcal, gaps.usual);
   const parts = [
     d.day + (d.weekend ? " (weekend)" : ""),
-    d.kcal != null ? `${d.kcal} kcal, P ${d.proteinG ?? "?"} g, biggest meal ${d.bigMealKcal ?? "?"}` : d.logged ? "food not logged" : "nothing logged",
+    partial ? `${d.kcal} kcal logged — partly logged (their usual day is ~${gaps!.usual} kcal), not a day of eating little${saidWords}`
+      : d.kcal != null ? `${d.kcal} kcal, P ${d.proteinG ?? "?"} g, biggest meal ${d.bigMealKcal ?? "?"}`
+      : `${d.logged ? "food not logged" : "nothing logged"} (they still ate — just didn't log it)${saidWords}`,
     d.caffeineMg ? `caffeine ${d.caffeineMg} mg (last ${d.lastCaffeineMin != null ? clock(new Date(2000, 0, 1, 0, d.lastCaffeineMin).getTime()) : "?"})` : "",
     d.alcoholG ? `alcohol ${d.alcoholG} g` : "",
     d.trained ? `gym (${Math.round(d.volumeKg)} kg volume)` : "",
@@ -230,6 +239,7 @@ function baseContext({ state, now, days, findings, patterns, weight, today = [],
   const { profile, supplements, ai, goals } = state;
   const en = state.settings?.energy;
   const names = new Map(supplements.map((s) => [s.id, s.name]));
+  const gaps = { usual: usualBefore(state.entries, localDay(now)), said: ateSaid(state.entries) };
   const answers = state.entries.filter((e) => e.kind === "answer" && e.at > now - 14 * 86_400_000).slice(-20);
   const notices = noticeLines(state.entries, now).slice(slim ? -8 : -20);
   const lines = [
@@ -251,7 +261,7 @@ function baseContext({ state, now, days, findings, patterns, weight, today = [],
     ...(ai.memory.length ? ["## What you remember about me", ...ai.memory.map((m) => `- ${m.text}`)] : []),
     ...(ai.experiments.filter((x) => !x.ended).length ? ["## Experiments running", ...ai.experiments.filter((x) => !x.ended).map((x) => `- ${x.name} since ${x.start} (${x.days} days, measuring ${x.measure})`)] : []),
     slim ? "## Last 7 days" : "## Last 14 days",
-    ...days.slice(slim ? -7 : -14).map((d) => `- ${dayLine(d, names)}`),
+    ...days.slice(slim ? -7 : -14).map((d) => `- ${dayLine(d, names, gaps)}`),
     ...(todaySoFar ? [`## Today so far (${dayLabel(now)}, up to ${clock(now)})`, ...(todaySoFar.length ? todaySoFar.map((l) => `- ${l}`) : ["- nothing logged yet"])] : []),
     ...(training.length ? ["## Training", ...training.map((l) => `- ${l}`)] : []),
     "## How I feel by time of day (last 30 days)",

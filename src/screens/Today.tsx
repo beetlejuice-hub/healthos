@@ -5,6 +5,7 @@ import { CheckInCard } from "../components/CheckIn";
 import { AUTO_END } from "../lib/training";
 import { NoticeBox } from "../components/NoticeBox";
 import { HeartAsk } from "../components/HeartAsk";
+import { FoodGapAsk } from "../components/FoodGapAsk";
 import { GuardBox } from "../components/GuardBox";
 import { checkWeight, type Guard } from "../lib/sanity";
 import { act, offerUndo, useStore } from "../lib/store";
@@ -152,6 +153,7 @@ export function Today() {
         <MorningRead />
         <AiQuestions />
         <HeartAsk now={now} />
+        <FoodGapAsk now={now} />
         <ExperimentStrip now={now} />
         <WorkoutRunning now={now} />
         <CheckInCard now={now} />

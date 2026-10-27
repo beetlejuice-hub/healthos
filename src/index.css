@@ -125,6 +125,10 @@ a { color: inherit; }
 .cu-row small { display: block; color: var(--c-dim); font-size: 12px; }
 .cu-btns { display: flex; gap: 6px; }
 .cu-btns .pill-btn { min-height: 36px; }
+.fg-why { margin: 0; font-size: 13px; color: var(--c-ink-2); }
+.fg-btns { flex-wrap: wrap; }
+.fg-more { margin: 0; font-size: 13px; color: var(--c-dim); }
+.fg-more .linkish { display: inline; padding: 0; font-size: 13px; }
 .cu-none { justify-self: start; }
 /* How much this time: − / + one capsule, or tap the amount and type it (owner, 9 Oct). */
 .samt { display: inline-flex; align-items: center; gap: 2px; margin-left: 4px; vertical-align: middle; }

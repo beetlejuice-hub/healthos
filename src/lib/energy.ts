@@ -10,6 +10,9 @@
 import type { Entry, Goals } from "./types";
 import { bodyDays, realBurn, weightTrend, BURN_MIN, KCAL_PER_KG, TREND_MIN, type Burn } from "./tdee";
 import { median, mean } from "./stats";
+import { guessedKcal, usualIntake } from "./foodgaps";
+
+export { usualIntake };
 import { addDays } from "./time";
 
 export type Energy = { mode: "fixed" | "burn" | "eat"; /** kg a week */ pace: number; /** kcal the check-ins added (+) or cut (−) */ offset: number;
@@ -36,7 +39,9 @@ export type BurnNow =
 
 /** Your measured burn over the last 4 weeks, today left out (the day isn't over) — the same window Noticed uses. */
 export function measuredBurn(entries: Entry[], today: string): Burn | null {
-  const days = bodyDays(entries, addDays(today, -(ENERGY.measuredDays - 1)), today);
+  // a day you didn't log that you said how you ate counts at your usual × that (lib/foodgaps; owner, 27 Oct: unlogged
+  // weekends of eating more made the burn look low)
+  const days = bodyDays(entries, addDays(today, -(ENERGY.measuredDays - 1)), today).map((d) => ({ ...d, kcal: guessedKcal(entries, d.day, d.kcal) }));
   days[days.length - 1] = { ...days[days.length - 1], kcal: null };
   return realBurn(days);
 }
@@ -109,14 +114,6 @@ export type EatWeek = {
 
 /** Monday of a day's week. */
 export const mondayOf = (day: string) => addDays(day, -((new Date(`${day}T12:00:00`).getDay() + 6) % 7));
-
-/** What you usually eat in [from, to]: the median of fully logged days, and how many there were. */
-export function usualIntake(entries: Entry[], from: string, to: string): { kcal: number | null; full: number } {
-  const logged = bodyDays(entries, from, to).map((d) => d.kcal).filter((k): k is number => k != null && k > 0);
-  if (!logged.length) return { kcal: null, full: 0 };
-  const mid = median(logged), full = logged.filter((k) => k >= mid * 0.5);
-  return { kcal: full.length >= EAT.minFull ? Math.round(median(full) / 10) * 10 : null, full: full.length };
-}
 
 /** Each week's goal from `since` to today's week; null until the first has what you usually eat. */
 export function eatGoal(entries: Entry[], since: string, today: string): { kcal: number; weeks: EatWeek[] } | null {

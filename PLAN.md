@@ -2592,3 +2592,18 @@ both reads and the questions. Phases in that order; #152 RPE waits (owner).
    same as logging every day; floor; starts on the first week with data; a week with nothing holds), propose.test,
    e2e eatgoal (his case: burn floored at 1,500, weekends unlogged → 2,300; three weeks on → 2,150; a later pick of
    the burn stays; 320 px), energy (unchanged).
+
+174. [x] **A day not logged is a day not logged — never a fast** (owner, 27 Oct: "i had this weekend skipped fully... make
+   sure app can still assume some things or recognize that im not logging anything, that means im still eating, and
+   living just not logging" — then "2 yes"). lib/foodgaps: a day is a gap when its food is under half your usual day
+   (nothing, a coffee, only a breakfast). Everywhere: the averages (glance → Insights, the week and month reads) leave
+   a gap's calories and protein out instead of counting a 2-kcal coffee day; the AI reads it as "nothing logged (they
+   still ate — just didn't log it)" or "600 kcal logged — partly logged … not a day of eating little"; the weekly goal
+   (173) already goes by full days. Today asks once (FoodGapAsk): "Not logged · Sat 24 – Sun 25 Oct — how did you eat?"
+   As usual / More / Less, Not sure · Log them instead; kept as an answer on each day, Undo. What you say is a guess
+   for the burn only (your usual × 1, 1.25, 0.75), and the AI hears it. Yesterday with a meal or so logged is left to
+   the morning catch-up's "No dinner logged yesterday · Log it" and asked here from the day after; yesterday with
+   nothing hides the catch-up's meal rows (one question, not three). Tests: foodgaps.test (planted: weekends of ~3,300
+   unlogged → the burn reads 2,300; saying "more" moves it toward the true ~2,590; gaps vs smaller days; answered not
+   asked again; the averages; the AI's lines), e2e foodgap (asked once about Sat–Sun, no meal rows, More kept, Undo;
+   control: the weekend logged asks nothing), catchup (unchanged).
