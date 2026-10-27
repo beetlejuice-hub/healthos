@@ -2607,3 +2607,13 @@ both reads and the questions. Phases in that order; #152 RPE waits (owner).
    unlogged → the burn reads 2,300; saying "more" moves it toward the true ~2,590; gaps vs smaller days; answered not
    asked again; the averages; the AI's lines), e2e foodgap (asked once about Sat–Sun, no meal rows, More kept, Undo;
    control: the weekend logged asks nothing), catchup (unchanged).
+
+175. [x] **A food's score where you tap it** (owner, 27 Oct: "CAN WE IMPLEMENT THE FOOD SCORING SYSTEM? FOR each food if i
+   click on it it should show the score - based on how much macro it has, and how good it is for my goal" — "3c"). It
+   existed on the day's food sheet (#139) only. Now also: Log → Food's search rows (yours, the basic table, the
+   database, a group's typical) each show the 0–100 a food would get logged at the time you're logging for — the goal
+   part is protein per 100 kcal and the quality its Nutri-Score, so the portion doesn't change it; a tap on the score
+   says why and doesn't add it; a tap on the row adds it as before. And Log → Logged today: tapping a food opens its
+   score and why above its values. lib/foodscore foodScore; components/FoodScore (chip and why). Tests: foodscore.test
+   (the same as logged, timed by the log time, a saved copy gets the table's nutrients, one with none says what's
+   missing), e2e foodtap (chicken 100 with why, not added on the chip, added on the row; the pizza's 45 with why).

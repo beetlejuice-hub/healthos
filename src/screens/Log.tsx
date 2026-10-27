@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { act, getState, newId, offerUndo, useStore } from "../lib/store";
 import { changeDose } from "../lib/dose";
 import { searchBasic } from "../lib/foods-basic";
@@ -30,6 +30,8 @@ import { convert, cookKind, cookState, WORD, type CookState } from "../lib/cooke
 import { findBarcode, type Lookup } from "../lib/barcode";
 import { ScanButton, Scanner } from "../components/Scanner";
 import { EntryEdit } from "../components/EntryEdit";
+import { ScoreChip, ScoreWhy } from "../components/FoodScore";
+import { foodFor, foodScore, itemScore, type ItemScore } from "../lib/foodscore";
 import { NoteField } from "../components/HowNow";
 import { SuppQuick } from "../components/SuppQuick";
 import { useNow } from "./Today";
@@ -307,7 +309,7 @@ function FoodTab({ done }: { done: (m: string) => void }) {
   if (detail != null && opened && !isDrink(opened)) return <Portion line={opened} onCancel={() => setDetail(null)} onDone={(l) => { upd(detail, l); setDetail(null); }} />;
   if (custom) return <CustomFood barcode={labelCode ?? undefined} onCancel={() => { setCustom(false); setLabelCode(null); }} onDone={(f) => { setCustom(false); setLabelCode(null); act.rememberFood(f); add(f); }} />;
 
-  return <>
+  return <LogAt.Provider value={atOf(when.day, when.time)}>
     <div className="card">
       {/* Opened for another day (Today's catch-up: "No dinner logged yesterday → Log it"): say so before anything's typed. */}
       {when.day && <p className="note log-for">Logging for <b>{when.day === addDays(localDay(Date.now()), -1) ? "yesterday" : dayLabel(atMinute(when.day, 12 * 60))}, {when.time}</b> ·{" "}
@@ -367,7 +369,7 @@ function FoodTab({ done }: { done: (m: string) => void }) {
       </div>
       <p className="note">Count it, don't weigh it: “3 eggs”, “1 can of tuna”, “2 toast with butter” — or use your hand: a palm of chicken, a fist of rice, a cupped hand of nuts, a thumb of butter. Close enough; the weekly numbers even out. Anything you log comes back first, with the amount you had.</p>
     </div>
-  </>;
+  </LogAt.Provider>;
 }
 
 const amountOf = (l: Line) => (l.unit ? amountText(l.count, l.unit) : `${Math.round(l.grams ?? 100)} g`);
@@ -487,26 +489,38 @@ function Thumb({ src, label }: { src?: string; label?: string }) {
   return <span className="thumb" aria-hidden="true">{src && !broken ? <img src={src} alt="" loading="lazy" referrerPolicy="no-referrer" onError={() => setBroken(true)} /> : label}</span>;
 }
 
+/** When the food tab is logging for (the time and day picked): a food's score is timed by it. */
+const LogAt = createContext<number | null>(null);
+/** The score a food would get logged now (or at the time picked), for the search rows (owner, 27 Oct: "3c"). */
+function useScoreAt(f: Food): ItemScore | null {
+  const at = useContext(LogAt) ?? Date.now(), bed = useStore((s) => s.settings.bedMinute) ?? 23 * 60;
+  return useMemo(() => foodScore(f, at, bed), [f, at, bed]);
+}
+
 function FoodRow({ f, onPick, thumb, suspect, amount }: { f: Food; onPick: () => void; thumb?: boolean; suspect?: boolean; amount?: string }) {
+  const s = useScoreAt(f), [why, setWhy] = useState(false);
   return (
-    <div className={`li tap${thumb ? " food" : ""}`} role="button" tabIndex={0} onClick={onPick} onKeyDown={(e) => e.key === "Enter" && onPick()}>
+    <div className={`li tap fr-li${thumb ? " food" : ""}`} role="button" tabIndex={0} onClick={onPick} onKeyDown={(e) => e.key === "Enter" && onPick()}>
       {thumb && <Thumb src={f.img} label={f.source === "usda" ? "USDA" : ""} />}
       <span>{f.name}<small>{sub(f)}</small>{suspect && <small className="warn">label doesn't add up — check before logging</small>}</span>
-      <span className="r">{amount ? `+ ${amount}` : "+"}</span>
+      <span className="r fr-right"><ScoreChip s={s} name={f.name} open={why} onToggle={() => setWhy(!why)} />{amount ? `+ ${amount}` : "+"}</span>
+      {why && s && <ScoreWhy s={s} />}
     </div>
   );
 }
 
 /** One food, many brands: tap the row for the typical values, or open the brands. */
 function GroupRow({ r, onPick }: { r: Extract<ResultRow, { kind: "group" }>; onPick: (f: Food) => void }) {
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(false), s = useScoreAt(r.typical), [why, setWhy] = useState(false);
   const [lo, hi] = r.kcalRange;
   return <>
-    <div className="li tap food" role="button" tabIndex={0} onClick={() => onPick(r.typical)} onKeyDown={(e) => e.key === "Enter" && onPick(r.typical)}>
+    <div className="li tap food fr-li" role="button" tabIndex={0} onClick={() => onPick(r.typical)} onKeyDown={(e) => e.key === "Enter" && onPick(r.typical)}>
       <Thumb label={`×${r.items.length}`} />
       <span>{r.typical.name}<small>typical · {r.typical.per100.kcal} kcal · P {Math.round(r.typical.per100.p)} / 100 g{hi > lo ? ` · brands ${lo}–${hi}` : ""}</small>
         {r.varies && <small className="warn">brands differ a lot (dry vs cooked?) — pick yours</small>}</span>
-      <button type="button" className="more" aria-expanded={open} onClick={(e) => { e.stopPropagation(); setOpen(!open); }}>{r.items.length} products {open ? "▴" : "▾"}</button>
+      <span className="fr-right"><ScoreChip s={s} name={r.typical.name} open={why} onToggle={() => setWhy(!why)} />
+        <button type="button" className="more" aria-expanded={open} onClick={(e) => { e.stopPropagation(); setOpen(!open); }}>{r.items.length} products {open ? "▴" : "▾"}</button></span>
+      {why && s && <ScoreWhy s={s} title="Typical" />}
     </div>
     {open && <div className="sublist">{[...r.items].sort((a, b) => Number(plausible(b.per100)) - Number(plausible(a.per100))).map((f) =>
       <FoodRow key={f.id} f={f} thumb suspect={!plausible(f.per100)} onPick={() => onPick(f)} />)}</div>}
@@ -981,6 +995,13 @@ const describe = (e: Entry, supps: Supplement[]): [string, string] => {
   }
 };
 
+/** A logged food's score, opened with it (owner, 27 Oct: "if i click on it it should show the score"). */
+function LoggedScore({ e }: { e: EntryOf<"food"> | EntryOf<"drink"> }) {
+  const foods = useStore((s) => s.foods), bed = useStore((s) => s.settings.bedMinute) ?? 23 * 60;
+  const s = useMemo(() => itemScore(e, foodFor(e, foods), bed), [e, foods, bed]);
+  return s ? <ScoreWhy s={s} title="Score" /> : null;
+}
+
 function TodayLog() {
   const entries = useStore((s) => s.entries);
   const supps = useStore((s) => s.supplements);
@@ -997,6 +1018,7 @@ function TodayLog() {
             {canEdit ? <button type="button" className="li-open" aria-expanded={edit === e.id} aria-label={`Change ${a}`} onClick={() => setEdit(edit === e.id ? null : e.id)}><span>{a}<small>{clock(e.at)} · {b}</small></span></button>
               : <span>{a}<small>{clock(e.at)} · {b}</small></span>}
             <button type="button" className="x" aria-label={`Delete ${a}`} onClick={() => act.removeEntry(e.id)}>×</button>
+            {edit === e.id && (e.kind === "food" || e.kind === "drink") && <LoggedScore e={e} />}
             {edit === e.id && (e.kind === "food" || e.kind === "drink") && <EntryEdit e={e} onDone={() => setEdit(null)} />}
             {/* a note on any check-in, later too (PLAN 89) */}
             {edit === e.id && e.kind === "feel" && <NoteField id={e.id} initial={e.note ?? ""} onSaved={() => setEdit(null)} autoFocus />}

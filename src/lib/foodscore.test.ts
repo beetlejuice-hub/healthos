@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { hoursBeforeBed, itemScore, plateScore } from "./foodscore";
+import { foodScore, hoursBeforeBed, itemScore, plateScore } from "./foodscore";
 import { BASIC_FOODS } from "./foods-basic";
 import type { EntryOf, Food } from "./types";
 
@@ -59,5 +59,25 @@ describe("a plate: its items weighed by calories", () => {
     const c = S(B("Chicken breast, cooked"), 150, "13:00");
     expect(plateScore([{ kcal: 247.5, s: c }, { kcal: 360, s: { score: null, parts: [], grade: null, missing: "x" } }])).toEqual({ score: null, unscored: 1 });
     expect(plateScore([{ kcal: 247.5, s: c }, { kcal: 4, s: null }])).toEqual({ score: 100, unscored: 0 });
+  });
+});
+
+// owner, 27 Oct: "FOR each food if i click on it it should show the score - based on how much macro it has, and how good it is
+// for my goal" — "3c": in the search results too, before it's logged
+describe("a food's score before it's logged (the search rows)", () => {
+  it("the same as logging it then — any portion — chicken breast 100 at lunch, a pizza 43", () => {
+    expect(foodScore(B("Chicken breast, cooked"), at("13:00"), BED)!.score).toBe(S(B("Chicken breast, cooked"), 150, "13:00").score);
+    expect(foodScore(B("Pizza margherita"), at("13:00"), BED)!.score).toBe(S(B("Pizza margherita"), 300, "13:00").score);
+    expect(foodScore(B("Chicken breast, cooked"), at("13:00"), BED)!.score).toBe(100);
+  });
+  it("timed by when you're logging it for: the same yoghurt at 22:00 loses its timing", () => {
+    const y = B("Greek yoghurt 0%");
+    expect(foodScore(y, at("13:00"), BED)!.score! - foodScore(y, at("22:00"), BED)!.score!).toBe(20);
+  });
+  it("a saved copy of a basic food gets the table's nutrients (as on the day sheet); a food with none says what's missing", () => {
+    const { nutri: _n, ...bare } = B("Apple") as Food & { nutri?: unknown };
+    expect(foodScore(bare as Food, at("13:00"), BED)!.score).toBe(56);
+    const mystery: Food = { id: "x1", name: "Something", per100: { kcal: 200, p: 5, c: 20, f: 10 }, source: "custom" } as Food;
+    expect(foodScore(mystery, at("13:00"), BED)).toMatchObject({ score: null, missing: "its sugar, saturated fat, fibre and salt aren't known yet" });
   });
 });

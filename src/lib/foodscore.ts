@@ -76,6 +76,17 @@ export function itemScore(e: FoodItem, food: Food | undefined, bedMinute: number
   return quality ? { score: Math.round(parts.reduce((a, p) => a + p.got, 0)), parts, grade: g.grade } : { score: null, parts, grade: null, missing: g.why };
 }
 
+/**
+ * A food before it's logged, as if eaten at `at` (owner, 27 Oct: "FOR each food if i click on it it should show the score
+ * - based on how much macro it has, and how good it is for my goal" — "3c": in the search results and on a logged food).
+ * The goal part is protein per 100 kcal and the quality its Nutri-Score, so the portion doesn't change it; the timing is
+ * when you're logging it for.
+ */
+export function foodScore(f: Food, at: number, bedMinute: number): ItemScore | null {
+  const item = { id: "", kind: "food" as const, at, foodId: f.id, name: f.name, grams: 100, macros: f.per100 };
+  return itemScore(item, foodFor(item, [f]) ?? f, bedMinute);
+}
+
 /** A plate: its scored items weighed by calories; null while any item big enough to count has no score. */
 export function plateScore(items: { kcal: number; s: ItemScore | null }[]): { score: number | null; unscored: number } {
   const counted = items.filter((x) => x.kcal >= FOOD_SCORE.minKcal), unscored = counted.filter((x) => x.s?.score == null).length;

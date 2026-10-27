@@ -1821,3 +1821,8 @@ span.fd-score[data-band="none"] { background: none; min-width: 34px; }
 .zones small, .zones-need { font-size: 12px; color: var(--c-dim, var(--k-ink-2)); margin: 0; }
 .tp-cardio-list li { display: grid; gap: 4px; }
 
+/* a food's score in the search rows and on a logged food (27 Oct, "3c") */
+.fr-right { display: inline-flex; align-items: center; justify-content: flex-end; gap: 8px; }
+.fr-li .fd-why { grid-column: 1 / -1; cursor: default; }
+.fd-why li.fd-title { font-weight: 600; }
+.li > .fd-why { grid-column: 1 / -1; }
