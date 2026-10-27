@@ -7,7 +7,8 @@
 import { SourceLink } from "./SourceLink";
 import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import { act, getState, newId, useStore, type Experiment } from "../lib/store";
-import { askAi, askRead, bandForRead, chatContext, contextNow, nightContext, refreshAiStatus, useAiStatus } from "../lib/ai/client";
+import { askAi, askRead, bandForRead, chatContext, contextNow, leadNow, nightContext, refreshAiStatus, useAiStatus } from "../lib/ai/client";
+import { leadLines, withLead } from "../lib/ai/lead";
 import { askChat } from "../lib/ai/chat";
 import { bandNow, bandSettled, onBandSettled, onNights } from "../lib/band-client";
 import { ChatChart } from "./ChatChart";
@@ -69,19 +70,21 @@ async function writeDigest(day: string) {
   if (ai.digest?.day === day && freshRead(ai.digest)) return null;
   // this morning's angle and kind of new thing, in turn (PLAN 132–133)
   // …and the band's night check or VO2 max when they have something to say (PLAN 52)
-  const st = getState(), brief = morningBrief(day, st.templates, st.workouts, Date.now(), bandForRead(st));
+  // the app's strongest tested link not featured lately leads (PLAN 176; owner, 27 Oct: "more likely for graphs and connections")
+  const st = getState(), lead = leadNow(st), brief = morningBrief(day, st.templates, st.workouts, Date.now(), bandForRead(st), !!lead);
   // what yesterday's reads suggested, for a follow-up question (PLAN 156)
   const follow = [
     ...(ai.digest && ai.digest.day < day && ai.digest.day >= addDays(day, -2) ? ai.digest.items.filter((i) => i.type === "try" || i.type === "protocol").map((i) => `${ai.digest!.day} morning read: ${i.title}${i.tip ? ` — "${i.tip}"` : ""}`) : []),
     ...(ai.night && ai.night.day >= addDays(day, -1) ? ai.night.change.map((c) => `${ai.night!.day} read-back: ${c.what}`) : []),
   ];
   // it may check its claims with the app's own numbers first (PLAN 160)
-  const r = await askRead({ task: "digest", context: `${contextNow()}\n${brief.join("\n")}\n${askFor(day, "morning", follow).join("\n")}`, shown: ai.shown.slice(-40) });
+  const r = await askRead({ task: "digest", context: `${contextNow()}\n${brief.join("\n")}\n${lead ? `${leadLines(lead).join("\n")}\n` : ""}${askFor(day, "morning", follow).join("\n")}`, shown: ai.shown.slice(-40) });
   if (!r.ok) return r;
-  const n = r.answer.news, at = Date.now();
+  const n = r.answer.news, at = Date.now(), items = withLead(r.answer.items, lead), led = lead && items.some((i) => i.lead);
   const qs = keepNew(r.answer.questions ?? [], `${day}:m`);
   act.setAi((a) => ({
-    digest: { day, at, greeting: r.answer.greeting, items: r.answer.items, ...(r.answer.looked ? { looked: r.answer.looked } : {}) },
+    digest: { day, at, greeting: r.answer.greeting, items, ...(r.answer.looked ? { looked: r.answer.looked } : {}) },
+    ...(led ? { leads: [...(a.leads ?? []), { id: lead.id, day }].slice(-60) } : {}),
     ...(qs.length ? { questions: { day, list: qs, from: "morning" as const, at }, asked: [...a.asked, ...qs.map((q) => q.text)].slice(-60), daily: tracked(a.daily, qs) } : {}),
     shown: [...a.shown, ...r.answer.items.map((i) => i.title), ...(n ? [n.title] : [])].slice(-80),
     // something new is a message (owner, 16 Oct: "only send message when it has a new finding, a new sttudy"); the rest is on Today

@@ -3,6 +3,7 @@
  * (calls today, cost) for Settings, and build the context the AI is told — on demand, at call time.
  */
 import { AI_ERRORS, MONTHLY_USD, READ_ROUNDS, isLooks, type AiError } from "./tasks";
+import { pickLead } from "./lead";
 import { runChatTool } from "./chattools";
 import { gridLines, todayLines, trainingLines } from "./sections";
 import { readiness } from "../readiness";
@@ -131,6 +132,12 @@ export function bandForRead(state: State = getState(), now = Date.now()): { nigh
 }
 
 /** The text the AI is told about you right now (also shown in Settings → AI → What the AI sees). */
+/** Today's lead for the morning read (PLAN 176): the strongest tested link in the last 90 days not featured in 3 weeks. */
+export function leadNow(state: State = getState(), now = Date.now()) {
+  const today = localDay(now), days = dailyFacts(state.entries, state.workouts, state.settings, addDays(today, -90), addDays(today, -1));
+  return pickLead(scout(days, state.supplements, (id) => !!state.scout[id]?.dismissed), state.ai.leads, today);
+}
+
 export function contextNow(state: State = getState(), now = Date.now(), { slim = false, todaySoFar = true } = {}): string {
   // the chat sees what Today shows from the AI: it isn't posted in the chat any more (owner, 16 Oct)
   const onToday = slim ? onTodayLines(state.ai, now) : [];

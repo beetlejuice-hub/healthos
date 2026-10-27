@@ -14,6 +14,7 @@ import { DEFAULT_GOALS, slotOf, slotsOf, slotTime } from "./types";
 import { tidyWorkouts } from "./training";
 import type { ScoutMemo } from "./scout";
 import type { Energy } from "./energy";
+import type { LeadMark } from "./ai/lead";
 import { DEFAULT_MODELS, MODELS_V, modelsNow, type DigestItem, type Models, type NightAnswer, type Question, type ReviewAnswer, type SupplementAnswer, type DiveAnswer, type DiveStudy } from "./ai/tasks";
 import type { Due, ReviewRow } from "./review";
 import type { ChartSpec } from "./ai/chattools";
@@ -53,6 +54,8 @@ export type AiState = {
   /** This week's deep dive (PLAN 160), and the topics so far (never again). `repicks`: "pick another" taps this week. */
   dive?: (DiveAnswer & { key: string; at: number; seen?: number; looked?: string[]; repicks?: number; skipped?: string[] }) | null;
   dives?: { key: string; topic: string }[];
+  /** Leads the morning read has explained, and when (PLAN 176): one rests 3 weeks before it leads again. */
+  leads?: LeadMark[];
   /** Read items you saved for later (PLAN 159), newest first. */
   saved?: Saved[];
   /** When you last opened the AI tab: newer unprompted messages show a dot. */

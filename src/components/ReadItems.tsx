@@ -16,6 +16,7 @@ import { isSaved, toggleSaved } from "../lib/ai/saved";
 import type { DigestItem, DigestMeasure, Sure } from "../lib/ai/tasks";
 import { addDays, localDay } from "../lib/time";
 import { DigestChart, MiniChart } from "./DigestChart";
+import { LeadChart } from "./LeadChart";
 import { AskAbout } from "./AskAbout";
 import { aboutItem } from "../lib/ai/chat";
 
@@ -41,7 +42,7 @@ export function ReadItems({ items, open, onOpen, tip, from, day }: { items: Dige
       return (
         <li key={k} className={`mr mr-${i.type}`} data-open={on || undefined}>
           <button type="button" className="mr-row" aria-expanded={on} onClick={() => { if (!open) onOpen(); setRow(on ? null : k); }}>
-            <span className="mr-kind">{KIND[i.type]}</span><b>{i.title}</b>
+            <span className="mr-kind">{i.lead ? "Your data · tested" : KIND[i.type]}</span><b>{i.title}</b>
             {!open && i.measure && vals && <MiniChart k={i.measure} vals={vals} />}
             <span className="chev" aria-hidden="true">{on ? "▴" : "▾"}</span>
           </button>
@@ -50,7 +51,7 @@ export function ReadItems({ items, open, onOpen, tip, from, day }: { items: Dige
             {i.chain && <ol className="mr-chain">{i.chain.map((c, n) => <li key={n}><span>{c.step}</span><i className={`sure sure-${c.sure}`}>{SURE_WORDS[c.sure]}</i></li>)}</ol>}
             <p>{i.sure && !i.chain && <i className={`sure sure-${i.sure}`}>{SURE_WORDS[i.sure]}</i>}{i.text}</p>
             {i.tip && <p className="mr-tip"><small>{tip}</small>{i.tip}</p>}
-            {i.measure && vals && <DigestChart k={i.measure} vals={vals} today={today} goal={goalOf(i.measure)} />}
+            {i.lead ? <LeadChart lead={i.lead} /> : i.measure && vals && <DigestChart k={i.measure} vals={vals} today={today} goal={goalOf(i.measure)} />}
             {i.source && <SourceLink s={i.source} />}
             {/* talk back to it (PLAN 164): "for me it's the opposite", or what food or supplement helps */}
             <AskAbout key={`${day}:${i.title}`} about={aboutItem(i, from, day)} label={`Re “${i.title}”`} placeholder="Ask or tell the AI about this…"

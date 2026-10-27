@@ -2617,3 +2617,39 @@ both reads and the questions. Phases in that order; #152 RPE waits (owner).
    score and why above its values. lib/foodscore foodScore; components/FoodScore (chip and why). Tests: foodscore.test
    (the same as logged, timed by the log time, a saved copy gets the table's nutrients, one with none says what's
    missing), e2e foodtap (chicken 100 with why, not added on the chip, added on the row; the pizza's 45 with why).
+
+176. [~] **A smarter AI — connections, graphs, research; never the obvious** (phase 1 done 27 Oct) (owner, 27 Oct: "ai seems to say the obvious when
+   asking for new habits, supps... bit boring. can we make it smarter, give more detailed answers, go to web if needed" ·
+   "Rn it just summarizes my day and tells me to eat more protein and sleep better basically" · "really have to make ai
+   smarter. more likely for graphs and connections between things and research/studies" — then "5 yea", and "I like the
+   study shows, the new things to try, so we can keep these"). (claimed: agent, 27 Oct — lib/ai/lead.ts, brief.ts,
+   tasks.ts prompts, ReadItems, LeadChart)
+   - Why it's bland: the app's own tested links (scout: rank correlations across food, caffeine, alcohol, training,
+     supplements and feelings, weekday/weekend adjusted, p < 0.005, with how often they held) reach the AI only as
+     "Early patterns (could be chance)" lines inside ~11k tokens, while the morning's "pattern" item is steered by a
+     rotating angle — on a morning whose angle has no data, it fills with protein and sleep.
+   - Phase 1 (now): **Today's lead.** The app picks the strongest tested link not featured in 3 weeks and hands it to the
+     morning read as the "pattern" item, as a connection: said with the app's numbers (held 9 of 11 days, rank r),
+     WHY searched (mechanism or study, cited), a chain, and a tip that tests it. The app draws both things over 14 days
+     beside it (a two-row chart: the cause on top, the outcome under it, the days that show it lit). **Never the
+     obvious**, in every task: no "eat more protein / sleep more / drink water / less caffeine" unless it comes with
+     something he didn't know — his own number, the mechanism, a dose or timing from a study. **Chat goes deep** on
+     habits, supplements, foods and protocols: what exactly, why (mechanism), what studies found (searched, linked),
+     how it fits his stack and data, how to test it in the app — not 120 words.
+   - Phase 2: Insights → "Leads": every tested link as a card with its two-row chart (no AI cost), each with "Ask why"
+     (the talk-back chat) and "Test it" (an experiment from the link).
+   - Phase 3: the night read's "noticed" from the day's leads; the weekly deep dive picks its question from the leads.
+   - Tests: lead.test (planted link found and picked, a featured one rests 3 weeks, a control with no link picks none),
+     brief.test (the lead replaces the angle; the obvious rule in every task), e2e (the lead item with its two-row chart).
+   - Open: none blocking — defaults picked: 3 weeks before a lead repeats; the strongest by |r| × held share.
+   - Phase 1 as built (27 Oct): lib/ai/lead.ts (pickLead, leadLines, leadSeries, withLead); the morning brief gives the
+     lead the "pattern" item (the third on a morning the night check flagged); the item it comes back as gets the lead
+     and the app draws it (LeadChart: the first thing on top, the second — the next day's when lagged — under it, the
+     days it was on lit; tap a day for both). Leads rest 3 weeks (ai.leads). Found while testing: scout flags a chance
+     link for about half of people with nothing real in their data (p < 0.005 over ~200 pairs) — so only a link at
+     p < 0.0002 leads: chance gets there ~3 in 100, a planted 2-point next-day effect still leads 94 in 100 over 90 days
+     (measured). "Never the obvious" is in the shared voice (every task); the chat answers habits, supplements, foods
+     and protocols in 150–350 words with mechanism, searched studies with links, fit to his stack and data, and how to
+     test it. Tests: lead.test (planted found across 30 people, control ≤5 in 100 with the bar — ~50 without, rests 3
+     weeks, the chart's days line up, the item gets the lead, the brief, the prompts), e2e lead (90 days of beers →
+     next-day mood: sent with its numbers, drawn with the drinking days lit, rests; control sends none).

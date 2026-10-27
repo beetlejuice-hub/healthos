@@ -56,7 +56,7 @@ export const VO2_ANGLE = (line: string) => `Cardio fitness — their VO2 max mov
 
 /** This morning's angle and "New to try" kind, and the workout that's due (when they train). */
 export function morningBrief(day: string, templates: { name: string }[], workouts: { template: string; startedAt: number; endedAt: number | null; kind?: string }[], now: number,
-  band: { night: string | null; vo2: { line: string; changes: { word: string }[] } | null } = { night: null, vo2: null }): string[] {
+  band: { night: string | null; vo2: { line: string; changes: { word: string }[] } | null } = { night: null, vo2: null }, lead = false): string[] {
   const n = dayNo(day), lifting = workouts.filter((w) => w.kind !== "cardio");
   // the day's due workout only when they trained in the last 2 weeks — not a nudge into a split they've stopped
   const due = lifting.some((w) => w.startedAt >= now - 14 * DAY) ? nextTemplate(templates, lifting) : undefined;
@@ -64,11 +64,13 @@ export function morningBrief(day: string, templates: { name: string }[], workout
   const a = n % ANGLES.length, turn = !due && ANGLES[a].startsWith("Today's session") ? ANGLES[(a + 2) % ANGLES.length] : ANGLES[a];
   const moved = band.vo2 && band.vo2.changes.at(-1)?.word !== "steady" && band.vo2.changes.length > 0;
   const angle = band.night ? NIGHT_ANGLE(band.night) : moved && turn.startsWith("One number that moved") ? VO2_ANGLE(band.vo2!.line) : turn;
+  // the app's own tested link leads (PLAN 176): it takes the pattern item, or the third on a morning the night check flagged
+  const LEAD_ITEM = "Today's lead — a \"connection\" about the link in \"## Today's lead\": its numbers, why (searched), its chain, a tip that tests it";
   return [
     "## This morning (the app's picks, so mornings differ)",
-    `- Angle for the "pattern" item: ${angle}`,
+    `- Angle for the "pattern" item: ${lead && !band.night ? LEAD_ITEM : angle}`,
     `- "try" item today: ${TRY[n % TRY.length]}`,
-    `- Third item today: ${THIRD[n % THIRD.length]}`,
+    `- Third item today: ${lead && band.night ? LEAD_ITEM : THIRD[n % THIRD.length]}`,
     ...(due ? [`- Today's plan: ${due.name} is the workout that's due next`] : []),
   ];
 }

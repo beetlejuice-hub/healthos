@@ -1826,3 +1826,11 @@ span.fd-score[data-band="none"] { background: none; min-width: 34px; }
 .fr-li .fd-why { grid-column: 1 / -1; cursor: default; }
 .fd-why li.fd-title { font-weight: 600; }
 .li > .fd-why { grid-column: 1 / -1; }
+/* today's lead, drawn: the first thing on top, the second under it, its days lit (PLAN 176) */
+.lc .dc-plot { --dc: var(--c-ink-2); }
+.lc .lc-a { height: 26px; border-bottom: 0; margin-bottom: 4px; }
+.lc .lc-b { --dc: var(--mood); height: 56px; }
+.lc .dc-day[data-lit]::after { content: ""; position: absolute; inset: 0; background: color-mix(in srgb, var(--mood) 12%, transparent); border-radius: 3px; pointer-events: none; }
+.lc-yes { position: absolute; left: 50%; top: 50%; width: 9px; height: 9px; margin: -4.5px 0 0 -4.5px; border-radius: 2px; border: 1.5px solid var(--c-dim); }
+.lc-yes.on { background: var(--c-ink-2); border-color: var(--c-ink-2); }
+.lc .dc-line polyline { stroke: var(--mood); }
