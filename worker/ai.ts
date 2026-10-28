@@ -161,30 +161,50 @@ export async function callModel(b: AiRequest, choice: ModelChoice, apiKey: strin
   const tools = chat ? [...CHAT_TOOLS.map((t) => ({ ...t, strict: true })), { type: m.web, name: "web_search" as const, max_uses: 3 }]
     : read ? [...READ_TOOLS.map((t) => ({ ...t, strict: true })), { type: m.web, name: "web_search" as const, max_uses: b.task === "dive" ? 10 : 4 }]
     : web ? [{ type: m.web, name: "web_search" as const, max_uses: lookup ? 2 : task === "verdict" ? 3 : 4 }] : null;
-  const paused: ChatTurn[] = [];
-  // A web-search turn can pause; continue it (at most 3 times) by sending the partial answer back.
-  for (let turn = 0; turn < 4; turn++) {
-    res = await client.beta.messages.create({
-      model: m.id,
-      max_tokens: web ? 16000 : 4000,
-      system,
-      messages,
-      ...(m.thinking ? { thinking: { type: "adaptive" as const } } : {}),
-      output_config: { ...(m.thinking ? { effort } : {}), ...(schema ? { format: { type: "json_schema" as const, schema: schema as Record<string, unknown> } } : {}) },
-      ...(tools ? { tools } : {}),
-      ...(final ? { tool_choice: { type: "none" as const } } : {}),
-      ...(choice !== "haiku" ? { betas: ["server-side-fallback-2026-07-01"], fallbacks: "default" as const } : {}),
-    } as Anthropic.Beta.MessageCreateParamsNonStreaming);
-    // each response priced as it comes, at the rates of the model that answered (a fallback bills at its own — 27 Oct)
-    spent.usd += costUsd(choice, res.usage as Usage);
-    spent.webFailed.push(...searchFails(res.content));
-    usage.input_tokens += res.usage.input_tokens; usage.output_tokens += res.usage.output_tokens;
-    usage.cache_read_input_tokens += res.usage.cache_read_input_tokens ?? 0; usage.cache_creation_input_tokens += res.usage.cache_creation_input_tokens ?? 0;
-    usage.server_tool_use.web_search_requests += res.usage.server_tool_use?.web_search_requests ?? 0;
-    if (res.stop_reason !== "pause_turn") break;
-    messages = [...messages, { role: "assistant", content: res.content }];
-    paused.push({ role: "assistant", content: res.content });
+  // A search that comes back "unavailable" (Anthropic: "an internal error occurred") is tried again once, the whole
+  // request, with the search called directly instead of from dynamic filtering's code — a different path to the same
+  // search (owner, 28 Oct: "Ai says web search is down..why?"). Failing again, it's said with the answer as before.
+  const direct = tools?.map((t) => ("type" in t && t.type === m.web ? { ...t, allowed_callers: ["direct"] } : t)) ?? null;
+  const start = messages;
+  let paused: ChatTurn[] = [], fails: string[] = [];
+  let first: { res: Anthropic.Beta.BetaMessage | null; paused: ChatTurn[]; fails: string[]; messages: typeof messages } | null = null;
+  for (let attempt = 0; attempt < 2; attempt++) {
+    const useTools = attempt ? direct : tools;
+    if (attempt) first = { res, paused, fails, messages };
+    paused = []; fails = []; messages = start;
+    try {
+    // A web-search turn can pause; continue it (at most 3 times) by sending the partial answer back.
+    for (let turn = 0; turn < 4; turn++) {
+      res = await client.beta.messages.create({
+        model: m.id,
+        max_tokens: web ? 16000 : 4000,
+        system,
+        messages,
+        ...(m.thinking ? { thinking: { type: "adaptive" as const } } : {}),
+        output_config: { ...(m.thinking ? { effort } : {}), ...(schema ? { format: { type: "json_schema" as const, schema: schema as Record<string, unknown> } } : {}) },
+        ...(useTools ? { tools: useTools } : {}),
+        ...(final ? { tool_choice: { type: "none" as const } } : {}),
+        ...(choice !== "haiku" ? { betas: ["server-side-fallback-2026-07-01"], fallbacks: "default" as const } : {}),
+      } as Anthropic.Beta.MessageCreateParamsNonStreaming);
+      // each response priced as it comes, at the rates of the model that answered (a fallback bills at its own — 27 Oct)
+      spent.usd += costUsd(choice, res.usage as Usage);
+      fails.push(...searchFails(res.content));
+      usage.input_tokens += res.usage.input_tokens; usage.output_tokens += res.usage.output_tokens;
+      usage.cache_read_input_tokens += res.usage.cache_read_input_tokens ?? 0; usage.cache_creation_input_tokens += res.usage.cache_creation_input_tokens ?? 0;
+      usage.server_tool_use.web_search_requests += res.usage.server_tool_use?.web_search_requests ?? 0;
+      if (res.stop_reason !== "pause_turn") break;
+      messages = [...messages, { role: "assistant", content: res.content }];
+      paused.push({ role: "assistant", content: res.content });
+    }
+    } catch (e) {
+      // the retry itself turned down (say, a chat that searched the other way earlier): keep the first answer, as before
+      if (!first) throw e;
+      ({ res, paused, fails, messages } = first);
+      break;
+    }
+    if (!tools || !fails.includes("unavailable")) break;
   }
+  spent.webFailed.push(...fails);
   if (!res) throw new Error("no answer");
   if (res.stop_reason === "refusal") return { refused: true as const, usage };
   if (chat) {

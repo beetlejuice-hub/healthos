@@ -409,10 +409,30 @@ describe("/api/ai", () => {
     const digest = { greeting: "Morning!", items: [{ type: "fact", title: "Protein first", text: "…", measure: "protein" }] };
     const fail = { type: "web_search_tool_result", tool_use_id: "s1", content: { type: "web_search_tool_result_error", error_code: "unavailable" } };
     const capped = { type: "web_search_tool_result", tool_use_id: "s2", content: { type: "web_search_tool_result_error", error_code: "max_uses_exceeded" } };
-    const w = world([{ text: "", content: [{ type: "server_tool_use", id: "s1", name: "web_search", input: { query: "q" } }, fail, capped, { type: "text", text: JSON.stringify(digest) }] }]);
+    const failed = { text: "", content: [{ type: "server_tool_use", id: "s1", name: "web_search", input: { query: "q" } }, fail, capped, { type: "text", text: JSON.stringify(digest) }] };
+    // unavailable twice: tried again once with the search called directly, then said with the answer
+    const w = world([failed, failed]);
     const body = (await (await handleAi(post({ task: "digest", context: "c", shown: [] }), env, w.deps)).json()) as { answer: { greeting: string }; webFailed?: string[] };
     expect(body.answer.greeting).toBe("Morning!");
     expect(body.webFailed).toEqual(["unavailable"]); // its own cap reached isn't a failure
+    expect(w.sent.length).toBe(2);
+    const webTool = (b: Record<string, unknown>) => (b.tools as { name: string; allowed_callers?: string[] }[]).find((t) => t.name === "web_search")!;
+    expect(webTool(w.sent[0].body).allowed_callers).toBeUndefined();
+    expect(webTool(w.sent[1].body).allowed_callers).toEqual(["direct"]);
+    // unavailable, then the direct search works: the second answer, nothing said about a failure, both paid for
+    const retried = world([failed, { text: JSON.stringify({ ...digest, greeting: "Morning, searched." }) }]);
+    const again = (await (await handleAi(post({ task: "digest", context: "c", shown: [] }), env, retried.deps)).json()) as { answer: { greeting: string }; webFailed?: string[]; costUsd: number };
+    expect(again.answer.greeting).toBe("Morning, searched.");
+    expect(again.webFailed).toBeUndefined();
+    expect(retried.sent.length).toBe(2);
+    // the retry turned down: the first answer stands, the failure said — never worse than not retrying
+    const refused = world([failed, { text: "", error: { status: 400, type: "invalid_request_error", message: "tools.0: something about callers" } }]);
+    const kept = (await (await handleAi(post({ task: "digest", context: "c", shown: [] }), env, refused.deps)).json()) as { answer: { greeting: string }; webFailed?: string[] };
+    expect(kept.answer.greeting).toBe("Morning!"); expect(kept.webFailed).toEqual(["unavailable"]);
+    // the cap alone isn't retried
+    const capOnly = world([{ text: "", content: [capped, { type: "text", text: JSON.stringify(digest) }] }]);
+    await handleAi(post({ task: "digest", context: "c", shown: [] }), env, capOnly.deps);
+    expect(capOnly.sent.length).toBe(1);
     const ok = world([{ text: JSON.stringify(digest) }]);
     expect(((await (await handleAi(post({ task: "digest", context: "c", shown: [] }), env, ok.deps)).json()) as { webFailed?: string[] }).webFailed).toBeUndefined();
   });

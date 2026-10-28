@@ -2887,4 +2887,11 @@ both reads and the questions. Phases in that order; #152 RPE waits (owner).
      "For you · 1 of 6" card, one ask at a time (my pick); A after the check-in (folds to a line, ask 2: the morning
      read); B — one Now card stepping through everything, log buttons pinned above the tabs; a tile opened (Stack).
      Waiting on his pick or changes.
+   - Owner, 28 Oct: "A" (Today A) — and "Ai says web search is down..why?". The app shows Anthropic's own code from a
+     search result: "unavailable" = "an internal error occurred" on their search (docs, web-search-tool → Errors). Not a
+     setting: web search switched off in the Console fails the whole request with a 400 instead. Couldn't see how often
+     (Sentry/Supabase connections down from here). Done: a search that comes back "unavailable" is tried again once,
+     the whole request, with the search called directly (allowed_callers: ["direct"]) instead of from dynamic
+     filtering's code; failing again it's said as before; a retry the API turns down keeps the first answer (worker
+     ai.test: both ways, the refusal, and that the cap alone isn't retried).
 
