@@ -15,7 +15,7 @@ import { leadSeries, type LeadRef } from "../lib/ai/lead";
 import { median } from "../lib/stats";
 import { addDays, atMinute, dayLabel, localDay } from "../lib/time";
 
-const show = (v: number | null, unit?: string, yes?: boolean) => (v == null ? "—" : yes ? (v ? "yes" : "no") : `${Math.abs(v) >= 100 ? Math.round(v).toLocaleString("en-GB") : Math.round(v * 10) / 10}${unit ? ` ${unit}` : ""}`);
+const show = (v: number | null, unit?: string, yes?: boolean, body?: boolean) => (v == null ? "—" : body ? ["no", "a bit", "a lot"][v] ?? String(v) : yes ? (v ? "yes" : "no") : `${Math.abs(v) >= 100 ? Math.round(v).toLocaleString("en-GB") : Math.round(v * 10) / 10}${unit ? ` ${unit}` : ""}`);
 
 export function LeadChart({ lead, days = 14 }: { lead: LeadRef; days?: number }) {
   const entries = useStore((s) => s.entries), workouts = useStore((s) => s.workouts), settings = useStore((s) => s.settings), supps = useStore((s) => s.supplements);
@@ -43,17 +43,17 @@ export function LeadChart({ lead, days = 14 }: { lead: LeadRef; days?: number })
           </button>
         ))}
       </div>
-      <div className="dc-plot level lc-b" style={{ gridTemplateColumns: `repeat(${n}, 1fr)` }} role="img" aria-label={`${s.b.name}${next}: ${s.b.vals.map((v) => show(v, s.b.unit)).join(", ")}`}>
+      <div className="dc-plot level lc-b" style={{ gridTemplateColumns: `repeat(${n}, 1fr)` }} role="img" aria-label={`${s.b.name}${next}: ${s.b.vals.map((v) => show(v, s.b.unit, false, s.b.body)).join(", ")}`}>
         {line && <svg className="dc-line" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"><polyline points={line} /></svg>}
         {s.b.vals.map((v, i) => (
-          <button type="button" key={i} className="dc-day" data-lit={lit[i] || undefined} data-pick={pick === i || undefined} aria-label={`${label(i)}: ${s.b.name}${next} ${show(v, s.b.unit)}`} onClick={() => setPick(pick === i ? null : i)}>
+          <button type="button" key={i} className="dc-day" data-lit={lit[i] || undefined} data-pick={pick === i || undefined} aria-label={`${label(i)}: ${s.b.name}${next} ${show(v, s.b.unit, false, s.b.body)}`} onClick={() => setPick(pick === i ? null : i)}>
             {v != null && <i className="dc-dot" style={{ bottom: `${yb(v)}%` }} />}
           </button>
         ))}
       </div>
       <p className="dc-ends" aria-hidden="true"><span>{label(0)}</span><span>{label(n - 1)}</span></p>
       <p className="dc-words">{pick != null
-        ? <><b>{label(pick)}</b> · {s.a.name} {show(s.a.vals[pick], s.a.unit, s.a.yes)} · {s.b.name}{next} {show(s.b.vals[pick], s.b.unit)}</>
+        ? <><b>{label(pick)}</b> · {s.a.name} {show(s.a.vals[pick], s.a.unit, s.a.yes)} · {s.b.name}{next} {show(s.b.vals[pick], s.b.unit, false, s.b.body)}</>
         : <>Lit: the days with {s.a.yes ? s.a.name : `more ${s.a.name}`} — see where {s.b.name} sits on them.</>}</p>
     </div>
   );

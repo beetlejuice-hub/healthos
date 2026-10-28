@@ -17,6 +17,8 @@ import { BETWEEN, gaps } from "../lib/detectors/between";
 import { CAF_SLEEP } from "../lib/caffeine-sleep";
 import { localDay } from "../lib/time";
 import { FeelSlider } from "./FeelSlider";
+import { BodyChips } from "./BodyChips";
+import { bodyLine, bodyOrder, type Level } from "../lib/bodywords";
 import { useBand } from "../lib/band-client";
 import { sleepScore } from "../lib/sleepscore";
 import { fellAsleep, nights } from "../lib/sleep";
@@ -74,6 +76,14 @@ export function HowNow({ now, always = false }: { now: number; always?: boolean 
     const cur = open.doing ?? [];
     act.updateEntry(open.id, { doing: cur.includes(tag) ? cur.filter((t) => t !== tag) : [...cur, tag] } as Partial<Entry>);
   };
+  // How's your body? (owner, 28 Oct: C) — on the open check-in, like "What were you up to?": the card stays small until
+  // you're answering (owner, 2 Oct: "big and bad on phone")
+  const setBody = (changes: Record<string, Level | undefined>) => {
+    if (!open) return;
+    const next: Record<string, Level> = { ...(open.body ?? {}) };
+    for (const [k, l] of Object.entries(changes)) if (l) next[k] = l; else delete next[k];
+    act.updateEntry(open.id, { body: Object.keys(next).length ? next : undefined } as Partial<Entry>);
+  };
   // every word kept, several tags at once (27 Oct: "one drink and work" became "one")
   const addOwn = () => {
     const cur = open?.doing ?? [], ts = tagsOf(own).filter((t) => !cur.includes(t));
@@ -100,6 +110,7 @@ export function HowNow({ now, always = false }: { now: number; always?: boolean 
   const addNightOwn = () => { const ts = tagsOf(nightOwn ?? "").filter((t) => !nightTags.includes(t)); if (ts.length) rateSleep({ tags: [...nightTags, ...ts] }); setNightOwn(null); };
 
   const order = useMemo(() => doingOrder(entries, now), [entries, now]);
+  const bodyKeys = useMemo(() => bodyOrder(entries, now), [entries, now]);
   // Last night's minutes to fall asleep from the band, when it has the night (PLAN 77) — no need to ask then.
   const band = useBand().data, bandSleep = band?.sleep;
   const fell = useMemo(() => (bandSleep ? fellAsleep(bandSleep, now) : null), [bandSleep, now]);
@@ -122,7 +133,7 @@ export function HowNow({ now, always = false }: { now: number; always?: boolean 
     const set = FEEL_KEYS.filter((k) => recent[k] != null).map((k) => `${k} ${recent[k]}`).join(" · ");
     return (
       <div className="hownow calm-line" id="feel">
-        <span>{set ? "Rated" : "Noted"} {clock(recent.at)}{set ? ` · ${set}` : ""}{recent.note ? <em className="hn-said"> · “{recent.note}”</em> : null}</span>
+        <span>{set ? "Rated" : "Noted"} {clock(recent.at)}{set ? ` · ${set}` : ""}{recent.body ? ` · ${bodyLine(recent.body)}` : ""}{recent.note ? <em className="hn-said"> · “{recent.note}”</em> : null}</span>
         <span className="hn-btns">
           <button type="button" className="pill-btn" aria-expanded={noting} onClick={() => setNoting(!noting)}>{recent.note ? "Edit note" : "Add a note"}</button>
           <button type="button" className="pill-btn" onClick={() => { setAgain(true); setNoting(false); }}>{morning && night?.rating == null ? "Rate sleep" : "Rate again"}</button>
@@ -165,6 +176,8 @@ export function HowNow({ now, always = false }: { now: number; always?: boolean 
             word={(v) => wordOf(k, v)} color={COLOR[k]} inverted={k === "stress"} onChange={(n) => rate(k, n)} />
         ))}
       </div>
+
+      {open && <BodyChips body={open.body ?? {}} order={bodyKeys} onSet={setBody} />}
 
       {open && <div className="hn-doing">
         <div className="hn-head"><b>What were you up to?</b><em>{since ? `since ${clock(since)}` : "today"} · optional</em></div>

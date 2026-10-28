@@ -20,7 +20,7 @@ import type { Supplement } from "./types";
 import { pTwoSided } from "./regress";
 import { mean, median } from "./stats";
 import { loggedInFull } from "./dayscore";
-import { BODY_WORDS } from "./bodywords";
+import { BODY_WORDS, bodyLabel } from "./bodywords";
 
 export type Signal = {
   id: string;
@@ -84,12 +84,30 @@ export function signals(supplements: Supplement[], facts: DayFacts[] = [], allWo
   ];
   for (const w of BODY_WORDS) {
     if (!allWords && facts.filter((d) => d.felt?.includes(w.id)).length < SCOUT.minWordDays) continue;
-    s.push({ id: `felt-${w.id}`, family: "body", name: w.name, yes: w.yes, say: w.say, outcomeOnly: true, notWith: ["feel"], get: (d) => (d.felt == null ? null : d.felt.includes(w.id) ? 1 : 0) });
+    s.push(bodySignal(w.id, w.name, w.yes, w.say));
   }
+  // your own words from the check-in's chips ("knee pain"), the same way, once on 4+ days
+  const own = new Map<string, number>();
+  for (const d of facts) for (const k of d.felt ?? []) if (!BODY_WORDS.some((w) => w.id === k)) own.set(k, (own.get(k) ?? 0) + 1);
+  for (const [k, n] of own) if (allWords || n >= SCOUT.minWordDays) s.push(ownSignal(k));
   for (const x of supplements) {
     s.push({ id: `supp-${x.id}`, family: `supp-${x.id}`, name: x.name, yes: `a ${x.name} day`, get: (d) => { const had = suppDay(d, x.id); return had == null ? null : had ? 1 : 0; }, lane: "supps", causeOnly: true });
   }
   return s;
+}
+
+/**
+ * How your body felt as a number a day: 0 not felt (a check-in that didn't say it), 1 a bit (or said in a note), 2 a lot
+ * (the check-in's chips, owner 28 Oct: "C") — so "the more you drank, the weaker" counts how much, not just whether.
+ */
+function bodySignal(key: string, name: string, yes: string, say: string): Signal {
+  return { id: `felt-${key}`, family: "body", name, yes, say, outcomeOnly: true, notWith: ["feel"],
+    get: (d) => (d.felt == null ? null : d.feltHow?.[key] ?? (d.felt.includes(key) ? 1 : 0)) };
+}
+/** One of your own words, from its key — also what a lead's chart rebuilds when the word isn't in its 14 days. */
+export function ownSignal(key: string): Signal {
+  const w = bodyLabel(key);
+  return bodySignal(key, w, `a day you noted ${w}`, `you noted ${w}`);
 }
 
 /** minWordDays: a body word joins once it's in your notes on this many days. */
@@ -170,7 +188,9 @@ export function pair(a: Signal, b: Signal, lag: 0 | 1, facts: DayFacts[]): Patte
     const on = ys.filter((_, i) => xs[i] > 0), off = ys.filter((_, i) => xs[i] === 0);
     // Against your average on other days (a median is 0 when most days are 0, and then nothing can be "lower").
     const usual = mean(off);
-    onAvg = mean(on); offAvg = mean(off);
+    // how your body felt is said as a share of days ("60 % of days"), whether it was a bit or a lot
+    const share = (v: number[]) => mean(v.map((y) => (y > 0 ? 1 : 0)));
+    onAvg = b.say ? share(on) : mean(on); offAvg = b.say ? share(off) : mean(off);
     on.forEach((y) => { of++; if ((y - usual) * sign > 0) held++; });
     days = dayOf.filter((_, i) => xs[i] > 0);
   } else {

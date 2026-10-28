@@ -904,6 +904,11 @@ a { color: inherit; }
 .hn-tags button { border: 0; border-radius: 999px; padding: 7px 12px; background: var(--c-card-2); color: var(--c-ink); font-size: 13px; font-weight: 600; }
 .hn-tags button[aria-pressed="true"], .hn-tags button[aria-checked="true"] { background: var(--c-ink); color: var(--c-bg); }
 .hn-tags .hn-more { background: transparent; color: var(--c-ink-2); box-shadow: inset 0 0 0 1px #ffffff22; }
+/* How's your body? (owner, 28 Oct, C): one tap a bit ●, two a lot ●● — a lot is the full chip, a bit a softer one */
+.hn-body { display: grid; gap: 8px; }
+.hn-bchips button i { font-style: normal; font-size: 9px; letter-spacing: 1px; margin-left: 6px; vertical-align: 1px; }
+.hn-bchips button[data-level="1"] { background: #c9ced8; color: var(--c-bg); }
+.hn-blegend { margin: 0; font-size: 12px; color: var(--c-ink-2); }
 .hn-own { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; }
 .hn-own input { background: var(--c-card-2); border: 1px solid transparent; border-radius: 12px; padding: 8px 12px; font-size: 16px; color: var(--c-ink); min-width: 0; }
 .hn-reward { margin: 0; font-size: 13.5px; color: var(--ok); }

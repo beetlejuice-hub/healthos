@@ -14,6 +14,7 @@ import { forGrams } from "../lib/nutrition";
 import { alcoholGrams } from "../lib/alcohol";
 import { addDays, atMinute, clock, dayLabel, localDay } from "../lib/time";
 import { labelOf } from "../lib/feel";
+import { bodyLine } from "../lib/bodywords";
 import { readRoute, go, LOG_FOR_KEY } from "../lib/nav";
 import { bodyDays, weightTrend } from "../lib/tdee";
 import { LineChart } from "../components/Charts";
@@ -989,7 +990,7 @@ const describe = (e: Entry, supps: Supplement[]): [string, string] => {
     case "weight": return ["Weight", `${e.kg} kg${e.fatPct != null ? ` · ${e.fatPct}% fat` : ""}`];
     // Only the sliders you set, all of them (stress was missing from this line).
     // a note or a tag on its own reads cleanly too ("“head hurts”", not " — “head hurts”")
-    case "feel": { const r = [...(["energy", "mood", "focus", "stress", "anxiety"] as const).filter((k) => e[k] != null).map((k) => `${k} ${e[k]}`), ...(e.doing?.length ? [e.doing.map(labelOf).join(", ")] : [])].join(" · ");
+    case "feel": { const r = [...(["energy", "mood", "focus", "stress", "anxiety"] as const).filter((k) => e[k] != null).map((k) => `${k} ${e[k]}`), ...(e.body ? [bodyLine(e.body, true)] : []), ...(e.doing?.length ? [e.doing.map(labelOf).join(", ")] : [])].join(" · ");
       return ["Feeling", [r, e.note ? `“${e.note}”` : ""].filter(Boolean).join(" — ") || "nothing rated"]; }
     // the night's cigarettes (PLAN 177) and a day not logged (PLAN 174) in words, not keys
     case "answer": return e.key.startsWith("smoke:") ? ["Cigarettes", SMOKE_LABEL[e.answer as SmokeBand] ?? e.answer] : e.key.startsWith("ate:") ? ["A day not logged", ATE[e.answer as Ate]?.said ?? e.answer] : [e.question, e.answer];

@@ -116,7 +116,8 @@ export type Entry =
       /** Another intake in a slot already answered, logged with one tap like food (lib/supplog, PLAN 87): counted on top. */ again?: true }
   | { id: string; kind: "set"; at: number; workoutId: string; exercise: string; kg: number; reps: number; /** A lighter warm-up set before the working sets: shown, never counted (PLAN 80). */ warmup?: boolean }
   | { id: string; kind: "weight"; at: number; kg: number; /** From a smart scale, optional: its body-fat estimate. */ fatPct?: number }
-  | { id: string; kind: "feel"; at: number; energy?: number; mood?: number; focus?: number; anxiety?: number; stress?: number; note?: string; /** What you were up to since the last check-in: "gym", "outside", your own words. */ doing?: string[] }
+  | { id: string; kind: "feel"; at: number; energy?: number; mood?: number; focus?: number; anxiety?: number; stress?: number; note?: string; /** What you were up to since the last check-in: "gym", "outside", your own words. */ doing?: string[];
+    /** How your body felt (owner, 28 Oct, picked C): a body word (lib/bodywords) or your own → 1 a bit, 2 a lot. */ body?: Record<string, 1 | 2> }
   /** Last night's sleep, rated in the morning check-in: 1–10, and whether falling asleep took long. One per night.
    *  `tags`: what last night held, in a tap — "gf", "worklate", "out", your own words (lib/lastnight).
    *  `phoneMin`: about how long on the phone before sleep, 0–60 (60 = "1 h+"; PLAN 88). */

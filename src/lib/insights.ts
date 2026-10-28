@@ -11,7 +11,7 @@ import { caffeineAt, cleared, doseCaffeine, type Dose } from "./caffeine";
 import { bedtimeOn } from "./caffeine-sleep";
 import type { Check } from "./feelgraph";
 import { alcoholCurve, type AlcoholDose } from "./alcohol";
-import { bodyWords } from "./bodywords";
+import { feltOn } from "./bodywords";
 import { currentKg } from "./body";
 import { atMinute, localDay, minuteOfDay, addDays, startOfDay, DAY, MIN } from "./time";
 import { correlation, difference, mean, median, sd, type Range } from "./stats";
@@ -132,10 +132,12 @@ export type DayFacts = {
   /** The sleep rating given that morning (last night's), if any. */
   sleep: number | null;
   /**
-   * Body words in that day's check-in notes (lib/bodywords: "weak", "tired", "headache"…); null on a day without a
+   * Body words that day — the check-in's chips and words in its notes (lib/bodywords: "weak", "tired", your own…); null on a day without a
    * check-in — a day nobody asked isn't a day you felt fine (owner, 27 Oct: "feeling weak and what I've been doing").
    */
   felt?: string[] | null;
+  /** How much of each (owner, 28 Oct: chips with how much): 1 a bit — or said in a note — 2 a lot. */
+  feltHow?: Record<string, number>;
   /** From the band (lib/daysband withBand): minutes asleep the night that ended this morning, and the day's steps. */
   asleepMin?: number | null;
   steps?: number | null;
@@ -197,7 +199,7 @@ export function dailyFacts(entries: Entry[], workouts: Workout[], settings: Sett
       volumeKg: volume(of(es, "set")),
       weekend: [0, 6].includes(new Date(atMinute(day, 12 * 60)).getDay()),
       sleep: sleepBy.get(day) ?? null,
-      felt: feel.length ? [...new Set(feel.flatMap((f) => bodyWords(f.note)))] : null,
+      ...felt(feel),
     });
   }
   return out;
@@ -266,4 +268,10 @@ export function suppEffects(facts: DayFacts[], supplements: Supplement[]): SuppE
     }
   }
   return out;
+}
+
+/** The day's body words and how much (lib/bodywords feltOn), as DayFacts holds them. */
+function felt(feel: EntryOf<"feel">[]): Pick<DayFacts, "felt" | "feltHow"> {
+  const f = feltOn(feel);
+  return f ? { felt: Object.keys(f), feltHow: f } : { felt: null };
 }

@@ -2809,10 +2809,10 @@ both reads and the questions. Phases in that order; #152 RPE waits (owner).
      Tests: lab.test (found → exact lines; not clear / too few / no hour → nothing; the morning after; lands in the
      full and the chat context under its heading, none → no heading).
 
-178. [~] **Connections with how your body felt** (owner, 27 Oct: "I just want to track a bunch of things and come up w things
+178. [x] **Connections with how your body felt** (owner, 27 Oct: "I just want to track a bunch of things and come up w things
    that could improve me physically or mentally" · "Make sure it can find connections between things i log like feeling
    weak amd what I've been doing and also things like" — the message ended there; asked what else). Also: "men" (fitness
-   age norms — still blocked on the network, journals.plos.org) and coin-flips for slow supplements "nah" (dropped).
+   age norms — built 28 Oct, see 177) and coin-flips for slow supplements "nah" (dropped).
    - What it already did: between check-ins (lib/detectors/between) — what you did between two check-ins (gym, meals,
      coffee, alcohol, supplements, your "doing" ticks) against how energy / mood / focus / stress changed; the Leads —
      food, caffeine, alcohol, cigarettes, gym, supplements against the next day's feelings. Missing: "feeling weak" as data
@@ -2836,7 +2836,21 @@ both reads and the questions. Phases in that order; #152 RPE waits (owner).
      scout's "Not interesting" now checks the card goes (with more patterns the next one moves up).
    - Speed: computing nights for every Leads card's chart made Insights slow — withBand is worked out once per band
      load and skips the heart rate (minutes asleep don't need it).
-   - Phase 2 (canvas first): one-tap body chips on the check-in (weak, tired, sore, headache… and your own) so it's not
-     only notes; "Test it" for body words once an experiment can measure them.
+   - [x] Phase 2 built (28 Oct): owner picked C on the canvas ("1 C"). "How's your body?" under the sliders on the
+     check-in (components/BodyChips): tap once "a bit" ●, twice "a lot" ●●, a third tap clears; weak, tired, sore,
+     headache, bloated, dizzy, foggy always, in that order; your own words ("knee pain, cramps and exhausted" → knee pain,
+     cramps, and tired's chip) join as chips once used. Shown once you're answering (a slider or a note tapped), like "What
+     were you up to?" — e2e slider's compact-card check (owner, 2 Oct: "big and bad on phone") caught the always-shown
+     version at 470 px; the resting card stays under 345. Saved on the
+     check-in as body {word: 1 | 2}; shown on the one line ("tired ●, weak ●●"), in the Log and to the AI in words
+     ("weak (a lot)"). In the finder (lib/scout): each word 0 / 1 / 2 a day at its strongest (a word in a note = 1), your
+     own words once on 4+ days ("you noted knee pain"), "% of days" stays a share of days with levels; the Leads chart
+     reads "a lot" / "a bit" / "no", and rebuilds an own word missing from its 14 days.
+     How much earns its place, measured (60 fake people, 90 days): drinks making "weak" likelier and stronger — found
+     in 34 with levels vs 25 yes/no only; only how much following the drinks — 0 vs 0 (90 days aren't enough for that
+     alone, said in the test); control 0. Tests: bodychips.test (levels test fails with the levels taken out, share test
+     with the share taken out), e2e bodychips (hidden until answering, taps, undo, two own words at once — caught a lost
+     word before the fix — one check-in, reload, Log, AI, tomorrow's chips, 320 px, Leads from 90 days of chips, control).
+     What else to connect ("and also things like…"): owner, 28 Oct: "I DONT KNOW" — not asked again.
    - Seen on the way: e2e heartpage's phone notes check fails since ~18:00 UTC on 6c3ecb1 too (not this change) —
      suggested as its own task.

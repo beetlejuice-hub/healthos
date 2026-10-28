@@ -22,6 +22,7 @@ import { weekly } from "../weekly";
 import { personalSleep, ratedNights } from "../caffeine-sleep";
 import { doseCompare } from "../dose";
 import { nightLabel, phoneLabel } from "../lastnight";
+import { bodyLine } from "../bodywords";
 import { morningShown, nightShown } from "./morning";
 
 const BANDS: [string, number, number][] = [["morning (5–11)", 5, 11], ["midday (11–14)", 11, 14], ["afternoon (14–18)", 14, 18], ["evening (18–24)", 18, 24]];
@@ -40,7 +41,7 @@ export function feelByTime(state: Pick<State, "entries">, now: number): string[]
 }
 
 const feelText = (e: Extract<State["entries"][number], { kind: "feel" }>) =>
-  (["energy", "mood", "focus", "stress"] as const).filter((k) => e[k] != null).map((k) => `${k} ${e[k]}`).join(", ");
+  [...(["energy", "mood", "focus", "stress"] as const).filter((k) => e[k] != null).map((k) => `${k} ${e[k]}`), ...(e.body ? [`body: ${bodyLine(e.body, true)}`] : [])].join(", ");
 
 /**
  * One day in order — what was eaten and drunk, the gym, every check-in with what you were up to and
@@ -130,7 +131,7 @@ export function moodJournal(state: Pick<State, "entries">, now: number, days = 6
     if (e.kind === "sleep" && (e.rating != null || e.tags?.length || e.phoneMin != null) && !sleep.has(d)) sleep.set(d, `${e.rating != null ? `slept ${e.rating}` : "night"}${e.slow ? " (slow to fall asleep)" : ""}${e.tags?.length ? ` [last night: ${e.tags.map(nightLabel).join(", ")}]` : ""}${e.phoneMin != null ? ` [${phoneLabel(e.phoneMin)} before sleep]` : ""}`);
     if (e.kind === "feel") {
       const v = (["energy", "mood", "focus", "stress"] as const).filter((k) => e[k] != null).map((k) => `${short(k)}${e[k]}`).join(" ");
-      byDay.set(d, [...(byDay.get(d) ?? []), `${clock(e.at)} ${v}${e.doing?.length ? ` [${e.doing.join(",")}]` : ""}${e.note ? ` "${e.note}"` : ""}`]);
+      byDay.set(d, [...(byDay.get(d) ?? []), `${clock(e.at)} ${v}${e.body ? ` {body: ${bodyLine(e.body, true)}}` : ""}${e.doing?.length ? ` [${e.doing.join(",")}]` : ""}${e.note ? ` "${e.note}"` : ""}`]);
     }
   }
   return [...new Set([...byDay.keys(), ...sleep.keys()])].sort().map((d) => `${d}: ${[sleep.get(d), ...(byDay.get(d) ?? [])].filter(Boolean).join(" · ")}`);

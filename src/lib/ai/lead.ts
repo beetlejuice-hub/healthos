@@ -7,7 +7,7 @@
  * explain, research and chart. Pure.
  */
 
-import type { Pattern, Signal } from "../scout";
+import { ownSignal, type Pattern, type Signal } from "../scout";
 import type { DayFacts } from "../insights";
 import { addDays } from "../time";
 import type { LeadRef } from "./tasks";
@@ -48,8 +48,9 @@ export function leadLines(p: Pattern): string[] {
 
 /** The lead's chart: `a` on each of the last `n` days to yesterday, and `b` that day (or the next, with a lag). */
 export function leadSeries(ref: LeadRef, facts: DayFacts[], signals: Signal[], yesterday: string, n = 14):
-  { days: string[]; a: { name: string; vals: (number | null)[]; yes: boolean; unit?: string }; b: { name: string; vals: (number | null)[]; unit?: string } } | null {
-  const sa = signals.find((s) => s.id === ref.a), sb = signals.find((s) => s.id === ref.b);
+  { days: string[]; a: { name: string; vals: (number | null)[]; yes: boolean; unit?: string }; b: { name: string; vals: (number | null)[]; unit?: string; body?: boolean } } | null {
+  // your own body word ("knee pain") isn't among the signals when it's not in these 14 days: rebuilt from its id
+  const sa = signals.find((s) => s.id === ref.a), sb = signals.find((s) => s.id === ref.b) ?? (ref.b.startsWith("felt-") ? ownSignal(ref.b.slice(5)) : undefined);
   if (!sa || !sb) return null;
   const by = new Map(facts.map((f) => [f.day, f]));
   const days = Array.from({ length: n }, (_, i) => addDays(yesterday, i - n + 1 - ref.lag));
@@ -57,7 +58,7 @@ export function leadSeries(ref: LeadRef, facts: DayFacts[], signals: Signal[], y
   return {
     days,
     a: { name: sa.name, vals: days.map((d) => at(sa, d)), yes: !!sa.yes, unit: sa.unit },
-    b: { name: sb.name, vals: days.map((d) => at(sb, addDays(d, ref.lag))), unit: sb.unit },
+    b: { name: sb.name, vals: days.map((d) => at(sb, addDays(d, ref.lag))), unit: sb.unit, body: !!sb.outcomeOnly },
   };
 }
 
