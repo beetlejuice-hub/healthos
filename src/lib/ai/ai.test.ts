@@ -130,7 +130,18 @@ describe("the day, read back (owner, 2 Oct)", () => {
   it("checkNight keeps it short and refuses an empty summary", () => {
     expect(() => checkNight({ summary: " ", happened: [], notes: "", change: [], remember: [] })).toThrow();
     const n = checkNight({ summary: "ok", happened: ["a", "", "b"], notes: "  n ", change: [{ what: "", why: "x" }, { what: "walk", why: "dip" }], remember: ["short", "Stress runs high on deadline days.", "x".repeat(300), "third one is dropped"] });
-    expect(n).toEqual({ summary: "ok", happened: ["a", "b"], notes: "n", change: [{ what: "walk", why: "dip" }], remember: ["Stress runs high on deadline days.", "x".repeat(180)] });
+    // each change named by what it's about, so a repeat in other words is caught (lib/ai/said, 28 Oct)
+    expect(n).toEqual({ summary: "ok", happened: ["a", "b"], notes: "n", change: [{ what: "walk", why: "dip", topic: "walk" }], remember: ["Stress runs high on deadline days.", "x".repeat(180)] });
+  });
+  it("checkNight / checkDigest keep the topics, and what to look into (at most 2, a line each) and what was covered", () => {
+    const n = checkNight({ summary: "ok", happened: [], notes: "", change: [{ what: "Eggs at 8", why: "", topic: "High Protein Breakfast" }], remember: [],
+      items: [{ type: "noticed", title: "Tuna toast landed", text: "35 g by 9.", topic: "protein-breakfast" }], look_into: ["Does creatine timing change fullness?", "short", "a third one, never kept", "a fourth"], looked_into: ["t:ab12"] });
+    expect(n.change[0].topic).toBe("high-protein-breakfast");
+    expect(n.items![0].topic).toBe("protein-breakfast");
+    expect([n.look_into, n.looked_into]).toEqual([["Does creatine timing change fullness?"], ["t:ab12"]]);
+    expect(checkNight({ summary: "ok", happened: [], notes: "", change: [], remember: [] })).not.toHaveProperty("look_into");
+    const d = checkDigest({ greeting: "Hi", items: [{ type: "pattern", title: "Your 3 pm dip has a suspect", text: "x" }], look_into: ["Why is Thursday energy lowest?"] });
+    expect([d.items[0].topic, d.look_into]).toEqual(["dip-suspect", ["Why is Thursday energy lowest?"]]);
   });
 });
 

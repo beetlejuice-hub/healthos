@@ -9,6 +9,7 @@
 import { PROGRAMS, asSplit } from "./programs";
 import { useSyncExternalStore } from "react";
 import type { Saved } from "./ai/saved";
+import type { Said, Thread } from "./ai/said";
 import type { Drink, Entry, Food, Goals, Supplement, Template, Workout } from "./types";
 import { DEFAULT_GOALS, slotOf, slotsOf, slotTime } from "./types";
 import { tidyWorkouts } from "./training";
@@ -40,6 +41,8 @@ export type AiState = {
   reviews?: (Due & ReviewAnswer & { at: number; rows: ReviewRow[]; /** the columns: the week's days, or the month's weeks ("1–7") */ cols?: string[] })[];
   /** Titles already shown, so the morning read doesn't repeat itself. */
   shown: string[];
+  /** What the reads told you, by topic, and what they mean to look into (lib/ai/said; owner, 28 Oct: "should keep a log of what it said … so it doesnt forget things it already said a million trimes"). */
+  said?: Said[]; threads?: Thread[];
   /** The latest questions and the read that brought them — shown while that read is (PLAN 155–156); "fallback": the cheap call. */
   questions: { day: string; list: Question[]; from?: "morning" | "evening" | "fallback"; at?: number } | null;
   /** What's tracked: a tracking question's key and its latest words — re-worded every time it's asked (PLAN 156; before 21 Oct these were asked word for word every day). */

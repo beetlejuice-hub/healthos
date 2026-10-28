@@ -2979,10 +2979,23 @@ both reads and the questions. Phases in that order; #152 RPE waits (owner).
      on, it's written again by itself, once. Its totals count everything logged for the day (a snack logged ahead for
      22:00 too). A read from before the fix is caught by its own numbers. Couldn't check his entries (Supabase MCP down)
      — the planted case is his. nightstale.test (4) + e2e nightstale (13 checks, control: nothing since → no line).
-   - [~] Repeats (owner, 28 Oct: "in the last liike 7 days it only recommended me to take in more protein w breakfast,
+   - [x] Bug (owner, 28 Oct, screenshot of the chat: "???" — "Anthropic turned this request down (ai-error 400: Schemas
+     contains too many optional parameters (28) …)"): the log/edit tools gave propose 28 optional fields; the API allows
+     24 across a request's strict schemas, so every chat message failed from c5a618b until 08008be. The fake-AI e2e
+     couldn't see it. propose is sent non-strict now (the app checks every proposal itself); worker/ai.test sends every
+     task's request and counts strict optional fields / unions / tools against the documented limits (fails on 28).
+   - [x] Repeats (owner, 28 Oct: "in the last liike 7 days it only recommended me to take in more protein w breakfast,
      it gets boring, it can repeat sometimes but not every day dude...should keep a log of what it said, what it thinks
      of me, what it should dive in more, what it should research etc, so it doesnt forget things it already said a
-     million trimes"). Claimed 28 Oct — lib/ai/said.ts, tasks.ts (night + digest prompts), Ai.tsx writers, Settings → AI.
+     million trimes"). Before: only titles were remembered ("never repeat these titles"), so the same advice came back
+     under a new title every day. Now (lib/ai/said): every item and every "Tomorrow, maybe" carries a topic the AI
+     names ("protein-breakfast"); the reads see "What the reads already told me" by topic (how often, when last,
+     resting until); a topic said in the last 5 days is dropped by the app whatever it's called now ("high-protein-
+     breakfast" counts — one's words inside the other's). What it thinks of you = its memory (unchanged). "To look into":
+     a read adds what it wants to dig into; the deep dive takes those first; a read that covers one closes it. All of it
+     in Settings → AI, deletable. said.test (8) + ai.test; e2e said (13 checks; the drop check fails with it switched
+     off; control: no history keeps all three; an account with no log yet opens Settings — the full run caught a
+     render loop there before it shipped).
    - [ ] Today "feels too empty" and he likes "charts and connecting dots, trying to find patterns in a lot of data
      points": a chart on Today (the day so far with its dots; a pattern with today's dot on it) — canvas first. Also
      changes the reform: don't cut the charts and grids he likes (i1–i3 to be reworded).

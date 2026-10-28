@@ -2066,3 +2066,12 @@ span.fd-score[data-band="none"] { background: none; min-width: 34px; }
 .weekask-t { font-size: 17px; }
 .weekask p { margin: 0; font-size: 14px; line-height: 1.45; color: var(--c-ink-2); }
 .weekask .pill-btn { justify-self: start; }
+
+/* Settings → AI: what the reads told me (lib/ai/said; owner, 28 Oct) */
+.readlog { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.readlog li { display: grid; grid-template-columns: 1fr auto; gap: 8px; align-items: start; }
+.readlog li > div { min-width: 0; }
+.readlog b { font-size: 14px; font-weight: 600; }
+.readlog span { font-size: 12.5px; color: var(--c-dim); }
+.readlog small { display: block; font-size: 12.5px; line-height: 1.4; color: var(--c-ink-2); margin-top: 2px; overflow-wrap: anywhere; }
+.readlog button { background: none; border: 0; color: var(--c-dim); font-size: 14px; padding: 4px 6px; }

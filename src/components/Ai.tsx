@@ -42,6 +42,7 @@ import { ReadItems } from "./ReadItems";
 import { digestDue, freshRead, morningShown, nightIn, nightShown } from "../lib/ai/morning";
 import { attempt, onRetryDue, tryNow } from "../lib/ai/attempts";
 import { dayTotals, dayWindow, eveningOf, nightDue, nightStale, STALE } from "../lib/ai/nightread";
+import { addThreads, adviceOf, closeThreads, dropSaid, keepSaid, saidTopics } from "../lib/ai/said";
 import { byDay, foldLine } from "../lib/ai/thread";
 
 const usd = (x: number) => (x < 0.1 ? `$${x.toFixed(3)}` : `$${x.toFixed(2)}`);
@@ -81,13 +82,18 @@ async function writeDigest(day: string) {
   // it may check its claims with the app's own numbers first (PLAN 160)
   const r = await askRead({ task: "digest", context: `${contextNow()}\n${brief.join("\n")}\n${lead ? `${leadLines(lead).join("\n")}\n` : ""}${askFor(day, "morning", follow).join("\n")}`, shown: ai.shown.slice(-40) });
   if (!r.ok) return r;
-  const n = r.answer.news, at = Date.now(), items = withLead(r.answer.items, lead), led = lead && items.some((i) => i.lead);
+  // advice on a topic said in the last 5 days goes, whatever it's called now (lib/ai/said; owner, 28 Oct: "in the last
+  // liike 7 days it only recommended me to take in more protein w breakfast… it can repeat sometimes but not every day")
+  const n = r.answer.news, at = Date.now(), fresh = dropSaid(r.answer.items, getState().ai.said ?? [], at, (i) => i.title).kept;
+  const items = withLead(fresh, lead), led = lead && items.some((i) => i.lead);
   const qs = keepNew(r.answer.questions ?? [], `${day}:m`);
   act.setAi((a) => ({
     digest: { day, at, greeting: r.answer.greeting, items, ...(r.answer.looked ? { looked: r.answer.looked } : {}) },
     ...(led ? { leads: [...(a.leads ?? []), { id: lead.id, day }].slice(-60) } : {}),
     ...(qs.length ? { questions: { day, list: qs, from: "morning" as const, at }, asked: [...a.asked, ...qs.map((q) => q.text)].slice(-60), daily: tracked(a.daily, qs) } : {}),
-    shown: [...a.shown, ...r.answer.items.map((i) => i.title), ...(n ? [n.title] : [])].slice(-80),
+    shown: [...a.shown, ...items.map((i) => i.title), ...(n ? [n.title] : [])].slice(-80),
+    said: keepSaid(a.said ?? [], adviceOf({ items }, "morning", at), at),
+    threads: addThreads(closeThreads(a.threads ?? [], r.answer.looked_into), r.answer.look_into, at, () => newId().slice(0, 6)),
     // something new is a message (owner, 16 Oct: "only send message when it has a new finding, a new sttudy"); the rest is on Today
     ...(n && !a.chat.some((m) => m.unprompted && m.text.startsWith(`📰 **${n.title}**`)) ? { chat: [...a.chat, { role: "assistant" as const, text: `📰 **${n.title}**\n\n${n.text}`, at, unprompted: true, source: n.source }].slice(-80) } : {}),
   }));
@@ -109,6 +115,8 @@ export async function makeDive(key: string, skip: string[] = []): Promise<string
     act.setAi((a) => ({
       dive: { ...answer, key, at, ...(looked ? { looked } : {}), repicks: skip.length, ...(skip.length ? { skipped: skip } : {}) },
       dives: [...(a.dives ?? []), { key, topic: answer.topic }].slice(-DIVE.keep),
+      // the one it took from "On my list to look into" is done (lib/ai/said)
+      threads: closeThreads(a.threads ?? [], answer.looked_into),
     }));
     return r;
   }, { queued: !skip.length, onFail: keepFail("dive") });
@@ -151,9 +159,16 @@ async function writeNight(day: string, force: boolean, auto = false) {
   const r = await askRead({ task: "night", day, context: [nightContext(day), ...eveningBrief(ai.shown), ...askFor(day, "evening", follow)].join("\n") });
   if (!r.ok) return r;
   const at = Date.now(), qs = keepNew(r.answer.questions ?? [], `${day}:e`);
+  // no advice on a topic said in the last 5 days (lib/ai/said) — a rewrite of the same evening replaces its own, so that's
+  // left out of what counts; a change on an item's topic in the same read goes too
+  const before = ai.night?.day === day ? ai.night.at : null, said = (getState().ai.said ?? []).filter((x) => x.at !== before);
+  const items = dropSaid(r.answer.items ?? [], said, at, (i) => i.title).kept;
+  const change = dropSaid(r.answer.change, [...said, ...adviceOf({ items }, "evening", at)], at, (c) => c.what).kept;
   act.setAi((a) => ({
-    night: { ...r.answer, day, at, tot, redone },
-    shown: [...a.shown, ...(r.answer.items ?? []).map((i) => i.title)].slice(-80),
+    night: { ...r.answer, items, change, day, at, tot, redone },
+    shown: [...a.shown, ...items.map((i) => i.title)].slice(-80),
+    said: keepSaid((a.said ?? []).filter((x) => x.at !== before), adviceOf({ items, change }, "evening", at), at),
+    threads: addThreads(closeThreads(a.threads ?? [], r.answer.looked_into), r.answer.look_into, at, () => newId().slice(0, 6)),
     ...(qs.length ? { questions: { day, list: qs, from: "evening" as const, at }, asked: [...a.asked, ...qs.map((q) => q.text)].slice(-60), daily: tracked(a.daily, qs) } : {}),
     // What it learned that lasts: into memory (shown in Settings → AI, deletable), no duplicates.
     memory: [...a.memory, ...r.answer.remember.filter((x) => !a.memory.some((m) => m.text.toLowerCase() === x.toLowerCase())).map((x) => ({ id: newId(), text: x, at }))].slice(-60),
@@ -620,8 +635,31 @@ export function AiSettings() {
       </>}
       <h3>What the AI knows about me <span>it adds lines as you chat · delete any</span></h3>
       {ai.memory.length === 0 ? <p className="note">Nothing yet.</p> : <div className="chips mem">{ai.memory.map((m) => <span className="chip" key={m.id}>{m.text}<button type="button" aria-label={`Forget ${m.text}`} onClick={() => act.setAi((a) => ({ memory: a.memory.filter((x) => x.id !== m.id) }))}>✕</button></span>)}</div>}
+      <ReadLog />
       <button type="button" className="linkish" onClick={() => setSeeing(!seeing)}>{seeing ? "Hide" : "What the AI sees about me"}</button>
       {seeing && <><pre className="ctx">{contextNow()}</pre><p className="note">That's what the reads get. Chat gets the top of it (a week of days, no nights or journal) and looks the rest up when you ask.</p></>}
     </div>
   );
+}
+
+/**
+ * Settings → AI: what the reads have told you, by topic, and what they mean to look into (owner, 28 Oct: "should keep a
+ * log of what it said, what it thinks of me, what it should dive in more, what it should research etc"). A topic said in
+ * the last 5 days rests; delete one to let it come back sooner, or a thread you don't care about.
+ */
+const NONE: never[] = [];
+function ReadLog() {
+  // the same empty list every time: a fresh [] from the store's selector re-renders forever (React #185)
+  const said = useStore((s) => s.ai.said ?? NONE), threads = useStore((s) => s.ai.threads ?? NONE), now = Date.now();
+  const topics = saidTopics(said, now);
+  return <>
+    <h3>What the reads told me <span>last 30 days · a topic rests 5 days</span></h3>
+    {topics.length === 0 ? <p className="note">Nothing yet — it starts with the next read.</p>
+      : <ul className="readlog">{topics.map((t) => (
+        <li key={t.topic}><div><b>{t.topic.replace(/-/g, " ")}</b> <span>{t.n}× · last {dayLabel(t.last.at)}{t.restUntil ? ` · resting till ${dayLabel(t.restUntil).replace(/^\w+ /, "")}` : ""}</span><small>“{t.last.text}”</small></div>
+          <button type="button" aria-label={`Forget ${t.topic.replace(/-/g, " ")}`} onClick={() => act.setAi((a) => ({ said: (a.said ?? []).filter((x) => x.topic !== t.topic) }))}>✕</button></li>))}</ul>}
+    <h3>On its list to look into <span>the deep dive takes these first</span></h3>
+    {threads.length === 0 ? <p className="note">Nothing yet — a read adds one when your data raises a question it had no room for.</p>
+      : <div className="chips mem">{threads.map((t) => <span className="chip" key={t.id}>{t.text}<button type="button" aria-label={`Drop ${t.text}`} onClick={() => act.setAi((a) => ({ threads: (a.threads ?? []).filter((x) => x.id !== t.id) }))}>✕</button></span>)}</div>}
+  </>;
 }

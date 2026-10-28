@@ -24,6 +24,7 @@ import { doseCompare } from "../dose";
 import { nightLabel, phoneLabel } from "../lastnight";
 import { bodyLine } from "../bodywords";
 import { morningShown, nightShown } from "./morning";
+import { saidLines, threadLines } from "./said";
 
 const BANDS: [string, number, number][] = [["morning (5–11)", 5, 11], ["midday (11–14)", 11, 14], ["afternoon (14–18)", 14, 18], ["evening (18–24)", 18, 24]];
 const avg = (xs: number[]) => (xs.length ? Math.round((xs.reduce((a, b) => a + b, 0) / xs.length) * 10) / 10 : null);
@@ -267,6 +268,10 @@ function baseContext({ state, now, days, findings, patterns, weight, today = [],
     "## My stack",
     ...supplements.map((s) => `- ${s.name}${s.dose ? ` ${s.dose}` : ""} (${s.slot})${s.status ? ` — ${s.status === "low" ? "running low" : s.status === "out" ? "ran out" : "stopped"}` : s.active ? "" : " — paused"}`),
     ...(ai.memory.length ? ["## What you remember about me", ...ai.memory.map((m) => `- ${m.text}`)] : []),
+    // owner, 28 Oct: "should keep a log of what it said, what it thinks of me, what it should dive in more, what it should
+    // research etc, so it doesnt forget things it already said a million trimes"
+    ...((l) => (l.length ? ["## What the reads already told me, by topic (last 30 days; a resting topic doesn't come back, an older one only with something new)", ...l.map((x) => `- ${x}`)] : []))(saidLines(ai.said ?? [], now)),
+    ...((l) => (l.length ? ["## On my list to look into (from earlier reads — the deep dive takes these first)", ...l.map((x) => `- ${x}`)] : []))(threadLines(ai.threads ?? [], now)),
     ...(ai.experiments.filter((x) => !x.ended).length ? ["## Experiments running", ...ai.experiments.filter((x) => !x.ended).map((x) => `- ${x.name} since ${x.start} (${x.days} days, measuring ${x.measure})`)] : []),
     slim ? "## Last 7 days" : "## Last 14 days",
     ...days.slice(slim ? -7 : -14).map((d) => `- ${dayLine(d, names, gaps)}`),

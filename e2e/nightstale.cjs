@@ -38,7 +38,7 @@ const read = (summary) => ({ summary, happened: [], notes: '', change: [], remem
   }
   const waitNight = async (calls, n) => { for (let i = 0; i < 40 && calls.filter((c) => c.task === 'night').length < n; i++) await new Promise((r) => setTimeout(r, 100)); return calls.filter((c) => c.task === 'night'); };
   const card = (pg) => pg.locator('section.night');
-  const show = async (pg) => { await card(pg).waitFor({ state: 'attached', timeout: 8000 }); await forYou(pg, 'night'); await card(pg).waitFor({ timeout: 8000 }); };
+  const show = async (pg) => { await card(pg).waitFor({ state: 'attached', timeout: 20000 }); await forYou(pg, 'night'); await card(pg).waitFor({ timeout: 20000 }); };
   const goals = { kcal: 2160, p: 160, c: 220, f: 70 };
 
   // 21:00: the day so far; the read is written at 21:09

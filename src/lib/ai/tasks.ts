@@ -8,6 +8,8 @@
  * estimate, so it's used once and free after that.
  */
 
+import { topicKey } from "./said";
+
 export type Task = "describe" | "supplement" | "chat" | "questions" | "digest" | "night" | "review" | "dive" | "verdict";
 export type ModelChoice = "opus" | "sonnet" | "haiku";
 /**
@@ -184,19 +186,20 @@ export type DigestItem = { type: "fact" | "study" | "pattern" | "protocol" | "tr
   /** what they do → a number that moves → what it goes with (owner, 22 Oct: "making the ai come up w connections like this on its own") */ | "connection"; title: string; text: string;
   sure?: Sure; /** A connection's links, each with how sure it is. */ chain?: { step: string; sure: Sure }[]; /** `checked`: the server opened it and it matched (PLAN 160). */ source?: { title: string; url: string; checked?: boolean }; protocol?: { name: string; how: string; days: number; measure: string };
   /** One thing to do today (owner, 21 Oct: "I like that its adding tips and advices"). */ tip?: string; measure?: DigestMeasure;
+  /** What the advice is about, named so a repeat in other words is caught (lib/ai/said; owner, 28 Oct: "it only recommended me to take in more protein w breakfast"). */ topic?: string;
   /** The app's tested link this item explains (PLAN 176): set by the app, not the AI — its two-row chart is drawn from it. */ lead?: LeadRef };
 /**
  * Something new enough to message about (owner, 16 Oct: "it should only send message when it has a new finding, a new
  * sttudy or whatever but if its displayed on today page then nonsensee"): sent to the chat, not shown on Today. Most days none.
  */
 export type DigestNews = { title: string; text: string; source: { title: string; url: string; checked?: boolean } };
-export type DigestAnswer = { greeting: string; items: DigestItem[]; news?: DigestNews | null; /** 1–2, the kinds the app picked (PLAN 156). */ questions?: Question[] };
+export type DigestAnswer = Threads & { greeting: string; items: DigestItem[]; news?: DigestNews | null; /** 1–2, the kinds the app picked (PLAN 156). */ questions?: Question[] };
 /**
  * The weekly deep dive (PLAN 160): the question it picked and why (from their data), what their own numbers say (from the
  * app's look-ups), 2–3 studies with their links, the verdict and how sure, and one experiment to try.
  */
 export type DiveStudy = { title: string; text: string; source: { title: string; url: string; checked?: boolean } };
-export type DiveAnswer = { topic: string; why: string; yourData: string; found: DiveStudy[]; verdict: string; sure: "strong" | "moderate" | "weak";
+export type DiveAnswer = Pick<Threads, "looked_into"> & { topic: string; why: string; yourData: string; found: DiveStudy[]; verdict: string; sure: "strong" | "moderate" | "weak";
   experiment?: { name: string; how: string; days: number; measure: (typeof EXPERIMENT_MEASURES)[number] } };
 export function checkDive(a: DiveAnswer): DiveAnswer {
   const str = (x: unknown, n: number) => (typeof x === "string" ? x.trim().slice(0, n) : "");
@@ -206,7 +209,15 @@ export function checkDive(a: DiveAnswer): DiveAnswer {
     .map((f) => ({ title: str(f.title, 120), text: str(f.text, 400), source: { title: str(f.source.title, 160) || str(f.title, 120), url: f.source.url } }));
   const x = a.experiment, okX = x && str(x.name, 1) && str(x.how, 1) && Number.isFinite(x.days) && x.days >= 3 && x.days <= 60 && (EXPERIMENT_MEASURES as readonly string[]).includes(x.measure);
   return { topic, why: str(a.why, 400), yourData: str(a.yourData, 600), found, verdict, sure: a.sure === "strong" || a.sure === "moderate" ? a.sure : "weak",
-    ...(okX ? { experiment: { name: str(x!.name, 80), how: str(x!.how, 300), days: Math.round(x!.days), measure: x!.measure } } : {}) };
+    ...(okX ? { experiment: { name: str(x!.name, 80), how: str(x!.how, 300), days: Math.round(x!.days), measure: x!.measure } } : {}),
+    ...(checkThreads(a).looked_into ? { looked_into: checkThreads(a).looked_into } : {}) };
+}
+
+/** A read's look_into (at most 2, a line each) and looked_into (the [t:…] ids it covered); left out when empty. */
+export function checkThreads(a: Threads | null | undefined): Threads {
+  const list = (x: unknown, n: number, len: number) => (Array.isArray(x) ? x : []).filter((v): v is string => typeof v === "string" && v.trim().length > 0).map((v) => v.trim().slice(0, len)).slice(0, n);
+  const add = list(a?.look_into, 2, 200).filter((t) => t.length > 8), done = list(a?.looked_into, 5, 40);
+  return { ...(add.length ? { look_into: add } : {}), ...(done.length ? { looked_into: done } : {}) };
 }
 
 /** An experiment's verdict (PLAN 160): the AI's words on the app's result — the app decides whether it worked, never the AI. */
@@ -229,8 +240,13 @@ export function checkReadCalls(calls: unknown[], turn: unknown): ReadLooks {
   return { calls: ok, turn: Array.isArray(turn) ? (turn as ChatTurn[]) : [] };
 }
 
+/**
+ * What a read wants to dig into later and had no room for, and the ones from "## On my list to look into" it covered
+ * (owner, 28 Oct: "what it should dive in more, what it should research"; lib/ai/said).
+ */
+export type Threads = { look_into?: string[]; looked_into?: string[] };
 /** The nightly read-back of your day (owner, 2 Oct: "summarizing what happened, what i should change"). */
-export type NightAnswer = { summary: string; happened: string[]; notes: string; change: { what: string; why: string }[]; /** Lasting patterns worth remembering (kept in AI memory). */ remember: string[];
+export type NightAnswer = Threads & { summary: string; happened: string[]; notes: string; change: { what: string; why: string; /** lib/ai/said */ topic?: string }[]; /** Lasting patterns worth remembering (kept in AI memory). */ remember: string[];
   /** On a day with a workout (PLAN 129): how it went against last time, what went up, one thing for next time. */
   workout?: { summary: string; better: string[]; next: string };
   /** The evening's three (PLAN 157; owner, 21 Oct: "the same studt, try, and notiiced session at Eod"), and its questions (PLAN 156). */
@@ -281,6 +297,9 @@ const SURE_RULES = `HOW SURE (owner: "make ai more smarter and cautious"): every
 const CONNECTION_RULES = `A "connection" item (owner: "i noticed when im drinking, my heart rate variability drops to 20 ms … connected to psoriasis flare ups. wondering what else is connected … not just psoriasis but everything else, me feeling tired, not focused"): a chain of 2–4 links from something they do (drinks, late caffeine, a late or big meal, training, short sleep, a supplement) through a number that moves in their data (HRV, resting heart rate, sleep, the night check) to something they care about — a condition in About me, feeling tired, focus, mood, sleep, skin, training. "chain": each link one short step (under 90 characters) with its own "sure". Check the link in their data with a look-up first (compare, e.g. hrv next_day after drinks) and put its numbers in the step; a link not tested on them says so in its own words ("… — not tested on you"), keeping its "sure" for what the studies show. "text" says in plain words what the chain means for them; "source" for the studies link. Goes with, never causes; never a diagnosis — a health worry → "worth asking a doctor".`;
 const LOOK_RULES = `THE APP'S NUMBERS (owner, 21 Oct: make the AI smarter — numbers must be proven): you can ask the app for exact numbers with its tools: compare (a measure on days with a thing against days without, with the app's own test), series (a measure day by day), nights (the band's nights), day, find, sessions. Before a "pattern" or "noticed" item says two things go together, check it with compare (or series / nights) and put the app's numbers in its text ("sleep 6.1 after drinks vs 7.4 without — clear"). If the app's test says it isn't clear, say so plainly or pick another. At most 2 rounds of look-ups, several in a round when you need them; then answer.`;
 
+const SAID_RULES = `NOT AGAIN (owner, 28 Oct: "in the last liike 7 days it only recommended me to take in more protein w breakfast, it gets boring, it can repeat sometimes but not every day dude"): every item and every change carries "topic" — what the advice is about in 2–4 words, kebab-case ("protein-breakfast", "caffeine-cutoff", "walk-after-lunch"). "## What the reads already told me" lists the topics said in the last 30 days: when yours is the same advice in other words, use its name. A topic marked resting doesn't come back — the app drops it, so you'd lose the slot; pick something else, there's always more in their data. An older topic comes back only with something new (a new number of theirs, a new study) — say what's new. Titles under "Already shown" count too. Never the same advice in the summary or greeting either.
+TO LOOK INTO (owner: "what it should dive in more, what it should research"): "look_into": 0–1 question their data raised that you'd dig into with more room — specific, one line ("Does creatine on training days only change how full your muscles feel?"). When this read covers one from "## On my list to look into", put its [t:…] id in "looked_into".`;
+
 const NIGHT = `${VOICE}
 Task: read the user's day back to them. Use "## The day being read back" and the rest of the context. Its header says when that day is: today (read back tonight), tonight past midnight (still the same evening — lines marked "after midnight" are part of it), or yesterday (read back the next morning because the app wasn't opened that evening — then say "yesterday", never "today", and "tomorrow" in change means today).
 - summary: 2–3 sentences on how the day went, with specifics (times, numbers) from the context.
@@ -299,17 +318,18 @@ Task: read the user's day back to them. Use "## The day being read back" and the
 ${SURE_RULES}
 ${CONNECTION_RULES}
 ${LOOK_RULES}
+${SAID_RULES}
 - questions: 1–2 about this day, the kinds "## Questions this time" names; for a study, its "source" (searched, https).
 ${ASK_RULES}
 Use "goes with", never "causes". No medical advice; anything health-worrying → "worth asking a doctor".
 Answer with ONLY a JSON object, no prose:
-{"summary":"","happened":[""],"notes":"","change":[{"what":"","why":""}],"remember":[],"workout":{"summary":"","better":[""],"next":""},"items":[{"type":"study|try|noticed|connection","title":"","text":"","sure":"${SURE.join("|")}","chain":[{"step":"","sure":""}],"tip":"","measure":"","source":{"title":"","url":""}}],"questions":[{"kind":"${Q_KINDS.join("|")}","text":"","options":["",""],"why":"","key":"","source":{"title":"","url":""}}]}
+{"summary":"","happened":[""],"notes":"","change":[{"what":"","why":"","topic":""}],"remember":[],"look_into":[],"looked_into":[],"workout":{"summary":"","better":[""],"next":""},"items":[{"type":"study|try|noticed|connection","topic":"","title":"","text":"","sure":"${SURE.join("|")}","chain":[{"step":"","sure":""}],"tip":"","measure":"","source":{"title":"","url":""}}],"questions":[{"kind":"${Q_KINDS.join("|")}","text":"","options":["",""],"why":"","key":"","source":{"title":"","url":""}}]}
 Leave "workout" out on a day without one.`;
 
 export const SYSTEM: Record<Task, string> = {
   night: NIGHT,
   dive: `${VOICE}
-Task: this week's deep dive (owner, 21 Oct: make the AI smarter, "do more research"; the AI picks the topic). "## This week's deep dive" says how to pick: ONE question from THEIR data, never a past topic. Then dig:
+Task: this week's deep dive (owner, 21 Oct: make the AI smarter, "do more research"; the AI picks the topic). "## This week's deep dive" says how to pick: ONE question from THEIR data, never a past topic — and "## On my list to look into" first, when one there fits (the reads put it there for this; owner, 28 Oct: "what it should dive in more, what it should research"): then put its [t:…] id in "looked_into". Then dig:
 - their own numbers first — use the app's look-ups (compare, series, nights, day, find, sessions) and put what they say in "yourData", with the numbers ("sleep 6.4 after magnesium vs 6.6 without over 40 nights — not clear");
 - search the web for the best 2–3 studies or reviews on it (recent where you can; a meta-analysis beats one small trial), each in "found" with what it found in one or two sentences and its real https link;
 - "verdict": answer the question for THEM in 2–4 sentences — what the studies say against what their data shows, plainly, including "the evidence is thin" or "your data can't tell yet" when that's the truth. Goes with, never causes; no medical advice;
@@ -318,7 +338,7 @@ Task: this week's deep dive (owner, 21 Oct: make the AI smarter, "do more resear
 "topic" is the question itself, under 100 characters ("Is magnesium doing anything for your sleep?"); "why" one sentence on why it came up in their data.
 ${LOOK_RULES}
 Answer with ONLY a JSON object, no prose:
-{"topic":"","why":"","yourData":"","found":[{"title":"","text":"","source":{"title":"","url":""}}],"verdict":"","sure":"strong|moderate|weak","experiment":{"name":"","how":"","days":14,"measure":"energy|mood|focus|stress|sleep|weight"}}`,
+{"topic":"","why":"","yourData":"","found":[{"title":"","text":"","source":{"title":"","url":""}}],"verdict":"","sure":"strong|moderate|weak","experiment":{"name":"","how":"","days":14,"measure":"energy|mood|focus|stress|sleep|weight"},"looked_into":[]}`,
   verdict: `${VOICE}
 Task: one of their experiments just ended (owner, 21 Oct: experiments should "end with a verdict"). "## The experiment" has what they tried and the app's own result — before against during, with its test. The app's result is THE result: never say it worked when the app says not clear, never the other way round.
 - "text": 2–3 short sentences — the result in plain words with the app's numbers, then what studies say about it (search: 1–3 searches), so they know whether their result fits the evidence or is unusual. Goes with, never causes; no medical advice.
@@ -369,11 +389,12 @@ Items, exactly 3 (owner, 21 Oct: "it was just too long, too much info w no visua
 Titles hook: specific and curious ("Your 3 pm dip has a suspect", "Deep sleep came early — that's normal"), never a topic label ("Sleep tips"); under 60 characters.
 SHORT — it's read on a phone at wake-up. "text": at most 2 short sentences (under 200 characters), with the one number that matters. "tip": one line, what to do today, starting with a verb ("Have the protein coffee before 10"), under 100 characters. "measure": the one of their numbers the item is about — sleep (their sleep rating), protein, kcal, mood, energy, focus, stress, caffeine, alcohol, weight or lifting (kg lifted) — and the app draws its last 14 days beside the item, so don't recite what the chart shows; leave it out when none fits.
 Answer with ONLY a JSON object, no prose:
-{"greeting":"one short line","items":[{"type":"fact|study|pattern|protocol|try|connection","title":"","text":"1–2 short sentences","sure":"${SURE.join("|")}","chain":[{"step":"","sure":""}],"tip":"one line for today","measure":"${DIGEST_MEASURES.join("|")}","source":{"title":"","url":""},"protocol":{"name":"","how":"","days":14,"measure":"energy|mood|focus|stress|sleep|weight"}}],"questions":[{"kind":"${Q_KINDS.join("|")}","text":"","options":["",""],"why":"","key":"","source":{"title":"","url":""}}],"news":null}
+{"greeting":"one short line","items":[{"type":"fact|study|pattern|protocol|try|connection","topic":"","title":"","text":"1–2 short sentences","sure":"${SURE.join("|")}","chain":[{"step":"","sure":""}],"tip":"one line for today","measure":"${DIGEST_MEASURES.join("|")}","source":{"title":"","url":""},"protocol":{"name":"","how":"","days":14,"measure":"energy|mood|focus|stress|sleep|weight"}}],"questions":[{"kind":"${Q_KINDS.join("|")}","text":"","options":["",""],"why":"","key":"","source":{"title":"","url":""}}],"news":null,"look_into":[],"looked_into":[]}
 "source" is required for facts, studies and tries. "protocol" only on protocol items, "chain" only on a connection. Don't repeat titles listed as already shown.
 ${SURE_RULES}
 ${CONNECTION_RULES}
 ${LOOK_RULES}
+${SAID_RULES}
 QUESTIONS: 1–2, one of each kind "## Questions this time" names; for a study, its "source" (searched, https).
 ${ASK_RULES}
 news (owner: "it should only send message when it has a new finding, a new sttudy or whatever"): null on most days. Only when your search turned up something genuinely new and worth a message for THIS user — a study or review from the last 12 months on something in their stack, their training or their conditions, or a safety note on something they take — give {"title":"","text":"2–3 sentences: what it found and what it means for them","source":{"title":"","url":"https://…"}}. It's sent to their chat, not shown with the items, so it must not repeat an item or anything already shown. No news is better than filler.`,
@@ -472,7 +493,7 @@ export function checkItems(raw: unknown): DigestItem[] {
     .slice(0, 3)
     .map((i): DigestItem => {
       const { tip, measure, sure, chain, ...rest } = i, t = typeof tip === "string" ? short(tip, 120) : "";
-      return { ...rest, title: short(i.title, 70), text: short(i.text, 240), ...(isSure(sure) ? { sure } : {}), ...(i.type === "connection" ? { chain } : {}),
+      return { ...rest, title: short(i.title, 70), text: short(i.text, 240), topic: topicKey(i.topic, i.title), ...(isSure(sure) ? { sure } : {}), ...(i.type === "connection" ? { chain } : {}),
         ...(i.type === "protocol" && i.protocol ? { protocol: { ...i.protocol, days: Math.min(42, Math.max(7, Math.round(i.protocol.days || 14))) } } : {}),
         ...(t ? { tip: t } : {}), ...(isDigestMeasure(measure) ? { measure } : {}) };
     });
@@ -485,7 +506,7 @@ export function checkDigest(a: DigestAnswer): DigestAnswer {
     && !items.some((i) => i.title.trim().toLowerCase() === n.title.trim().toLowerCase());
   const news = ok ? { title: n.title.trim().slice(0, 90), text: n.text.trim().slice(0, 500), source: { title: String(n.source.title ?? "Source").slice(0, 90), url: n.source.url } } : null;
   const questions = checkAsk(a.questions);
-  return { greeting: typeof a.greeting === "string" ? a.greeting : "Morning!", items, news, ...(questions.length ? { questions } : {}) };
+  return { greeting: typeof a.greeting === "string" ? a.greeting : "Morning!", items, news, ...(questions.length ? { questions } : {}), ...checkThreads(a) };
 }
 
 export function checkReview(a: ReviewAnswer): ReviewAnswer {
@@ -508,8 +529,9 @@ export function checkNight(a: NightAnswer): NightAnswer {
     summary: line(a.summary, 800),
     happened: (a.happened ?? []).map((x) => line(x, 200)).filter(Boolean).slice(0, 4),
     notes: line(a.notes, 500),
-    change: (a.change ?? []).filter((c) => line(c?.what, 200)).slice(0, 2).map((c) => ({ what: line(c.what, 200), why: line(c.why, 240) })),
+    change: (a.change ?? []).filter((c) => line(c?.what, 200)).slice(0, 2).map((c) => ({ what: line(c.what, 200), why: line(c.why, 240), topic: topicKey(c.topic, c.what) })),
     remember: (a.remember ?? []).map((x) => line(x, 180)).filter((x) => x.length > 8).slice(0, 2),
+    ...checkThreads(a),
     ...(a.workout && line(a.workout.summary, 600) ? { workout: { summary: line(a.workout.summary, 600), better: (a.workout.better ?? []).map((x) => line(x, 200)).filter(Boolean).slice(0, 3), next: line(a.workout.next, 300) } } : {}),
     ...(() => { const items = checkItems(a.items).filter((i) => ["study", "try", "noticed", "connection"].includes(i.type)), questions = checkAsk(a.questions);
       return { ...(items.length ? { items } : {}), ...(questions.length ? { questions } : {}) }; })(),
