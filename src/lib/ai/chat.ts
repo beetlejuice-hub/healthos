@@ -69,6 +69,7 @@ export function aboutItem(i: { type: string; title: string; text: string; tip?: 
 export const ABOUT_NOTICE = `## They just typed this in Today's "Noticed something?" box
 It can be anything — a finding about themselves, a supplement or food that makes them feel good, a symptom, a habit, an idea. It's already kept as a note. Take it at face value and act on it now:
 - a supplement or food they started, or one that makes them feel good → propose it (add_supplement to keep taking it, log_supplement for one taken just now);
+- something they ate, drank, weigh or feel right now ("had 2 eggs", "3 beers last night", "energy is 3") → log_food, log_drink, log_weight or log_feel, one card each;
 - something they want to try for a while → propose an experiment;
 - a lasting fact about them → remember it;
 - something to look into → check it now with a look-up when their data can say (compare, series, nights) and give the numbers, or say what the app will watch for.

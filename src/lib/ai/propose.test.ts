@@ -214,3 +214,57 @@ describe("deleting an entry", () => {
     expect(applyProposal(p, setup({ entries: [lunch] }), NOW, "x")).toBe("It's already gone.");
   });
 });
+
+// owner, 28 Oct: "give ai more tools, so it can reach and do more inside app" — log and fix from the chat, still a card you Apply
+describe("logging from the chat", () => {
+  it("a food: the amount and macros as estimated, at the time said; Apply adds exactly that", () => {
+    const p = ok(makeProposal({ change: "log_food", name: "Scrambled eggs", grams: 120, kcal: 180, protein: 13, carbs: 1, fat: 14, time: "08:00", why: "2 eggs, estimated" }, setup(), "f1", NOW));
+    expect(p.label).toBe("Log Scrambled eggs 120 g · 180 kcal, 13 g protein · 08:00");
+    const r = done(applyProposal(p, setup({ entries: [] }), NOW, "x"));
+    expect(r.add).toEqual({ kind: "food", at: new Date("2026-10-16T08:00:00").getTime(), name: "Scrambled eggs", grams: 120, macros: { kcal: 180, p: 13, c: 1, f: 14 } });
+  });
+  it("a drink, yesterday evening; caffeine and alcohol only when there are any", () => {
+    const p = ok(makeProposal({ change: "log_drink", name: "Beer", ml: 500, alcohol_g: 19.7, kcal: 215, day: "yesterday", time: "21:30", why: "" }, setup(), "d1", NOW));
+    expect(p.label).toBe("Log Beer 500 ml · 19.7 g alcohol, 215 kcal · yesterday 21:30");
+    expect(p.add).toMatchObject({ kind: "drink", caffeineMg: 0, alcoholG: 19.7, at: new Date("2026-10-15T21:30:00").getTime() });
+  });
+  it("a check-in with a note, and a weigh-in; no time means now", () => {
+    expect(ok(makeProposal({ change: "log_feel", energy: 3, mood: 5, note: "flat after lunch", why: "" }, setup(), "c1", NOW)).add).toEqual({ kind: "feel", at: NOW, mood: 5, energy: 3, note: "flat after lunch" });
+    expect(ok(makeProposal({ change: "log_weight", kg: 78.45, time: "07:30", why: "" }, setup(), "w1", NOW)).label).toBe("Log weigh-in 78.45 kg · 07:30");
+  });
+  it("refuses what can't be right: later than now, a check-in with nothing rated, no amount, out of range", () => {
+    expect(makeProposal({ change: "log_food", name: "Pizza", grams: 300, kcal: 800, time: "13:00", why: "" }, setup(), "x", NOW)).toMatch(/later than now/);
+    expect(makeProposal({ change: "log_feel", note: "meh", why: "" }, setup(), "x", NOW)).toMatch(/at least one of mood/);
+    expect(makeProposal({ change: "log_food", name: "Rice", kcal: 300, why: "" }, setup(), "x", NOW)).toMatch(/^grams/);
+    expect(makeProposal({ change: "log_drink", name: "Espresso", ml: 30, caffeine_mg: 5000, why: "" }, setup(), "x", NOW)).toMatch(/caffeine_mg 0–1000/);
+    expect(makeProposal({ change: "log_feel", energy: 11, why: "" }, setup(), "x", NOW)).toBe("energy: 1–10");
+    expect(makeProposal({ change: "log_weight", kg: 7.8, why: "" }, setup(), "x", NOW)).toBe("kg: 30–300");
+    expect(makeProposal({ change: "log_food", name: "Toast", grams: 60, kcal: 160, day: "tomorrow", why: "" }, setup(), "x", NOW)).toBe("day: today or yesterday");
+  });
+});
+
+describe("fixing an entry from the chat", () => {
+  const coffee = { id: "e1", kind: "drink" as const, at: new Date("2026-10-16T08:10:00").getTime(), name: "Flat white", ml: 200, caffeineMg: 80, alcoholG: 0, kcal: 110 };
+  const rice = { id: "e2", kind: "food" as const, at: new Date("2026-10-15T19:00:00").getTime(), name: "Rice", grams: 200, macros: { kcal: 260, p: 5, c: 56, f: 1 } };
+  const s = setup({ entries: [coffee, rice] });
+  it("the time, on the same day; Put it back has the entry as it was", () => {
+    const p = ok(makeProposal({ change: "edit_entry", entry: "[id:e1]", time: "09:00", why: "" }, s, "p", NOW));
+    expect(p.label).toBe("Change Flat white (80 mg caffeine): 08:10 → 09:00");
+    expect(done(applyProposal(p, s, NOW, "x")).patch).toEqual({ id: "e1", patch: { at: new Date("2026-10-16T09:00:00").getTime() } });
+    expect(p.edit!.before).toEqual(coffee);
+  });
+  it("an amount scales what it carries: 300 g of rice is 390 kcal; 300 ml of the coffee is 120 mg", () => {
+    const p = ok(makeProposal({ change: "edit_entry", entry: "e2", grams: 300, why: "" }, s, "p", NOW));
+    expect(p.edit!.patch).toEqual({ grams: 300, macros: { kcal: 390, p: 8, c: 84, f: 2 } });
+    expect(p.label).toBe("Change Rice (260 kcal): 200 → 300 g (260 → 390 kcal)");
+    expect(ok(makeProposal({ change: "edit_entry", entry: "e1", ml: 300, why: "" }, s, "p", NOW)).edit!.patch).toEqual({ ml: 300, caffeineMg: 120, alcoholG: 0, kcal: 165 });
+  });
+  it("refuses: no such entry, grams on a drink, a time later than now, nothing different; gone by the time you tap", () => {
+    expect(makeProposal({ change: "edit_entry", entry: "zz", time: "09:00", why: "" }, s, "p", NOW)).toMatch(/no entry with id zz/);
+    expect(makeProposal({ change: "edit_entry", entry: "e1", grams: 100, why: "" }, s, "p", NOW)).toMatch(/only for a food/);
+    expect(makeProposal({ change: "edit_entry", entry: "e1", time: "11:00", why: "" }, s, "p", NOW)).toMatch(/later than now/);
+    expect(makeProposal({ change: "edit_entry", entry: "e1", time: "08:10", why: "" }, s, "p", NOW)).toMatch(/^nothing to change/);
+    const p = ok(makeProposal({ change: "edit_entry", entry: "e1", time: "09:00", why: "" }, s, "p", NOW));
+    expect(applyProposal(p, setup({ entries: [rice] }), NOW, "x")).toBe("That entry is gone.");
+  });
+});

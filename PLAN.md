@@ -2971,4 +2971,12 @@ both reads and the questions. Phases in that order; #152 RPE waits (owner).
      "better after gym") — follow-up questions, papers and Reddit, offered when a check-in is low, and in the morning /
      night reads ("i liked that i mentioned getting sick and it showed me zinc w studies").
    - [ ] More AI tools so it can do more inside the app (log, edit, watch, ask later, quiet, settings, workout).
+     His picks (AskUserQuestion, 28 Oct): weekly = one scrolling report; Today = "a pattern, with today on it";
+     Watching = "show me first"; AI tools first = "Log and edit from chat" + "Watch and ask later". Canvas row
+     "28 Oct evening · your picks": Week, TodayPattern, Watch1–3 (https://claude.ai/artifact/UzvHnzEw7gf6z8SoidHn6d).
+   - [x] Log and edit from chat: propose gets log_food / log_drink / log_feel / log_weight (time + today/yesterday, never
+     later than now, ranges checked) and edit_entry (time on the same day, grams / ml scale what the entry carries,
+     name; "Put it back"). Still a card you tap ("Log it", "Change it"). The Noticed box uses them too. propose.test (8
+     new: known answers, refusals); e2e chatlog (three cards, nothing before a tap, exactly what the card said, Today's
+     kcal moves, Log → Food lists it, change + put back, reload, 320 px).
 

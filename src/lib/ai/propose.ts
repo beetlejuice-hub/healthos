@@ -5,13 +5,15 @@
  * days later (the supplement deleted, already added, the dose already changed). Nothing here changes anything by itself.
  * `log_supplement` logs something taken — one you ran out of, or one that isn't yours (owner, 20 Oct: "i took from my moms
  * stack so i should be able to tell ai i took x amount of vit d3 and it should log without offering the restock option").
+ * `log_food` / `log_drink` / `log_feel` / `log_weight` log what you tell the chat, and `edit_entry` fixes one logged wrong
+ * (owner, 28 Oct: "give ai more tools, so it can reach and do more inside app") — still a card you Apply.
  */
 
 import type { AiState, Experiment, State } from "../store";
 import { SLOTS, SUPP_STATUS_PATCH, slotOf, slotTime, suppStatus, type Entry, type Goals, type Slot, type Supplement } from "../types";
 import { changeDose, doseAt } from "../dose";
 import { DEFAULT_ENERGY, PACES, withKcal, type Energy } from "../energy";
-import { atMinute, clock, dayLabel, localDay, minuteOfDay } from "../time";
+import { addDays, atMinute, clock, dayLabel, localDay, minuteOfDay } from "../time";
 import { logIntake, type Intake } from "../supplog";
 import { resolve } from "../stackcheck/check";
 import { EXPERIMENT_MEASURES, PACE_NAMES, PROPOSE_CHANGES, type ProposeChange } from "./tasks";
@@ -32,6 +34,10 @@ export type Proposal = {
   log?: { at: number; amount?: string };
   /** delete_entry: the entry, kept on the card so "Put it back" can restore it. */
   entry?: Entry;
+  /** log_food / log_drink / log_feel / log_weight: the entry to add. */
+  add?: NewEntry;
+  /** edit_entry: what changes, and the entry as it was, so "Put it back" can restore it. */
+  edit?: { patch: Partial<Entry>; before: Entry };
   /** When "Put it back" restored a deleted entry. */
   restored?: number;
   /** When you tapped Apply, or Not now. */
@@ -40,7 +46,9 @@ export type Proposal = {
 };
 
 export type Setup = Pick<State, "supplements" | "goals" | "settings"> & { ai: Pick<AiState, "experiments">; entries?: Entry[] };
-export type Applied = { supplements?: Supplement[]; goals?: Goals; energy?: Energy; experiments?: Experiment[]; intake?: Intake; /** delete_entry: the entry to delete. */ remove?: string; text: string };
+type Kinds = Entry extends infer E ? (E extends { kind: "food" | "drink" | "feel" | "weight" } ? E : never) : never;
+export type NewEntry = Kinds extends infer E ? (E extends Entry ? Omit<E, "id"> : never) : never;
+export type Applied = { supplements?: Supplement[]; goals?: Goals; energy?: Energy; experiments?: Experiment[]; intake?: Intake; /** delete_entry: the entry to delete. */ remove?: string; /** log_*: the entry to add. */ add?: NewEntry; /** edit_entry */ patch?: { id: string; patch: Partial<Entry> }; text: string };
 
 /** An entry in a few words, for a delete card: "Coffee (95 mg caffeine)", "check-in: mood 6", "weigh-in 82.4 kg". */
 export function entryWords(e: Entry, supplements: Supplement[]): string {
@@ -81,6 +89,17 @@ export function findSupp(list: Supplement[], name: string): Supplement | Supplem
   if (near.length) return near.length === 1 ? near[0] : near;
   const kind = resolve(name), alike = kind ? list.filter((s) => resolve(s.name)?.key === kind.key) : [];
   return alike.length === 1 ? alike[0] : alike.length ? alike : null;
+}
+
+/** `time` "HH:MM" and `day` today / yesterday → a moment; now when neither is given; never later than now. */
+function whenOf(input: Record<string, unknown>, now: number): number | string {
+  const day = input.day == null || input.day === "today" ? localDay(now) : input.day === "yesterday" ? addDays(localDay(now), -1) : null;
+  if (!day) return "day: today or yesterday";
+  if (input.time == null) return day === localDay(now) ? now : "time: \"HH:MM\" — when yesterday";
+  const m = typeof input.time === "string" ? input.time.match(/^(\d{1,2}):(\d{2})$/) : null;
+  if (!m || +m[1] > 23 || +m[2] > 59) return "time: \"HH:MM\"";
+  const at = atMinute(day, +m[1] * 60 + +m[2]);
+  return at > now ? `${input.time} is later than now (${clock(now)}) — only what already happened can be logged` : at;
 }
 
 const slotWords = (slots: Slot[]) => SLOTS.filter((x) => slots.includes(x.id)).map((x) => x.name).join(" + ");
@@ -145,6 +164,80 @@ export function makeProposal(input: Record<string, unknown>, s: Setup, id: strin
     return { id, change, why, entry: e, label: `Delete ${entryWords(e, s.supplements)} · ${localDay(e.at) === localDay(now) ? "today" : dayLabel(e.at)} ${clock(e.at)}` };
   }
 
+  if (change === "log_food" || change === "log_drink" || change === "log_feel" || change === "log_weight") {
+    const at = whenOf(input, now);
+    if (typeof at === "string") return at;
+    const when = `${localDay(at) === localDay(now) ? "" : "yesterday "}${clock(at)}`;
+    if (change === "log_food") {
+      const name = str(input.name, 80), grams = int(input.grams, 1, 3000), kcal = int(input.kcal, 0, 5000);
+      const [p, c, f] = [input.protein, input.carbs, input.fat].map((x) => (x == null ? 0 : int(x, 0, 500)));
+      if (!name) return "name: what they ate, up to 80 characters";
+      if (grams == null) return "grams: how much, 1–3000 (your best estimate)";
+      if (kcal == null) return "kcal: for that amount, 0–5000";
+      if (p == null || c == null || f == null) return "protein, carbs, fat: grams for that amount, 0–500 each";
+      return { id, change, why, add: { kind: "food", at, name, grams, macros: { kcal, p, c, f } }, label: `Log ${name} ${grams} g · ${kcalText(kcal)} kcal, ${p} g protein · ${when}` };
+    }
+    if (change === "log_drink") {
+      const name = str(input.name, 80), ml = int(input.ml, 1, 3000), kcal = input.kcal == null ? 0 : int(input.kcal, 0, 2000);
+      const caf = input.caffeine_mg == null ? 0 : int(input.caffeine_mg, 0, 1000);
+      const alc = input.alcohol_g == null ? 0 : typeof input.alcohol_g === "number" && input.alcohol_g >= 0 && input.alcohol_g <= 200 ? Math.round(input.alcohol_g * 10) / 10 : null;
+      if (!name) return "name: what they drank, up to 80 characters";
+      if (ml == null) return "ml: how much, 1–3000";
+      if (kcal == null || caf == null || alc == null) return "kcal 0–2000, caffeine_mg 0–1000, alcohol_g 0–200 (leave out what's none)";
+      const what = [caf ? `${caf} mg caffeine` : "", alc ? `${alc} g alcohol` : "", kcal ? `${kcal} kcal` : ""].filter(Boolean).join(", ");
+      return { id, change, why, add: { kind: "drink", at, name, ml, caffeineMg: caf, alcoholG: alc, kcal }, label: `Log ${name} ${ml} ml${what ? ` · ${what}` : ""} · ${when}` };
+    }
+    if (change === "log_feel") {
+      const vals: Partial<Record<"mood" | "energy" | "focus" | "stress", number>> = {};
+      for (const k of ["mood", "energy", "focus", "stress"] as const) {
+        if (input[k] == null) continue;
+        const v = int(input[k], 1, 10);
+        if (v == null) return `${k}: 1–10`;
+        vals[k] = v;
+      }
+      const note = input.note == null ? undefined : str(input.note, 300);
+      if (note === null) return "note: up to 300 characters";
+      if (!Object.keys(vals).length) return "log_feel: give at least one of mood, energy, focus, stress (1–10)";
+      return { id, change, why, add: { kind: "feel", at, ...vals, ...(note ? { note } : {}) }, label: `Log a check-in: ${Object.entries(vals).map(([k, v]) => `${k} ${v}`).join(", ")}${note ? ` · "${note.slice(0, 40)}"` : ""} · ${when}` };
+    }
+    const kg = typeof input.kg === "number" && input.kg >= 30 && input.kg <= 300 ? Math.round(input.kg * 100) / 100 : null;
+    if (kg == null) return "kg: 30–300";
+    return { id, change, why, add: { kind: "weight", at, kg }, label: `Log weigh-in ${kg} kg · ${when}` };
+  }
+
+  if (change === "edit_entry") {
+    const ref = typeof input.entry === "string" ? input.entry.trim().replace(/^\[?id:/, "").replace(/\]$/, "") : "";
+    const e = (s.entries ?? []).find((x) => x.id === ref);
+    if (!e) return ref ? `no entry with id ${ref} — look it up with day or find and use the [id:…] shown after it` : "entry: the [id:…] the day or find look-up shows after it";
+    const patch: Record<string, unknown> = {}, said: string[] = [];
+    if (input.time != null) {
+      const m = typeof input.time === "string" ? input.time.match(/^(\d{1,2}):(\d{2})$/) : null;
+      if (!m || +m[1] > 23 || +m[2] > 59) return "time: \"HH:MM\", on the same day as the entry";
+      const at = atMinute(localDay(e.at), +m[1] * 60 + +m[2]);
+      if (at > now) return `${input.time} that day is later than now`;
+      if (at !== e.at) { patch.at = at; said.push(`${clock(e.at)} → ${clock(at)}`); }
+    }
+    if (input.name != null) {
+      const name = str(input.name, 80);
+      if (!name || !("name" in e)) return "name: only a food or drink has one, up to 80 characters";
+      if (name !== e.name) { patch.name = name; said.push(`“${name}”`); }
+    }
+    if (input.grams != null) {
+      const g = int(input.grams, 1, 3000);
+      if (e.kind !== "food" || g == null) return "grams: only for a food, 1–3000";
+      const k = g / (e.grams || g), r = (n: number) => Math.round(n * k);
+      if (g !== e.grams) { patch.grams = g; patch.macros = { kcal: r(e.macros.kcal), p: r(e.macros.p), c: r(e.macros.c), f: r(e.macros.f) }; said.push(`${e.grams} → ${g} g (${kcalText(Math.round(e.macros.kcal))} → ${kcalText(r(e.macros.kcal))} kcal)`); }
+    }
+    if (input.ml != null) {
+      const ml = int(input.ml, 1, 3000);
+      if (e.kind !== "drink" || ml == null) return "ml: only for a drink, 1–3000";
+      const k = ml / (e.ml || ml);
+      if (ml !== e.ml) { Object.assign(patch, { ml, caffeineMg: Math.round(e.caffeineMg * k), alcoholG: Math.round(e.alcoholG * k * 10) / 10, kcal: Math.round(e.kcal * k) }); said.push(`${e.ml} → ${ml} ml`); }
+    }
+    if (!said.length) return "nothing to change: give time, name, grams (a food) or ml (a drink) that differ from what's logged";
+    return { id, change, why, edit: { patch: patch as Partial<Entry>, before: e }, label: `Change ${entryWords(e, s.supplements)}: ${said.join(", ")}` };
+  }
+
   if (change === "goals") {
     const kcal = input.kcal == null ? undefined : int(input.kcal, ...GOAL_RANGE.kcal);
     const p = input.protein == null ? undefined : int(input.protein, ...GOAL_RANGE.p);
@@ -200,6 +293,15 @@ export function applyProposal(p: Proposal, s: Setup, now: number, id: string): A
     const patch = p.change === "dose" ? changeDose(cur, p.supp!.dose!, now) : isNow(cur, p.supp!.status!) ? null : SUPP_STATUS_PATCH[p.supp!.status!];
     if (!patch) return p.change === "dose" ? `${cur.name} is already ${cur.dose}.` : `${cur.name} is already ${ALREADY[p.supp!.status!]}.`;
     return { supplements: s.supplements.map((x) => (x.id === cur.id ? { ...x, ...patch } : x)), text: p.change === "dose" ? `${cur.name} is ${p.supp!.dose} from today — past days keep their dose.` : `${cur.name}: ${STATUS_WORDS[p.supp!.status!]}.` };
+  }
+  if (p.add) {
+    const a = p.add;
+    return { add: a, text: `Logged ${a.kind === "food" || a.kind === "drink" ? a.name : a.kind === "weight" ? `${a.kg} kg` : "the check-in"} at ${clock(a.at)}.` };
+  }
+  if (p.change === "edit_entry") {
+    const e = (s.entries ?? []).find((x) => x.id === p.edit!.before.id);
+    if (!e) return "That entry is gone.";
+    return { patch: { id: e.id, patch: p.edit!.patch }, text: `Changed ${entryWords(e, s.supplements)}.` };
   }
   if (p.change === "goals") {
     const g = p.goals!, energy = s.settings.energy ?? DEFAULT_ENERGY;
