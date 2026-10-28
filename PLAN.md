@@ -2913,4 +2913,21 @@ both reads and the questions. Phases in that order; #152 RPE waits (owner).
      card; lib/readiness keeps its unit tests). Looked at: 07:45, 14:20 and 21:20 at 390 px.
      Noticed, for later parts: the AI tab still sends "Readiness 41 this morning" when it's low (inbox) — a number Today
      no longer shows. To ask him at part 5 (AI).
+180. [x] **Your own tips, suggested when you need them** (owner, 28 Oct: "i will type anything in the box on today, things
+   like music helps me focus, exercise clears my head, etc - whenever my focus is low it should recommend to put on my
+   focus music. thats just an example but this is how it should work"). Claimed and built 28 Oct — lib/tips,
+   components/TipAsk, Today's For you, lib/ai/context. Defaults I picked (told him): a part of a Noticed note that says
+   something helps a feeling is a tip for it — "X helps me focus", "X clears my head", "X calms me down", "X gives me
+   energy", "X lifts my mood", "I focus better with X" — focus, energy, mood or stress (stress only the calming way:
+   "coffee makes me anxious" isn't a tip); said the other way later ("music doesn't help me focus anymore"), it's
+   dropped. Low: 4 or under (stress 7 or over) on your last check-in, within 3 hours. Then it's first in For you:
+   "Focus 3 — what you said helps", each tip in his words, "Doing it" (kept as an answer, key tip:<what>, so the AI sees
+   it and it can be tested later), Skip for not now. The AI is told his tips and how often he did each.
+   Tested: lib/tips.test (11: his own sentence → two tips; seven other phrasings; controls — a bad effect, a plain
+   note, "it", a whole sentence; the other way round; low at 4 not 5, stress at 7 not 6; four hours old → nothing;
+   low then fine → nothing; Doing it → gone, the next low check-in asks again). e2e tips: typed in the real box, focus
+   7 → nothing, focus 3 → first in For you, Doing it kept, Undo, "doesn't help anymore" → exercise only, the AI's
+   section, 390 and 320 px; fails with the ask taken out of Today.
+   Next, if he wants: an hour after "Doing it", ask how it went — then the app can say whether music really goes with
+   better focus for him.
 

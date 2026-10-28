@@ -7,6 +7,7 @@
 
 import { fatLines } from "../bodyfat";
 import { noticeLines } from "../notices";
+import { tipLines } from "../tips";
 import { creatineFrom } from "../checkin";
 import type { State } from "../store";
 import type { Entry } from "../types";
@@ -248,7 +249,7 @@ function baseContext({ state, now, days, findings, patterns, weight, today = [],
   const names = new Map(supplements.map((s) => [s.id, s.name]));
   const gaps = { usual: usualBefore(state.entries, localDay(now)), said: ateSaid(state.entries) };
   const answers = state.entries.filter((e) => e.kind === "answer" && e.at > now - 14 * 86_400_000).slice(-20);
-  const notices = noticeLines(state.entries, now).slice(slim ? -8 : -20);
+  const notices = noticeLines(state.entries, now).slice(slim ? -8 : -20), tips = tipLines(state.entries);
   const lines = [
     // owner, 15 Oct: "make sure app sees all data, organized" — what's here, in order
     nowLine(now, slim ? 7 : 14, !!todaySoFar),
@@ -279,6 +280,8 @@ function baseContext({ state, now, days, findings, patterns, weight, today = [],
     ...(patterns.length ? ["## Early patterns (could be chance, still being checked)", ...patterns.slice(0, 5).map((p) => `- ${p.text} — held ${p.held} of ${p.of}`)] : []),
     ...(feelNotes(state, now).length ? ["## Why I felt that way (my own notes on check-ins — take these seriously)", ...feelNotes(state, now).map((l) => `- ${l}`)] : []),
     // PLAN 135: what I noticed about myself, each with what that day held up to then
+    // owner, 28 Oct: "music helps me focus" — his own tips, which Today suggests when that feeling is low
+    ...(tips.length ? ["## What helps me, in my own words (from what I noticed; Today suggests one when that feeling is low)", ...tips.map((l) => `- ${l}`)] : []),
     ...(notices.length ? ["## Things I noticed about myself (my words, last 30 days — informal, for looking into together; not a diagnosis)", ...notices.map((l) => `- ${l}`)] : []),
     ...(answers.length ? ["## My recent answers to your questions", ...answers.map((a) => (a.kind === "answer" ? `- ${new Date(a.at).toISOString().slice(0, 10)} ${a.question} → ${a.answer}` : ""))] : []),
   ];

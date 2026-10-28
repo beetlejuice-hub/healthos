@@ -1171,6 +1171,11 @@ a { color: inherit; }
 .t2-items .item { background: transparent; padding: 4px 0; border-radius: 0; grid-template-columns: 30px minmax(0, 1fr); }
 .t2-items .item > div { min-width: 0; }
 .t2-items .item p { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* your own tip when a feeling's low (lib/tips): his words, Doing it */
+.tipask ul { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 8px; }
+.tipask li { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.tipask q { font-size: 14px; line-height: 1.35; min-width: 0; }
+.tipask .pill-btn { flex: none; }
 /* one ask at a time in For you (Today A): room for the whole sentence */
 .fy .t2-items .item p { white-space: normal; overflow: visible; }
 .t2-items .item .acts { margin-top: 4px; }
