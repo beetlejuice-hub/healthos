@@ -2941,4 +2941,16 @@ both reads and the questions. Phases in that order; #152 RPE waits (owner).
    said one way; every page opens with its answer; hide what can't say anything yet; Sleep's numbers once; Data into
    Settings; the food score's "not in it yet" line), AI 2 (no readiness number in messages; the intro paragraph goes),
    Settings 1 (order by use). Next: his answers → the yeses on the canvas → build, small ones first.
+   - Owner, 28 Oct, the bigger ask: "rn i feel like its just a fancy way of collecting data w band connected … nothing
+     really useful yet. things like i feel good w gf, i feel bad when hangover are things i knew … make this app actually
+     useful. Be really creative, get inspo from others from net". Added on top of the same page as layer 1, "Make it
+     change you": 9 questions (what should be different in 3 months, the one that matters most, straight orders or
+     suggestions, notifications — he said no on 15 Oct, time a day, what he'd buy, what he already knows, daily
+     decisions, accountability) and 12 ideas: Today tells you what to do (Whoop strain target / Rise energy schedule);
+     "I knew that" → your rules, applied for you; "I feel flat" what-now that learns; a weekly review ending in one
+     if-then plan (Gollwitzer & Sheeran 2006); a 12-week body program with a finish line (0.5–0.7 %/week, waist under
+     half your height, lifts, protein); fitness age down with a weekly 4×4 (Helgerud 2007); one wake time + morning
+     light (Windred 2024); psoriasis rating with lagged links; what to eat next; night-out mode; a monthly report card
+     with body tests (push-ups, Yang 2019); experiments he plans (n-of-1, no coin flips). Honest note on the page:
+     prompts alone did little in a 2023 trial (VALENTINE); plans you make yourself do better.
 
