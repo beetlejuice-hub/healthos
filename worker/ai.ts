@@ -20,6 +20,8 @@ type Deps = { fetch: typeof fetch; now: () => number };
 
 const SB_URL = "https://ubfvaewfdbmecowoeuni.supabase.co";
 const SB_KEY = "sb_publishable_yN86P7x08XORkRDCtr7sbw_If6orfsW";
+/** Chat tools sent without strict: the API allows 24 optional fields across a request's strict schemas (and 16 unions). */
+const LOOSE = new Set(["propose"]);
 const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json" } });
 
 /** "2026-10-01" in the user's time zone, so the cap resets at their midnight. */
@@ -158,7 +160,10 @@ export async function callModel(b: AiRequest, choice: ModelChoice, apiKey: strin
   // The chat's own tools (the app runs them) and web search for outside facts; the last round may not call any.
   // the reads may ask the app for exact numbers too (PLAN 160): its read-only look-ups, beside web search
   const read = b.task === "digest" || b.task === "night" || b.task === "dive", final = (chat || read) && !!(b as { final?: boolean }).final;
-  const tools = chat ? [...CHAT_TOOLS.map((t) => ({ ...t, strict: true })), { type: m.web, name: "web_search" as const, max_uses: 3 }]
+  // strict: the API holds every argument to its schema — but it allows 24 optional fields across a request's strict
+  // schemas, and propose has 28 (28 Oct: "Schemas contains too many optional parameters (28)" turned every chat message
+  // down). propose goes non-strict: the app checks each one itself before it becomes a card (lib/ai/propose).
+  const tools = chat ? [...CHAT_TOOLS.map((t) => ({ ...t, strict: !LOOSE.has(t.name) })), { type: m.web, name: "web_search" as const, max_uses: 3 }]
     : read ? [...READ_TOOLS.map((t) => ({ ...t, strict: true })), { type: m.web, name: "web_search" as const, max_uses: b.task === "dive" ? 10 : 4 }]
     : web ? [{ type: m.web, name: "web_search" as const, max_uses: lookup ? 2 : task === "verdict" ? 3 : 4 }] : null;
   // A search that comes back "unavailable" (Anthropic: "an internal error occurred") is tried again once, the whole

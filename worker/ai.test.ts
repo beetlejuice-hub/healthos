@@ -64,7 +64,8 @@ describe("/api/ai", () => {
     expect(r1.usage.calls).toBe(50);
     const sent = w.sent[0].body as { tools: { name: string; type?: string; strict?: boolean; max_uses?: number }[]; output_config: { format?: unknown }; tool_choice?: unknown };
     expect(sent.tools.map((t) => t.name)).toEqual(["day", "series", "find", "show_chart", "compare", "nights", "sessions", "propose", "remember", "web_search"]);
-    expect(sent.tools.slice(0, 9).every((t) => t.strict === true)).toBe(true);
+    // strict, all but propose: 28 optional fields, past the API's 24 for a request (28 Oct: every chat message turned down)
+    expect(sent.tools.slice(0, 9).filter((t) => t.strict !== true).map((t) => t.name)).toEqual(["propose"]);
     expect(sent.tools[9]).toMatchObject({ type: "web_search_20260209", max_uses: 3 });
     expect(sent.output_config.format).toBeUndefined(); // replies are Markdown now, not JSON
     expect(sent.tool_choice).toBeUndefined();
@@ -435,5 +436,43 @@ describe("/api/ai", () => {
     expect(capOnly.sent.length).toBe(1);
     const ok = world([{ text: JSON.stringify(digest) }]);
     expect(((await (await handleAi(post({ task: "digest", context: "c", shown: [] }), env, ok.deps)).json()) as { webFailed?: string[] }).webFailed).toBeUndefined();
+  });
+});
+
+/**
+ * Every request the Worker sends stays inside the API's limits for strict schemas: 24 optional fields, 16 union fields
+ * and 20 strict tools across a request (platform docs, structured outputs). 28 Oct: "Schemas contains too many optional
+ * parameters (28)" turned every chat message down after propose grew; this would have caught it before it shipped.
+ */
+describe("strict schemas stay inside the API's limits", () => {
+  const count = (s: unknown): { optional: number; unions: number } => {
+    let optional = 0, unions = 0;
+    const walk = (x: unknown) => {
+      if (!x || typeof x !== "object") return;
+      const o = x as { type?: unknown; properties?: Record<string, unknown>; required?: string[]; items?: unknown; anyOf?: unknown[] };
+      if (o.properties) { const req = new Set(o.required ?? []); for (const [k, v] of Object.entries(o.properties)) { if (!req.has(k)) optional++; const p = v as { anyOf?: unknown; type?: unknown }; if (p && (p.anyOf || Array.isArray(p.type))) unions++; walk(v); } }
+      if (o.items) walk(o.items);
+      for (const a of o.anyOf ?? []) walk(a);
+    };
+    walk(s);
+    return { optional, unions };
+  };
+  const bodies: Record<string, object> = {
+    chat: { task: "chat", messages: [{ role: "user", text: "hi" }], context: "c" },
+    digest: { task: "digest", context: "c", shown: [] }, night: { task: "night", day: "2026-10-28", context: "c" }, dive: { task: "dive", context: "c" },
+    questions: { task: "questions", context: "c", asked: [] }, describe: { task: "describe", text: "2 eggs" },
+    supplement: { task: "supplement", name: "Creatine", context: "c" }, verdict: { task: "verdict", context: "c" },
+  };
+  for (const [task, body] of Object.entries(bodies)) it(task, async () => {
+    const w = world([{ text: "{}" }]);
+    await handleAi(post(body), env, w.deps).catch(() => null);
+    const sent = w.sent[0]?.body as { tools?: { strict?: boolean; input_schema?: unknown }[]; output_config?: { format?: { schema?: unknown } } } | undefined;
+    expect(sent, `${task} was sent`).toBeTruthy();
+    const strict = (sent!.tools ?? []).filter((t) => t.strict === true);
+    const all = [...strict.map((t) => count(t.input_schema)), count(sent!.output_config?.format?.schema)];
+    const total = all.reduce((a, c) => ({ optional: a.optional + c.optional, unions: a.unions + c.unions }), { optional: 0, unions: 0 });
+    expect(total.optional, `${task}: optional fields across strict schemas`).toBeLessThanOrEqual(24);
+    expect(total.unions, `${task}: union fields`).toBeLessThanOrEqual(16);
+    expect(strict.length).toBeLessThanOrEqual(20);
   });
 });
