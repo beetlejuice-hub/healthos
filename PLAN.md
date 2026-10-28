@@ -2930,4 +2930,15 @@ both reads and the questions. Phases in that order; #152 RPE waits (owner).
    section, 390 and 320 px; fails with the ask taken out of Today.
    Next, if he wants: an hour after "Doing it", ask how it went — then the app can say whether music really goes with
    better focus for him.
+181. [~] **The reform: proposals for every part** (owner, 28 Oct: "we need a systematic reform. i want u to look at the
+   parts of the app and come up w ideas, fixes, changes, removing things etc, what to change or add, propose it to me,
+   ill answer, then make prototype and build"). Claimed 28 Oct. Every screen recaptured after Today A (sample's 60 days
+   + 90-day fake band; Today at 08:30 / 15:40 / 21:30). 23 proposals on a page he answers Yes / No / Change on:
+   https://claude.ai/artifact/CMe4ZKoeWzHF7gdCzGSFaa — Today 6 (yesterday's asks stop at noon; one stack ask; the
+   morning read leaves at noon; "From your data" one line; "did your tip help?"; tips from check-in notes), Log 5 (one
+   box for food and for drink; recent foods as tiles; Stack tab's list once; the weight chart in one place), Workout 3
+   (only the next day open; programs behind "Change program"; strength drawn once), Insights 6 (each finding once,
+   said one way; every page opens with its answer; hide what can't say anything yet; Sleep's numbers once; Data into
+   Settings; the food score's "not in it yet" line), AI 2 (no readiness number in messages; the intro paragraph goes),
+   Settings 1 (order by use). Next: his answers → the yeses on the canvas → build, small ones first.
 
