@@ -69,6 +69,23 @@ function world(plant) {
   const w = world(true);
   let { ctx, pg } = await open(w, 390);
   check(`the Body lab tab is there (${await pg.locator('.secbar button').allInnerTexts().then((t) => t.join(' | ').replace(/\n/g, ' '))})`, await pg.locator('.secbar button', { hasText: 'Body lab' }).count() === 1);
+  // one page at a time (owner, 8 Oct): the Body lab tab showed every other page above it, ~30,000 px (found 28 Oct)
+  const others = await pg.evaluate(() => [...document.querySelectorAll('.inst [data-sec]:not([data-sec="lab"])')].filter((e) => e.getBoundingClientRect().height > 0).map((e) => e.dataset.sec));
+  check(`the Body lab tab shows only the lab (${[...new Set(others)].join(', ') || 'nothing else'})`, others.length === 0);
+  // …and every page does, so a page added later without its line in index.css's one-page rule shows up here
+  const leaks = await pg.evaluate(async () => {
+    const out = [];
+    for (const b of [...document.querySelectorAll('.secbar button')]) {
+      b.click(); await new Promise((r) => setTimeout(r, 150));
+      const tab = document.querySelector('.inst').dataset.tab;
+      const shown = [...new Set([...document.querySelectorAll('.inst [data-sec]')].filter((e) => e.getBoundingClientRect().height > 0).map((e) => e.dataset.sec))];
+      if (shown.some((x) => x !== tab)) out.push(`${tab}: ${shown.join('+')}`);
+    }
+    document.querySelector('.secbar button:last-child')?.click();
+    return out;
+  });
+  check(`every Insights page shows only itself (${leaks.join('; ') || 'all clean'})`, leaks.length === 0);
+  await pg.goto(APP + '#insights/lab'); await pg.waitForTimeout(300);
   check(`all 63 nights loaded (${await pg.locator('.bl').getAttribute('data-nights').catch(() => '?')})`, +(await pg.locator('.bl').getAttribute('data-nights').catch(() => 0)) >= 60);
   const dr = await text(card(pg, 'drinks').locator('h3'));
   check(`drinks: each one +~2.5 bpm asleep, −~5 ms HRV (${dr})`, /^Each drink went with heart rate asleep \+(2\.\d|3\.0) bpm, HRV −(4\.\d|5\.\d|6\.0) ms that night\.$/.test(dr));

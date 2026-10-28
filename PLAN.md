@@ -2861,3 +2861,8 @@ both reads and the questions. Phases in that order; #152 RPE waits (owner).
    fake band), morning / afternoon / night, and the taps each daily job takes. Phase 2: a review page — per screen what
    it's for, what repeats elsewhere, what's noise, what's confusing or broken, what could be smarter — ranked. Phase 3:
    the top simplifications on the canvas for him to pick.
+   - Found in phase 1 and fixed at once (28 Oct): the Body lab tab showed every other Insights page above the lab —
+     34,000 px, the lab cards 30,000 px down — since body lab went in (PLAN 177): index.css's one-page rule had no line
+     for "lab". e2e bodylab now opens every Insights page and checks each shows only itself (failed: "lab: week+timeline
+     +heart+…"; passes with the line), so a page added later without its line fails there.
+

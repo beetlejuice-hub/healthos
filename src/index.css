@@ -1058,6 +1058,7 @@ a { color: inherit; }
 .inst[data-tab="sleep"] [data-sec]:not([data-sec="sleep"]),
 .inst[data-tab="intake"] [data-sec]:not([data-sec="intake"]),
 .inst[data-tab="training"] [data-sec]:not([data-sec="training"]),
+.inst[data-tab="lab"] [data-sec]:not([data-sec="lab"]),
 .inst[data-tab="data"] [data-sec]:not([data-sec="data"]) { display: none !important; }
 .inst .sec-wrap { display: grid; gap: 16px; }
 .lanes-t { display: flex; justify-content: space-between; align-items: center; width: 100%; background: none; border: 0; padding: 0 0 4px; color: inherit; font: inherit; cursor: pointer; }
