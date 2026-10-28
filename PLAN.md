@@ -2979,6 +2979,12 @@ both reads and the questions. Phases in that order; #152 RPE waits (owner).
      on, it's written again by itself, once. Its totals count everything logged for the day (a snack logged ahead for
      22:00 too). A read from before the fix is caught by its own numbers. Couldn't check his entries (Supabase MCP down)
      — the planted case is his. nightstale.test (4) + e2e nightstale (13 checks, control: nothing since → no line).
+     Then (owner: "the food was logged before the digest i think..like i logged the food, then opened the app after
+     21:00"): the real cause — two devices. On open (or when a tab left open comes back) the AI's tick and the sync
+     start together, and nothing made the read wait: the laptop wrote it from its own breakfast + lunch before the
+     phone's dinner arrived. Now every automatic AI call waits for the sync under way (lib/session syncSettled); offline
+     it goes with what's here. e2e nightsync (slow connection: open and tab-comes-back both fail without it, 671 → 2,001;
+     control: offline still writes).
    - [x] Bug (owner, 28 Oct, screenshot of the chat: "???" — "Anthropic turned this request down (ai-error 400: Schemas
      contains too many optional parameters (28) …)"): the log/edit tools gave propose 28 optional fields; the API allows
      24 across a request's strict schemas, so every chat message failed from c5a618b until 08008be. The fake-AI e2e

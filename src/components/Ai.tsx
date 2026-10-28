@@ -43,6 +43,7 @@ import { digestDue, freshRead, morningShown, nightIn, nightShown } from "../lib/
 import { attempt, onRetryDue, tryNow } from "../lib/ai/attempts";
 import { dayTotals, dayWindow, eveningOf, nightDue, nightStale, STALE } from "../lib/ai/nightread";
 import { addThreads, adviceOf, closeThreads, dropSaid, keepSaid, saidTopics } from "../lib/ai/said";
+import { onSyncSettled, syncSettled } from "../lib/session";
 import { byDay, foldLine } from "../lib/ai/thread";
 
 const usd = (x: number) => (x < 0.1 ? `$${x.toFixed(3)}` : `$${x.toFixed(2)}`);
@@ -253,8 +254,10 @@ export function useAiAuto(userId: string | undefined) {
   useEffect(() => {
     if (!on) return;
     const tick = () => {
-      // not before the band's first load is done: a read written without it misses the heart rate (21 Oct)
-      if (!bandSettled()) return;
+      // not before the band's first load is done: a read written without it misses the heart rate (21 Oct); nor while
+      // the other device's entries are on their way (28 Oct: dinner logged on the phone, the read written on the
+      // laptop at 21:09 from breakfast and lunch)
+      if (!bandSettled() || !syncSettled()) return;
       const now = new Date(), h = now.getHours(), today = localDay(now.getTime()), ai = getState().ai;
       const rated = getState().entries.some((e) => e.kind === "sleep" && e.rating != null && localDay(e.at) === today);
       const target = digestDue(now.getTime(), ai.digest, nightIn(bandNow()?.sleep, rated, now.getTime()));
@@ -284,10 +287,11 @@ export function useAiAuto(userId: string | undefined) {
     const t = setInterval(tick, 10 * 60_000);
     // the band's nights arrive a few seconds after the app opens: look again then, not 10 minutes later
     // …and when a failed call's wait is over (lib/ai/attempts)
-    const off = onNights(tick), offSettled = onBandSettled(tick), offRetry = onRetryDue(tick);
-    const vis = () => document.visibilityState === "visible" && tick();
+    const off = onNights(tick), offSettled = onBandSettled(tick), offRetry = onRetryDue(tick), offSync = onSyncSettled(tick);
+    // after every other listener: the sync this return starts is under way first, so the tick waits for it
+    const vis = () => { if (document.visibilityState === "visible") setTimeout(tick, 0); };
     document.addEventListener("visibilitychange", vis);
-    return () => { clearInterval(t); off(); offSettled(); offRetry(); document.removeEventListener("visibilitychange", vis); };
+    return () => { clearInterval(t); off(); offSettled(); offRetry(); offSync(); document.removeEventListener("visibilitychange", vis); };
   }, [on]);
 }
 

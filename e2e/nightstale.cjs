@@ -5,7 +5,7 @@
 // numbers (the same as Today's kcal tile), "Read it again" sends the AI the new totals, and half an hour on it's written
 // again by itself — once. A read from before this fix (no totals kept) is caught by its own words. Control: nothing
 // logged since → no line, no extra call.
-const { chromium, APP, OUT, handle, forYou } = require('./harness.cjs');
+const { chromium, APP, OUT, handle, forYou, tables } = require('./harness.cjs');
 
 const T = (hm) => new Date(`2026-10-28T${hm}:00`).getTime(), KEY = 'healthos.v1:u-test';
 const food = (id, hm, kcal, p) => ({ id, kind: 'food', at: T(hm), name: id, grams: 100, macros: { kcal, p, c: 0, f: 0 } });
@@ -16,6 +16,9 @@ const read = (summary) => ({ summary, happened: [], notes: '', change: [], remem
   const b = await chromium.launch(); const errs = [];
   const check = (label, ok) => { console.log((ok ? 'PASS ' : 'FAIL ') + label); if (!ok) process.exitCode = 1; };
   async function open(at, setup) {
+    // each evening its own account on the fake server: since 28 Oct the reads wait for the sync, which would bring the
+    // last scenario's day back
+    tables.entries.clear(); tables.docs.clear();
     const calls = [];
     const ctx = await b.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true });
     await ctx.route('https://ubfvaewfdbmecowoeuni.supabase.co/**', handle);

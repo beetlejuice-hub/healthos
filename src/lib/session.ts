@@ -15,6 +15,14 @@ let status: SyncStatus = { state: "idle", pending: 0, lastSync: null };
 const subs = new Set<() => void>();
 
 export const currentSyncer = () => syncer;
+/**
+ * No sync half-way: what the other device logged is in. The reads wait for it (owner, 28 Oct: "i ate around 1900 kcal
+ * … yet ai digest says i ate 650 something" — dinner logged on one device, the read written on the other at 21:09
+ * before the pull landed). Offline, a sync fails fast and this is true again: the reads go with what's here.
+ */
+export const syncSettled = () => !syncer || status.state !== "syncing";
+const settledSubs = new Set<() => void>();
+export function onSyncSettled(f: () => void): () => void { settledSubs.add(f); return () => { settledSubs.delete(f); }; }
 export function useSyncStatus(): SyncStatus {
   return useSyncExternalStore((l) => { subs.add(l); return () => { subs.delete(l); }; }, () => status);
 }
@@ -23,7 +31,7 @@ function start(userId: string) {
   if (syncer) return;
   const adopted = openStore(userId);
   syncer = new Syncer(supabase, userId, getState, applyFromServer, `${storageKey()}:sync`, resetLocal);
-  syncer.onStatus((s) => { status = s; subs.forEach((l) => l()); });
+  syncer.onStatus((s) => { const was = status.state; status = s; subs.forEach((l) => l()); if (was === "syncing" && s.state !== "syncing") settledSubs.forEach((f) => f()); });
   if (adopted) syncer.adoptLocal(getState());
   setRemote(syncer);
   void syncer.sync();
