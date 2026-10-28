@@ -2881,4 +2881,10 @@ both reads and the questions. Phases in that order; #152 RPE waits (owner).
      one, u check, ask question, i answer, look at prototype and accept or send changes". So: one part at a time — I
      check it, ask him, he answers, a prototype on the canvas, he accepts or sends changes, then build it; then the next
      part. Order: Today → Log → Workout → Insights page by page → AI → Settings.
+   - Part 1 · Today (28 Oct). His answers: opens Today for all four — logging, check-in, stack, the morning read; asks
+     "one at a time"; numbers "tiles, tap for details" (the Stack / Caffeine / Food cards go); cut the readiness line.
+     Prototype on the canvas (row "Part 1 of the review · Today"): A — log buttons under the tiles, the check-in, then a
+     "For you · 1 of 6" card, one ask at a time (my pick); A after the check-in (folds to a line, ask 2: the morning
+     read); B — one Now card stepping through everything, log buttons pinned above the tabs; a tile opened (Stack).
+     Waiting on his pick or changes.
 
