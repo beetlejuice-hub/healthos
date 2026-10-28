@@ -7,10 +7,10 @@ import { addDays, atMinute } from "../time";
 
 const now = atMinute("2026-10-27", 10 * 60);
 const fit = (slope: number, sure: Slope["sure"]): Slope => ({ pts: [], slope, p: sure === "clear" ? 0.001 : sure === "likely" ? 0.01 : 0.3, sure });
-const none: Lab = { recovery: null, drink: null, smoke: null, caf: null, heat: null, clock: null, coins: [], fit: null };
+const none: Lab = { recovery: null, drink: null, smoke: null, caf: null, heat: null, clock: null, fit: null };
 
 describe("the body lab, as the AI is told (PLAN 177)", () => {
-  it("found: each drink, smoking days, late caffeine, the wound-up hour, the body clock, a coin-flip — with the numbers the app shows", () => {
+  it("found: each drink, smoking days, late caffeine, the wound-up hour, the body clock — with the numbers the app shows", () => {
     const lab: Lab = {
       ...none,
       drink: { hr: { bins: [], base: 54, fit: fit(2.34, "clear") }, hrv: { bins: [], base: 50, fit: fit(-4.8, "likely") }, nights: [53, 1, 3, 3, 3], smoked: 0 },

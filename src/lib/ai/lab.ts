@@ -1,7 +1,7 @@
 /**
  * What the AI is told from the body lab (PLAN 177; owner, 15 Oct: "make sure app sees all data, organized"): the morning
- * after a night out, what each drink / a smoking day / late caffeine has gone with, the wound-up hour, the body clock, and
- * coin-flip results — only what the app's own tests call clear or likely, with the numbers it showed you. Chance never
+ * after a night out, what each drink / a smoking day / late caffeine has gone with, the wound-up hour, the body clock and
+ * fitness age — only what the app's own tests call clear or likely, with the numbers it showed you. Chance never
  * reaches the AI as a finding. `labLines` only words what's computed (tested on its own); `labNow` computes it.
  */
 
@@ -9,7 +9,6 @@ import type { BandData } from "../band";
 import { drinkDose, labNights, lateCaffeine, smokeCompare, type DrinkDose, type SmokeCompare } from "../bodylab";
 import { bodyClock, clockOf, type BodyClock } from "../bodyclock";
 import { cardioSpans } from "../cardio";
-import { coinResult, endOf, OUTCOME, running, type Coin, type CoinResult } from "../coin";
 import { cardioByDay, fitAge, fitLine, type FitAge } from "../fitage";
 import { usualByHour } from "../hrusual";
 import { sessions } from "../liftstrength";
@@ -22,13 +21,12 @@ import { addDays, clock, DAY, localDay } from "../time";
 import type { EntryOf } from "../types";
 import { kgByDay } from "../vo2";
 import { woundHeat, type Heat } from "../wound";
-import { RESULT_WORDS } from "./experiment";
 
 const sure = (f: Slope | { sure: string } | null | undefined) => !!f && (f.sure === "clear" || f.sure === "likely");
 const sg = (v: number, d = 1) => `${v >= 0 ? "+" : "−"}${Math.abs(v).toFixed(d)}`;
 const hh = (h: number) => `${String(h % 24).padStart(2, "0")}:00`;
 
-export type Lab = { recovery: Recovery | null; drink: DrinkDose | null; smoke: SmokeCompare; caf: ReturnType<typeof lateCaffeine>; heat: Heat | null; clock: BodyClock | null; coins: { c: Coin; r: CoinResult }[]; fit: FitAge | null };
+export type Lab = { recovery: Recovery | null; drink: DrinkDose | null; smoke: SmokeCompare; caf: ReturnType<typeof lateCaffeine>; heat: Heat | null; clock: BodyClock | null; fit: FitAge | null };
 
 export function labLines(l: Lab, now: number): string[] {
   const out: string[] = [];
@@ -60,10 +58,6 @@ export function labLines(l: Lab, now: number): string[] {
     if (bits.length) out.push(`Body clock, last 30 days: ${bits.join("; ")}.`);
   }
   if (l.fit) out.push(fitLine(l.fit));
-  for (const { c: x, r: res } of l.coins) {
-    const first = res.rows[0];
-    out.push(`Coin-flip "${x.name}" (${x.start} to ${addDays(x.ended && x.ended < endOf(x) ? x.ended : endOf(x), -1)}; heads: ${x.heads}, tails: ${x.tails}): ${res.verdict ? RESULT_WORDS[res.verdict] : "not enough days to tell"}${first && first.diff != null ? ` — ${OUTCOME[first.id].name.toLowerCase()} ${first.heads!.toFixed(1)} on heads vs ${first.tails!.toFixed(1)} on tails ${OUTCOME[first.id].unit} (${first.sure})` : ""}; ${res.counted} days counted.`);
-  }
   return out;
 }
 
@@ -84,9 +78,8 @@ function labCompute(state: State, band: BandData | null, now: number): string[] 
   const ls = labNights(ns, state.entries);
   const spans = state.workouts.map((w) => ({ start: w.startedAt, end: w.endedAt ?? w.startedAt + 3_600_000 }));
   const heat = band ? woundHeat(band.hr, band.sleep, spans, band.steps ?? [], usualByHour(band.hr, spans, today, 14), today) : null;
-  const coins = (state.ai.coins ?? []).filter((c) => !running(c, today) && (c.ended ?? endOf(c)) >= addDays(today, -60)).map((c) => ({ c, r: coinResult(c, ns, state.entries, today) }));
   // fitness age only once you've said whose norms (the card asks): never a guess at men's or women's
   const sex = state.settings.sex;
   const fit = band && sex ? fitAge(band.vo2, today, sex, { age: state.settings.age, kg: kgByDay(state.entries), rhr: band.rhr, cardio: cardioByDay(cardioSpans(state.workouts, now)) }) : null;
-  return labLines({ recovery, drink: ns.length ? drinkDose(ls) : null, smoke: smokeCompare(ls), caf: lateCaffeine(ls), heat, clock: bodyClock(ns, state.entries, today), coins, fit }, now);
+  return labLines({ recovery, drink: ns.length ? drinkDose(ls) : null, smoke: smokeCompare(ls), caf: lateCaffeine(ls), heat, clock: bodyClock(ns, state.entries, today), fit }, now);
 }

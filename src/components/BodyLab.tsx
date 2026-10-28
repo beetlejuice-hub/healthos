@@ -14,7 +14,6 @@ import { SMOKE_LABEL } from "../lib/smoke";
 import { DAY, localDay } from "../lib/time";
 import type { Entry } from "../lib/types";
 import { useWidth } from "./useWidth";
-import { CoinLab } from "./Coins";
 import { WoundHeat } from "./WoundHeat";
 import { BodyClockCard } from "./BodyClockCard";
 import { FitAgeCard } from "./FitAgeCard";
@@ -38,7 +37,6 @@ export function BodyLab({ band, entries, now, active }: { band: BandData | null;
   const [ref, w] = useWidth<HTMLDivElement>();
   return (
     <div className="bl" data-sec="lab" ref={ref} data-nights={ls.length}>
-      <CoinLab now={now} />
       <FitAgeCard band={band} now={now} w={w} />
       {ls.length > 0 && <Drinks d={drink} w={w} nights={ls.length} />}
       {(ls.length > 0 || month.answered > 0) && <section className="sl-p bl-card" aria-label="Cigarettes and your heart" data-card="smoke">

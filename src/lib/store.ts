@@ -6,7 +6,6 @@
  * (phone ↔ laptop) plugs in through `setRemote` and never blocks the screen.
  */
 
-import type { Coin } from "./coin";
 import { PROGRAMS, asSplit } from "./programs";
 import { useSyncExternalStore } from "react";
 import type { Saved } from "./ai/saved";
@@ -52,8 +51,8 @@ export type AiState = {
   research: Record<string, SupplementAnswer & { at: number; /** The name you typed when it was looked up. */ asked: string }>;
   /** Protocols you chose to try: the app compares before and during. */
   experiments: Experiment[];
-  /** Coin-flip experiments (PLAN 177, body lab 1): the coin picks each day; lib/coin. */
-  coins?: Coin[];
+  /** Coin-flip experiments, retired 28 Oct (owner: "remove coin flip from body lab"): kept only so old saved data loads. */
+  coins?: unknown[];
   /** This week's deep dive (PLAN 160), and the topics so far (never again). `repicks`: "pick another" taps this week. */
   dive?: (DiveAnswer & { key: string; at: number; seen?: number; looked?: string[]; repicks?: number; skipped?: string[] }) | null;
   dives?: { key: string; topic: string }[];

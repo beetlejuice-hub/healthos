@@ -17,7 +17,6 @@ import { SMOKE_BANDS, SMOKE_LABEL, SMOKE_MID } from "../smoke";
 import type { Finding } from "../findings";
 import type { Pattern } from "../scout";
 import { addDays, atMinute, clock, dayLabel, localDay } from "../time";
-import { coinOn, running } from "../coin";
 import { weekly } from "../weekly";
 import { personalSleep, ratedNights } from "../caffeine-sleep";
 import { doseCompare } from "../dose";
@@ -268,8 +267,6 @@ function baseContext({ state, now, days, findings, patterns, weight, today = [],
     ...supplements.map((s) => `- ${s.name}${s.dose ? ` ${s.dose}` : ""} (${s.slot})${s.status ? ` — ${s.status === "low" ? "running low" : s.status === "out" ? "ran out" : "stopped"}` : s.active ? "" : " — paused"}`),
     ...(ai.memory.length ? ["## What you remember about me", ...ai.memory.map((m) => `- ${m.text}`)] : []),
     ...(ai.experiments.filter((x) => !x.ended).length ? ["## Experiments running", ...ai.experiments.filter((x) => !x.ended).map((x) => `- ${x.name} since ${x.start} (${x.days} days, measuring ${x.measure})`)] : []),
-    // coin-flips (PLAN 177): only that one runs and what today's coin says — never a mid-way result (it's sealed)
-    ...((ai.coins ?? []).filter((c) => running(c, localDay(now))).map((c) => `## Coin-flip running: ${c.name} since ${c.start} (${c.days} days; heads: ${c.heads}, tails: ${c.tails}; today's coin: ${coinOn(c, localDay(now))}; the result is sealed until it ends — don't guess at it)`)),
     slim ? "## Last 7 days" : "## Last 14 days",
     ...days.slice(slim ? -7 : -14).map((d) => `- ${dayLine(d, names, gaps)}`),
     ...(todaySoFar ? [`## Today so far (${dayLabel(now)}, up to ${clock(now)})`, ...(todaySoFar.length ? todaySoFar.map((l) => `- ${l}`) : ["- nothing logged yet"])] : []),

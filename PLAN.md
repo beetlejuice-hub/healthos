@@ -2874,4 +2874,11 @@ both reads and the questions. Phases in that order; #152 RPE waits (owner).
      showed back to back; e2e ghost + foodgap); coin-flip card no longer says slow supplements are "next" (owner: "nah");
      Body lab's subtitle names what's on it; fitness age leaves out what didn't move ("54 → 54"). e2e coins failed once
      under load (74 s, 3 at a time) and passes alone, before and after — a load flake, not this change.
+   - [x] Coin-flips removed (28 Oct; owner: "remove coin flip from body lab"). Body lab was the only place to start one,
+     so the whole feature went: the card, Today's coin card, the AI's coin lines, lib/coin and its tests, its styles,
+     e2e coins. ai.coins stays in the saved data's shape (unknown[]) so an old saved state still loads; nothing deleted.
+   - The way to go (owner, 28 Oct): "i meant to go one by one, both of us - through all the parts of the app. but one by
+     one, u check, ask question, i answer, look at prototype and accept or send changes". So: one part at a time — I
+     check it, ask him, he answers, a prototype on the canvas, he accepts or sends changes, then build it; then the next
+     part. Order: Today → Log → Workout → Insights page by page → AI → Settings.
 
