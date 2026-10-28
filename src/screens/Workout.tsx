@@ -22,6 +22,8 @@ import { checkSet, type Guard } from "../lib/sanity";
 import { StrengthCard } from "../components/StrengthCard";
 import { bandLatest, useBand } from "../lib/band-client";
 import { ZoneBar } from "../components/ZoneBar";
+import { WeekEntry, WeekReport } from "../components/WeekReport";
+import { readRoute } from "../lib/nav";
 
 type SetE = EntryOf<"set">;
 /** One tap for cardio when none was planned. */
@@ -38,6 +40,10 @@ function lastSets(sets: SetE[], exercise: string, notWorkout?: string): SetE[] {
 export function WorkoutScreen() {
   const workouts = useStore((s) => s.workouts);
   const active = workouts.find((w) => w.endedAt === null);
+  // #workout/week: the week's report (owner, 28 Oct: "a weekly overview of strength and cardio and gym performance")
+  const [sub, setSub] = useState(() => readRoute()[1]);
+  useEffect(() => { const on = () => setSub(readRoute()[1]); addEventListener("hashchange", on); return () => removeEventListener("hashchange", on); }, []);
+  if (sub === "week") return <WeekReport now={Date.now()} />;
   return active ? (active.kind === "cardio" ? <CardioSession w={active} /> : <Session w={active} />) : <Pick />;
 }
 
@@ -72,6 +78,7 @@ function Pick() {
         <span className="k">Cardio · one tap starts the timer</span>
         <div className="picks" aria-label="Start cardio">{CARDIO.map((c) => <button type="button" key={c} onClick={() => act.startCardio(c)}>▶ {c}</button>)}</div>
       </div>
+      <WeekEntry now={now} />
       <StrengthCard sets={sets} now={now} className="tile strength" />
       <MuscleMap sets={sets} now={now} />
       <Premade templates={templates} />

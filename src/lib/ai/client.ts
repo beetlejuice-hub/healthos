@@ -6,6 +6,7 @@ import { AI_ERRORS, MONTHLY_USD, READ_ROUNDS, isLooks, type AiError } from "./ta
 import { pickLead } from "./lead";
 import { runChatTool } from "./chattools";
 import { gridLines, todayLines, trainingLines } from "./sections";
+import { weekAiLines } from "../weekreport";
 import { readiness } from "../readiness";
 import { heartSigns, nightCheck, nightCheckLines } from "../nightcheck";
 import { kgByDay, vo2Trend, type Vo2Trend } from "../vo2";
@@ -162,7 +163,9 @@ export function contextNow(state: State = getState(), now = Date.now(), { slim =
       // cardio (PLAN 130): this week's minutes against the weeks before, the last sessions with the band's heart rate
       ...cardioWeekLines(cardioSpans(state.workouts, now), band?.hr ?? [], currentKg(state.entries, 0, now) || null, now, 4, 3, maxHrOf(state.settings)?.bpm),
       // cardio fitness from the band, and which way it's going — split from the kilos while you lose weight (PLAN 52)
-      ...[vo2Trend(band?.vo2, today, kgByDay(state.entries))?.line].filter((l): l is string => !!l)], grids: gridLines(state.ai.inbox ?? []), slim, onToday,
+      ...[vo2Trend(band?.vo2, today, kgByDay(state.entries))?.line].filter((l): l is string => !!l),
+      // last week as the weekly report shows it (owner, 28 Oct: "a weekly overview of strength and cardio and gym performance")
+      ...weekAiLines({ sets, workouts: state.workouts, templates: state.templates, hr: band?.hr ?? [], rhr: band?.rhr ?? {}, vo2: band?.vo2, maxHr: maxHrOf(state.settings)?.bpm ?? null }, now)], grids: gridLines(state.ai.inbox ?? []), slim, onToday,
     // today from midnight; before 04:00 it was still last night's evening, and says so (#107)
     // the app's own totals first: the AI never adds up the lines itself (PLAN 149)
     ...(todaySoFar ? { todaySoFar: [totalsLine(state.entries, dayWindow(today)[0], now + 1, state.goals), ...timeline(state, atMinute(today, 0), now + 1, (at) => (at < dayWindow(today)[0] ? " (last night, after midnight)" : ""))].filter((l): l is string => !!l) } : {}) });
@@ -177,10 +180,11 @@ export function nightContext(day: string, state: State = getState(), now = Date.
   // yesterday (read back the next morning) — it used to say "Today" for yesterday (#107)
   const [from, to] = dayWindow(day), w = dayWord(day, now);
   // the day's totals as the app counts them, first (PLAN 149: the AI added up the food lines and missed a protein coffee)
-  const tot = totalsLine(state.entries, from, Math.min(to, now + 1), state.goals);
-  const tl = [...(tot ? [tot] : []), ...timeline(state, from, Math.min(to, now + 1), (at) => (localDay(at) !== day ? " (after midnight)" : ""))];
+  // …everything logged for the day, as Today counts it: a snack logged ahead for 22:00 is in it (28 Oct)
+  const tot = totalsLine(state.entries, from, to, state.goals);
+  const tl = [...(tot ? [tot] : []), ...timeline(state, from, to, (at) => (localDay(at) !== day ? " (after midnight)" : "") + (at > now ? " (logged ahead)" : ""))];
   // the day's plates with their food scores (PLAN 139): what fit the goal best, and the one swap that would help most
-  const plates = plateLines(state.entries, state.foods, day, [from, Math.min(to, now + 1)], state.settings.bedMinute);
+  const plates = plateLines(state.entries, state.foods, day, [from, to], state.settings.bedMinute);
   // …and the day as a whole, out of 100 (lib/dayscore) — so far, when it isn't over
   const ds = dayScore(state.entries, state.foods, state.goals, state.settings.bedMinute, day);
   if (ds) plates.unshift(...dayScoreLines(ds, `The whole day${localDay(now) === day ? ", so far" : ""}`));

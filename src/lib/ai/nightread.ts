@@ -5,6 +5,8 @@
  */
 
 import { addDays, atMinute, dayLabel, localDay } from "../time";
+import { macrosOf } from "../nutrition";
+import type { Entry } from "../types";
 
 const H = 3_600_000;
 /** The evening ends at 04:00; read-backs from 21:00; the next morning's catch-up until noon. */
@@ -32,4 +34,39 @@ export function dayWord(day: string, now: number): { label: string; when: "today
   const today = localDay(now);
   const when = day === today ? "today" : day === eveningOf(now) ? "tonight, past midnight" : day === addDays(today, -1) ? "yesterday" : "earlier";
   return { label: dayLabel(atMinute(day, 720)), when };
+}
+
+/**
+ * A day's food and drinks, everything logged for it (04:00 to 04:00) — a dinner logged at 21:30 with the "Dinner · 19:00"
+ * chip, or a late snack timed for 22:00, counts as soon as it's logged, as on Today.
+ */
+export function dayTotals(entries: Entry[], day: string): { kcal: number; p: number } {
+  const [from, to] = dayWindow(day);
+  let kcal = 0, p = 0;
+  for (const e of entries) if (e.at >= from && e.at < to) { const m = macrosOf(e); if (m) { kcal += m.kcal; p += m.p; } }
+  return { kcal: Math.round(kcal), p: Math.round(p) };
+}
+
+/** How far a read's food numbers are from the day as logged now: enough to say so, and enough to write it again. */
+export const STALE = { kcal: 100, p: 10, redoKcal: 300, redoP: 20, redoAfterMin: 30, redoMax: 1 } as const;
+
+/**
+ * The night read against what's logged now (owner, 28 Oct: "i ate around 1900 kcal (160 left), yet ai digest says i ate
+ * 650 something"): written at 21:09 from 671 kcal, dinner logged after it with the 19:00 chip — the old check only looked
+ * for entries timed after the read, so it never said. Null when it still holds. A read from before `tot` was kept: stale
+ * when anything with calories is timed after it (the old rule).
+ */
+export function nightStale(n: { day: string; at: number; tot?: { kcal: number; p: number }; summary?: string }, entries: Entry[]):
+  { now: { kcal: number; p: number }; kcal: number; p: number; redo: boolean } | null {
+  const now = dayTotals(entries, n.day);
+  const then = n.tot ?? saidIn(n.summary) ?? dayTotals(entries.filter((e) => e.at <= n.at), n.day);
+  const kcal = now.kcal - then.kcal, p = now.p - then.p;
+  if (Math.abs(kcal) < STALE.kcal && Math.abs(p) < STALE.p) return null;
+  return { now, kcal, p, redo: Math.abs(kcal) >= STALE.redoKcal || Math.abs(p) >= STALE.redoP };
+}
+
+/** A read written before `tot` was kept: the totals it states ("671 kcal and 58 g protein"), the app's own numbers then. */
+function saidIn(summary: string | undefined): { kcal: number; p: number } | null {
+  const k = summary?.match(/(\d{1,2},\d{3}|\d{2,4}) kcal/), p = summary?.match(/(\d{1,3}) ?g (?:of )?protein/);
+  return k ? { kcal: Number(k[1].replace(",", "")), p: p ? Number(p[1]) : 0 } : null;
 }

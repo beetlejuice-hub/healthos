@@ -90,7 +90,7 @@ const ANSWERS = { night: () => NIGHT, digest: () => ({ greeting: 'Hi', items: []
   await pg.evaluate(() => { const k = 'healthos.v1:u-test', s = JSON.parse(localStorage.getItem(k)); s.entries.push({ id: 'b1', kind: 'drink', at: new Date(2026, 9, 1, 21, 40).getTime(), name: 'Beer', ml: 500, caffeineMg: 0, alcoholG: 20, kcal: 210 }); localStorage.setItem(k, JSON.stringify(s)); });
   await pg.clock.setFixedTime(new Date(2026, 9, 1, 21, 45)); await pg.goto(APP + '#today'); await pg.reload(); await pg.waitForSelector('text=Settings'); await pg.waitForTimeout(300);
   check('no automatic second call', calls.filter((c) => c.task === 'night').length === 1);
-  await pg.getByRole('button', { name: /read it again/ }).click(); await pg.waitForTimeout(300);
+  await pg.getByRole('button', { name: /read it again/i }).click(); await pg.waitForTimeout(300);
   check('"read it again" asks once more, with the beer in it', calls.filter((c) => c.task === 'night').length === 2 && /21:40 drank Beer/.test(calls.filter((c) => c.task === 'night')[1].context));
   check('the new read-back is new again: highlighted', await isNew());
 
@@ -98,7 +98,7 @@ const ANSWERS = { night: () => NIGHT, digest: () => ({ greeting: 'Hi', items: []
   await pg.evaluate(() => { const k = 'healthos.v1:u-test', s = JSON.parse(localStorage.getItem(k)); s.entries.push({ id: 'b2', kind: 'drink', at: new Date(2026, 9, 2, 0, 20).getTime(), name: 'Beer', ml: 500, caffeineMg: 0, alcoholG: 20, kcal: 210 }); localStorage.setItem(k, JSON.stringify(s)); });
   await pg.clock.setFixedTime(new Date(2026, 9, 2, 0, 30)); await pg.goto(APP + '#today'); await pg.reload(); await pg.waitForSelector('text=Settings'); await pg.waitForTimeout(300);
   check(`00:30: still "tonight", not re-asked by itself (${(await pg.getByLabel('Your day, read back').locator('.mr-head').innerText()).replace(/\s+/g, ' ')})`, /tonight/.test(await pg.getByLabel('Your day, read back').locator('.mr-head').innerText()) && calls.filter((c) => c.task === 'night').length === 2);
-  await pg.getByRole('button', { name: /read it again/ }).click(); await pg.waitForTimeout(300);
+  await pg.getByRole('button', { name: /read it again/i }).click(); await pg.waitForTimeout(300);
   const third = calls.filter((c) => c.task === 'night')[2];
   check('…the 00:20 beer offers a re-read; it\'s the 1st\'s, after the 21:40 one, marked, the header saying so', third && third.day === '2026-10-01'
     && /## The day being read back: Thu 1 Oct \(tonight, past midnight\)[\s\S]*21:40 drank Beer[\s\S]*00:20 \(after midnight\) drank Beer/.test(third.context));

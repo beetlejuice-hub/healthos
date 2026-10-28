@@ -27,6 +27,7 @@ import { morningShown, nightShown } from "../lib/ai/morning";
 import { ForYou, type Ask } from "../components/ForYou";
 import { NightCheckAsk } from "../components/NightCheckAsk";
 import { TipAsk } from "../components/TipAsk";
+import { WeekAsk } from "../components/WeekReport";
 import { FoldCard } from "../components/FoldCard";
 import type { Drink, Entry, EntryOf, Slot } from "../lib/types";
 import { answerSlot, SLOTS, slotsOf } from "../lib/types";
@@ -146,7 +147,8 @@ export function Today() {
   const dueAsk = (it: (typeof due)[number]): Ask => ({ key: `due:${it.id}`, name: shortTitle(it.title), node: dueNode(it) });
   const later = (it: (typeof due)[number]) => it.kind === "weight" || it.kind === "food";
   // One ask at a time, in this order (owner, 28 Oct, review part 1: "one at a time"; picked A): your own tip when a
-  // feeling's low (owner, 28 Oct: "whenever my focus is low it should recommend to put on my focus music") → what's due → the morning
+  // feeling's low (owner, 28 Oct: "whenever my focus is low it should recommend to put on my focus music") → what's due → last
+  // week's report, the first day of a new week → the morning
   // read → a quick question → your heart → yesterday (the stack, your usual things, then how you ate) → cigarettes →
   // last night's check → the weigh-in → nothing eaten yet → the two-week check-in → an experiment → the stack check.
   // The reads are in it only once there is one to read; until then the Now card says where it is.
@@ -154,6 +156,7 @@ export function Today() {
   const asks: Ask[] = [
     { key: "tip", name: "your own tip", node: <TipAsk now={now} /> },
     ...due.filter((it) => !later(it)).map(dueAsk),
+    { key: "week", name: "your week", node: <WeekAsk now={now} />, read: true },
     ...(mrShown ? [{ key: "morning", name: "morning read", node: <MorningRead />, read: true }] : []),
     ...(nrShown ? [{ key: "night", name: "your day, read back", node: <NightRead />, read: true }] : []),
     { key: "questions", name: "a quick question", node: <AiQuestions /> },

@@ -2963,7 +2963,26 @@ both reads and the questions. Phases in that order; #152 RPE waits (owner).
      should be a button to say okay, and it silences that thing for like a week"): Supplement.quietUntil; Restocked /
      Bought more clear it. today.test (quiet, back after 7 days, the others still say theirs); e2e round (gone, gone
      after a reload, quiet on day 6, back on day 8).
-   - [ ] Weekly health summary — strength, cardio, gym, "mostly graphics of how much i improved or not": canvas first.
+   - [x] Weekly health summary — strength, cardio, gym, "mostly graphics of how much i improved or not" (picked "one
+     scrolling report", then "like all, lets build it"). Workout → "Your week" (#workout/week, ‹ › between weeks): the
+     headline and chips, the 4 main lifts as small multiples (best e1RM a week, 8 weeks, PB), sets per muscle against
+     10–20, cardio minutes by zone against the week before, resting HR / VO2 max 12 weeks, sessions against the split,
+     and "one thing for next week" (+2 sets of a lift in your split for the muscle furthest under 10 → "Add to {day}",
+     Undo; "Not now"). Monday's "For you" has last week (first day of the week only); the AI sees last week's line.
+     lib/weekreport (14 tests: planted weeks, sets by hand, zones, week edges, empty account); e2e weekreport (390 + 320,
+     Add / Undo / reload, ‹ ›, Workout entry, Tuesday control; a lift's numbers stay in its box — failed before the fix).
+   - [x] Bug (owner, 28 Oct: "i ate around 1900 kcal (160 left), yet ai digest says i ate 650 something calories"): the
+     night read is written once, at the first open after 21:00 (21:09), and the "logged more since" link only looked
+     for entries timed after it — dinner logged later with the "Dinner · 19:00" chip is timed before it, so nothing
+     said. Now the read keeps the totals it was written from; when the day moves ≥ 100 kcal / 10 g protein the card
+     says so with the day's numbers (the same as Today's tile) and "Read it again"; ≥ 300 kcal / 20 g and half an hour
+     on, it's written again by itself, once. Its totals count everything logged for the day (a snack logged ahead for
+     22:00 too). A read from before the fix is caught by its own numbers. Couldn't check his entries (Supabase MCP down)
+     — the planted case is his. nightstale.test (4) + e2e nightstale (13 checks, control: nothing since → no line).
+   - [~] Repeats (owner, 28 Oct: "in the last liike 7 days it only recommended me to take in more protein w breakfast,
+     it gets boring, it can repeat sometimes but not every day dude...should keep a log of what it said, what it thinks
+     of me, what it should dive in more, what it should research etc, so it doesnt forget things it already said a
+     million trimes"). Claimed 28 Oct — lib/ai/said.ts, tasks.ts (night + digest prompts), Ai.tsx writers, Settings → AI.
    - [ ] Today "feels too empty" and he likes "charts and connecting dots, trying to find patterns in a lot of data
      points": a chart on Today (the day so far with its dots; a pattern with today's dot on it) — canvas first. Also
      changes the reform: don't cut the charts and grids he likes (i1–i3 to be reworded).

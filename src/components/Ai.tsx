@@ -41,7 +41,7 @@ import { Md } from "./Md";
 import { ReadItems } from "./ReadItems";
 import { digestDue, freshRead, morningShown, nightIn, nightShown } from "../lib/ai/morning";
 import { attempt, onRetryDue, tryNow } from "../lib/ai/attempts";
-import { dayWindow, eveningOf, nightDue } from "../lib/ai/nightread";
+import { dayTotals, dayWindow, eveningOf, nightDue, nightStale, STALE } from "../lib/ai/nightread";
 import { byDay, foldLine } from "../lib/ai/thread";
 
 const usd = (x: number) => (x < 0.1 ? `$${x.toFixed(3)}` : `$${x.toFixed(2)}`);
@@ -137,17 +137,22 @@ const loggedOn = (day: string) => { const [from, to] = dayWindow(day); return ge
 /** `force`: "read it again" (a tap — it goes now); `now`: "Try again" after it failed (the waits forgotten). */
 export const makeNight = (day: string, force = false, now = false) => now ? tryNow(`night:${day}:`, () => writeNight(day, false), keepFail("night"))
   : attempt(`night:${day}:${force ? Date.now() : ""}`, () => writeNight(day, force), { queued: !force, lane: "read", onFail: keepFail("night") });
+/** Written again on its own: the food logged since moved the day's numbers a lot (lib/ai/nightread nightStale). */
+const redoNight = (day: string) => attempt(`night:${day}:redo`, () => writeNight(day, true, true), { lane: "read", onFail: keepFail("night") });
 
-async function writeNight(day: string, force: boolean) {
+async function writeNight(day: string, force: boolean, auto = false) {
   // its three and its questions (PLAN 156–157): tonight's "try" kind, the question kinds, what this morning suggested
   const ai = getState().ai;
   if (!force && ai.night?.day === day) return null;
   const follow = ai.digest && ai.digest.day === day ? ai.digest.items.filter((i) => i.type === "try" || i.type === "protocol").map((i) => `this morning's read: ${i.title}${i.tip ? ` — "${i.tip}"` : ""}`) : [];
+  // the day's totals it's written from: when what's logged moves past them, the card says so (owner, 28 Oct: "i ate around
+  // 1900 kcal (160 left), yet ai digest says i ate 650 something")
+  const tot = dayTotals(getState().entries, day), redone = (ai.night?.day === day ? ai.night.redone ?? 0 : 0) + (auto ? 1 : 0);
   const r = await askRead({ task: "night", day, context: [nightContext(day), ...eveningBrief(ai.shown), ...askFor(day, "evening", follow)].join("\n") });
   if (!r.ok) return r;
   const at = Date.now(), qs = keepNew(r.answer.questions ?? [], `${day}:e`);
   act.setAi((a) => ({
-    night: { ...r.answer, day, at },
+    night: { ...r.answer, day, at, tot, redone },
     shown: [...a.shown, ...(r.answer.items ?? []).map((i) => i.title)].slice(-80),
     ...(qs.length ? { questions: { day, list: qs, from: "evening" as const, at }, asked: [...a.asked, ...qs.map((q) => q.text)].slice(-60), daily: tracked(a.daily, qs) } : {}),
     // What it learned that lasts: into memory (shown in Settings → AI, deletable), no duplicates.
@@ -243,6 +248,11 @@ export function useAiAuto(userId: string | undefined) {
       // wasn't opened that evening (lib/ai/nightread). Asked for second, in the reads' own line (22 Oct).
       const back = nightDue(now.getTime(), ai.night?.day, loggedOn);
       if (back) void makeNight(back);
+      // …and once more, on its own, when food logged since moved the day a lot (a dinner logged after it with the 19:00
+      // chip) — half an hour after it was written, so a meal logged item by item is in
+      const n = ai.night;
+      if (!back && n && eveningOf(now.getTime()) === n.day && (n.redone ?? 0) < STALE.redoMax && now.getTime() - n.at >= STALE.redoAfterMin * 60_000
+        && nightStale(n, getState().entries)?.redo) void redoNight(n.day);
       // the reads bring the questions; only a day without any gets them from the cheap call (PLAN 156)
       if (h >= 13 && h < 21 && ai.questions?.day !== today) void makeQuestions(today);
       // The week just gone from Monday 06:00, the month just gone from the 1st (PLAN 65).
@@ -328,6 +338,9 @@ export function NightRead() {
   if (!n || !nightShown(n, morning, now)) return <NightPending onRetry={(day) => void makeNight(day, false, true)} />;
   // still that evening (to 04:00): logged more since → read it again; at 00:40 it's still "tonight" (#107)
   const newer = tonight && entries.some((e) => e.at > n.at && e.at >= dayWindow(n.day)[0] && e.at < dayWindow(n.day)[1]);
+  // its food numbers against what's logged now, whenever it was timed (owner, 28 Oct: "i ate around 1900 kcal … yet ai
+  // digest says i ate 650 something")
+  const stale = nightStale(n, entries), num = (v: number) => Math.abs(v).toLocaleString("en-GB");
   const fresh = unseen(n);
   const setOpen = (v: boolean) => { setOpenState(v); if (v && fresh) act.setAi((a) => ({ night: a.night ? { ...a.night, seen: Date.now() } : a.night })); };
   return (
@@ -337,6 +350,8 @@ export function NightRead() {
         <span className="chev" aria-hidden="true">{open ? "▴" : "▾"}</span>
       </button>
       <p className={`greet${open ? "" : " clamp2"}`} onClick={() => !open && setOpen(true)}>{n.summary}</p>
+      {stale && <p className="night-stale">Written at {clock(n.at)} — since then you {stale.kcal >= 0 ? "logged" : "took off"} {num(stale.kcal)} kcal{stale.p ? ` and ${num(stale.p)} g protein` : ""}. The day now: <b>{stale.now.kcal.toLocaleString("en-GB")} kcal, {stale.now.p} g protein</b>.{" "}
+        <button type="button" className="linkish" onClick={() => void makeNight(n.day, true)}>Read it again</button></p>}
       {open && <>
         {n.happened.length > 0 && <ul className="night-list">{n.happened.map((h, i) => <li key={i}>{h}</li>)}</ul>}
         {n.notes && <p className="night-notes"><small>Your notes</small>{n.notes}</p>}
@@ -349,7 +364,7 @@ export function NightRead() {
       {/* the evening's study, thing to try and noticed (PLAN 157; owner, 21 Oct: "the same studt, try, and notiiced session at Eod") */}
       {(n.items?.length ?? 0) > 0 && <ReadItems key={String(open)} items={n.items!} open={open} onOpen={() => setOpen(true)} tip="Tomorrow" from="evening" day={n.day} />}
       {open && <Looked names={n.looked} />}
-      {newer && <button type="button" className="linkish" onClick={() => void makeNight(n.day, true)}>You logged more since — read it again</button>}
+      {newer && !stale && <button type="button" className="linkish" onClick={() => void makeNight(n.day, true)}>You logged more since — read it again</button>}
     </section>
   );
 }

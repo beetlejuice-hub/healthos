@@ -34,7 +34,8 @@ export type AiState = {
   digest: { day: string; /** When it was written (lib/ai/morning). */ at?: number; greeting: string; items: DigestItem[]; read?: boolean; /** When you first opened it (16 Oct: highlighted until then). */ seen?: number;
     /** The app's look-ups it was checked with (PLAN 160). */ looked?: string[] } | null;
   /** The nightly read-back of a day (optional: older synced docs don't have it). */
-  night?: (NightAnswer & { day: string; at: number; /** When you first opened it — a re-read is new again. */ seen?: number; /** The app's look-ups (PLAN 160). */ looked?: string[] }) | null;
+  night?: (NightAnswer & { day: string; at: number; /** When you first opened it — a re-read is new again. */ seen?: number; /** The app's look-ups (PLAN 160). */ looked?: string[];
+    /** The day's food and drink totals it was written from (lib/ai/nightread nightStale); `redone`: rewritten on its own for that. */ tot?: { kcal: number; p: number }; redone?: number }) | null;
   /** The week and month reads (PLAN 65), newest last: what the AI wrote, and the app's numbers it was written from (for the card's table and charts). */
   reviews?: (Due & ReviewAnswer & { at: number; rows: ReviewRow[]; /** the columns: the week's days, or the month's weeks ("1–7") */ cols?: string[] })[];
   /** Titles already shown, so the morning read doesn't repeat itself. */
