@@ -64,9 +64,10 @@ export function nowItems(c: NowContext): NowItem[] {
   const foods = todays.filter((e) => e.kind === "food");
   if (!foods.length && nowMin >= 11 * 60) out.push({ id: "food", kind: "food", title: "Nothing eaten logged yet", body: "Log what you've had so today's totals mean something." });
 
-  // Running low / ran out: a gentle shopping reminder, and a way to say it's back.
-  const low = c.supplements.filter((x) => x.active && x.status === "low");
-  const gone = c.supplements.filter((x) => !x.active && x.status === "out");
+  // Running low / ran out: a gentle shopping reminder, and a way to say it's back — or "I know", quiet for a week.
+  const loud = (x: Supplement) => !(x.quietUntil && x.quietUntil > c.now);
+  const low = c.supplements.filter((x) => x.active && x.status === "low" && loud(x));
+  const gone = c.supplements.filter((x) => !x.active && x.status === "out" && loud(x));
   const names = (l: Supplement[]) => l.map((x) => x.name).join(", ");
   if (gone.length) out.push({ id: "restock", kind: "restock", title: `Out of ${names(gone)}${low.length ? ` · low on ${names(low)}` : ""}`, body: "Restocked? Tap it and it's back on Today. The days without it are useful: they show what it does.", low: low.map((x) => x.id), out: gone.map((x) => x.id) });
   else if (low.length) out.push({ id: "restock", kind: "restock", title: `Running low: ${names(low)}`, body: "Buy more soon. If it runs out, tap Out — the days off are useful too.", low: low.map((x) => x.id), out: [] });
@@ -84,5 +85,7 @@ export function nowItems(c: NowContext): NowItem[] {
 }
 
 export const FEEL_FROM_MIN = 19 * 60;
+/** "I know" on a running-low or ran-out reminder keeps Today quiet about it this long (owner, 28 Oct: "like a week"). */
+export const QUIET_MS = 7 * 86_400_000;
 
 const clockOf = (minute: number) => `${String(Math.floor(minute / 60)).padStart(2, "0")}:${String(minute % 60).padStart(2, "0")}`;

@@ -2953,4 +2953,22 @@ both reads and the questions. Phases in that order; #152 RPE waits (owner).
      light (Windred 2024); psoriasis rating with lagged links; what to eat next; night-out mode; a monthly report card
      with body tests (push-ups, Yang 2019); experiments he plans (n-of-1, no coin flips). Honest note on the page:
      prompts alone did little in a 2023 trial (VALENTINE); plans you make yourself do better.
+182. [~] **28 Oct evening: his notes before the reform** (owner: "look at theese, brainstorm, and after we done w these
+   can move on to questions and reform"). Claimed 28 Oct.
+   - [x] For you is a cycle ("i should be able to cycle through it - rn i said skip to a couple items and they
+     disappeared, cant get them back"): Skip moves on and the skipped one comes round again, ‹ Back steps back, your
+     place survives a reload; only a read's Done puts it away (still one tap back). Old skips come back by themselves.
+     e2e today2: skip → next, reload keeps the place, Back returns, skipping all the way round comes back to it.
+   - [x] "I know · quiet for a week" on running low / ran out ("i am out of vit d and saffron everyday, i know it, there
+     should be a button to say okay, and it silences that thing for like a week"): Supplement.quietUntil; Restocked /
+     Bought more clear it. today.test (quiet, back after 7 days, the others still say theirs); e2e round (gone, gone
+     after a reload, quiet on day 6, back on day 8).
+   - [ ] Weekly health summary — strength, cardio, gym, "mostly graphics of how much i improved or not": canvas first.
+   - [ ] Today "feels too empty" and he likes "charts and connecting dots, trying to find patterns in a lot of data
+     points": a chart on Today (the day so far with its dots; a pattern with today's dot on it) — canvas first. Also
+     changes the reform: don't cut the charts and grids he likes (i1–i3 to be reworded).
+   - [ ] Watching: notes become things the AI looks out for ("creatine makes my muscles fuller", "better after a walk",
+     "better after gym") — follow-up questions, papers and Reddit, offered when a check-in is low, and in the morning /
+     night reads ("i liked that i mentioned getting sick and it showed me zinc w studies").
+   - [ ] More AI tools so it can do more inside the app (log, edit, watch, ask later, quiet, settings, workout).
 

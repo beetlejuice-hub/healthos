@@ -12,7 +12,7 @@ import { GuardBox } from "../components/GuardBox";
 import { checkWeight, type Guard } from "../lib/sanity";
 import { act, offerUndo, useStore } from "../lib/store";
 import { DRINKS } from "../lib/drinks";
-import { nowItems } from "../lib/today";
+import { nowItems, QUIET_MS } from "../lib/today";
 import { notice } from "../lib/findings";
 import { StackAlert } from "../components/StackCheck";
 import { ScoutLine } from "../components/Scout";
@@ -134,9 +134,10 @@ export function Today() {
             {it.kind === "food" && <button type="button" className="pill-btn pri" onClick={() => go("log", "food")}>Log food</button>}
             {it.kind === "weight" && <WeighIn lastKg={it.lastKg} />}
             {it.kind === "restock" && <>
-              {it.out.length > 0 && <button type="button" className="pill-btn pri" onClick={() => act.setSupplements(s.supplements.map((x) => (it.out.includes(x.id) || it.low.includes(x.id) ? { ...x, active: true, status: undefined } : x)))}>Restocked</button>}
-              {it.out.length === 0 && <button type="button" className="pill-btn" onClick={() => act.setSupplements(s.supplements.map((x) => (it.low.includes(x.id) ? { ...x, active: true, status: undefined } : x)))}>Bought more</button>}
+              {it.out.length > 0 && <button type="button" className="pill-btn pri" onClick={() => act.setSupplements(s.supplements.map((x) => (it.out.includes(x.id) || it.low.includes(x.id) ? { ...x, active: true, status: undefined, quietUntil: undefined } : x)))}>Restocked</button>}
+              {it.out.length === 0 && <button type="button" className="pill-btn" onClick={() => act.setSupplements(s.supplements.map((x) => (it.low.includes(x.id) ? { ...x, active: true, status: undefined, quietUntil: undefined } : x)))}>Bought more</button>}
               {it.out.length === 0 && <button type="button" className="pill-btn" onClick={() => act.setSupplements(s.supplements.map((x) => (it.low.includes(x.id) ? { ...x, active: false, status: "out" } : x)))}>It's out</button>}
+              <button type="button" className="pill-btn" title="Today stays quiet about these for a week" onClick={() => act.setSupplements(s.supplements.map((x) => (it.out.includes(x.id) || it.low.includes(x.id) ? { ...x, quietUntil: Date.now() + QUIET_MS } : x)))}>I know · quiet for a week</button>
             </>}
           </div>
         </div>

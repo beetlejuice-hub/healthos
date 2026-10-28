@@ -52,6 +52,16 @@ const { chromium, APP, OUT, handle, forYou, openCard } = require('./harness.cjs'
   check('Today reminds to buy more', await pg.getByText('Running low: Saffron').count() === 1);
   await pg.getByRole('button', { name: "It's out" }).click(); await pg.waitForTimeout(100);
   check('then: out of Saffron, Restocked button', await pg.getByText('Out of Saffron').count() === 1);
+  // owner, 28 Oct: "i see that i am out of vit d and saffron everyday, i know it … silences that thing for like a week"
+  await pg.getByRole('button', { name: 'I know · quiet for a week' }).click(); await pg.waitForTimeout(150);
+  check('"I know": the reminder goes', await pg.getByText('Out of Saffron').count() === 0);
+  await pg.reload(); await pg.waitForSelector('.t2-status'); await pg.waitForTimeout(300);
+  check('…and stays gone after a reload', await pg.getByText('Out of Saffron').count() === 0);
+  await pg.clock.fastForward(6 * 864e5); await pg.reload(); await pg.waitForSelector('.t2-status'); await pg.waitForTimeout(300);
+  check('…six days later, still quiet', await pg.getByText('Out of Saffron').count() === 0);
+  await pg.clock.fastForward(2 * 864e5); await pg.reload(); await pg.waitForSelector('.t2-status'); await pg.waitForTimeout(300);
+  await forYou(pg, 'due:restock');
+  check('…a week on, it asks again', await pg.getByText('Out of Saffron').count() === 1);
   await pg.getByRole('button', { name: 'Restocked' }).click(); await pg.waitForTimeout(100);
   check('restocked clears it', await pg.getByText(/Out of Saffron|Running low/).count() === 0);
 

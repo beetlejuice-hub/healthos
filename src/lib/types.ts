@@ -99,6 +99,9 @@ export type Supplement = {
   doseLog?: { at: number; dose: string }[];
   /** "low": still taking, buy more soon. "out": ran out (paused until restocked). "stopped": not taking any more. */
   status?: "low" | "out" | "stopped";
+  /** Until when Today stays quiet about it being low or out (owner, 28 Oct: "i see that i am out of vit d and saffron
+   *  everyday, i know it, there should be a button to say okay, and it silences that thing for like a week"). */
+  quietUntil?: number;
 };
 
 /** Where a supplement stands, as the stack editor shows it, and the patch that puts it there. */

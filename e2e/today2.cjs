@@ -81,7 +81,7 @@ const { chromium, APP, OUT, handle } = require('./harness.cjs');
   const fy = pg.getByRole('region', { name: 'For you' }), cur = pg.locator('.fy-item[data-current]');
   const count = async () => (await fy.locator('.fy-k').textContent().catch(() => '')).replace(/\s+/g, ' '); // as written, not as styled (capitals)
   const visible = () => pg.locator('.fy-item').evaluateAll((els) => els.filter((e) => e.offsetParent !== null).length);
-  const c1 = await count(), nxt = await fy.locator('.fy-foot span').innerText().catch(() => '');
+  const c1 = await count(), nxt = await fy.locator('.fy-foot .fy-next').innerText().catch(() => '');
   const total = +((c1.match(/of (\d+)/) || [])[1] || 0);
   check(`one ask at a time, counted, the next one named (${c1} · ${nxt})`, /^For you · 1 of \d+$/.test(c1) && total >= 3 && await visible() === 1 && /^next: Running low: Saffron$/.test(nxt) && /^next: \S/.test(nxt));
   check(`the first is the missed morning stack (${(await cur.innerText()).split('\n')[0]})`, /Morning stack/.test(await cur.innerText()));
@@ -97,12 +97,18 @@ const { chromium, APP, OUT, handle } = require('./harness.cjs');
   const before = await tile(pg, 'Stack');
   await cur.getByRole('button', { name: 'Took all' }).click(); await pg.waitForTimeout(200);
   check(`ticking the stack moves its number (${before.replace(/\s+/g, ' ')} → ${(await tile(pg, 'Stack')).replace(/\s+/g, ' ')})`, /Stack\s*0\s*\/\s*3/i.test(before) && /Stack\s*2\s*\/\s*3/i.test(await tile(pg, 'Stack')));
-  check(`…and the next ask comes up (${await count()})`, await count() === `For you · 2 of ${total}` && await visible() === 1);
-  const k2 = await cur.getAttribute('data-key');
-  await fy.locator('.fy-foot .linkish').click(); await pg.waitForTimeout(150);
-  check(`Skip puts it away and brings the next (${k2} → ${await cur.getAttribute('data-key')}, ${await count()})`, await cur.getAttribute('data-key') !== k2 && await count() === `For you · 3 of ${total}`);
+  const n = total - 1; // the stack is answered: one fewer still open
+  check(`…and the one after it comes up (${await count()})`, await count() === `For you · 1 of ${n}` && await visible() === 1 && /Saffron/.test(await cur.innerText()));
+  // a cycle (owner, 28 Oct: "i should be able to cycle through it - rn i said skip to a couple items and they disappeared")
+  const k2 = await cur.getAttribute('data-key'), key = () => cur.getAttribute('data-key');
+  await fy.locator('.fy-skip').click(); await pg.waitForTimeout(150);
+  check(`Skip moves on (${k2} → ${await key()}, ${await count()})`, await key() !== k2 && await count() === `For you · 2 of ${n}`);
   await pg.reload(); await pg.waitForSelector('.t2-status'); await pg.waitForTimeout(400);
-  check(`…and it stays away after a reload (${await count()})`, await cur.getAttribute('data-key') !== k2 && await count() === `For you · 3 of ${total}`);
+  check(`…and a reload keeps your place (${await count()})`, await key() !== k2 && await count() === `For you · 2 of ${n}`);
+  await fy.locator('.fy-back').click(); await pg.waitForTimeout(150);
+  check(`‹ Back brings the skipped one back (${await key()}, ${await count()})`, await key() === k2 && await count() === `For you · 1 of ${n}`);
+  for (let k = 0; k < n; k++) { await fy.locator('.fy-skip').click(); await pg.waitForTimeout(100); }
+  check(`skipping all the way round comes back to it: nothing disappears (${await key()})`, await key() === k2 && await count() === `For you · 1 of ${n}`);
   check('14:20: nothing scrolls sideways', !(await sideways(pg)));
   await pg.screenshot({ path: OUT + 'today2-day.png' });
   await ctx.close();

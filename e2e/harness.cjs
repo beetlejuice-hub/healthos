@@ -84,12 +84,16 @@ async function openCard(pg, id) {
  */
 async function forYou(pg, key) {
   await pg.waitForSelector('.t2-status');
-  const bySel = /^[.#[]/.test(key);
+  const bySel = /^[.#[]/.test(key), seen = new Set();
   for (let i = 0; i < 20; i++) {
     const cur = await pg.locator('.fy-item[data-current]').getAttribute('data-key', { timeout: 1500 }).catch(() => null);
     if (cur && (bySel ? await pg.locator(`.fy-item[data-current] ${key}`).count() > 0 : cur === key || cur.startsWith(key))) return true;
-    if (!cur) return false;
-    await pg.locator('.fy-foot .linkish').first().click(); await pg.waitForTimeout(120);
+    // a cycle since 28 Oct: back where it started means it isn't there
+    if (!cur || seen.has(cur)) return false;
+    seen.add(cur);
+    const skip = pg.locator('.fy-foot .fy-skip');
+    if (!(await skip.count())) return false;
+    await skip.click(); await pg.waitForTimeout(120);
   }
   return false;
 }

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { nowItems, type NowContext } from "./today";
+import { nowItems, type NowContext, QUIET_MS } from "./today";
 import type { Entry, Supplement } from "./types";
 import { fromOff } from "./off";
 import { DEFAULT_GOALS } from "./types";
@@ -141,5 +141,16 @@ describe("basic foods", () => {
     const justLow = { ...ctx(at(10), []), supplements: [{ ...stack[0], status: "low" as const }] };
     expect(nowItems(justLow).find((i) => i.kind === "restock")?.title).toBe("Running low: Creatine");
     expect(nowItems(ctx(at(10), [])).some((i) => i.kind === "restock")).toBe(false);
+  });
+
+  // owner, 28 Oct: "i see that i am out of vit d and saffron everyday, i know it … silences that thing for like a week"
+  it("“I know”: quiet for a week, then back; the others still say theirs", () => {
+    const quiet = at(10) + QUIET_MS - 60_000;
+    const both = (q: number) => ({ ...ctx(at(10), []), supplements: [{ ...stack[0], status: "low" as const }, { ...stack[1], active: false, status: "out" as const, quietUntil: q }] });
+    expect(nowItems(both(quiet)).find((i) => i.kind === "restock")).toMatchObject({ title: "Running low: Creatine", out: [], low: ["cre"] });
+    const later = { ...both(quiet), now: quiet + 120_000 };
+    expect(nowItems(later).find((i) => i.kind === "restock")?.title).toBe("Out of Black cumin oil · low on Creatine");
+    const allQuiet = { ...ctx(at(10), []), supplements: [{ ...stack[1], active: false, status: "out" as const, quietUntil: quiet }] };
+    expect(nowItems(allQuiet).some((i) => i.kind === "restock")).toBe(false);
   });
 });
