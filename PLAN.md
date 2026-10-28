@@ -2854,3 +2854,10 @@ both reads and the questions. Phases in that order; #152 RPE waits (owner).
      What else to connect ("and also things like…"): owner, 28 Oct: "I DONT KNOW" — not asked again.
    - Seen on the way: e2e heartpage's phone notes check fails since ~18:00 UTC on 6c3ecb1 too (not this change) —
      suggested as its own task.
+
+179. [~] **A visual and how-it-works review of the whole app** (owner, 28 Oct: "should we do a visual review of all the
+   parts in app? visual and how it actually works so we can make it simpler but better and smarter"). Claimed 28 Oct —
+   no app code until he picks. Phase 1: every screen at phone size with realistic data (the sample's 60 days + a 90-day
+   fake band), morning / afternoon / night, and the taps each daily job takes. Phase 2: a review page — per screen what
+   it's for, what repeats elsewhere, what's noise, what's confusing or broken, what could be smarter — ranked. Phase 3:
+   the top simplifications on the canvas for him to pick.
