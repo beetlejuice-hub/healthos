@@ -268,3 +268,28 @@ describe("fixing an entry from the chat", () => {
     expect(applyProposal(p, setup({ entries: [rice] }), NOW, "x")).toBe("That entry is gone.");
   });
 });
+
+// Watching (owner, 28 Oct: "make ai look out for these things … give me followup questions"): known cards and refusals.
+describe("a watch", () => {
+  const W = { change: "watch", why: "you noticed it", what: "Creatine → fuller muscles", note: "creatine makes my muscles fuller", question: "Muscles feel full today?", options: ["Not really", "A bit", "Very"],
+    found: [{ text: "Creatine pulls water into muscle — 1–2 kg in the first weeks", sure: "strong", title: "Kreider 2017", url: "https://example.org/k" }, { text: "Many on r/Creatine say the full look shows in week 1–3", sure: "anecdote" }, { text: "A study without a link", sure: "some" }] };
+  it("a card: the question each evening for 14 days, what was found with how sure — a study without its link left out", () => {
+    const p = ok(makeProposal(W, setup(), "w1", NOW));
+    expect(p.label).toBe("Watch: Creatine → fuller muscles — ask “Muscles feel full today?” each evening for 14 days");
+    expect(p.watch!.found.map((f) => [f.sure, !!f.source])).toEqual([["strong", true], ["anecdote", false]]);
+    const r = done(applyProposal(p, setup(), NOW, "w1"));
+    expect(r.watches).toEqual([{ id: "w1", at: NOW, start: "2026-10-16", what: W.what, note: W.note, question: W.question, options: W.options, days: 14, found: p.watch!.found }]);
+    expect(r.text).toBe("Watching Creatine → fuller muscles — its first question comes at 18:00.");
+  });
+  it("refused: one answer, the same answer twice, 40 days, already watching it, six at once", () => {
+    expect(makeProposal({ ...W, options: ["Yes"] }, setup(), "x", NOW)).toMatch(/^options: 2–4/);
+    expect(makeProposal({ ...W, options: ["A bit", "a bit"] }, setup(), "x", NOW)).toMatch(/^options/);
+    expect(makeProposal({ ...W, days: 40 }, setup(), "x", NOW)).toBe("days: 7–28");
+    const one = { id: "w0", at: NOW - 86_400_000, start: "2026-10-15", what: "creatine → fuller muscles", note: "n", question: "q", options: ["a", "b"], days: 14, found: [] };
+    expect(makeProposal(W, setup({ ai: { experiments: [], watches: [one] } }), "x", NOW)).toBe("already watching Creatine → fuller muscles");
+    const six = Array.from({ length: 6 }, (_, i) => ({ ...one, id: `w${i}`, what: `thing ${i}` }));
+    expect(makeProposal(W, setup({ ai: { experiments: [], watches: six } }), "x", NOW)).toMatch(/^already watching 6 things/);
+    // a stopped or finished one doesn't count
+    expect(typeof makeProposal(W, setup({ ai: { experiments: [], watches: [{ ...one, stopped: NOW - 1 }] } }), "x", NOW)).toBe("object");
+  });
+});

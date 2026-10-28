@@ -14,6 +14,7 @@ const WHERE: Record<Proposal["change"], [string, string]> = {
   add_supplement: ["#log/stack", "Stack"], dose: ["#log/stack", "Stack"], supplement_status: ["#log/stack", "Stack"], log_supplement: ["#today", "Today"],
   goals: ["#settings", "Settings"], experiment: ["#insights/training", "Insights → Training"], delete_entry: ["#log", "Log"],
   log_food: ["#log/food", "Log"], log_drink: ["#log/drink", "Log"], log_feel: ["#today", "Today"], log_weight: ["#log/body", "Log"], edit_entry: ["#log", "Log"],
+  watch: ["#ai", "the AI tab"],
 };
 const LOGS = new Set<Proposal["change"]>(["log_supplement", "log_food", "log_drink", "log_feel", "log_weight"]);
 
@@ -34,7 +35,7 @@ function applyNow(at: number, p: Proposal, onAdded?: (s: Supplement) => void): {
   if (r.remove) act.removeEntry(r.remove);
   if (r.add) act.addEntry(r.add);
   if (r.patch) act.updateEntry(r.patch.id, r.patch.patch);
-  mark(at, p.id, { applied: now, dismissed: undefined }, r.experiments ? { experiments: r.experiments } : {});
+  mark(at, p.id, { applied: now, dismissed: undefined }, { ...(r.experiments ? { experiments: r.experiments } : {}), ...(r.watches ? { watches: r.watches } : {}) });
   const added = p.change === "add_supplement" ? r.supplements?.at(-1) : undefined;
   if (added && onAdded) onAdded(added);
   return { text: r.text };
@@ -62,10 +63,12 @@ export function Proposals({ at, list, now, onAdded }: { at: number; list: Propos
           <div key={p.id} className="propose" data-state={p.applied ? "applied" : p.dismissed ? "dismissed" : "open"}>
             <b>{p.label}</b>
             {p.why && !p.applied && !p.dismissed && <small className="pr-why">{p.why}</small>}
+            {/* a watch: what's out there, each with how sure (owner, 28 Oct: "peoples opinions on forums like reddit, and scientific papers") */}
+            {p.watch && p.watch.found.length > 0 && !p.dismissed && <ul className="pr-found">{p.watch.found.map((f, i) => <li key={i}><span>{f.text}</span> <i className={`sure sure-${f.sure}`}>{f.sure}</i>{f.source && <> <a href={f.source.url} target="_blank" rel="noreferrer">{f.source.title} ↗</a></>}</li>)}</ul>}
             {p.applied && (p.change === "delete_entry" || p.change === "edit_entry") ? <small className="pr-done">✓ {s && !s.bad ? s.text : `${p.change === "edit_entry" ? "Changed" : "Deleted"} ${localDay(p.applied) === localDay(now) ? clock(p.applied) : dayLabel(p.applied)}`} · <button type="button" className="linkish" onClick={() => putBack(p)}>Put it back</button></small>
               : p.applied ? <small className="pr-done">✓ {s && !s.bad ? s.text : `Applied ${localDay(p.applied) === localDay(now) ? clock(p.applied) : dayLabel(p.applied)}`} · <a href={href}>see it in {where}</a></small>
               : <div className="pr-acts">
-                  <button type="button" className={`pill-btn pri${p.change === "delete_entry" ? " danger" : ""}`} onClick={() => apply(p)}>{LOGS.has(p.change) ? "Log it" : p.change === "delete_entry" ? "Delete" : p.change === "edit_entry" ? "Change it" : "Apply"}</button>
+                  <button type="button" className={`pill-btn pri${p.change === "delete_entry" ? " danger" : ""}`} onClick={() => apply(p)}>{LOGS.has(p.change) ? "Log it" : p.change === "delete_entry" ? "Delete" : p.change === "edit_entry" ? "Change it" : p.change === "watch" ? "Watch it" : "Apply"}</button>
                   {!p.dismissed && <button type="button" className="pill-btn" onClick={() => tap(p, { dismissed: now })}>Not now</button>}
                   {p.dismissed && <small className="pr-skip">not applied</small>}
                 </div>}

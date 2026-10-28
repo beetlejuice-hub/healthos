@@ -6,7 +6,8 @@
  * `log_supplement` logs something taken — one you ran out of, or one that isn't yours (owner, 20 Oct: "i took from my moms
  * stack so i should be able to tell ai i took x amount of vit d3 and it should log without offering the restock option").
  * `log_food` / `log_drink` / `log_feel` / `log_weight` log what you tell the chat, and `edit_entry` fixes one logged wrong
- * (owner, 28 Oct: "give ai more tools, so it can reach and do more inside app") — still a card you Apply.
+ * (owner, 28 Oct: "give ai more tools, so it can reach and do more inside app") — still a card you Apply. `watch` looks out
+ * for something you noticed (lib/watch; owner, 28 Oct: "make ai look out for these things … give me followup questions").
  */
 
 import type { AiState, Experiment, State } from "../store";
@@ -16,7 +17,8 @@ import { DEFAULT_ENERGY, PACES, withKcal, type Energy } from "../energy";
 import { addDays, atMinute, clock, dayLabel, localDay, minuteOfDay } from "../time";
 import { logIntake, type Intake } from "../supplog";
 import { resolve } from "../stackcheck/check";
-import { EXPERIMENT_MEASURES, PACE_NAMES, PROPOSE_CHANGES, type ProposeChange } from "./tasks";
+import { EXPERIMENT_MEASURES, PACE_NAMES, PROPOSE_CHANGES, SURE, type ProposeChange } from "./tasks";
+import { WATCH, watchLive, type Watch, type WatchFind } from "../watch";
 
 type SetStatus = "taking" | "stopped" | "out";
 
@@ -30,6 +32,8 @@ export type Proposal = {
   supp?: { id?: string; name: string; dose?: string; slots?: Slot[]; status?: SetStatus };
   goals?: { kcal?: number; p?: number; pace?: number };
   experiment?: { name: string; how: string; days: number; measure: string };
+  /** watch: what to look out for, its evening question, and what's out there. */
+  watch?: Omit<Watch, "id" | "at" | "start">;
   /** log_supplement: when it was taken, and how much when they said. */
   log?: { at: number; amount?: string };
   /** delete_entry: the entry, kept on the card so "Put it back" can restore it. */
@@ -45,10 +49,10 @@ export type Proposal = {
   dismissed?: number;
 };
 
-export type Setup = Pick<State, "supplements" | "goals" | "settings"> & { ai: Pick<AiState, "experiments">; entries?: Entry[] };
+export type Setup = Pick<State, "supplements" | "goals" | "settings"> & { ai: Pick<AiState, "experiments" | "watches">; entries?: Entry[] };
 type Kinds = Entry extends infer E ? (E extends { kind: "food" | "drink" | "feel" | "weight" } ? E : never) : never;
 export type NewEntry = Kinds extends infer E ? (E extends Entry ? Omit<E, "id"> : never) : never;
-export type Applied = { supplements?: Supplement[]; goals?: Goals; energy?: Energy; experiments?: Experiment[]; intake?: Intake; /** delete_entry: the entry to delete. */ remove?: string; /** log_*: the entry to add. */ add?: NewEntry; /** edit_entry */ patch?: { id: string; patch: Partial<Entry> }; text: string };
+export type Applied = { supplements?: Supplement[]; goals?: Goals; energy?: Energy; experiments?: Experiment[]; watches?: Watch[]; intake?: Intake; /** delete_entry: the entry to delete. */ remove?: string; /** log_*: the entry to add. */ add?: NewEntry; /** edit_entry */ patch?: { id: string; patch: Partial<Entry> }; text: string };
 
 /** An entry in a few words, for a delete card: "Coffee (95 mg caffeine)", "check-in: mood 6", "weigh-in 82.4 kg". */
 export function entryWords(e: Entry, supplements: Supplement[]): string {
@@ -100,6 +104,15 @@ function whenOf(input: Record<string, unknown>, now: number): number | string {
   if (!m || +m[1] > 23 || +m[2] > 59) return "time: \"HH:MM\"";
   const at = atMinute(day, +m[1] * 60 + +m[2]);
   return at > now ? `${input.time} is later than now (${clock(now)}) — only what already happened can be logged` : at;
+}
+
+/** One thing found about a watch: a line, how sure, and its link — a study (strong / some) without a real link isn't kept. */
+function findOf(x: unknown): WatchFind | null {
+  const f = x as { text?: unknown; sure?: unknown; title?: unknown; url?: unknown } | null;
+  const text = str(f?.text, 220), sure = f?.sure as WatchFind["sure"], url = typeof f?.url === "string" && /^https:\/\//.test(f.url) ? f.url : null;
+  if (!text || !(SURE as readonly string[]).includes(sure) || sure === "yours") return null;
+  if ((sure === "strong" || sure === "some") && !url) return null;
+  return { text, sure, ...(url ? { source: { title: str(f?.title, 120) ?? "Source", url } } : {}) };
 }
 
 const slotWords = (slots: Slot[]) => SLOTS.filter((x) => slots.includes(x.id)).map((x) => x.name).join(" + ");
@@ -238,6 +251,22 @@ export function makeProposal(input: Record<string, unknown>, s: Setup, id: strin
     return { id, change, why, edit: { patch: patch as Partial<Entry>, before: e }, label: `Change ${entryWords(e, s.supplements)}: ${said.join(", ")}` };
   }
 
+  if (change === "watch") {
+    const what = str(input.what, 60), note = str(input.note, 400), question = str(input.question, 120);
+    const options = Array.isArray(input.options) ? input.options.map((o) => str(o, 30)).filter((o): o is string => !!o) : [];
+    const days = input.days == null ? WATCH.days : int(input.days, WATCH.minDays, WATCH.maxDays);
+    if (!what) return "what: the watch in a few words, like 'Creatine → fuller muscles' (up to 60 characters)";
+    if (!note) return "note: what they said, in their words";
+    if (!question) return "question: one short evening question about the effect, answered with a tap (up to 120 characters)";
+    if (options.length < WATCH.options[0] || options.length > WATCH.options[1] || new Set(options.map(fold)).size !== options.length) return "options: 2–4 different short answers, low to high ('Not really', 'A bit', 'Very')";
+    if (days == null) return `days: ${WATCH.minDays}–${WATCH.maxDays}`;
+    const live = (s.ai.watches ?? []).filter((w) => watchLive(w, now));
+    if (live.some((w) => fold(w.what) === fold(what))) return `already watching ${what}`;
+    if (live.length >= WATCH.max) return `already watching ${WATCH.max} things — they can stop one in the AI tab first`;
+    const found = (Array.isArray(input.found) ? input.found : []).map(findOf).filter((f): f is WatchFind => !!f).slice(0, 3);
+    return { id, change, why, watch: { what, note, question, options, days, found }, label: `Watch: ${what} — ask “${question}” each evening for ${days} days` };
+  }
+
   if (change === "goals") {
     const kcal = input.kcal == null ? undefined : int(input.kcal, ...GOAL_RANGE.kcal);
     const p = input.protein == null ? undefined : int(input.protein, ...GOAL_RANGE.p);
@@ -314,6 +343,11 @@ export function applyProposal(p: Proposal, s: Setup, now: number, id: string): A
   if (p.change === "delete_entry") {
     const e = (s.entries ?? []).find((x) => x.id === p.entry!.id);
     return e ? { remove: e.id, text: `Deleted ${entryWords(e, s.supplements)}.` } : "It's already gone.";
+  }
+  if (p.change === "watch") {
+    const w = p.watch!;
+    if ((s.ai.watches ?? []).some((x) => watchLive(x, now) && fold(x.what) === fold(w.what))) return `Already watching ${w.what}.`;
+    return { watches: [...(s.ai.watches ?? []), { id, at: now, start: localDay(now), ...w }], text: `Watching ${w.what} — ${new Date(now).getHours() >= WATCH.from ? "its first question is in For you on Today now" : `its first question comes at ${WATCH.from}:00`}.` };
   }
   const x = p.experiment!;
   if (s.ai.experiments.some((e) => !e.ended && fold(e.name) === fold(x.name))) return `${x.name} is already running.`;

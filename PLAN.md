@@ -3005,9 +3005,20 @@ both reads and the questions. Phases in that order; #152 RPE waits (owner).
    - [ ] Today "feels too empty" and he likes "charts and connecting dots, trying to find patterns in a lot of data
      points": a chart on Today (the day so far with its dots; a pattern with today's dot on it) — canvas first. Also
      changes the reform: don't cut the charts and grids he likes (i1–i3 to be reworded).
-   - [ ] Watching: notes become things the AI looks out for ("creatine makes my muscles fuller", "better after a walk",
+   - [~] Watching: notes become things the AI looks out for ("creatine makes my muscles fuller", "better after a walk",
      "better after gym") — follow-up questions, papers and Reddit, offered when a check-in is low, and in the morning /
-     night reads ("i liked that i mentioned getting sick and it showed me zinc w studies").
+     night reads ("i liked that i mentioned getting sick and it showed me zinc w studies"). Owner, 28 Oct: "start
+     watching task". Claimed 28 Oct — lib/watch.ts, propose "watch", components/Watching.tsx, Today asks, AI tab.
+     - [x] Phase 1: a note → the AI searches studies and forums and proposes a watch (a card: its evening question with
+       2–4 taps, 14 days, what it found with how sure; "Watch it" / "Not now"). Its question is in For you from 18:00,
+       once a day (an answer entry, Undo); the AI tab lists each with its answers as bars, what was found, Stop; the
+       AI and the reads see "What I'm watching" with every answer, and a read may bring news on one. watch.test (5),
+       propose.test (2), e2e watch (19 checks, 390 + 320; control: Not now keeps nothing).
+     - [ ] Phase 2: "your data" on each — its answers against the days it happened (creatine days vs not; after a walk
+       vs before) with the app's own test and an early/clear label; asks after the thing itself (30 min after a walk
+       or a session, not only evenings).
+     - [ ] Phase 3: offered when a check-in is low ("Energy 3. You said you feel better after a walk" — TipAsk's place)
+       with your data and the studies; the end of a watch gets a verdict like an experiment's.
    - [ ] More AI tools so it can do more inside the app (log, edit, watch, ask later, quiet, settings, workout).
      His picks (AskUserQuestion, 28 Oct): weekly = one scrolling report; Today = "a pattern, with today on it";
      Watching = "show me first"; AI tools first = "Log and edit from chat" + "Watch and ask later". Canvas row

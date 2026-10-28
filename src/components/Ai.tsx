@@ -44,6 +44,7 @@ import { attempt, onRetryDue, tryNow } from "../lib/ai/attempts";
 import { dayTotals, dayWindow, eveningOf, nightDue, nightStale, STALE } from "../lib/ai/nightread";
 import { addThreads, adviceOf, closeThreads, dropSaid, keepSaid, saidTopics } from "../lib/ai/said";
 import { onSyncSettled, syncSettled } from "../lib/session";
+import { WatchList } from "./Watching";
 import { byDay, foldLine } from "../lib/ai/thread";
 
 const usd = (x: number) => (x < 0.1 ? `$${x.toFixed(3)}` : `$${x.toFixed(2)}`);
@@ -494,6 +495,7 @@ export function AiScreen() {
     <div className="calm ai-screen">
       <div className="head"><span>Your AI</span><a href="#settings">Settings</a></div>
       <DeepDive onRepick={makeDive} />
+      <WatchList now={now} />
       <SavedCard />
       <div className="chat" aria-live="polite">
         {thread.length === 0 && <p className="note">Ask me anything about your data — I see your numbers, patterns, stack and About me. The morning read and your day read back are on Today — ask me about them here. I only write here myself with something new: a heart-rate stretch the app can't explain, a new finding to comment on, your week and month.</p>}

@@ -28,6 +28,7 @@ import { ForYou, type Ask } from "../components/ForYou";
 import { NightCheckAsk } from "../components/NightCheckAsk";
 import { TipAsk } from "../components/TipAsk";
 import { WeekAsk } from "../components/WeekReport";
+import { WatchAsk } from "../components/Watching";
 import { FoldCard } from "../components/FoldCard";
 import type { Drink, Entry, EntryOf, Slot } from "../lib/types";
 import { answerSlot, SLOTS, slotsOf } from "../lib/types";
@@ -160,6 +161,8 @@ export function Today() {
     ...(mrShown ? [{ key: "morning", name: "morning read", node: <MorningRead />, read: true }] : []),
     ...(nrShown ? [{ key: "night", name: "your day, read back", node: <NightRead />, read: true }] : []),
     { key: "questions", name: "a quick question", node: <AiQuestions /> },
+    // what you asked it to look out for: its evening question (lib/watch; owner, 28 Oct: "give me followup questions")
+    ...(s.ai.watches ?? []).filter((w) => !w.stopped).map((w) => ({ key: `watch:${w.id}`, name: w.what.toLowerCase(), node: <WatchAsk w={w} now={now} /> })),
     { key: "heart", name: "your heart", node: <HeartAsk now={now} /> },
     { key: "catchup", name: "yesterday", node: <CatchUp now={now} /> },
     { key: "ghost", name: "yesterday, drafted", node: <GhostCard now={now} /> },
