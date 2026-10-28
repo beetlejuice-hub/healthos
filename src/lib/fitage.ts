@@ -126,8 +126,9 @@ export function fitAge(rec: Record<string, Vo2Day> | undefined, today: string, s
     change = { weeks: c.weeks, then: c.then, thenFit, word: c.word, years, fitness: kg != null ? years! - kg : null, kg, kgLost: c.kgLost };
     const end = addDays(today, -7 * c.weeks);
     const r0 = o.rhr ? rhrWeek(o.rhr, end) : null, r1 = o.rhr ? rhrWeek(o.rhr, today) : null;
-    if (r0 != null && r1 != null) rhr = [r0, r1];
-    if (o.cardio) { const m0 = cardioWeek(o.cardio, end), m1 = cardioWeek(o.cardio, today); if (m0 || m1) cardio = [m0, m1]; }
+    // only what moved: "54 → 54" says nothing (28 Oct review)
+    if (r0 != null && r1 != null && Math.round(r0) !== Math.round(r1)) rhr = [r0, r1];
+    if (o.cardio) { const m0 = cardioWeek(o.cardio, end), m1 = cardioWeek(o.cardio, today); if (Math.round(m0) !== Math.round(m1)) cardio = [m0, m1]; }
   }
   const you = o.age && o.age >= 12 && o.age <= 100 ? o.age : null;
   return { sex, vo2: t.now, fit, you, est: t.est, per, weeks, change, rhr, cardio };

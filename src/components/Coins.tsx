@@ -123,7 +123,7 @@ export function CoinLab({ now }: { now: number }) {
       {live ? <p className="bl-need" data-running={live.id}>{live.name}: day {coinDays(live).findIndex((d) => d.day === today) + 1} of {live.days} · result sealed until {dateWords(endOf(live))} · <button type="button" className="linkish" onClick={() => setCoin(live.id, (y) => ({ ...y, ended: today }))}>end early</button></p>
         : <div className="coin-start">
           {ps.map((p) => <button key={p.name} type="button" className="ibtn" onClick={() => start(p)}><b>{p.name}</b><span>{p.heads} vs {lower(p.tails)} · {COIN.days} days</span></button>)}
-          <p className="bl-foot">Daily coins are for things that act the same night. Slow supplements — ones that build up over weeks — need weeks-long blocks instead; that's next.</p>
+          <p className="bl-foot">Daily coins are for things that act the same night. Supplements that build up over weeks can't be tested a day at a time, so they aren't offered here.</p>
         </div>}
       {coins.filter((c) => c !== live).slice().reverse().map((c) => <Result key={c.id} c={c} today={today} />)}
     </section>

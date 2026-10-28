@@ -53,6 +53,8 @@ function log() {
   check(`Saturday: stack, coffee, pancakes, 2nd coffee; Sunday: stack, both coffees; no varied food (${l.join(' | ')})`, l.join('|') === '08:05 · Morning stack: Creatine, Vitamin D3|09:10 · Flat white|10:30 · Pancakes|14:30 · Flat white|08:05 · Morning stack: Creatine, Vitamin D3|09:10 · Flat white|14:30 · Flat white');
   check(`fits the phone (${await pg.evaluate(() => document.documentElement.scrollWidth)} px)`, await pg.evaluate(() => document.documentElement.scrollWidth) <= 390);
   await card(pg).screenshot({ path: OUT + 'ghost.png' });
+  // one ask about the same days at a time (28 Oct review: drafts and "how did you eat?" showed back to back)
+  check('while drafted, "how did you eat?" waits', await pg.getByRole('region', { name: 'Days not logged' }).count() === 0);
   const before = (await store(pg)).length;
   await card(pg).locator('[data-draft="2026-10-25|drink:flat white|870"] input').uncheck();
   await card(pg).getByRole('button', { name: 'Keep the 6 ticked' }).click(); await pg.waitForTimeout(400);

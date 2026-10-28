@@ -84,6 +84,9 @@ describe("your fitness age over the weeks, and what moved it", () => {
     expect(f.cardio).toEqual([40, 75]);
     const none = fitAge(vo2, TODAY, "male", { rhr: {}, cardio: {} })!;
     expect(none.rhr).toBeNull(); expect(none.cardio).toBeNull();
+    // what didn't move isn't said: "resting heart rate 54 → 54" (28 Oct review)
+    const flat: Record<string, number> = {}; for (let k = 0; k < 90; k++) flat[addDays(TODAY, -k)] = 54;
+    expect(fitAge(vo2, TODAY, "male", { rhr: flat, cardio: { [TODAY]: 30, [addDays(TODAY, -56)]: 30 } })!.rhr).toBeNull();
   });
   it("women's norms set the same VO2 max younger; under 3 days of VO2 max this week, nothing", () => {
     const { vo2 } = band(() => 3.2, () => 80);

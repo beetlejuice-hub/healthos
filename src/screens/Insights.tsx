@@ -48,7 +48,7 @@ const PAGE_SUB: Record<string, string> = {
   intake: "What you ate and drank, and your weight.",
   training: "What you trained, and what you took.",
   connections: "What goes with better or worse days — with how sure each one is.",
-  lab: "What a dose of something has gone with in your own nights — each drink, a smoking day, late caffeine.",
+  lab: "Your own experiments and your body's numbers: coin-flips, fitness age, what each drink, a smoking day or late caffeine went with, when you're wound up, your body clock.",
   data: "How complete the picture is, and how the numbers are made.",
 };
 /** The period switch matters on these pages only. */

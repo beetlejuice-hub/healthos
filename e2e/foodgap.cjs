@@ -32,6 +32,11 @@ const NOW = new Date('2026-10-26T09:00:00').getTime(), D = 864e5, KEY = 'healtho
     await pg.goto(APP + '#today'); await pg.reload(); await pg.waitForSelector('#feel'); await pg.waitForTimeout(600);
     const card = pg.getByRole('region', { name: 'Days not logged' });
     if (control) { check('control: the weekend logged — nothing asked', await card.count() === 0); await ctx.close(); continue; }
+    // your usual lunch and dinner are drafted for the weekend first (GhostCard); one ask at a time (28 Oct review), so
+    // "how did you eat?" waits until those are answered — "None of it": you didn't have the usual, so it asks
+    const ghost = pg.getByRole('region', { name: 'Usual things, drafted' });
+    check(`drafts first, the question waits (${await ghost.count()} drafts card, ${await card.count()} question)`, await ghost.count() === 1 && await card.count() === 0);
+    await ghost.getByRole('button', { name: 'None of it' }).click(); await pg.waitForTimeout(400);
     const t = (await card.innerText().catch(() => '')).replace(/\s+/g, ' ');
     check(`Today asks once about the weekend, against the usual day (${t})`, /^Not logged Sat 24 – Sun 25 Oct How did you eat\? Kept as a guess — your usual day \(2,300 kcal\) and your goal leave these days out either way\. As usual More Less Not sure · Log them instead$/i.test(t));
     const meals = await pg.locator('#catchup .cu-row[data-kind=meal]').count();

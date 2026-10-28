@@ -2865,4 +2865,13 @@ both reads and the questions. Phases in that order; #152 RPE waits (owner).
      34,000 px, the lab cards 30,000 px down — since body lab went in (PLAN 177): index.css's one-page rule had no line
      for "lab". e2e bodylab now opens every Insights page and checks each shows only itself (failed: "lab: week+timeline
      +heart+…"; passes with the line), so a page added later without its line fails there.
+   - [x] Phases 1–2 done (28 Oct): review page https://claude.ai/artifact/8niTusijYjMTV1Vqz3esEW. 20 screens, three times of
+     day. Big moves, in order: (1) Today one ask at a time — 10 asks before the log buttons in the morning (~2,100 px),
+     stack shown 4 times, kcal/protein/caffeine twice; (2) Findings — "X goes with Y" in 15 places in 4 number styles;
+     (3) Insights pages lead with the answer (Findings 9.4 phone screens, Training 7.9, Sleep 5.6). Asked the owner to
+     start with (1) on the canvas.
+   - [x] Small fixes from it (28 Oct): "how did you eat?" waits while the same days' usual things are drafted (both
+     showed back to back; e2e ghost + foodgap); coin-flip card no longer says slow supplements are "next" (owner: "nah");
+     Body lab's subtitle names what's on it; fitness age leaves out what didn't move ("54 → 54"). e2e coins failed once
+     under load (74 s, 3 at a time) and passes alone, before and after — a load flake, not this change.
 
