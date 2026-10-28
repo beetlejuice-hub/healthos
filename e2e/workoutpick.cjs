@@ -81,6 +81,14 @@ const { chromium, APP, OUT, handle } = require('./harness.cjs');
   await pg.getByRole('button', { name: '+ Add exercise' }).click(); await pg.getByLabel('Exercise 2').fill('wrist');
   const wo = await pg.locator('.exed').nth(1).locator('.exp-list button b').allInnerTexts().then((xs) => xs.map((x) => [x]));
   check(`the day editor suggests too (${wo.map((o) => o[0]).join(', ')})`, wo.some((o) => o[0] === 'Wrist curl'));
+  // owner, 28 Oct (screenshot, Edit day): the move/remove buttons' style squeezed every suggestion to a 36 px square — the
+  // names read one letter per line. Each row spans the list, its name on one line, and ↑ ↓ × stay beside the box.
+  const rows = await pg.locator('.exed').nth(1).locator('.exp-list').evaluate((l) => [l.getBoundingClientRect().width, ...[...l.querySelectorAll('button')].map((x) => [x.getBoundingClientRect().width, x.querySelector('b').getBoundingClientRect().height])]);
+  const [listW, ...opts] = rows;
+  check(`each suggestion spans the list, its name at most two lines (list ${Math.round(listW)} px; rows ${opts.map(([w, h]) => `${Math.round(w)}×${Math.round(h)}`).join(', ')})`, opts.length > 0 && opts.every(([w, h]) => w >= listW - 2 && h <= 40));
+  const level = await pg.locator('.exed').nth(1).evaluate((e) => Math.abs(e.querySelector('.exed-top > button').getBoundingClientRect().top - e.querySelector('.exp input').getBoundingClientRect().top));
+  check(`↑ ↓ × stay beside the box while the list is open (${Math.round(level)} px off)`, level <= 8);
+  await pg.locator('.exed').nth(1).screenshot({ path: OUT + 'workoutpick-editday.png' });
   await pg.locator('.exp-list button', { hasText: 'Wrist curl' }).first().click();
   await pg.getByRole('button', { name: 'Save day' }).click(); await pg.waitForTimeout(150);
   const day = (await pg.evaluate(() => JSON.parse(localStorage.getItem('healthos.v1:u-test') || '{}'))).templates.find((t) => t.name === 'Back day');
