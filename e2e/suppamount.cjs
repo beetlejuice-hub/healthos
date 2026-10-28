@@ -16,7 +16,7 @@ const { chromium, APP, OUT, handle, openCard } = require('./harness.cjs');
   await pg.getByRole('button', { name: 'Sign in' }).click(); await pg.waitForSelector('text=Settings');
   await pg.evaluate(() => { const k = 'healthos.v1:u-test', s = JSON.parse(localStorage.getItem(k) || '{}');
     s.supplements = [{ id: 'mag', name: 'Magnesium glycinate', dose: '200 mg', slot: 'evening', at: 21 * 60 + 30, active: true }]; s.entries = []; localStorage.setItem(k, JSON.stringify(s)); });
-  await pg.reload(); await pg.waitForSelector('#stack'); await openCard(pg, 'stack');
+  await pg.reload(); await openCard(pg, 'stack'); await openCard(pg, 'stack');
   const st = () => pg.evaluate(() => JSON.parse(localStorage.getItem('healthos.v1:u-test') || '{}'));
   const intake = async () => (await st()).entries.filter((e) => e.kind === 'supp');
   const row = pg.locator('#stack .stack-row').filter({ hasText: 'Magnesium' });

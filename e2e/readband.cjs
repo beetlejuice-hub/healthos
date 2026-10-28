@@ -2,7 +2,7 @@
 // 35 nights, and in one run last night's skin +0.9 °C and breathing +2.2. With it flagged, the morning read must be told
 // to make its pattern item of it — the app's own line quoted — whatever the day's turn; the item the AI sends back about
 // skin temperature must draw 14 days of it from the band, folded and opened. Without the plant: the day's usual angle.
-const { chromium, APP, OUT, handle } = require('./harness.cjs');
+const { chromium, APP, OUT, handle, forYou } = require('./harness.cjs');
 
 const MIN = 60_000, HOUR = 3_600_000, D = 86_400_000, NOW = new Date('2026-10-21T08:30:00').getTime();
 const ymd = (t) => { const d = new Date(t); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
@@ -66,6 +66,7 @@ const STUDIES = [{ type: 'study', title: 'Skin temperature rises before symptoms
       check(`${tag}: the read is told to make its pattern item of it, the app's line quoted (${angle.slice(0, 140)})`,
         /^- Angle for the "pattern" item: Last night's night check — the app flagged it: "Night check: skin \d\.\d °C over your usual and breathing [12]\.\d\/min over your usual — together these go with getting ill/.test(angle) && /never a diagnosis or medical advice/.test(angle));
       await pg.waitForSelector('section.morning .mr-row', { timeout: 5000 }).catch(() => {});
+      await forYou(pg, 'morning');
       const mr = pg.locator('section.morning');
       check(`${tag}: folded, the skin item has its small chart (${await mr.locator('.dc-mini').count()})`, await mr.locator('.dc-mini').count() === 1);
       // the links: "✓ checked" on the one the server opened and matched, nothing on the one it couldn't

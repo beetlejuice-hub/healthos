@@ -1158,19 +1158,21 @@ a { color: inherit; }
 .t2-k { font-size: 11px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: var(--m-accent); }
 .t2-now > * + *:not(.t2-k) { border-top: 1px solid var(--m-line); padding-top: 12px; border-radius: 0; }
 .t2-now > .t2-k + * { border-top: 0; padding-top: 0; }
-.t2-now .card, .t2-now .hownow.calm-line, .t2-now .noticed-line, .t2-now .nextanswer { background: transparent; padding-left: 0; padding-right: 0; margin: 0; border-radius: 0; box-shadow: none; border-width: 0; }
-.t2-now .card { padding-top: 0; padding-bottom: 0; }
-.t2-now .card h3 { font-size: 18px; }
+.t2-now .card, .fy .card, .t2-now .hownow.calm-line, .t2-now .noticed-line, .t2-now .nextanswer { background: transparent; padding-left: 0; padding-right: 0; margin: 0; border-radius: 0; box-shadow: none; border-width: 0; }
+.t2-now .card, .fy .card { padding-top: 0; padding-bottom: 0; }
+.t2-now .card h3, .fy .card h3 { font-size: 18px; }
 /* new and not opened yet (16 Oct): a thin accent bar at the left edge and the tag in the moment's colour — no shift when it goes */
-.t2-now .card[data-new] { position: relative; }
-.t2-now .card[data-new]::before { content: ""; position: absolute; left: -10px; top: 14px; bottom: 4px; width: 3px; border-radius: 2px; background: var(--m-accent); opacity: .85; }
-.t2-now .rd-new { color: var(--m-accent); background: color-mix(in srgb, var(--m-accent) 16%, transparent); }
+.t2-now .card[data-new], .fy .card[data-new] { position: relative; }
+.t2-now .card[data-new]::before, .fy .card[data-new]::before { content: ""; position: absolute; left: -10px; top: 14px; bottom: 4px; width: 3px; border-radius: 2px; background: var(--m-accent); opacity: .85; }
+.t2-now .rd-new, .fy .rd-new { color: var(--m-accent); background: color-mix(in srgb, var(--m-accent) 16%, transparent); }
 .t2-now .noticed-line { font-size: 13.5px; }
-.t2-now .pill-btn.pri { background: var(--m-accent); color: #111; }
+.t2-now .pill-btn.pri, .fy .pill-btn.pri { background: var(--m-accent); color: #111; }
 .t2-items { display: grid; gap: 4px; }
 .t2-items .item { background: transparent; padding: 4px 0; border-radius: 0; grid-template-columns: 30px minmax(0, 1fr); }
 .t2-items .item > div { min-width: 0; }
 .t2-items .item p { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* one ask at a time in For you (Today A): room for the whole sentence */
+.fy .t2-items .item p { white-space: normal; overflow: visible; }
 .t2-items .item .acts { margin-top: 4px; }
 .t2-items .item + .item { border-top: 1px solid var(--m-line); padding-top: 12px; }
 .t2-items .item .ic { background: color-mix(in srgb, var(--m-accent) 16%, transparent); color: var(--m-accent); }
@@ -1193,7 +1195,13 @@ a { color: inherit; }
 .t2-daynums b { font-family: var(--f-cond); font-size: 24px; font-weight: 600; color: var(--c-ink); font-variant-numeric: tabular-nums; }
 
 /* Six buttons that never move. */
-.t2-pad { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+/* the log buttons, one row under the tiles (owner, 28 Oct, review part 1: picked A) — icon over name; what each has today
+   is in the tiles, and each button still says it to a screen reader */
+.t2-pad { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 6px; }
+.t2-pad .t2-pad-b { height: auto; padding: 9px 0 8px; border-radius: 14px; grid-template-columns: minmax(0, 1fr); grid-template-rows: auto auto; justify-items: center; row-gap: 3px; }
+.t2-pad .t2-pad-b svg { grid-row: auto; width: 20px; height: 20px; }
+.t2-pad .t2-pad-b b { font-size: 11.5px; font-weight: 700; }
+.t2-pad .t2-pad-b span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 .t2-pad-b { all: unset; box-sizing: border-box; cursor: pointer; min-width: 0; height: 70px; padding: 0 10px 0 12px; border-radius: 18px; background: var(--c-card);
   display: grid; grid-template-columns: 26px minmax(0, 1fr); grid-template-rows: auto auto; column-gap: 8px; align-content: center; }
 .t2-pad-b svg { grid-row: span 2; align-self: center; }
@@ -1202,6 +1210,22 @@ a { color: inherit; }
 .t2-pad-b:active { background: var(--c-card-2); }
 .t2-pad-b:focus-visible { outline: 2px solid var(--gym); outline-offset: 2px; }
 .t2-usual .drinks button { background: var(--c-card-2); }
+.t2-tile[aria-expanded="true"] { box-shadow: inset 0 0 0 1.5px var(--c-ink); }
+/* For you: one ask at a time (owner, 28 Oct, review part 1: "one at a time") */
+.fy { --m-accent: var(--gym); --m-line: #2c2f35; --m-sub: var(--c-ink-2); display: grid; gap: 10px; padding: 14px 16px 12px; border-radius: 22px; }
+.fy-top { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+.fy-k { font-size: 11px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: var(--c-ink-2); }
+.fy-dots { display: inline-flex; gap: 4px; }
+.fy-dots i { width: 6px; height: 6px; border-radius: 50%; background: var(--c-track); }
+.fy-dots i[data-done] { background: color-mix(in srgb, var(--gym) 45%, transparent); }
+.fy-dots i[data-on] { background: var(--gym); }
+.fy-item:not([data-current]) { display: none; }
+.fy-foot { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; border-top: 1px solid #2c2f35; padding-top: 9px; font-size: 13px; color: var(--c-ink-2); }
+.fy-foot .linkish { color: var(--c-ink-2); text-decoration: underline; font-size: 13px; padding: 0; }
+.fy-reads { margin: 0; font-size: 12.5px; color: var(--c-ink-2); }
+.fy-reads .linkish { font-size: 12.5px; padding: 0; color: var(--c-ink-2); }
+.nightask { display: grid; gap: 6px; }
+.nightask .rd-night { margin: 0; font-size: 14px; }
 .today2 #stack { margin-top: 12px; }
 .t2-data:has(> h3:only-child) { display: none; }
 .t2-data .noticed-line, .t2-data .nextanswer { background: transparent; padding: 0; margin: 0; border-radius: 0; border: 0; }

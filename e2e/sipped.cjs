@@ -18,7 +18,7 @@ const { chromium, APP, OUT, handle, openCard } = require('./harness.cjs');
   const T = (s) => new Date(s).getTime();
   const coffee = (iso, mg = 95) => ({ id: 'c' + iso, kind: 'drink', at: T(iso), name: 'Coffee', ml: 250, caffeineMg: mg, alcoholG: 0, kcal: 2 });
   await pg.evaluate((es) => { const k = 'healthos.v1:u-test', s = JSON.parse(localStorage.getItem(k) || '{}'); s.entries = es; s.settings = { ...(s.settings || {}), halfLifeMin: 300, bedMinute: 1380 }; localStorage.setItem(k, JSON.stringify(s)); }, [coffee('2026-10-02T14:00:00')]);
-  const at = async (iso) => { await pg.clock.setFixedTime(new Date(iso)); await pg.goto(APP + '#today'); await pg.reload(); await pg.waitForSelector('#caffeine'); await openCard(pg, 'caffeine'); };
+  const at = async (iso) => { await pg.clock.setFixedTime(new Date(iso)); await pg.goto(APP + '#today'); await pg.reload(); await openCard(pg, 'caffeine'); await openCard(pg, 'caffeine'); };
   const head = async () => (await pg.locator('#caffeine h3').innerText()).replace(/\s+/g, ' ');
   const nowMg = async () => { const m = (await head()).match(/(\d+) mg now/); return m ? +m[1] : /none now/.test(await head()) ? 0 : NaN; };
   const bedMg = async () => +((await head()).match(/(\d+) mg at 23:00/) || [0, NaN])[1];

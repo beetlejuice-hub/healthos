@@ -35,7 +35,7 @@ const ENTRIES = [
   // logged earlier (as if on another phone): on the server, so the app pulls them the way it really gets them
   for (const e of ENTRIES) tables.entries.set(`u-test|${e.id}`, { user_id: 'u-test', id: e.id, kind: e.kind, at: new Date(e.at).toISOString(), data: e, deleted: false, updated_at: '2026-09-29T11:00:00.000Z' });
   const pg = await phone();
-  await pg.goto(APP + '#today'); await pg.waitForSelector('#fuel'); await openCard(pg, 'fuel');
+  await pg.goto(APP + '#today'); await openCard(pg, 'fuel'); await openCard(pg, 'fuel');
   await pg.waitForFunction((k) => (JSON.parse(localStorage.getItem(k) || '{}').entries || []).some((e) => e.id === 'pizza'), KEY, { timeout: 8000 });
   const ids = async (p = pg) => (await p.evaluate((k) => JSON.parse(localStorage.getItem(k) || '{}').entries || [], KEY)).map((e) => e.id);
   const sheet = pg.getByRole('dialog', { name: 'What I ate' });
@@ -92,12 +92,12 @@ const ENTRIES = [
   check(`Today's card counts what's left (${await open.innerText()})`, /What I ate · 2 items/.test(await open.innerText()));
 
   // really gone: a reload, then the server, then a second phone signing in fresh
-  await pg.reload(); await pg.waitForSelector('#fuel'); await pg.waitForLoadState('networkidle'); await pg.waitForTimeout(1500);
+  await pg.reload(); await openCard(pg, 'fuel'); await pg.waitForLoadState('networkidle'); await pg.waitForTimeout(1500);
   check('after a reload: still gone', !(await ids()).includes('toast') && !(await ids()).includes('pizza') && (await ids()).includes('oats'));
   const row = (id) => [...tables.entries.values()].find((r) => r.id === id);
   check(`the server has them as deleted (toast ${row('toast')?.deleted}, pizza ${row('pizza')?.deleted})`, row('toast')?.deleted === true && row('pizza')?.deleted === true);
   const pg2 = await phone();
-  await pg2.goto(APP + '#today'); await pg2.waitForSelector('#fuel'); await pg2.waitForLoadState('networkidle'); await pg2.waitForTimeout(1500);
+  await pg2.goto(APP + '#today'); await openCard(pg2, 'fuel'); await pg2.waitForLoadState('networkidle'); await pg2.waitForTimeout(1500);
   const two = await pg2.evaluate((k) => JSON.parse(localStorage.getItem(k) || '{}').entries || [], KEY);
   check(`a second phone, fresh from the server: the deleted ones aren't there, the beer is 250 (${two.filter((e) => ['oats', 'cof', 'toast', 'pizza', 'beer'].includes(e.id)).map((e) => e.id).join(',')})`,
     two.some((e) => e.id === 'oats') && !two.some((e) => e.id === 'toast' || e.id === 'pizza') && two.find((e) => e.id === 'beer')?.kcal === 250);

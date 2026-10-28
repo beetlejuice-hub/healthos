@@ -1,4 +1,4 @@
-const { chromium, APP, OUT, handle } = require('./harness.cjs');
+const { chromium, APP, OUT, handle, forYou } = require('./harness.cjs');
 (async () => {
   const b = await chromium.launch(); const errs = [];
   const check = (label, ok) => { console.log((ok ? 'PASS ' : 'FAIL ') + label); if (!ok) process.exitCode = 1; };
@@ -46,7 +46,7 @@ const { chromium, APP, OUT, handle } = require('./harness.cjs');
   await pg.goto(APP + '#today'); await pg.waitForTimeout(300);
   check('Today shows the avoid alert', /St John's wort \+ Otezla: avoid combining/.test(await pg.locator('.noticed-line.alert').innerText()));
   await pg.screenshot({ path: OUT + 'sc-today.png' });
-  await pg.locator('.noticed-line.alert').click(); await pg.waitForTimeout(800);
+  await forYou(pg, '.noticed-line.alert'); await pg.locator('.noticed-line.alert').click(); await pg.waitForTimeout(800);
   const panel = await pg.locator('#stackcheck').innerText();
   check('Insights panel lists reds first', /Avoid[\s\S]*Caution[\s\S]*Mixed evidence/.test(panel));
   check('panel: alcohol + psoriasis caution', /Alcohol \+ pikkelysömör/.test(panel));

@@ -1,4 +1,4 @@
-const { chromium, APP, OUT, handle } = require('./harness.cjs');
+const { chromium, APP, OUT, handle, forYou, openCard } = require('./harness.cjs');
 // Owner's 1 Oct list: log earlier, drinks in search, make your own food, supplements running low/out,
 // weight chart, today's chips and next answer, caffeine traces.
 (async () => {
@@ -48,7 +48,7 @@ const { chromium, APP, OUT, handle } = require('./harness.cjs');
   await pg.getByRole('button', { name: 'Running low' }).click(); await pg.getByRole('button', { name: 'Done' }).click();
   check('row says running low', /running low/.test(await pg.locator('.supp-row').filter({ hasText: 'Saffron' }).innerText()));
   await pg.goto(APP + '#today'); await pg.waitForTimeout(200);
-  if (await pg.locator('.t2-more').count()) await pg.locator('.t2-more').click(); // the Now card shows two due items, the rest one tap away
+  await forYou(pg, 'due:restock'); // For you: one ask at a time
   check('Today reminds to buy more', await pg.getByText('Running low: Saffron').count() === 1);
   await pg.getByRole('button', { name: "It's out" }).click(); await pg.waitForTimeout(100);
   check('then: out of Saffron, Restocked button', await pg.getByText('Out of Saffron').count() === 1);
@@ -63,7 +63,8 @@ const { chromium, APP, OUT, handle } = require('./harness.cjs');
 
   // The next day: yesterday's coffee is gone (under 10 mg counts as none), not "5 mg" or "a trace".
   await pg.goto(APP + '#today'); await pg.waitForTimeout(200);
-  const cafCard = await pg.locator('.card').filter({ hasText: 'Caffeine' }).first().innerText();
+  await openCard(pg, 'caffeine'); // Today A: the Caffeine tile opens it
+  const cafCard = await pg.locator('#caffeine').innerText();
   check('a day-old coffee reads as none', /none now/i.test(cafCard) && !/trace|\b[1-9] mg now/i.test(cafCard));
   await pg.screenshot({ path: OUT + 'round-today.png', fullPage: true });
   console.log('errors:', JSON.stringify(errs));

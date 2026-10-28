@@ -37,9 +37,9 @@ const ENTRIES = [
   await pg.getByRole('button', { name: 'Sign in' }).click(); await pg.waitForSelector('text=Settings');
   await pg.evaluate(([k, es, fs]) => { const s = JSON.parse(localStorage.getItem(k) || '{}'); s.entries = es; s.foods = fs; s.workouts = []; s.goals = { ...(s.goals || {}), kcal: 2000, p: 150 }; s.settings = { ...(s.settings || {}), bedMinute: 23 * 60 }; localStorage.setItem(k, JSON.stringify(s)); }, [KEY, ENTRIES, FOODS]);
   await pg.goto(APP + '#today'); await pg.reload(); await pg.waitForSelector('#feel');
-  const fold = await pg.locator('#fuel').innerText().catch(() => '');
-  check(`Today's Food card, folded: yesterday's score (${fold.split('\n').slice(0, 2).join(' · ')})`, /yesterday 32\/100/.test(fold));
-  await openCard(pg, 'fuel');
+  await openCard(pg, 'fuel'); // Today A (28 Oct): the Food card opens from its tile; its head keeps the one-line read
+  const fold = await pg.locator('#fuel .fold-head').innerText().catch(() => '');
+  check(`Today's Food card, its head: yesterday's score (${fold.split('\n').slice(0, 2).join(' · ')})`, /yesterday 32\/100/.test(fold));
   const line = await pg.locator('.fuel-score').innerText().catch(() => '');
   check(`…open: what it was and what cost it (${line})`, line === "Yesterday's food 32/100 · off goal — protein low (46 g of 150) ›");
   await pg.locator('.fuel-score').screenshot({ path: OUT + 'dayscore-today.png' }).catch(() => {});

@@ -25,7 +25,7 @@ const { chromium, APP, OUT, handle, tables, users, openCard } = require('./harne
   await phone.goto(APP + '#settings');
   check('tester sees Dev tools link', await phone.getByRole('link', { name: 'Dev tools' }).count() === 1);
   await phone.goto(APP + '#dev'); await phone.getByRole('button', { name: '7 days of sample' }).click();
-  await phone.goto(APP + '#today'); await phone.waitForSelector('#caffeine'); await openCard(phone, 'caffeine'); await phone.getByRole('button', { name: '☆ Set usual drink' }).click(); await phone.getByRole('button', { name: /^Filter coffee/ }).click(); await phone.getByRole('button', { name: '+ Filter coffee' }).click();
+  await phone.goto(APP + '#today'); await openCard(phone, 'caffeine'); await phone.getByRole('button', { name: '☆ Set usual drink' }).click(); await phone.getByRole('button', { name: /^Filter coffee/ }).click(); await phone.getByRole('button', { name: '+ Filter coffee' }).click();
   await phone.goto(APP + '#settings'); await phone.getByLabel('kcal', { exact: true }).fill('2450');
   await syncNow(phone);
   const serverEntries = [...tables.entries.values()].filter(r => r.user_id === 'u-test' && !r.deleted).length;

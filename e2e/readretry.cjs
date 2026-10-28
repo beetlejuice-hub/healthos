@@ -5,7 +5,7 @@
 // go one at a time, the morning read first; Today must say it didn't come, why and when it tries again; it must try again
 // by itself at 08:32; Try again must go at once and bring the read; Settings → AI must list both failures. Before last
 // night is in (no rating, no band): Today says it waits for it, and nothing is sent.
-const { chromium, APP, OUT, handle } = require('./harness.cjs');
+const { chromium, APP, OUT, handle, forYou } = require('./harness.cjs');
 
 const H = 3_600_000, NOW = new Date('2026-10-22T08:30:00').getTime(), KEY = 'healthos.v1:u-test';
 const READ = { greeting: 'Morning — 7 h and a calm night.', items: [{ type: 'fact', title: 'Protein first', text: 'Words.', tip: 'Eggs before 10', measure: 'protein' }] };
@@ -97,7 +97,8 @@ const RATED = { id: 'sl', kind: 'sleep', at: NOW - H, rating: 7 };
 
   // 3. Try again: at once, and the read comes
   await note(pg).getByRole('button', { name: 'Try again' }).click({ timeout: 2000 }).catch(() => {});
-  await pg.waitForSelector('section.morning:not(.mr-pending)', { timeout: 5000 }).catch(() => {});
+  await pg.waitForSelector('section.morning:not(.mr-pending)', { state: 'attached', timeout: 5000 }).catch(() => {});
+  await forYou(pg, 'morning'); // a read that came goes into For you (Today A, 28 Oct)
   const card = await pg.locator('section.morning').first().innerText({ timeout: 2000 }).catch(() => '');
   check(`Try again brings it, there and then (${card.split('\n').slice(0, 3).join(' · ')})`, calls.filter((c) => c === 'digest').length === 3 && /7 h and a calm night/.test(card) && await note(pg).count() === 0);
   await pg.locator('section.morning .mr-head').click({ timeout: 2000 }).catch(() => {});

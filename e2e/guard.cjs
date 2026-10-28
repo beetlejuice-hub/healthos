@@ -1,7 +1,7 @@
 // The typo guard (PLAN 145; owner, 20 Oct: "things like i lifted 315 kg per hand - possible misstype from 31,5" — "do
 // these"). A lateral raise at ~31 kg: typing 315 asks "Did you mean 31.5?", and Use keeps 31.5. Today's weigh-in after
 // 84.6: 48.6 asks; Change it, 84.8 logs. In Log, a real 70 is asked without a fix and kept when he says so. Never blocks.
-const { chromium, APP, OUT, handle } = require('./harness.cjs');
+const { chromium, APP, OUT, handle, forYou } = require('./harness.cjs');
 
 (async () => {
   const b = await chromium.launch(); const errs = [];
@@ -37,7 +37,7 @@ const { chromium, APP, OUT, handle } = require('./harness.cjs');
   check(`Use 31.5: logged as 31.5 (${set && set.kg})`, set && set.kg === 31.5 && await g.count() === 0);
 
   // a weigh-in: 48.6 for 84.6 (digits swapped; under 20 or over 400 can't be tapped at all) — asked; Change it; then the right one
-  await pg.goto(APP + '#today'); await pg.waitForSelector('.weighin');
+  await pg.goto(APP + '#today'); await forYou(pg, '.weighin'); await pg.waitForSelector('.weighin');
   const wbox = pg.locator('.weighin').getByLabel('Weight in kg'), logKg = pg.locator('.weighin').getByRole('button', { name: 'Log kg' });
   await wbox.fill('48.6'); await logKg.click(); await pg.waitForTimeout(200);
   const wg = pg.locator('.guard');

@@ -3,7 +3,7 @@
 // credits"). A Push today and one on Tuesday: at 21:30 the read-back that already runs is asked once — no extra call — and
 // its context has the session against Tuesday's and each lift against last time, the warm-up left out. The answer's
 // workout part shows on Today's card, opened, on a phone.
-const { chromium, APP, OUT, handle } = require('./harness.cjs');
+const { chromium, APP, OUT, handle, forYou } = require('./harness.cjs');
 const calls = [];
 const NIGHT = { summary: 'A training day: Push at 18:00, a little more on bench than Tuesday.', happened: ['Push 18:00–19:05'], notes: '', change: [], remember: [],
   workout: { summary: 'Bench went up: 62.5 × 8, about 4 % over Tuesday\'s best — a new best, with total volume about the same.', better: ['Bench press 62.5 × 8 ≈ 79 kg, +4.2 % — new best'], next: 'Bench at 62.5 until both sets hit 8, then 65.' } };
@@ -39,6 +39,7 @@ const set = (id, d, h, m, w, exercise, kg, reps, warmup) => ({ id, kind: 'set', 
     && /^- Push 18:00–19:05 \(65 min\): 2 working sets, 938 kg \(last Push, Tue 13 Oct: 960 kg, −2\.3 %\)$/.test(sec[1]) && /^ {2}- Bench press: 62\.5 × 8, 62\.5 × 7 — best 62\.5 × 8 ≈ 79 kg 1-rep max; last time Tue 13 Oct 60 × 8 ≈ 76 kg, \+4\.2 % — new best$/.test(sec[2]));
   check('the warm-up isn\'t counted', sent[0] && !/30 × 10/.test(sent[0].context.slice(sent[0].context.indexOf('## The workout that day'))));
 
+  await forYou(pg, 'night');
   const card = pg.getByLabel('Your day, read back');
   check('folded: the workout part waits inside', !/Your workout/i.test(await card.innerText()));
   await card.locator('.mr-head').click(); await pg.waitForTimeout(150);

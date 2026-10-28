@@ -5,7 +5,7 @@
 // (1) Opening the app moves it once to "from what you eat": 2,300, carbs with it; Settings says why. (2) Three weeks on,
 // still eating 2,300 and not losing: 2,300 → 2,250 → 2,200 → 2,150, never more than 150 under what he eats. (3) A pick of
 // "From your burn" after the move stays.
-const { chromium, APP, OUT, handle, tables } = require('./harness.cjs');
+const { chromium, APP, OUT, handle, tables, openCard } = require('./harness.cjs');
 
 const NOW = new Date('2026-10-20T09:00:00').getTime(), D = 864e5; // a Tuesday
 const day = (i) => { const d = new Date(NOW - i * D); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
@@ -50,7 +50,7 @@ const day = (i) => { const d = new Date(NOW - i * D); return `${d.getFullYear()}
     && /This week 2,300 — what you eat now\. Each Monday it steps 50 lower while the scale isn't dropping 0\.3 kg a week\./.test(t) && /Next step Mon, 26 Oct/.test(t));
   check('"From what you eat" is the one pressed; the kcal box is auto', await card(pg).getByRole('button', { name: 'From what you eat' }).getAttribute('aria-pressed') === 'true' && /auto/.test(await card(pg).locator('[data-auto=kcal]').innerText()));
   await card(pg).screenshot({ path: OUT + 'eatgoal-start.png' });
-  await pg.goto(APP + '#today'); await pg.waitForSelector('#fuel');
+  await pg.goto(APP + '#today'); await openCard(pg, 'fuel');
   check(`Today's Food card uses it (${(await pg.locator('#fuel h3').innerText()).replace(/\s+/g, ' ')})`, /goal 2,300 kcal/.test(await pg.locator('#fuel h3').innerText()));
   // 3 · a pick of the burn after the move stays
   await pg.goto(APP + '#settings'); await pg.waitForSelector('.card.en');

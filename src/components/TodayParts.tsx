@@ -24,12 +24,13 @@ export function useStackCount(now: number) {
 }
 
 /** The four numbers. Each one jumps to its detail further down. */
-export function Status({ kcal, goalKcal, protein, goalP, cafNow, rising = false, cafBed, bed, stack }: {
+export function Status({ kcal, goalKcal, protein, goalP, cafNow, rising = false, cafBed, bed, stack, opened, onTile }: {
   kcal: number; goalKcal: number; protein: number; goalP: number; cafNow: number; /** a drink still going in (PLAN 86) */ rising?: boolean; cafBed: number; bed: number; stack: { total: number; taken: number };
+  /** the tile whose card is open under the tiles, and what a tap does (owner, 28 Oct: "tiles, tap for details") */ opened?: string | null; onTile?: (target: string) => void;
 }) {
   const left = goalKcal - kcal;
   const tile = (label: string, value: ReactNode, pct: number, color: string, sub: string, target: string) => (
-    <button type="button" className="t2-tile" onClick={() => openCard(target)} aria-label={`${label}: ${typeof value === "string" ? value : ""} ${sub}`.trim()}>
+    <button type="button" className="t2-tile" data-card={target} onClick={() => (onTile ? onTile(target) : openCard(target))} aria-expanded={onTile ? opened === target : undefined} aria-label={`${label}: ${typeof value === "string" ? value : ""} ${sub}`.trim()}>
       <span className="k">{label}</span>
       <b>{value}</b>
       <span className="bar"><i style={{ width: `${Math.max(0, Math.min(100, pct))}%`, background: color }} /></span>

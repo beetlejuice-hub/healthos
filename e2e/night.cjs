@@ -1,6 +1,6 @@
 // A "why?" note on a check-in, and the nightly read-back that takes it seriously (owner, 2 Oct).
 // Fake /api/ai: no credits spent; we check what the AI was sent, and what the app shows.
-const { chromium, APP, OUT, handle, rate } = require('./harness.cjs');
+const { chromium, APP, OUT, handle, rate, forYou } = require('./harness.cjs');
 const calls = [];
 const NIGHT = { summary: 'A steady day with one spike: stress hit 8 at 14:00, right when the deadline you wrote about landed.', happened: ['Coffee at 08:10, nothing after', 'Check-in at 14:00: mood 4, stress 8'], notes: 'You said the stress was the deadline at work — the 8 fits that, and nothing else in your log points elsewhere.', change: [{ what: 'A 10-minute walk before the next deadline block.', why: 'Your stress tends to ease after time outside.' }], remember: ['Stress runs high on deadline days; it eases after time outside.'],
   // PLAN 157 (owner, 21 Oct: "the same studt, try, and notiiced session at Eod"): the evening's three, and its questions
@@ -55,6 +55,7 @@ const ANSWERS = { night: () => NIGHT, digest: () => ({ greeting: 'Hi', items: []
   check('what it learned that lasts goes into its memory', (await pg.evaluate(() => JSON.parse(localStorage.getItem('healthos.v1:u-test')))).ai.memory.some((m) => /deadline days/.test(m.text)));
   // owner, 16 Oct: "collapsed at default … a subtle highlight … when it wasnt opened … after opening its just sits tehre
   // collapsed not highlighted"
+  await forYou(pg, 'night');
   const card = pg.getByLabel('Your day, read back'), isNew = async () => (await card.getAttribute('data-new')) === 'true';
   let txt = await card.innerText();
   const foldedH = await card.evaluate((e) => Math.round(e.getBoundingClientRect().height));

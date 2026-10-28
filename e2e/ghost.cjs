@@ -4,7 +4,7 @@
 // both coffees, pancakes on Saturday only, none of the varied food. Untick Sunday's 2nd coffee, keep the rest: exactly
 // those are logged, at their usual times; the card goes; the "how did you eat?" card still asks (a coffee and pancakes
 // aren't a day's food). Undo brings the drafts back. "None of it" logs nothing and doesn't ask again. 320 px fits.
-const { chromium, APP, OUT, handle } = require('./harness.cjs');
+const { chromium, APP, OUT, handle, forYou } = require('./harness.cjs');
 
 const KEY = 'healthos.v1:u-test';
 const SUPPS = [{ id: 'cre', name: 'Creatine', dose: '5 g', slot: 'morning', at: 480, active: true }, { id: 'vitd', name: 'Vitamin D3', dose: '2000 IU', slot: 'morning', at: 480, active: true }];
@@ -40,6 +40,7 @@ function log() {
     await pg.getByRole('button', { name: 'Sign in' }).click(); await pg.waitForSelector('text=Settings');
     await pg.evaluate(([k, es, ss]) => { const s = JSON.parse(localStorage.getItem(k) || '{}'); s.entries = es; s.supplements = ss; localStorage.setItem(k, JSON.stringify(s)); }, [KEY, edit(log()), SUPPS]);
     await pg.goto(APP + '#today'); await pg.reload(); await pg.waitForSelector('#feel'); await pg.waitForTimeout(400);
+    await forYou(pg, 'ghost');
     return { ctx, pg };
   }
   const card = (pg) => pg.getByRole('region', { name: 'Usual things, drafted' });

@@ -1,10 +1,11 @@
 // The night check (PLAN 52; owner, 21 Oct: "1 good / 2 line"): last night's skin temperature, breathing and blood oxygen
 // against your usual, a line under readiness — the score unchanged. 35 fake nights: skin 33.8 °C, breathing 14.5 a minute,
 // blood oxygen 96 %, each with its ordinary night-to-night wobble; heart and sleep as usual. Planted in one run: last night
-// skin +0.9 °C and breathing +2.2 (what a cold coming on looks like on a band). The line must show in readiness's closed
-// strip, name both, say they go together; the score must be the same as without the plant; opened, all three with their
-// usual; and "What the AI sees" must carry it. The run without the plant: no line, all three shown, none marked.
-const { chromium, APP, OUT, handle } = require('./harness.cjs');
+// skin +0.9 °C and breathing +2.2 (what a cold coming on looks like on a band). Since Today A (28 Oct: the readiness line
+// cut) the line is an ask in "For you": it must name both and say they go together; opened, all three with their usual;
+// readiness (now only told to the AI) the same as without the plant; and "What the AI sees" must carry it. The run without
+// the plant: nothing asked.
+const { chromium, APP, OUT, handle, forYou } = require('./harness.cjs');
 
 const MIN = 60_000, HOUR = 3_600_000, D = 86_400_000, NOW = new Date('2026-10-21T08:30:00').getTime();
 const ymd = (t) => { const d = new Date(t); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
@@ -35,7 +36,7 @@ function world(plant) {
 (async () => {
   const b = await chromium.launch(); const errs = [];
   const check = (label, ok) => { console.log((ok ? 'PASS ' : 'FAIL ') + label); if (!ok) process.exitCode = 1; };
-  const scores = {};
+  const scores = {}; // readiness, as the AI is told it
   for (const plant of [true, false]) {
     const w = world(plant), tag = plant ? 'skin +0.9 °C, breathing +2.2' : 'an ordinary night';
     const ctx = await b.newContext({ viewport: { width: 390, height: 900 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true });
@@ -55,26 +56,29 @@ function world(plant) {
     await pg.getByRole('button', { name: 'Sign in' }).click(); await pg.waitForSelector('text=Settings');
     await pg.evaluate(() => { const k = 'healthos.v1:u-test', s = JSON.parse(localStorage.getItem(k) || '{}'); s.entries = []; s.workouts = []; localStorage.setItem(k, JSON.stringify(s)); });
     await pg.goto(APP + '#today'); await pg.reload(); await pg.waitForSelector('#feel');
-    await pg.waitForFunction(() => document.querySelectorAll('.rd .sl-sp').length >= 5 && document.querySelectorAll('.rd .nc li').length === 3, null, { timeout: 15000 }).catch(() => {});
-    const rd = pg.locator('.rd'), sum = rd.locator('summary');
-    scores[plant] = +(await rd.getAttribute('data-score').catch(() => 0));
-    const night = (await sum.locator('.rd-night').count()) ? await sum.locator('.rd-night').innerText() : ''; // not innerText's 30 s wait when there's none
-    if (plant) {
-      check(`${tag}: the line shows in readiness's closed strip, names both, says they go together (${night})`,
-        await sum.locator('.rd-night').isVisible().catch(() => false) && /^Night check: skin \d\.\d °C over your usual and breathing [12]\.\d\/min over your usual — together these go with getting ill/.test(night) && !/cause/.test(night));
-      await rd.screenshot({ path: OUT + 'nightcheck-line.png' });
-    } else check(`${tag}: no line (${night})`, await sum.locator('.rd-night').count() === 0);
-    await sum.click(); await pg.waitForTimeout(150);
-    const rows = await rd.locator('.nc li').evaluateAll((els) => els.map((e) => [e.dataset.sig, !!e.dataset.off, e.innerText.replace(/\s+/g, ' ')]));
-    const offs = rows.filter((r) => r[1]).map((r) => r[0]).join(',');
-    check(`${tag}: opened, all three with their usual (${rows.map((r) => r[2]).join(' | ')})`, rows.length === 3 && rows.every((r) => /usual \d/.test(r[2])) && /^Skin temperature 3\d\.\d °C usual 33\.\d/.test(rows[0][2]));
-    check(`${tag}: ${plant ? 'skin and breathing' : 'none'} marked off (${offs})`, offs === (plant ? 'skin,breath' : ''));
+    // Today A (owner, 28 Oct): the readiness line is gone; the night check is an ask in "For you", only when something's off
+    await pg.locator('.hn-score').waitFor({ state: 'attached', timeout: 15000 }).catch(() => {}); // the band is in
+    await pg.locator('.nightask').waitFor({ state: 'attached', timeout: plant ? 8000 : 1500 }).catch(() => {});
+    check(`${tag}: no readiness line on Today`, await pg.locator('.rd').count() === 0);
+    if (!plant) check(`${tag}: nothing asked`, await pg.locator('.nightask').count() === 0 && !(await pg.locator('.fy-item').allInnerTexts()).some((t) => /Night check/.test(t)));
+    else {
+      await forYou(pg, 'nightcheck');
+      const ask = pg.getByRole('region', { name: "Last night's check" }), night = await ask.locator('.rd-night').innerText().catch(() => '');
+      check(`${tag}: in "For you", names both, says they go together (${night})`,
+        await ask.isVisible().catch(() => false) && /^Night check: skin \d\.\d °C over your usual and breathing [12]\.\d\/min over your usual — together these go with getting ill/.test(night) && !/cause/.test(night));
+      await ask.screenshot({ path: OUT + 'nightcheck-line.png' });
+      await ask.getByRole('button', { name: 'All three against your usual' }).click(); await pg.waitForTimeout(150);
+      const rows = await ask.locator('.nc li').evaluateAll((els) => els.map((e) => [e.dataset.sig, !!e.dataset.off, e.innerText.replace(/\s+/g, ' ')]));
+      check(`${tag}: opened, all three with their usual (${rows.map((r) => r[2]).join(' | ')})`, rows.length === 3 && rows.every((r) => /usual \d/.test(r[2])) && /^Skin temperature 3\d\.\d °C usual 33\.\d/.test(rows[0][2]));
+      check(`${tag}: skin and breathing marked off (${rows.filter((r) => r[1]).map((r) => r[0]).join(',')})`, rows.filter((r) => r[1]).map((r) => r[0]).join(',') === 'skin,breath');
+      await ask.screenshot({ path: OUT + 'nightcheck-open.png' });
+    }
     check(`${tag}: fits the phone (${await pg.evaluate(() => document.documentElement.scrollWidth)} px)`, await pg.evaluate(() => document.documentElement.scrollWidth) <= 390);
-    if (plant) await rd.screenshot({ path: OUT + 'nightcheck-open.png' });
     await pg.goto(APP + '#settings'); await pg.waitForSelector('#ai');
     await pg.getByRole('button', { name: 'What the AI sees about me' }).click();
     const seen = await pg.locator('.ctx').innerText().catch(() => '');
-    check(`${tag}: the AI sees last night's three against the usual${plant ? ', and the line' : ''}`, /## This morning \(readiness, the night check[^\n]*\n[\s\S]*- Last night from the band: Skin temperature 3\d\.\d °C \(usual 33\.\d/.test(seen) && (plant ? /- Night check: skin \d\.\d °C over your usual and breathing/.test(seen) : !/Night check:/.test(seen)));
+    check(`${tag}: the AI sees last night's three against the usual${plant ? ', and the line' : ''}`, /## This morning \(readiness[^\n]*the night check[^\n]*\n[\s\S]*- Last night from the band: Skin temperature 3\d\.\d °C \(usual 33\.\d/.test(seen) && (plant ? /- Night check: skin \d\.\d °C over your usual and breathing/.test(seen) : !/Night check:/.test(seen)));
+    scores[plant] = +((seen.match(/- Readiness (\d+)\/100/) || [])[1] || 0);
     check(`${tag}: and each night's in the list of nights`, /score \d+\/100[^\n]*skin temperature [+−]\d\.\d °C vs usual, breathing 1\d\.\d\/min, blood oxygen 9\d %/.test(seen));
     await ctx.close();
   }

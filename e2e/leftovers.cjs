@@ -3,7 +3,7 @@
 // 8 minutes after waking, said "Above your usual 0 h 00 of 0 h 08 awake": it waits for an hour awake — and at 15:00 says
 // its numbers as before. (3) The caffeine chart's top was fixed at 200 mg: on a 12 mg morning the line lay on the floor;
 // now its top fits the day (40 for 12 mg) — and a 300 mg day still fits under it.
-const { chromium, APP, OUT, handle, openCard } = require('./harness.cjs');
+const { chromium, APP, OUT, handle, openCard, forYou } = require('./harness.cjs');
 const { sampleBand, routeBand } = require('./tools/sampleband.cjs');
 
 const KEY = 'healthos.v1:u-test', at = (hm) => new Date(`2026-10-21T${hm}:00`).getTime();
@@ -35,6 +35,7 @@ const KEY = 'healthos.v1:u-test', at = (hm) => new Date(`2026-10-21T${hm}:00`).g
   for (const width of [320, 390]) {
     const { ctx, pg } = await open(at('07:30'), width, ['weight', []]);
     await pg.goto(APP + '#today'); await pg.reload(); await pg.waitForSelector('#feel'); await pg.waitForTimeout(800);
+    await forYou(pg, '.weighin');
     const row = await pg.locator('.weighin').evaluate((e) => Math.round(e.getBoundingClientRect().right * 10) / 10).catch(() => null);
     const boxes = await pg.locator('.weighin input').evaluateAll((els) => els.map((e) => Math.round(e.getBoundingClientRect().width)));
     check(`${width} px: the weigh-in row is asked for and fits (its right edge at ${row} px)`, row != null && row <= width);

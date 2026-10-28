@@ -18,7 +18,7 @@ const { chromium, APP, OUT, handle, openCard } = require('./harness.cjs');
   await pg.evaluate(() => { const k = 'healthos.v1:u-test', s = JSON.parse(localStorage.getItem(k) || '{}'); s.entries = [];
     s.supplements = [{ id: 'mag', name: 'Magnesium', dose: '200 mg', slot: 'evening', at: 1290, active: true }, { id: 'd3', name: 'Vitamin D3', dose: '2000 IU', slot: 'morning', at: 480, active: true }];
     localStorage.setItem(k, JSON.stringify(s)); });
-  const at = async (iso) => { await pg.clock.setFixedTime(new Date(iso)); await pg.goto(APP + '#today'); await pg.reload(); await pg.waitForSelector('#stack'); await openCard(pg, 'stack'); };
+  const at = async (iso) => { await pg.clock.setFixedTime(new Date(iso)); await pg.goto(APP + '#today'); await pg.reload(); await openCard(pg, 'stack'); await openCard(pg, 'stack'); };
   const supps = async () => { await pg.waitForTimeout(350); return ((await pg.evaluate(() => JSON.parse(localStorage.getItem('healthos.v1:u-test') || '{}'))).entries || []).filter((e) => e.kind === 'supp'); };
   const chip = (name) => pg.locator('#stack').getByRole('button', { name: new RegExp(`^Log ${name} now`) });
   const extras = () => pg.locator('#stack .stack-row.extra').allInnerTexts().then((t) => t.map((x) => x.replace(/\s+/g, ' ')));

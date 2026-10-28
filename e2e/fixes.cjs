@@ -38,7 +38,7 @@ const { chromium, APP, OUT, handle, rate, openCard } = require('./harness.cjs');
   await pg.getByRole('button', { name: 'Done' }).click();
   check('stack row says both times', /L-theanine[\s\S]*Morning 08:00 \+ Midday 13:00/.test(await pg.locator('.supp-row', { hasText: 'L-theanine' }).innerText()));
 
-  await pg.goto(APP + '#today'); await pg.waitForSelector('#stack'); await openCard(pg, 'stack');
+  await pg.goto(APP + '#today'); await openCard(pg, 'stack'); await openCard(pg, 'stack');
   const card = pg.locator('#stack');
   const ticks = card.getByRole('button', { name: 'Took L-theanine' });
   check('Today lists it twice, morning and midday', await ticks.count() === 2);

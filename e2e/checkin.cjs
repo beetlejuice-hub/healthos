@@ -1,6 +1,6 @@
 // Today → the two-week check-in (owner, 6 Oct): his ±150 kcal rule, from weekly-average weight and lifts,
 // offered as one tap that changes the calorie goal — and then quiet for two weeks.
-const { chromium, APP, OUT, handle } = require('./harness.cjs');
+const { chromium, APP, OUT, handle, forYou } = require('./harness.cjs');
 
 (async () => {
   const b = await chromium.launch(); const errs = [];
@@ -21,10 +21,10 @@ const { chromium, APP, OUT, handle } = require('./harness.cjs');
     localStorage.setItem(k, JSON.stringify(s)); }, [days, perWeek]);
   const card = pg.getByRole('region', { name: 'Two-week check-in' });
 
-  await seed(10, -0.1); await pg.reload(); await pg.waitForTimeout(600);
+  await seed(10, -0.1); await pg.reload(); await pg.waitForTimeout(600); await forYou(pg, 'checkin');
   check('ten days of weigh-ins: no check-in yet (needs the week two weeks ago too)', await card.count() === 0);
 
-  await seed(28, -0.1); await pg.reload(); await pg.waitForTimeout(600);
+  await seed(28, -0.1); await pg.reload(); await pg.waitForTimeout(600); await forYou(pg, 'checkin');
   const t = await card.innerText().catch(() => '');
   check(`four weeks, losing ~0.1 kg a week: the rule says cut 150 (${t.replace(/\s+/g, ' ').slice(0, 140)}…)`, /losing about 0\.\d\d kg a week, under 0\.3 kg/.test(t) && /cut 150: 2,600 → 2,450 kcal/.test(t));
   await card.evaluate((el) => el.scrollIntoView({ block: 'center' })); await pg.waitForTimeout(100); await card.screenshot({ path: OUT + 'checkin.png' });
@@ -33,11 +33,11 @@ const { chromium, APP, OUT, handle } = require('./harness.cjs');
   check('one tap sets the goal; carbs move by what the card said (−38 g), protein and fat stay', /−38 g/.test(t) && s.goals.kcal === 2450 && s.goals.c === 262 && s.goals.p === 160 && s.goals.f === 80);
   check('the answer is kept', s.settings.checkins.length === 1 && s.settings.checkins[0].kcalBefore === 2600 && s.settings.checkins[0].kcalAfter === 2450);
   check('and the card is gone', await card.count() === 0);
-  await pg.reload(); await pg.waitForTimeout(600);
+  await pg.reload(); await pg.waitForTimeout(600); await forYou(pg, 'checkin');
   check('…still gone after a reload', await card.count() === 0);
 
   // Two weeks later, losing 0.5 a week: keep.
-  await pg.clock.fastForward(14 * 864e5); await seed(28, -0.5); await pg.reload(); await pg.waitForTimeout(600);
+  await pg.clock.fastForward(14 * 864e5); await seed(28, -0.5); await pg.reload(); await pg.waitForTimeout(600); await forYou(pg, 'checkin');
   const t2 = await card.innerText().catch(() => '');
   check('two weeks on, losing ~0.5 a week: keep, one OK', /inside 0\.3–0\.7 kg/.test(t2) && /keep 2,450 kcal/i.test(t2) && await card.getByRole('button', { name: 'OK' }).count() === 1);
   await card.getByRole('button', { name: 'OK' }).click(); await pg.waitForTimeout(200);
@@ -52,7 +52,7 @@ const { chromium, APP, OUT, handle } = require('./harness.cjs');
     s.supplements = [...(s.supplements || []).filter((x) => x.id !== 'creatine'), { id: 'creatine', name: 'Creatine', dose: '5 g', slot: 'morning', at: 480, active: true }];
     s.entries.push(...[10, 9, 8, 6, 4, 2, 1].map((d) => ({ id: 'cr' + d, kind: 'supp', at: now - d * 864e5, suppId: 'creatine', status: 'taken', slot: 'morning' })));
     localStorage.setItem(k, JSON.stringify(s)); });
-  await pg.reload(); await pg.waitForTimeout(600);
+  await pg.reload(); await pg.waitForTimeout(600); await forYou(pg, 'checkin');
   const t3 = (await card.innerText().catch(() => '')).replace(/\s+/g, ' ');
   check(`creatine 10 days in, the scale up: the cut is held, and says why (${t3.slice(0, 220)}…)`, /gaining about 0\.\d\d kg a week, under 0\.3 — but creatine started .* holds 1–2 kg of water/.test(t3) && /keep 2,450 kcal/i.test(t3));
   check('…still his call: "Cut 150 anyway" next to Keep', await card.getByRole('button', { name: 'Cut 150 anyway' }).count() === 1 && await card.getByRole('button', { name: 'Keep 2,450' }).count() === 1);

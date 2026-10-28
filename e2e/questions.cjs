@@ -2,7 +2,7 @@
 // questions for today, the first one tracked: "Stop asking this" takes it away now and for good; "Skip" hides one for
 // today only; answering still works. The next day none of yesterday's comes back word for word (owner, 21 Oct: "got the
 // same questions"; PLAN 156) — after 13:00 a day without a read's questions asks the cheap call, told what's tracked.
-const { chromium, APP, OUT, handle } = require('./harness.cjs');
+const { chromium, APP, OUT, handle, forYou } = require('./harness.cjs');
 
 const NOW = new Date('2026-10-16T15:00:00').getTime(), D = 864e5;
 const Q = (key, text, repeat) => ({ id: `2026-10-16:${key}`, key, text, why: 'to see what lines up with your slumps', options: ['Small', 'Medium', 'Big'], repeat });
@@ -28,7 +28,7 @@ const q3 = Q('walk', 'Did you walk outside at lunch?', 'once');
   await pg.evaluate(([q1, q2, q3]) => { const k = 'healthos.v1:u-test', s = JSON.parse(localStorage.getItem(k) || '{}');
     s.ai = { ...(s.ai || {}), questions: { day: '2026-10-16', list: [q1, q2, q3] }, daily: [q1, q2], asked: [q1.text, q2.text, q3.text] };
     localStorage.setItem(k, JSON.stringify(s)); }, [q1, q2, q3]);
-  await pg.goto(APP + '#today'); await pg.reload(); await pg.waitForSelector('.question');
+  await pg.goto(APP + '#today'); await pg.reload(); await forYou(pg, 'questions'); await pg.waitForSelector('.question');
   const card = pg.locator('.question');
   const head = async () => (await card.locator('h3').innerText().catch(() => '')).replace(/\s+/g, ' ');
   const text = async () => card.locator('.q').innerText().catch(() => '');

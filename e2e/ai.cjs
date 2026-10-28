@@ -1,4 +1,4 @@
-const { chromium, APP, OUT, handle, openCard } = require('./harness.cjs');
+const { chromium, APP, OUT, handle, openCard, forYou } = require('./harness.cjs');
 // The in-app AI against a fake /api/ai (no credits spent) and a fake food database:
 // sentence → built-in, database median, then AI (saved, free next time); drink by description →
 // "my usual"; supplement look-up; morning read → experiment; quick question; chat that writes first,
@@ -66,7 +66,7 @@ const GOGOSI = [['Gogosi', 330, 6, 48, 13], ['Gogosi', 350, 7, 50, 14]].map(([na
     // Background: the morning read and today's questions are written on open (it's 15:00).
     check('morning read and questions were asked for', calls.some((c) => c.task === 'digest') && calls.some((c) => c.task === 'questions'));
     check('the context is a summary, not the raw log', /## About me[\s\S]*## Last 14 days/.test(calls.find((c) => c.task === 'digest').context) && !/"kind"/.test(calls.find((c) => c.task === 'digest').context));
-    await pg.goto(APP + '#today'); await pg.waitForTimeout(200);
+    await pg.goto(APP + '#today'); await pg.waitForTimeout(200); await forYou(pg, 'morning');
     // owner, 15 Oct: "the morning read looks a bit too big on front page, its at least should be collapsable"
     const mrH = await pg.locator('.morning').evaluate((e) => Math.round(e.getBoundingClientRect().height));
     check(`Today: the morning read folded — its greeting and a line per item (${mrH} px)`, /Quiet night, two things worth a look[\s\S]*Saffron and mood/.test(await pg.locator('.morning').innerText()) && mrH < 240 && await pg.locator('.morning .mr-body').count() === 0 && await pg.locator('.morning.open').count() === 0);
@@ -77,6 +77,7 @@ const GOGOSI = [['Gogosi', 330, 6, 48, 13], ['Gogosi', 350, 7, 50, 14]].map(([na
     await pg.locator('.morning').getByRole('button', { name: 'Try it for 14 days' }).click();
     check('a protocol becomes a running experiment', /Running — see Insights/.test(await pg.locator('.morning').innerText()));
     // no read brought questions today, so the cheap call did after 13:00 (PLAN 156); a tracking one says it comes back reworded
+    await forYou(pg, 'questions'); // For you: the read is done, the question is next
     check('a quick question with tappable answers', /^Tracking/i.test(await pg.locator('.question h3').innerText()) && /big lunch today\?[\s\S]*Why: to see if lunch size explains the dip · comes back now and then, in new words/.test(await pg.locator('.question').innerText()));
     // owner, 15 Oct: "for questions make sure i can write custom reply"
     await pg.locator('.question .q-own input').fill('a huge kebab, then sleepy'); await pg.locator('.question .q-own').getByRole('button', { name: 'Send' }).click(); await pg.waitForTimeout(200);
@@ -137,7 +138,7 @@ const GOGOSI = [['Gogosi', 330, 6, 48, 13], ['Gogosi', 350, 7, 50, 14]].map(([na
     await pg.waitForSelector('.made');
     check('the AI made a drink: 150 mg, says what it assumed', /Long coffee, large[\s\S]*150 mg caffeine · AI estimate — assumed a double shot/.test(await pg.locator('.made').innerText()));
     await pg.getByRole('button', { name: 'Make it my usual' }).click();
-    await pg.goto(APP + '#today'); await pg.waitForSelector('#caffeine'); await openCard(pg, 'caffeine');
+    await pg.goto(APP + '#today'); await openCard(pg, 'caffeine'); await openCard(pg, 'caffeine');
     check('Today\'s one-tap button is now that coffee', await pg.getByRole('button', { name: '+ Long coffee, large' }).count() === 1);
 
     // A new supplement is looked up.

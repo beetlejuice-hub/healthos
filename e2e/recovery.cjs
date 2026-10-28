@@ -106,7 +106,7 @@ function world(lastOut, pastShrug = false) {
 
   // 3 · control: a quiet Saturday
   ({ ctx, pg } = await open(world(false), '2026-10-18T10:00:00'));
-  await pg.waitForSelector('.rd', { timeout: 15000 }).catch(() => {}); await pg.waitForTimeout(1500);
+  await pg.waitForSelector('.hn-score', { state: 'attached', timeout: 15000 }).catch(() => {}); await pg.waitForTimeout(1500); // the band is in (was the readiness card, cut 28 Oct)
   check('a quiet Saturday: no card', await card(pg).count() === 0);
   await ctx.close();
 

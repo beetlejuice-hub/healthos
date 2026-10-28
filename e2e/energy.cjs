@@ -1,7 +1,7 @@
 // The calorie goal from what you burn (PLAN 95; owner, 15 Oct: "lose fat and gain some muscles why being lean, in like
 // 2-3 months? or faster even"). Settings → Daily goals: by hand, or burn − the pace's deficit, written into the goals
 // once a day. The band says 2,700 a day; your own measured burn beats it; the two-week check-in's −150 stays on top.
-const { chromium, APP, OUT, handle, tables } = require('./harness.cjs');
+const { chromium, APP, OUT, handle, tables, openCard, forYou } = require('./harness.cjs');
 
 const NOW = new Date('2026-10-20T09:00:00').getTime(), D = 864e5;
 const day = (i) => { const d = new Date(NOW - i * D); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
@@ -61,7 +61,7 @@ const bandOf = (kcal, days) => Object.fromEntries([...Array(days)].map((_, i) =>
   check('tapping it again changes nothing', (await st(pg)).goals.kcal === 2030 && (await st(pg)).goals.c === 157);
   await pg.reload(); await pg.waitForSelector('.card.en'); await pg.waitForTimeout(900);
   check('after a reload: still 2,030, still Fast', (await st(pg)).goals.kcal === 2030 && await card(pg).getByRole('button', { name: /Fast/ }).getAttribute('aria-pressed') === 'true');
-  await pg.goto(APP + '#today'); await pg.waitForSelector('#fuel');
+  await pg.goto(APP + '#today'); await openCard(pg, 'fuel');
   check(`Today's Food card uses it (${(await pg.locator('#fuel h3').innerText()).replace(/\s+/g, ' ')})`, /goal 2,030 kcal/.test(await pg.locator('#fuel h3').innerText()));
   await pg.goto(APP + '#settings'); await pg.waitForSelector('.card.en');
   await card(pg).getByRole('button', { name: 'By hand' }).click(); await pg.waitForTimeout(300);
@@ -83,7 +83,7 @@ const bandOf = (kcal, days) => Object.fromEntries([...Array(days)].map((_, i) =>
   // 3 · the two-week check-in, losing 0.1 a week: its −150 sits on top of the burn and survives tomorrow's goal
   ({ ctx, pg } = await open(bandOf(2700, 10), 'slow'));
   await card(pg).getByRole('button', { name: 'From your burn' }).click(); await pg.waitForTimeout(400);
-  await pg.goto(APP + '#today'); await pg.waitForTimeout(600);
+  await pg.goto(APP + '#today'); await pg.waitForTimeout(600); await forYou(pg, 'checkin');
   const ci = pg.getByRole('region', { name: 'Two-week check-in' });
   t = (await ci.innerText().catch(() => '')).replace(/\s+/g, ' ');
   check(`the check-in: cut 150 from the burn's goal (${t.slice(0, 120)}…)`, /cut 150: 2,150 → 2,000 kcal/.test(t));

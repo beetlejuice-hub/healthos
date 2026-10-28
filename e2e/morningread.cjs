@@ -2,7 +2,7 @@
 // yyesterdays data" — it was written from 20:00 the evening before, so it called yesterday "today"). The evening before:
 // nothing written. Next morning before last night is in: the read written the evening before isn't shown, nothing is
 // written yet. A sleep rating comes in: the read is written, told what today is, with today's entries; it's on Today.
-const { chromium, APP, OUT, handle } = require('./harness.cjs');
+const { chromium, APP, OUT, handle, forYou } = require('./harness.cjs');
 
 const KEY = 'healthos.v1:u-test', EVE = new Date('2026-10-15T20:30:00').getTime(), MORNING = new Date('2026-10-16T07:40:00').getTime();
 const calls = [];
@@ -69,6 +69,7 @@ const READ = { greeting: 'Morning! 7 h last night — a better start.', items: [
   check(`Today shows the new read (${card.split('\n').slice(0, 2).join(' · ')})`, /7 h last night — a better start/.test(card) && !/Rough night/.test(card));
   await pg.locator('section.morning').screenshot({ path: OUT + 'morning-read.png' }).catch(() => {});
   // owner, 16 Oct: folded by default, highlighted until opened once
+  await forYou(pg, 'morning');
   const mr = pg.locator('section.morning');
   check('the morning read is new until opened', await mr.getAttribute('data-new') === 'true');
   // owner, 20 Oct: "should add timestamp for new messages on today screen so its not just says new"
@@ -105,6 +106,7 @@ const READ = { greeting: 'Morning! 7 h last night — a better start.', items: [
   check('the news isn\'t on Today — it\'s a message', !/Creatine and sleep loss/.test(card));
   // the read's questions (PLAN 156): asked with the kinds the app picked, shown with the read, a study with its source
   check(`the read is told which kinds of question to ask, and not to repeat words (${c.slice(c.indexOf('## Questions this time')).split('\n').slice(0, 3).join(' | ').slice(0, 160)})`, /## Questions this time \(the app's picks, so days differ\)\n- \w+/.test(c));
+  await forYou(pg, 'questions'); // For you: one ask at a time
   const qc = pg.locator('.question');
   check(`its study question is on Today, labelled, with its source (${(await qc.innerText().catch(() => '')).split('\n').slice(0, 3).join(' | ')})`, /^Saw a study/i.test(await qc.locator('h3').innerText().catch(() => '')) && /glycine before bed/.test(await qc.innerText()) && await qc.locator('a.q-src').getAttribute('href') === 'https://example.org/gly');
   await qc.screenshot({ path: OUT + 'question-study.png' });
@@ -114,7 +116,7 @@ const READ = { greeting: 'Morning! 7 h last night — a better start.', items: [
   check(`what's tracked is remembered by its key (${tr.join()})`, tr.includes('social_battery') && !tr.includes('glycine'));
   const badge = async () => (await pg.locator('nav.tabs a[href="#ai"] .tabbadge').textContent().catch(() => '')) || '0';
   check(`the AI tab's number says there's a message (${await badge()})`, await badge() === '1');
-  await pg.reload(); await pg.waitForSelector('section.morning'); await pg.waitForTimeout(800);
+  await pg.reload(); await pg.waitForSelector('section.morning', { state: 'attached' }); await pg.waitForTimeout(800); // read and put away: under "Done today"
   check('a reload doesn\'t write it again', calls.filter((x) => x.task === 'digest').length === 1);
   check('after a reload: folded, not highlighted', await pg.locator('section.morning.open').count() === 0 && await pg.locator('section.morning .mr-body').count() === 0 && await pg.locator('section.morning').getAttribute('data-new') === null);
   await pg.goto(APP + '#ai'); await pg.waitForTimeout(300);

@@ -2894,4 +2894,23 @@ both reads and the questions. Phases in that order; #152 RPE waits (owner).
      the whole request, with the search called directly (allowed_callers: ["direct"]) instead of from dynamic
      filtering's code; failing again it's said as before; a retry the API turns down keeps the first answer (worker
      ai.test: both ways, the refusal, and that the cap alone isn't retried).
+   - [x] Today A built (28 Oct). Top to bottom: the four tiles — a tap opens that card right under them (kcal and
+     protein → Food, Caffeine, Stack), one at a time, a second tap or its head closes it; the six log buttons; the Now
+     card (the check-in); "For you · 1 of N", one ask at a time with its dots, Skip (a read: Done) and "next: …"; what
+     the data says; Noticed. The order: what's due now → the morning read / your day read back (once there's one to read;
+     until then the Now card says where it is) → a quick question → your heart → yesterday (stack, usual things drafted,
+     how you ate) → cigarettes → last night's check → the weigh-in / nothing eaten → the two-week check-in → an
+     experiment → the stack check. Skipped and done are kept per day (a reload doesn't bring them back; tomorrow starts
+     fresh); a read put away stays one tap away ("Done today: morning read ›"). Each ask is its own component and says
+     whether it has anything (renders nothing when not); the card reads which ones did, so no ask's rules are copied.
+     The readiness line is gone; its night check — the one part worth a warning — is now the "Last night's check" ask,
+     only when skin temperature or breathing is off. The AI is still told readiness (its heading says it's not shown).
+     Tested: e2e today2 rewritten for A (no cards until a tap; tile opens under the tiles, swaps, closes; "1 of 3",
+     next named, Took all → "2 of 3", Skip → "3 of 3", still after a reload; Pick… opens the Stack under the tiles; the
+     evening stack is the first ask); nightcheck rewritten (the ask with its line and three rows; nothing asked on an
+     ordinary night; readiness the same with or without the plant, read from what the AI is told); 30 other suites
+     reach their ask through For you as a person would (Skip until it's up); e2e readiness removed (it tested the cut
+     card; lib/readiness keeps its unit tests). Looked at: 07:45, 14:20 and 21:20 at 390 px.
+     Noticed, for later parts: the AI tab still sends "Readiness 41 this morning" when it's low (inbox) — a number Today
+     no longer shows. To ask him at part 5 (AI).
 

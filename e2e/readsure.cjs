@@ -4,7 +4,7 @@
 // (drinks → HRV → psoriasis, each link with how sure), and a try. Open, each says how sure in words; the connection shows
 // its links in order, one under the other; the request carried this morning's picks. The evening read's try is a
 // community idea, labelled anecdote. At 320 px nothing sticks out.
-const { chromium, APP, OUT, handle } = require('./harness.cjs');
+const { chromium, APP, OUT, handle, forYou } = require('./harness.cjs');
 
 const NOW = new Date('2026-10-22T08:30:00').getTime(), KEY = 'healthos.v1:u-test';
 const CHAIN = [
@@ -52,6 +52,7 @@ const NIGHT = { summary: 'A calm day.', happened: [], notes: '', change: [], rem
       check('the morning read is told this morning\'s third item (a connection or a study, in turn) and how sure to be', !!dg && /- Third item today: (a "connection"|a study or fun fact)/.test(dg.context));
       check('the evening read\'s try is a community idea, labelled anecdote', !!nt && /- "try" item tonight: what people are trying, from Reddit .*"sure": "anecdote"/.test(nt.context));
     }
+    await forYou(pg, 'morning');
     const mr = pg.locator('section.morning:not(.mr-pending)');
     await mr.locator('.mr-head').click(); await pg.waitForTimeout(150);
     const rows = mr.locator('.mr-row');
@@ -69,6 +70,7 @@ const NIGHT = { summary: 'A calm day.', happened: [], notes: '', change: [], rem
     await mr.screenshot({ path: OUT + `readsure-connection-${width}.png` });
     if (width === 390) {
       // the evening read, read back the next morning: its community try says anecdote
+      await forYou(pg, 'night'); // For you: one ask at a time
       const nr = pg.locator('section.night');
       if (await nr.count()) {
         await nr.locator('.mr-head').click(); await pg.waitForTimeout(150);

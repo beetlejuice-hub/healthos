@@ -3,7 +3,7 @@
 // the real tool, the real engine — and send it back in the next round. Planted: a beer every third evening, and the next
 // morning's sleep rated ~5 against ~8. The answer sent back must find it ("clear", ~5 vs ~8); the same evenings without the
 // plant must come back "not clear". The read, once written, says what it was checked with.
-const { chromium, APP, OUT, handle } = require('./harness.cjs');
+const { chromium, APP, OUT, handle, forYou } = require('./harness.cjs');
 
 const H = 3_600_000, D = 86_400_000, NOW = new Date('2026-10-21T08:30:00').getTime();
 const ymd = (t) => { const d = new Date(t); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
@@ -58,6 +58,7 @@ const FINAL = { greeting: 'Morning.', items: [{ type: 'pattern', title: 'Beer ni
     else check(`${tag}: …and finds nothing when nothing's there (${text})`, /with: average [78]\.\d\/10 over 10 days; without: [78]\.\d\/10 over 20\. .*not clear/.test(text));
     if (plant) {
       await pg.waitForSelector('section.morning .mr-row', { timeout: 5000 }).catch(() => {});
+      await forYou(pg, 'morning');
       const mr = pg.locator('section.morning');
       await mr.locator('.mr-head').click(); await pg.waitForTimeout(150);
       const looked = await mr.locator('.mr-looked').innerText().catch(() => '');

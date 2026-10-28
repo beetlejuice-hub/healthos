@@ -22,7 +22,10 @@ import { bedtimeVerdict, CAF_SLEEP, chartMax, personalSleep, ratedNights, tierOf
 import { caffeineDoses } from "../lib/insights";
 import { add, byDay, macrosOf, ZERO } from "../lib/nutrition";
 import { atMinute, clock, dayLabel, localDay, MIN, addDays, quarterDown } from "../lib/time";
-import { go, openCard } from "../lib/nav";
+import { go, OPEN_CARD, openCard } from "../lib/nav";
+import { morningShown, nightShown } from "../lib/ai/morning";
+import { ForYou, type Ask } from "../components/ForYou";
+import { NightCheckAsk } from "../components/NightCheckAsk";
 import { FoldCard } from "../components/FoldCard";
 import type { Drink, Entry, EntryOf, Slot } from "../lib/types";
 import { answerSlot, SLOTS, slotsOf } from "../lib/types";
@@ -31,7 +34,6 @@ import { HowNow } from "../components/HowNow";
 import { SuppAmount } from "../components/SuppAmount";
 import { SuppQuick } from "../components/SuppQuick";
 import { Tonight } from "../components/Tonight";
-import { Readiness } from "../components/Readiness";
 import { RecoveryCard } from "../components/RecoveryCard";
 import { extrasOn } from "../lib/supplog";
 import { CatchUp } from "../components/CatchUp";
@@ -55,10 +57,10 @@ export function useNow(ms = 30_000) {
 }
 
 const fmt = (n: number) => Math.round(n).toLocaleString("en-GB");
-/** Due items shown in the Now card before "+ N more". */
-const NOW_MAX = 2;
-/** What the rest are, not just how many (PLAN 151: "+ 1 more due" at bedtime didn't say what): "Morning weigh-in, Evening stack and 1 more". */
-const moreDue = (titles: string[]) => { const n = titles.map((t) => (t.length <= 28 ? t : t.split(":")[0].trim())); return `${n.slice(0, 2).join(", ")}${n.length > 2 ? ` and ${n.length - 2} more` : ""}`; };
+/** A due item's name in "next: …": "Morning stack", not the whole list of what's in it. */
+const shortTitle = (t: string) => (t.length <= 28 ? t : t.split(":")[0].trim());
+/** The cards a tile opens under the tiles (owner, 28 Oct, review part 1: "tiles, tap for details"). */
+const TILE_CARDS = ["fuel", "caffeine", "stack"];
 
 /** caffeineAt already counts under 10 mg as none (CLEAR_MG), so 0 means cleared. */
 const mgText = (mg: number) => (mg === 0 ? "none" : `${mg} mg`);
@@ -70,7 +72,14 @@ export function Today() {
   const [dismissed, setDismissed] = useState<string[]>([]);
   const [pickUsual, setPickUsual] = useState(false);
   const [foodDay, setFoodDay] = useState<string | null>(null);
-  const [allDue, setAllDue] = useState(false);
+  const [opened, setOpened] = useState<string | null>(null);
+  // "Pick…" and anything else that sends you to the stack, caffeine or food card opens it under the tiles
+  useEffect(() => {
+    const on = (e: Event) => { const id = (e as CustomEvent<string>).detail; if (TILE_CARDS.includes(id)) setOpened(id); };
+    window.addEventListener(OPEN_CARD, on);
+    return () => window.removeEventListener(OPEN_CARD, on);
+  }, []);
+  const ai = useStore((x) => x.ai);
   const moment = momentOf(now);
   const stack = useStackCount(now);
 
@@ -106,13 +115,10 @@ export function Today() {
     offerUndo(ids, `${status === "taken" ? "Ticked" : "Skipped"} ${suppIds.length} supplement${suppIds.length > 1 ? "s" : ""}`);
   };
 
-  // The Now card's items: what's due, as before, minus "rate it" (the check-in sits in the card itself).
-  // Two at a time, so the one-tap buttons stay near the first screen; the rest one tap away.
+  // what's due, as before, minus "rate it" (the check-in is the Now card itself): each one ask in "For you"
   const due = shown.filter((it) => it.kind !== "feel");
-  const listed = allDue ? due : due.slice(0, NOW_MAX);
-  const itemsList = due.length > 0 && (
+  const dueNode = (it: (typeof due)[number]) => (
     <div className="t2-items">
-      {listed.map((it) => (
         <div key={it.id} className={`item ${it.kind.startsWith("supp") || it.kind === "restock" ? "supp" : it.kind === "caffeine" ? (it.tone === "notice" ? "warn" : "caf") : it.kind}`}>
           <span className="ic" aria-hidden="true">{it.kind.startsWith("supp") ? "✓" : it.kind === "caffeine" ? (it.tone === "notice" ? "!" : "☾") : it.kind === "food" ? "+" : it.kind === "weight" ? "kg" : it.kind === "restock" ? "↻" : "~"}</span>
           <div><b>{it.title}</b><p>{it.body}</p></div>
@@ -133,13 +139,36 @@ export function Today() {
             </>}
           </div>
         </div>
-      ))}
-      {due.length > NOW_MAX && <button type="button" className="t2-more" onClick={() => setAllDue(!allDue)}>{allDue ? "Show fewer" : `+ ${moreDue(due.slice(NOW_MAX).map((it) => it.title))}`}</button>}
     </div>
   );
-  // Evening puts the stack and what's due first; the check-in is usually done by then (one line).
-  const feelNow = <HowNow now={now} />;
+  const dueAsk = (it: (typeof due)[number]): Ask => ({ key: `due:${it.id}`, name: shortTitle(it.title), node: dueNode(it) });
+  const later = (it: (typeof due)[number]) => it.kind === "weight" || it.kind === "food";
+  // One ask at a time, in this order (owner, 28 Oct, review part 1: "one at a time"; picked A): what's due → the morning
+  // read → a quick question → your heart → yesterday (the stack, your usual things, then how you ate) → cigarettes →
+  // last night's check → the weigh-in → nothing eaten yet → the two-week check-in → an experiment → the stack check.
+  // The reads are in it only once there is one to read; until then the Now card says where it is.
+  const mrShown = !!ai.digest && morningShown(ai.digest, ai.night, now), nrShown = !!ai.night && nightShown(ai.night, ai.digest, now);
+  const asks: Ask[] = [
+    ...due.filter((it) => !later(it)).map(dueAsk),
+    ...(mrShown ? [{ key: "morning", name: "morning read", node: <MorningRead />, read: true }] : []),
+    ...(nrShown ? [{ key: "night", name: "your day, read back", node: <NightRead />, read: true }] : []),
+    { key: "questions", name: "a quick question", node: <AiQuestions /> },
+    { key: "heart", name: "your heart", node: <HeartAsk now={now} /> },
+    { key: "catchup", name: "yesterday", node: <CatchUp now={now} /> },
+    { key: "ghost", name: "yesterday, drafted", node: <GhostCard now={now} /> },
+    { key: "foodgap", name: "how you ate", node: <FoodGapAsk now={now} /> },
+    { key: "smoke", name: "cigarettes", node: <SmokeAsk now={now} /> },
+    { key: "nightcheck", name: "last night's check", node: <NightCheckAsk now={now} /> },
+    ...due.filter(later).map(dueAsk),
+    { key: "checkin", name: "two-week check-in", node: <CheckInCard now={now} /> },
+    { key: "experiment", name: "your experiment", node: <ExperimentStrip now={now} /> },
+    { key: "stackcheck", name: "stack check", node: <StackAlert /> },
+  ];
+  const tile = (t: string) => setOpened((o) => (o === t ? null : t));
+  const close = () => setOpened(null);
 
+  // Today A (owner, 28 Oct, review part 1): the tiles (a tap opens the card under them) → the log buttons → the Now card
+  // (the check-in) → "For you", one ask at a time → what the data says, and "Noticed something?" at the bottom
   return (
     <div className="calm today2">
       <div className="t2-head">
@@ -147,48 +176,40 @@ export function Today() {
         <a href="#settings">Settings</a>
       </div>
 
-      <Status kcal={totals.kcal} goalKcal={s.goals.kcal} protein={totals.p} goalP={s.goals.p} cafNow={cafNow} rising={cafComing >= 10} cafBed={cafBed} bed={bed} stack={stack} />
-      <Readiness now={now} />
+      <Status kcal={totals.kcal} goalKcal={s.goals.kcal} protein={totals.p} goalP={s.goals.p} cafNow={cafNow} rising={cafComing >= 10} cafBed={cafBed} bed={bed} stack={stack} opened={opened} onTile={tile} />
+      {opened === "stack" && <Stack now={now} onClose={close} />}
+      {opened === "caffeine" && <CaffeineCard doses={doses} now={now} bed={bed} halfLife={s.settings.halfLifeMin} cafNow={cafNow} cafComing={cafComing} cafBed={cafBed} personal={personal} coffeeMg={coffeeMg} onClose={close} />}
+      {opened === "fuel" && <Fuel totals={totals} goals={s.goals} usual={usual} burned={burned} yday={yday} items={todays.filter((e) => macrosOf(e)).length} onOpen={() => setFoodDay(day)} yScore={yScore} onClose={close} />}
+      <Pad now={now} stack={stack} onPickUsual={() => setPickUsual(true)} />
+      {pickUsual && <UsualPicker onDone={() => setPickUsual(false)} />}
       <RecoveryCard now={now} />
 
       <NowCard moment={moment}>
-        {moment === "evening" ? <>{itemsList}{feelNow}</> : <>{feelNow}<CatchUp now={now} />{itemsList}</>}
-        <NightRead />
-        <MorningRead />
-        <AiQuestions />
-        <HeartAsk now={now} />
-        <GhostCard now={now} />
-        <FoodGapAsk now={now} />
-        <SmokeAsk now={now} />
-        <ExperimentStrip now={now} />
         <WorkoutRunning now={now} />
-        <CheckInCard now={now} />
-        <StackAlert />
+        <HowNow now={now} />
+        {/* a read not shown yet says where it is (being written, didn't come and why); shown, it's in "For you" */}
+        {!mrShown && <MorningRead />}
+        {!nrShown && <NightRead />}
         {moment === "evening" && <EveningRead cafBed={cafBed} bed={bed} tier={tierOf(cafBed)} day={dayNumbers(s.entries, now)} rest={restDay(s.templates, s.workouts, now)} />}
         {moment === "evening" && <Tonight now={now} />}
       </NowCard>
+      <ForYou asks={asks} day={day} />
 
-      <Pad now={now} stack={stack} onPickUsual={() => setPickUsual(true)} />
-      <NoticeBox />
-      {pickUsual && <UsualPicker onDone={() => setPickUsual(false)} />}
-
-      <Stack now={now} />
-      <CaffeineCard doses={doses} now={now} bed={bed} halfLife={s.settings.halfLifeMin} cafNow={cafNow} cafComing={cafComing} cafBed={cafBed} personal={personal} coffeeMg={coffeeMg} />
-      <Fuel totals={totals} goals={s.goals} usual={usual} burned={burned} yday={yday} items={todays.filter((e) => macrosOf(e)).length} onOpen={() => setFoodDay(day)} yScore={yScore} />
       {foodDay && <FoodDay day={foodDay} onClose={() => setFoodDay(null)} />}
       <DataCard>
         <NoticedLine />
         <ScoutLine />
         <NextAnswer />
       </DataCard>
+      <NoticeBox />
     </div>
   );
 }
 
-function Fuel({ totals, goals, usual, burned, yday, items, onOpen, yScore }: { totals: { kcal: number; p: number; c: number; f: number }; goals: { kcal: number; p: number; c: number; f: number }; usual: number | null; burned: number | null; yday: { ate: number; burned: number } | null; items: number; onOpen: () => void; yScore: DayScore | null }) {
+function Fuel({ totals, goals, usual, burned, yday, items, onOpen, yScore, onClose }: { totals: { kcal: number; p: number; c: number; f: number }; goals: { kcal: number; p: number; c: number; f: number }; usual: number | null; burned: number | null; yday: { ate: number; burned: number } | null; items: number; onOpen: () => void; yScore: DayScore | null; onClose: () => void }) {
   const pct = Math.min(1, totals.kcal / goals.kcal);
   return (
-    <FoldCard id="fuel" title="Food" read={<>goal {fmt(goals.kcal)} kcal{usual ? ` · usual day ${fmt(usual)}` : ""}{yScore ? ` · yesterday ${yScore.score}/100` : ""}</>}
+    <FoldCard id="fuel" startOpen onClose={onClose} title="Food" read={<>goal {fmt(goals.kcal)} kcal{usual ? ` · usual day ${fmt(usual)}` : ""}{yScore ? ` · yesterday ${yScore.score}/100` : ""}</>}
       more={<><b>{fmt(totals.kcal)}</b> kcal eaten · {totals.kcal <= goals.kcal ? `${fmt(goals.kcal - totals.kcal)} left` : `${fmt(totals.kcal - goals.kcal)} over`} · protein <b>{fmt(totals.p)}</b> / {goals.p} g{items ? ` · ${items} item${items === 1 ? "" : "s"}` : ""}</>}>
       <div className="fuel">
         <div className="ring">
@@ -222,7 +243,7 @@ function Fuel({ totals, goals, usual, burned, yday, items, onOpen, yScore }: { t
   );
 }
 
-function CaffeineCard({ doses, now, bed, halfLife, cafNow, cafComing, cafBed, personal, coffeeMg }: { doses: { at: number; mg: number }[]; now: number; bed: number; halfLife: number; cafNow: number; cafComing: number; cafBed: number; personal: Personal; coffeeMg: number }) {
+function CaffeineCard({ doses, now, bed, halfLife, cafNow, cafComing, cafBed, personal, coffeeMg, onClose }: { doses: { at: number; mg: number }[]; now: number; bed: number; halfLife: number; cafNow: number; cafComing: number; cafBed: number; personal: Personal; coffeeMg: number; onClose: () => void }) {
   const d0 = new Date(now); d0.setHours(6, 0, 0, 0);
   const t0 = d0.getTime(), t1 = t0 + 18 * 60 * MIN;
   const W = 320, H = 110, pl = 26, pr = 6, pt = 18, pb = 16;
@@ -248,7 +269,7 @@ function CaffeineCard({ doses, now, bed, halfLife, cafNow, cafComing, cafBed, pe
   const px = probe != null ? x(probe) : 0;
   const tier = tierOf(cafBed);
   return (
-    <FoldCard id="caffeine" title="Caffeine" read={<>{mgText(cafNow)} now{cafComing >= 10 ? ", rising" : ""} · {mgText(cafBed)} at {clock(bed)}</>}
+    <FoldCard id="caffeine" startOpen onClose={onClose} title="Caffeine" read={<>{mgText(cafNow)} now{cafComing >= 10 ? ", rising" : ""} · {mgText(cafBed)} at {clock(bed)}</>}
       more={now < bed ? <><b className={`tier-${tier}`}>{tier === "low" ? "Low" : tier === "possible" ? "Possible effect on sleep" : "Higher chance of an effect on sleep"}</b> at bedtime{cafComing >= 10 ? ` · ${cafComing} mg still going in` : ""}</> : undefined}>
       <svg viewBox={`0 0 ${W} ${H}`} width="100%" data-max={max} role="img" aria-label={`Caffeine in your body today: ${cafNow} mg now, ${cafBed} mg at your planned bedtime`}
         style={{ touchAction: "pan-y", cursor: "crosshair" }} onPointerMove={onMove} onPointerDown={onMove} onPointerLeave={(e) => { if (e.pointerType !== "touch") setProbe(null); }}>
@@ -343,7 +364,7 @@ function UsualDrink() {
 }
 
 /** The daily stack as three short lists — morning, midday, evening — each ✓ took / ✗ skipped. */
-function Stack({ now }: { now: number }) {
+function Stack({ now, onClose }: { now: number; onClose: () => void }) {
   const all = useStore((s) => s.supplements);
   const entries = useStore((s) => s.entries);
   const day = localDay(now);
@@ -365,7 +386,7 @@ function Stack({ now }: { now: number }) {
   // folded: what's still to tick, slot by slot (owner, 21 Oct: supplements "in one place" — Now asks for what's due)
   const left = SLOTS.map((slot) => ({ name: slot.name, n: supps.filter((s) => slotsOf(s).includes(slot.id) && !answers.has(key(s.id, slot.id))).length })).filter((x) => x.n);
   return (
-    <FoldCard id="stack" title="Stack" read={supps.length ? <>{taken} of {doses.length} taken{extras.length ? ` · +${extras.length} more` : ""}</> : "none set up"}
+    <FoldCard id="stack" startOpen onClose={onClose} title="Stack" read={supps.length ? <>{taken} of {doses.length} taken{extras.length ? ` · +${extras.length} more` : ""}</> : "none set up"}
       more={supps.length ? (left.length ? left.map((x) => `${x.name}: ${x.n} to tick`).join(" · ") : "Everything answered today") : "Add your stack in Log → Stack"}>
       {SLOTS.map((slot) => {
         const list = supps.filter((s) => slotsOf(s).includes(slot.id));

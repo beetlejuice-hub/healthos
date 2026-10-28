@@ -1,5 +1,5 @@
 // Smart-scale body fat: an optional box on both weigh-ins, shown only as a 2-week average.
-const { chromium, APP, OUT, handle } = require('./harness.cjs');
+const { chromium, APP, OUT, handle, forYou } = require('./harness.cjs');
 
 (async () => {
   const b = await chromium.launch(); const errs = [];
@@ -15,6 +15,7 @@ const { chromium, APP, OUT, handle } = require('./harness.cjs');
   await pg.getByRole('button', { name: 'Sign in' }).click(); await pg.waitForSelector('text=Settings');
 
   // Today, morning: weight and fat in one go.
+  await forYou(pg, '.weighin');
   await pg.getByLabel('Weight in kg').fill('71,95'); await pg.getByLabel('Body fat % (optional)').fill('20,1');
   await pg.getByRole('button', { name: 'Log kg' }).click(); await pg.waitForTimeout(200);
   await pg.goto(APP + '#log/body'); await pg.waitForTimeout(200);

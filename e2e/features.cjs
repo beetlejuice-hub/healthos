@@ -20,7 +20,7 @@ const { chromium, APP, OUT, handle, openCard } = require('./harness.cjs');
   await pg.getByRole('button', { name: 'Sign in' }).click(); await pg.waitForSelector('text=Settings');
 
   // Usual drink: empty at first, pick one, one-tap log, undo, clear.
-  await pg.goto(APP + '#today'); await pg.waitForSelector('#caffeine'); await openCard(pg, 'caffeine');
+  await pg.goto(APP + '#today'); await openCard(pg, 'caffeine'); await openCard(pg, 'caffeine');
   check('usual drink starts empty', await pg.getByRole('button', { name: '☆ Set usual drink' }).count() === 1);
   await pg.getByRole('button', { name: '☆ Set usual drink' }).click();
   await pg.getByRole('button', { name: /^Red Bull 250 ml/ }).click();

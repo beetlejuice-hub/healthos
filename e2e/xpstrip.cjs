@@ -2,7 +2,7 @@
 // strip on Today — start on these"). Three: one running (day 9 of 21), one done with its verdict, one stopped early. Today
 // shows a line each — the running one with today's reminder, the done one with its result; a tap opens Insights →
 // Training with the experiments in view; once opened, the done one's line goes. Nothing at all with no experiments.
-const { chromium, APP, OUT, handle } = require('./harness.cjs');
+const { chromium, APP, OUT, handle, forYou } = require('./harness.cjs');
 
 const D = 86_400_000, NOW = new Date('2026-10-21T09:00:00').getTime(), KEY = 'healthos.v1:u-test';
 const XS = [
@@ -29,7 +29,7 @@ const XS = [
   await pg.goto(APP + '#today'); await pg.reload(); await pg.waitForSelector('#feel');
   check('no experiments: no strip', await pg.locator('.xp-strip').count() === 0);
   await seed(XS);
-  await pg.reload(); await pg.waitForSelector('.xp-strip', { timeout: 5000 }).catch(() => {});
+  await pg.reload(); await forYou(pg, 'experiment'); await pg.waitForSelector('.xp-strip', { timeout: 5000 }).catch(() => {});
   const lines = await pg.locator('.xp-strip li').evaluateAll((ls) => ls.map((l) => l.innerText.replace(/\s+/g, ' ').replace(/ ›$/, '')));
   check(`a line each: running with today's reminder, done with its result, stopped early says so (${lines.join(' | ')})`, lines.length === 3
     && lines[0] === '🧪 No caffeine after 14:00 day 9 of 21 — today: last coffee by 14:00' && lines[1] === '🧪 Protein at breakfast worked for you · see why' && lines[2] === '🧪 Magnesium at 21:00 ended early — too few days to tell');

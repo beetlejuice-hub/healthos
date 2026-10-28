@@ -19,7 +19,7 @@ const { chromium, APP, OUT, handle, rate } = require('./harness.cjs');
 
   // 13:00 — the first check-in: top of Today, a tap per feeling.
   const box = await pg.locator('#feel').boundingBox();
-  check('How now? sits near the top of Today', box && box.y < 260);
+  check(`How now? sits near the top of Today, under the tiles and the log row (y ${box && Math.round(box.y)})`, box && box.y < 320); // Today A (28 Oct): the tiles, then the log row, then the check-in
   await rate(pg, 'mood', 4);
   await rate(pg, 'stress', 7);
   await pg.waitForTimeout(250);

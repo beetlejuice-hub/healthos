@@ -35,9 +35,9 @@ const calls = [];
   await pg.getByRole('button', { name: 'Sign in' }).click(); await pg.waitForSelector('text=Settings');
   await pg.waitForFunction((k) => (JSON.parse(localStorage.getItem(k) || '{}').entries || []).some((e) => e.id === 'sch'), KEY, { timeout: 8000 });
   await pg.evaluate(([k, foods]) => { const s = JSON.parse(localStorage.getItem(k)); s.foods = [...foods, ...(s.foods || []).filter((f) => !foods.some((x) => x.id === f.id))]; localStorage.setItem(k, JSON.stringify(s)); }, [KEY, [SCH, BAR]]);
-  await pg.goto(APP + '#today'); await pg.reload(); await pg.waitForSelector('#fuel');
+  await pg.goto(APP + '#today'); await pg.reload(); await openCard(pg, 'fuel');
   const st = () => pg.evaluate((k) => JSON.parse(localStorage.getItem(k)), KEY);
-  if (!(await st()).foods.some((f) => f.id === SCH.id)) { await pg.evaluate(([k, foods]) => { const s = JSON.parse(localStorage.getItem(k)); s.foods = [...foods, ...(s.foods || [])]; localStorage.setItem(k, JSON.stringify(s)); }, [KEY, [SCH, BAR]]); await pg.reload(); await pg.waitForSelector('#fuel'); }
+  if (!(await st()).foods.some((f) => f.id === SCH.id)) { await pg.evaluate(([k, foods]) => { const s = JSON.parse(localStorage.getItem(k)); s.foods = [...foods, ...(s.foods || [])]; localStorage.setItem(k, JSON.stringify(s)); }, [KEY, [SCH, BAR]]); await pg.reload(); await openCard(pg, 'fuel'); }
 
   await openCard(pg, 'fuel'); await pg.locator('#fuel .fuel-open').click();
   const sheet = pg.getByRole('dialog', { name: 'What I ate' });

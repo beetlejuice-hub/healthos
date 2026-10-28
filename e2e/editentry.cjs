@@ -46,7 +46,7 @@ const drink = { id: 'drink:off:59900:330', name: 'Protein coffee 330 ml', ml: 33
   await ff.getByRole('button', { name: 'Cancel' }).click();
   check('Cancel leaves it as it was', (await st()).entries.find((e) => e.id === 'e2').macros.f === 35);
   // the usual drink, one tap on Today: protein comes along
-  await pg.goto(APP + '#today'); await pg.waitForSelector('#caffeine'); await openCard(pg, 'caffeine');
+  await pg.goto(APP + '#today'); await openCard(pg, 'caffeine'); await openCard(pg, 'caffeine');
   // wait for it to be saved: the store writes 150 ms after a change, and a read at 150 ms lost the race under load
   const drinks0 = (await st()).entries.filter((e) => e.kind === 'drink').length;
   await pg.getByRole('button', { name: '+ Protein coffee 330 ml' }).click();

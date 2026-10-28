@@ -1,6 +1,6 @@
 // Drink tab: search-first, with the online food database behind it (owner, 1 Oct: "I NEED THE ONLINE
 // SEARCHABLE DATABASE LIKE FOR FOODS… DO NOT FILL THE SCREEN W THE OPTIONS").
-const { chromium, APP, OUT, handle } = require('./harness.cjs');
+const { chromium, APP, OUT, handle, openCard } = require('./harness.cjs');
 
 const P = (code, name, brand, kcal, c, extra = {}) => ({ code, product_name: name, brands: brand ? [brand] : [], serving_quantity: extra.serving, nutriments: { 'energy-kcal_100g': kcal, proteins_100g: 0, carbohydrates_100g: c, fat_100g: 0, ...(extra.caf != null ? { caffeine_100g: extra.caf } : {}) } });
 const DB = {
@@ -48,7 +48,7 @@ const DB = {
   await m.click();
   check('500 ml can = 160 mg caffeine', /500 ml\s*235 kcal · 160 mg/.test(await pg.locator('.sizes .pill-btn').first().innerText()));
 
-  await pg.goto(APP + '#today'); await pg.waitForTimeout(200);
+  await pg.goto(APP + '#today'); await pg.waitForTimeout(200); await openCard(pg, 'fuel');
   check('Today counts the drink\'s kcal', /\b95\b/.test(await pg.locator('#fuel').innerText()) || /95/.test(await pg.locator('body').innerText()));
   console.log('errors:', JSON.stringify(errs));
   await b.close();

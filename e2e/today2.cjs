@@ -1,5 +1,7 @@
 // Today, redesigned (owner, 6 Oct, approved on the canvas: "I LOVE THIS!! build this pls"): four live
-// numbers, a Now card that follows the clock, six one-tap buttons, the detail below. At phone size.
+// numbers, a Now card that follows the clock, six one-tap buttons. Today A (owner, 28 Oct, review part 1: "tiles, tap for
+// details", "one at a time"): a tile opens its card right under the tiles; everything Today asks comes one at a time in
+// "For you"; the readiness line is gone. At phone size.
 const { chromium, APP, OUT, handle } = require('./harness.cjs');
 
 (async () => {
@@ -30,13 +32,23 @@ const { chromium, APP, OUT, handle } = require('./harness.cjs');
   check('six buttons, always in this order', JSON.stringify(await pg.locator('.t2-pad button b').allInnerTexts()) === '["Coffee","Food","Drink","Stack","Feel","Weigh"]');
   check('four numbers on top', (await pg.locator('.t2-tile').count()) === 4 && /kcal[\s\S]*2,600[\s\S]*left today/i.test(await tile(pg, 'kcal')));
   check('07:45: nothing scrolls sideways', !(await sideways(pg)));
-  // owner, 21 Oct (PLAN 151): supplements in one place, the Caffeine and Food cards folded to their one-line read
-  const folded = async (id) => (await pg.locator(`#${id}.fold:not(.open)`).count()) === 1 && (await pg.locator(`#${id} .fold-body`).count()) === 0;
-  const reads = (await pg.locator('.fold-more').allInnerTexts()).map((t) => t.replace(/\s+/g, ' '));
-  check(`Stack, Caffeine and Food start folded, each with its line (${reads.join(' | ')})`, await folded('stack') && await folded('caffeine') && await folded('fuel') && reads.some((t) => /kcal eaten · 2,600 left · protein 0 \/ 160 g/.test(t)));
-  await pg.locator('#fuel .fold-head').click();
-  check('a tap opens one, the rest stay folded', await pg.locator('#fuel.open .fuel-open').count() === 1 && await folded('stack') && await folded('caffeine'));
+  check('no readiness line (owner, 28 Oct: cut)', await pg.locator('.rd').count() === 0);
+  // Today A: no detail cards until a tile is tapped; the card opens right under the tiles, one at a time; a second tap or
+  // its head closes it
+  const cards = () => pg.locator('#stack, #caffeine, #fuel').count();
+  const tap = async (id) => { await pg.locator(`.t2-tile[data-card="${id}"]`).first().click(); await pg.waitForTimeout(150); };
+  check('no detail cards until a tile is tapped', await cards() === 0);
+  await tap('fuel');
+  const under = (id) => pg.evaluate((id) => { const s = document.querySelector('.t2-status'), c = document.getElementById(id), p = document.querySelector('.t2-pad'); return !!c && !!(s.compareDocumentPosition(c) & 4) && !!(c.compareDocumentPosition(p) & 4); }, id);
+  check('the kcal tile opens the Food card, under the tiles and above the log row', await pg.locator('#fuel.open .fuel-open').count() === 1 && await under('fuel') && await cards() === 1);
+  check('…and both its tiles say so (kcal and protein)', await pg.locator('.t2-tile[data-card="fuel"][aria-expanded="true"]').count() === 2);
   await pg.screenshot({ path: OUT + 'today2-morning.png' });
+  await tap('caffeine');
+  check('the Caffeine tile swaps it for the Caffeine card: one at a time', await pg.locator('#caffeine.open').count() === 1 && await pg.locator('#fuel').count() === 0 && await under('caffeine'));
+  await tap('caffeine');
+  check('a second tap closes it', await cards() === 0);
+  await tap('fuel'); await pg.locator('#fuel .fold-head').click(); await pg.waitForTimeout(150);
+  check('…and so does its head', await cards() === 0);
 
   // Coffee without a usual drink: pick one, then it's one tap with Undo, and the numbers move.
   await pg.locator('.t2-pad button', { hasText: 'Coffee' }).click(); await pg.waitForTimeout(150);
@@ -53,7 +65,7 @@ const { chromium, APP, OUT, handle } = require('./harness.cjs');
   await pg.getByRole('button', { name: 'Undo' }).click(); await pg.waitForTimeout(250);
   check('…and takes it back', (await st(pg)).entries.filter((e) => e.kind === 'drink').length === 0 && /Caffeine\s*0\s*mg/i.test(await tile(pg, 'Caffeine')));
   await pg.locator('.t2-pad button', { hasText: 'Stack' }).click(); await pg.waitForTimeout(600);
-  check('Stack scrolls to the checklist, opened', await pg.locator('#stack.open .stack-row').count() > 0 && await pg.locator('#stack').evaluate((el) => { const r = el.getBoundingClientRect(); return r.top >= -2 && r.top < 200; }));
+  check('Stack opens the checklist under the tiles, in view', await pg.locator('#stack.open .stack-row').count() > 0 && await under('stack') && await pg.locator('#stack').evaluate((el) => { const r = el.getBoundingClientRect(); return r.top >= -2 && r.top < 400; }));
   await pg.locator('.t2-pad button', { hasText: 'Food' }).click(); await pg.waitForTimeout(200);
   check('Food opens Log → Food', await pg.evaluate(() => location.hash) === '#log/food');
   await ctx.close();
@@ -65,20 +77,32 @@ const { chromium, APP, OUT, handle } = require('./harness.cjs');
     localStorage.setItem(k, JSON.stringify(s));
   }));
   check('14:20: the Now card is "Check in", with the sliders', /Check in/i.test(await pg.locator('.t2-now').innerText()) && await pg.locator('.t2-now.m-day #feel .hn-sliders [role=slider]').count() === 4);
-  const due = await pg.locator('.t2-items .item').count();
-  // PLAN 151: the rest are named, not counted ("+ 1 more due" didn't say what)
-  const more = await pg.locator('.t2-more').innerText();
-  check(`two due items at a time, the rest named (${due} shown; ${more})`, due === 2 && /^\+ [A-Z][a-z]/.test(more) && !/more due/.test(more));
-  // "Pick…" on a due stack opens the folded Stack card at its list
-  const pick = pg.locator('.t2-items .item', { hasText: 'stack' }).getByRole('button', { name: 'Pick…' });
-  if (await pick.count()) { await pick.first().click(); await pg.waitForTimeout(500); check('"Pick…" opens the Stack card at its list', await pg.locator('#stack.open .stack-row').count() > 0); }
-  else check('a due stack offers "Pick…"', false);
-  await pg.locator('.t2-more').click(); await pg.waitForTimeout(100);
-  check('"more" shows the rest', await pg.locator('.t2-items .item').count() > 2 && await pg.locator('.t2-more').innerText() === 'Show fewer');
-  check('the check-in is not repeated as a "Rate it" item', !/How was today|Rate it/.test(await pg.locator('.t2-items').innerText()));
+  // "For you": one ask at a time, counted, the next one named; the rest out of sight
+  const fy = pg.getByRole('region', { name: 'For you' }), cur = pg.locator('.fy-item[data-current]');
+  const count = async () => (await fy.locator('.fy-k').textContent().catch(() => '')).replace(/\s+/g, ' '); // as written, not as styled (capitals)
+  const visible = () => pg.locator('.fy-item').evaluateAll((els) => els.filter((e) => e.offsetParent !== null).length);
+  const c1 = await count(), nxt = await fy.locator('.fy-foot span').innerText().catch(() => '');
+  const total = +((c1.match(/of (\d+)/) || [])[1] || 0);
+  check(`one ask at a time, counted, the next one named (${c1} · ${nxt})`, /^For you · 1 of \d+$/.test(c1) && total >= 3 && await visible() === 1 && /^next: Running low: Saffron$/.test(nxt) && /^next: \S/.test(nxt));
+  check(`the first is the missed morning stack (${(await cur.innerText()).split('\n')[0]})`, /Morning stack/.test(await cur.innerText()));
+  // "Pick…" on a due stack opens the Stack card under the tiles, at its list
+  // from further down the page, as on a phone with more on it: the card opens up top and the page goes to it
+  await pg.setViewportSize({ width: 390, height: 600 }); await pg.evaluate(() => window.scrollTo(0, document.body.scrollHeight)); await pg.waitForTimeout(100);
+  await cur.getByRole('button', { name: 'Pick…' }).click(); await pg.waitForTimeout(700);
+  const top = await pg.locator('#stack').evaluate((el) => Math.round(el.getBoundingClientRect().top)).catch(() => null);
+  check(`"Pick…" opens the Stack card under the tiles, at its list, and shows it (top at ${top} px)`, await pg.locator('#stack.open .stack-row').count() > 0 && await under('stack') && top != null && top >= -2 && top < 300);
+  await pg.setViewportSize({ width: 390, height: 844 });
+  await tap('stack');
+  check('the check-in is not repeated as a "Rate it" ask', !/How was today|Rate it/.test(await fy.evaluate((e) => e.textContent)));
   const before = await tile(pg, 'Stack');
-  await pg.locator('.t2-items .item', { hasText: 'Morning stack' }).getByRole('button', { name: 'Took all' }).click(); await pg.waitForTimeout(200);
+  await cur.getByRole('button', { name: 'Took all' }).click(); await pg.waitForTimeout(200);
   check(`ticking the stack moves its number (${before.replace(/\s+/g, ' ')} → ${(await tile(pg, 'Stack')).replace(/\s+/g, ' ')})`, /Stack\s*0\s*\/\s*3/i.test(before) && /Stack\s*2\s*\/\s*3/i.test(await tile(pg, 'Stack')));
+  check(`…and the next ask comes up (${await count()})`, await count() === `For you · 2 of ${total}` && await visible() === 1);
+  const k2 = await cur.getAttribute('data-key');
+  await fy.locator('.fy-foot .linkish').click(); await pg.waitForTimeout(150);
+  check(`Skip puts it away and brings the next (${k2} → ${await cur.getAttribute('data-key')}, ${await count()})`, await cur.getAttribute('data-key') !== k2 && await count() === `For you · 3 of ${total}`);
+  await pg.reload(); await pg.waitForSelector('.t2-status'); await pg.waitForTimeout(400);
+  check(`…and it stays away after a reload (${await count()})`, await cur.getAttribute('data-key') !== k2 && await count() === `For you · 3 of ${total}`);
   check('14:20: nothing scrolls sideways', !(await sideways(pg)));
   await pg.screenshot({ path: OUT + 'today2-day.png' });
   await ctx.close();
@@ -99,7 +123,8 @@ const { chromium, APP, OUT, handle } = require('./harness.cjs');
   check(`caffeine at bed, with the word for it (${(await pg.locator('.t2-bedcaf').innerText())})`, /Caffeine at 23:00: (none|about \d+ mg) · (low|possible effect|higher chance)/.test(await pg.locator('.t2-bedcaf').innerText()));
   check(`the day in numbers (${(await pg.locator('.t2-daynums').innerText()).replace(/\s+/g, ' ')})`, /1,241\s*kcal today/.test(await pg.locator('.t2-daynums').innerText()) && /78 g\s*protein/.test(await pg.locator('.t2-daynums').innerText()) && /7\.0\s*mood, avg/.test(await pg.locator('.t2-daynums').innerText()));
   check(`a rest day from the plan, no workout today (${await pg.locator('.t2-rest').innerText().catch(() => 'none')})`, /Rest day · walking, abs/.test(await pg.locator('.t2-rest').innerText().catch(() => '')));
-  check('the evening stack comes before the check-in', await pg.evaluate(() => { const c = document.querySelector('.t2-now'); const i = c.querySelector('.t2-items'), f = c.querySelector('#feel'); return !!i && !!f && !!(i.compareDocumentPosition(f) & Node.DOCUMENT_POSITION_FOLLOWING); }));
+  const ask = await pg.locator('.fy-item[data-current]').innerText().catch(() => '');
+  check(`the evening stack is the first ask (${ask.split('\n')[0]})`, /^due:/.test(await pg.locator('.fy-item[data-current]').getAttribute('data-key').catch(() => '')) && /stack|Saffron/i.test(ask));
   check('21:20: nothing scrolls sideways', !(await sideways(pg)));
   await pg.screenshot({ path: OUT + 'today2-evening.png' });
   // Trained this evening: no rest-day line.

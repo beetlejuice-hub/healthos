@@ -2,7 +2,7 @@
 // 21:30: Today asks "Cigarettes today?"; 3–5 keeps an answer on today; the card goes; Undo brings it back; answered again it
 // stays answered, so next morning there's no catch-up ask. A morning after a night that wasn't answered asks about
 // yesterday. The afternoon asks nothing. Logged today says it in words.
-const { chromium, APP, OUT, handle, tables } = require('./harness.cjs');
+const { chromium, APP, OUT, handle, tables, forYou } = require('./harness.cjs');
 
 const KEY = 'healthos.v1:u-test';
 
@@ -23,6 +23,7 @@ const KEY = 'healthos.v1:u-test';
     await pg.getByRole('button', { name: 'Sign in' }).click(); await pg.waitForSelector('text=Settings');
     await pg.evaluate((k) => { const s = JSON.parse(localStorage.getItem(k) || '{}'); s.entries = []; localStorage.setItem(k, JSON.stringify(s)); }, KEY);
     await pg.goto(APP + '#today'); await pg.reload(); await pg.waitForSelector('#feel'); await pg.waitForTimeout(300);
+    await forYou(pg, 'smoke');
     return { ctx, pg };
   }
   const answers = (pg) => pg.evaluate((k) => JSON.parse(localStorage.getItem(k)).entries.filter((e) => e.kind === 'answer' && e.key.startsWith('smoke:')).map((e) => `${e.key}=${e.answer}`), KEY);

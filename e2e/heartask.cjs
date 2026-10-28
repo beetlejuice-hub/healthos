@@ -3,7 +3,7 @@
 // around 66 bpm. Planted today, with nothing logged: +18 at 14:10–14:50 and −14 at 15:20–16:00. At 17:00 Today asks
 // about one, then the other; each answer is saved as what you were doing in the middle of its stretch (so it explains it
 // everywhere) and both are answered in the AI tab too. A control day with no plant asks nothing.
-const { chromium, APP, OUT, handle } = require('./harness.cjs');
+const { chromium, APP, OUT, handle, forYou } = require('./harness.cjs');
 
 const MIN = 60_000, HOUR = 3_600_000, D = 86_400_000, NOW = new Date('2026-10-22T17:00:00').getTime(), KEY = 'healthos.v1:u-test';
 function rng(seed) {
@@ -52,7 +52,8 @@ function world(plant) {
     await pg.evaluate((k) => { const s = JSON.parse(localStorage.getItem(k) || '{}'); s.entries = []; s.workouts = []; s.ai = { ...(s.ai || {}), inbox: [], sent: [], chat: [] }; localStorage.setItem(k, JSON.stringify(s)); }, KEY);
     await pg.goto(APP + '#today'); await pg.reload(); await pg.waitForSelector('#feel');
     const ask = pg.locator('.heart-ask');
-    await ask.waitFor({ timeout: plant ? 15000 : 6000 }).catch(() => {});
+    await ask.waitFor({ state: 'attached', timeout: plant ? 15000 : 6000 }).catch(() => {});
+    if (plant) await forYou(pg, 'heart');
     if (!plant) { check(`${tag}: nothing planted, nothing asked`, await ask.count() === 0); await ctx.close(); continue; }
     const titles = [];
     // the first answer as he typed it (27 Oct: "i wrote one drink and work but it cut off" — to "one")

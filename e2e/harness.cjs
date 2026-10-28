@@ -67,9 +67,30 @@ async function seed(pg, url, write, arg) {
   }
 }
 
-/** Open one of Today's folded cards — Stack, Caffeine, Food (PLAN 151) — when it's folded. */
+/** Open one of Today's cards — Stack, Caffeine, Food: since 28 Oct (Today A) a tap on its tile opens it under the tiles. */
 async function openCard(pg, id) {
+  if (await pg.locator(`#${id}`).count() === 0) {
+    await pg.waitForSelector('.t2-status');
+    await pg.locator(`.t2-status .t2-tile[data-card="${id}"]`).first().click();
+    await pg.locator(`#${id}`).waitFor({ timeout: 3000 }).catch(() => {});
+  }
   const head = pg.locator(`#${id}.fold:not(.open) > .fold-head`);
   if (await head.count()) { await head.click(); await pg.locator(`#${id}.fold.open`).waitFor({ timeout: 3000 }).catch(() => {}); }
 }
-module.exports = { rate, chromium, APP, OUT, handle, users, tables, seed, openCard };
+/**
+ * Today's "For you" shows one ask at a time (28 Oct, Today A): skip, as a person would, until the ask is the one shown —
+ * by its key ("morning", "smoke", "ghost", "due:…" a prefix) or by a selector inside it (".weighin"). False when it
+ * isn't there at all.
+ */
+async function forYou(pg, key) {
+  await pg.waitForSelector('.t2-status');
+  const bySel = /^[.#[]/.test(key);
+  for (let i = 0; i < 20; i++) {
+    const cur = await pg.locator('.fy-item[data-current]').getAttribute('data-key', { timeout: 1500 }).catch(() => null);
+    if (cur && (bySel ? await pg.locator(`.fy-item[data-current] ${key}`).count() > 0 : cur === key || cur.startsWith(key))) return true;
+    if (!cur) return false;
+    await pg.locator('.fy-foot .linkish').first().click(); await pg.waitForTimeout(120);
+  }
+  return false;
+}
+module.exports = { rate, chromium, APP, OUT, handle, users, tables, seed, openCard, forYou };
