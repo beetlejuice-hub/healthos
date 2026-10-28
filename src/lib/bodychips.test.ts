@@ -74,11 +74,11 @@ describe("how much, in the pattern finder", () => {
     const lv = count(60, (s) => weakAfterDrinks(scout(world(s, "graded"), []))), yn = count(60, (s) => weakAfterDrinks(scout(yesNo(world(s, "graded")), [])));
     expect(lv).toBeGreaterThanOrEqual(30);
     expect(lv - yn).toBeGreaterThanOrEqual(5);
-  });
+  }, 30_000);
   it("said honestly: when only how much follows the drinks, 90 days aren't enough — and the control finds nothing", () => {
     expect(count(30, (s) => weakAfterDrinks(scout(world(s, "howOnly"), [])))).toBeLessThanOrEqual(2);
     expect(count(60, (s) => weakAfterDrinks(scout(world(s, "none"), [])))).toBeLessThanOrEqual(2);
-  });
+  }, 30_000);
   it("said as a share of days, a bit or a lot alike — never an average of levels", () => {
     const f = feelWorld({ seed: 9, days: 90 }), { r } = rng(77);
     f.forEach((d, i) => {

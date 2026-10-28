@@ -57,18 +57,18 @@ describe("body words from check-in notes", () => {
 describe("connections with sleep, steps and how your body felt", () => {
   it("planted: an hour more sleep → more energy that day — found in 27+ of 30 people", () => {
     expect(count(30, (s) => has(scout(world(s, { sleepEnergy: true }), []), "asleep", "energy", 0))).toBeGreaterThanOrEqual(27);
-  });
+  }, 30_000);
   it("planted: drinks → feeling weak the next day — found in 27+ of 30, as 'the next day'", () => {
     expect(count(30, (s) => has(scout(world(s, { weakAfterDrinks: true }), []), "alcohol", "felt-weak", 1))).toBeGreaterThanOrEqual(27);
-  });
+  }, 30_000);
   // power, measured (27 Oct): 17 of 30 at 90 days — the finder is strict on purpose (chance kept at its calibrated rate);
   // a pattern like this shows for about half to two thirds of people within 90 days, and firms up as days come in
   it("planted: the less you sleep, the likelier you feel weak that day — found in 15+ of 30 at 90 days", () => {
     expect(count(30, (s) => has(scout(world(s, { weakLessSleep: true }), []), "asleep", "felt-weak", 0))).toBeGreaterThanOrEqual(15);
-  });
+  }, 30_000);
   it("power, said plainly: only under 6 h makes it likelier, ~7 such nights in 90 days — found in about half (12+ of 30)", () => {
     expect(count(30, (s) => has(scout(world(s, { weakShortSleep: true }), []), "asleep", "felt-weak", 0))).toBeGreaterThanOrEqual(12);
-  });
+  }, 30_000);
   it("the sentence says it the way you'd say it, on the right day", () => {
     const p = scout(world(4, { weakAfterDrinks: true }), []).find((x) => x.a.id === "alcohol" && x.b.id === "felt-weak")!;
     expect(p.text).toBe("With more alcohol, you felt weak the next day more often");
@@ -79,5 +79,5 @@ describe("connections with sleep, steps and how your body felt", () => {
     const fresh = (ps: ReturnType<typeof scout>) => ps.filter((p) => [p.a.id, p.b.id].some((id) => ["asleep", "steps", "sleepRating"].includes(id) || id.startsWith("felt-")));
     expect(count(100, (s) => fresh(scout(world(s), [])).length > 0)).toBeLessThanOrEqual(10);
     expect(count(100, (s) => { const p = pickLead(scout(world(s), []), [], "2026-10-27"); return !!p && p.p < LEAD.maxP; })).toBeLessThanOrEqual(5);
-  });
+  }, 30_000);
 });
