@@ -3005,6 +3005,18 @@ both reads and the questions. Phases in that order; #152 RPE waits (owner).
    - [ ] Today "feels too empty" and he likes "charts and connecting dots, trying to find patterns in a lot of data
      points": a chart on Today (the day so far with its dots; a pattern with today's dot on it) — canvas first. Also
      changes the reform: don't cut the charts and grids he likes (i1–i3 to be reworded).
+     - [x] "A pattern, with today on it" (owner, 29 Oct: "Today's pattern card"). Claimed 29 Oct — lib/todaypattern.ts,
+       components/TodayPattern.tsx, Today.tsx. After For you: one of the scout's own tested links as a scatter — a dot
+       a day of the last 60 (the second thing the next day when the link is next-day; only days that are over), a
+       dashed line, and today's yellow ring where today is so far, on the line (held inside what it has seen — no 2 h
+       night from 900 mg). The link in words with "clear" / "early — could be chance", then "Today: 120 mg so far —
+       on the line, that goes with your sleep rating 5.6 the next day." Tap a dot for its day; ‹ › between up to 3,
+       the ones with today on them first; "See it on Insights". No link → no card. todaypattern.test (6: planted
+       slope −0.01 found, today on the line at the planted value, the clamp, no-today and early controls); e2e
+       todaypattern (60 planted days through the real scout, 390 + 320; control: no link → no card). Also fixed on
+       the way: For you's grid widened to 347 px at 320 on a long line (minmax column), and the scout said "next-day
+       your sleep rating".
+     - [ ] The day so far with its dots.
    - [x] Watching: notes become things the AI looks out for ("creatine makes my muscles fuller", "better after a walk",
      "better after gym") — follow-up questions, papers and Reddit, offered when a check-in is low, and in the morning /
      night reads ("i liked that i mentioned getting sick and it showed me zinc w studies"). Owner, 28 Oct: "start

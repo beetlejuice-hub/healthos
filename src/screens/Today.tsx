@@ -29,6 +29,7 @@ import { NightCheckAsk } from "../components/NightCheckAsk";
 import { TipAsk } from "../components/TipAsk";
 import { WeekAsk } from "../components/WeekReport";
 import { WatchAsk, WatchDoneAsk, WatchOfferAsk } from "../components/Watching";
+import { TodayPattern } from "../components/TodayPattern";
 import { FoldCard } from "../components/FoldCard";
 import type { Drink, Entry, EntryOf, Slot } from "../lib/types";
 import { answerSlot, SLOTS, slotsOf } from "../lib/types";
@@ -208,6 +209,8 @@ export function Today() {
         {moment === "evening" && <Tonight now={now} />}
       </NowCard>
       <ForYou asks={asks} day={day} />
+      {/* owner, 28 Oct: "Now the today page feels too empty" · "I liked charts and connecting dots" — picked a pattern, with today on it */}
+      <TodayPattern now={now} />
 
       {foodDay && <FoodDay day={foodDay} onClose={() => setFoodDay(null)} />}
       <DataCard>

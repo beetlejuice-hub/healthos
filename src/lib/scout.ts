@@ -216,7 +216,8 @@ export function pair(a: Signal, b: Signal, lag: 0 | 1, facts: DayFacts[]): Patte
       ? `With more ${a.name}, ${b.say} ${next} ${sign > 0 ? "more" : "less"} often`
     : b.yes
       ? `When ${a.name} is higher, ${next} is ${sign > 0 ? "more" : "less"} often ${b.yes}`
-      : `${cap(a.name)} and ${lag ? `next-day ${b.name}` : b.name} move ${sign > 0 ? "the same way" : "opposite ways"}`;
+      // "your next-day sleep rating", not "next-day your sleep rating" (29 Oct, on Today's pattern card)
+      : `${cap(a.name)} and ${lag ? (b.name.startsWith("your ") ? `your next-day ${b.name.slice(5)}` : `next-day ${b.name}`) : b.name} move ${sign > 0 ? "the same way" : "opposite ways"}`;
   return { id: `${a.id}>${b.id}@${lag}`, a, b, lag, r, p, n, sign, held, of, onAvg, offAvg, days, text };
 }
 const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
