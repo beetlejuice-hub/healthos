@@ -2094,3 +2094,10 @@ span.fd-score[data-band="none"] { background: none; min-width: 34px; }
 .watch-bars i { width: 8px; border-radius: 2px; background: color-mix(in srgb, var(--gym) 45%, var(--c-card-2)); }
 .watch-bars i[data-top] { background: var(--gym); }
 .watch-since { overflow-wrap: anywhere; }
+/* Watching phase 2: your data, with what the app's test says */
+.watch-data { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; font-size: 13px; line-height: 1.45; color: var(--c-ink-2); }
+.watch-data li > span:first-child { color: var(--c-ink); font-weight: 600; }
+.watch-data .sure { margin: 0 0 0 2px; }
+.sure.wd-early { color: var(--gym); background: color-mix(in srgb, var(--gym) 15%, transparent); }
+.sure.wd-clear { color: var(--ok); background: color-mix(in srgb, var(--ok) 15%, transparent); }
+.sure.wd-notclear { color: var(--c-dim); background: #ffffff0f; }

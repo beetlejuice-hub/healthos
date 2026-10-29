@@ -62,6 +62,20 @@ export function difference(a: number[], b: number[]): Range | null {
   return { value: d, lo: d - 1.96 * se, hi: d + 1.96 * se, n: a.length + b.length, clear: d - 1.96 * se > 0 || d + 1.96 * se < 0 };
 }
 
+/** Two-sided 95% t value for `df` degrees of freedom: a handful of pairs can't claim the normal 1.96. */
+export function t95(df: number): number {
+  const T: [number, number][] = [[1, 12.71], [2, 4.30], [3, 3.18], [4, 2.78], [5, 2.57], [6, 2.45], [7, 2.36], [8, 2.31], [9, 2.26], [10, 2.23], [12, 2.18], [15, 2.13], [20, 2.09], [30, 2.04], [60, 2.0]];
+  for (const [d, t] of T) if (df <= d) return t;
+  return 1.96;
+}
+
+/** The mean of paired differences (after − before) with a 95% range on the t distribution. Needs 3 pairs. */
+export function paired(diffs: number[]): Range | null {
+  if (diffs.length < 3) return null;
+  const d = mean(diffs), half = t95(diffs.length - 1) * (sd(diffs) / Math.sqrt(diffs.length));
+  return { value: d, lo: d - half, hi: d + half, n: diffs.length, clear: d - half > 0 || d + half < 0 };
+}
+
 /**
  * Nights (or days) per group needed to see a difference of `effect` reliably, given the spread
  * `sd` — 80% power at the 5% level. How the experiment card says "you need ~26 more nights off".

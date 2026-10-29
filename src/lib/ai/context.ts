@@ -272,7 +272,7 @@ function baseContext({ state, now, days, findings, patterns, weight, today = [],
     // owner, 28 Oct: "should keep a log of what it said, what it thinks of me, what it should dive in more, what it should
     // research etc, so it doesnt forget things it already said a million trimes"
     ...((l) => (l.length ? ["## What the reads already told me, by topic (last 30 days; a resting topic doesn't come back, an older one only with something new)", ...l.map((x) => `- ${x}`)] : []))(saidLines(ai.said ?? [], now)),
-    ...((l) => (l.length ? ["## What I'm watching (from my notes, each with its evening question and my answers — when a read has something new on one, say it; the chat proposes a watch for a new one)", ...l.map((x) => `- ${x}`)] : []))(watchLines(ai.watches ?? [], state.entries, now)),
+    ...((l) => (l.length ? ["## What I'm watching (from my notes, each with its evening question and my answers — when a read has something new on one, say it; the chat proposes a watch for a new one)", ...l.map((x) => `- ${x}`)] : []))(watchLines(ai.watches ?? [], { entries: state.entries, workouts: state.workouts ?? [] }, now)),
     ...((l) => (l.length ? ["## On my list to look into (from earlier reads — the deep dive takes these first)", ...l.map((x) => `- ${x}`)] : []))(threadLines(ai.threads ?? [], now)),
     ...(ai.experiments.filter((x) => !x.ended).length ? ["## Experiments running", ...ai.experiments.filter((x) => !x.ended).map((x) => `- ${x.name} since ${x.start} (${x.days} days, measuring ${x.measure})`)] : []),
     slim ? "## Last 7 days" : "## Last 14 days",

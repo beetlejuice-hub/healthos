@@ -3014,9 +3014,14 @@ both reads and the questions. Phases in that order; #152 RPE waits (owner).
        once a day (an answer entry, Undo); the AI tab lists each with its answers as bars, what was found, Stop; the
        AI and the reads see "What I'm watching" with every answer, and a read may bring news on one. watch.test (5),
        propose.test (2), e2e watch (19 checks, 390 + 320; control: Not now keeps nothing).
-     - [ ] Phase 2: "your data" on each — its answers against the days it happened (creatine days vs not; after a walk
-       vs before) with the app's own test and an early/clear label; asks after the thing itself (30 min after a walk
-       or a session, not only evenings).
+     - [x] Phase 2 (owner: "phase2"): what a watch is about in the data — a supplement in the stack (by id), gym
+       sessions, cardio ("Walk"), a food or drink, or a check-in's "up to" tag — and "Your data" on it: its evening
+       answers on days it happened vs days it didn't (Welch, 3 of each first), and for a feeling, the check-in after
+       each time vs the one before over the last 60 days (paired, t for few pairs, 3 times first) — EARLY / NOT CLEAR /
+       CLEAR. A watch can ask 30 min after each time instead of each evening (once per time, within 3 h). On the
+       question card, in the AI tab, and in what the AI is told. lib/stats paired + t95; watch.test (planted creatine
+       days → clear, 5 random worlds → never clear, every day → "nothing to compare yet"; walks +1.5 → clear, no lift →
+       not clear; after-ask timing), propose.test (stack, ambiguity, ranges); e2e watch2 (11 checks).
      - [ ] Phase 3: offered when a check-in is low ("Energy 3. You said you feel better after a walk" — TipAsk's place)
        with your data and the studies; the end of a watch gets a verdict like an experiment's.
    - [ ] More AI tools so it can do more inside the app (log, edit, watch, ask later, quiet, settings, workout).

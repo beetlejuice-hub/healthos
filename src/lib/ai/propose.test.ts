@@ -293,3 +293,25 @@ describe("a watch", () => {
     expect(typeof makeProposal(W, setup({ ai: { experiments: [], watches: [{ ...one, stopped: NOW - 1 }] } }), "x", NOW)).toBe("object");
   });
 });
+
+// Watching phase 2: what a watch is about in the data — checked against the stack, the feelings, and when it asks.
+describe("a watch tied to the data", () => {
+  const base = { change: "watch", why: "w", what: "Magnesium → calmer evenings", note: "magnesium calms me", question: "Calm tonight?", options: ["No", "A bit", "Yes"] };
+  it("a supplement in the stack: its id is kept, by whatever name it was called", () => {
+    const p = ok(makeProposal({ ...base, cause_kind: "supplement", cause_name: "magnesium", feel: "stress" }, setup(), "m1", NOW));
+    expect(p.watch!.cause).toEqual({ kind: "supplement", name: "Magnesium glycinate", suppId: "mag" });
+    expect(p.watch!.feel).toBe("stress");
+  });
+  it("refused: not in the stack, two that match, a feeling that isn't one, after_min without a cause or out of range", () => {
+    expect(makeProposal({ ...base, cause_kind: "supplement", cause_name: "zinc" }, setup(), "x", NOW)).toMatch(/zinc isn't in their stack/);
+    expect(makeProposal({ ...base, cause_kind: "supplement", cause_name: "vitamin" }, setup(), "x", NOW)).toBe("cause_name: which one — Vitamin D or Vitamin C");
+    expect(makeProposal({ ...base, feel: "happiness" }, setup(), "x", NOW)).toBe("feel: mood, energy, focus, stress");
+    expect(makeProposal({ ...base, after_min: 30 }, setup(), "x", NOW)).toMatch(/^after_min needs cause_kind/);
+    expect(makeProposal({ ...base, cause_kind: "cardio", cause_name: "Walk", after_min: 600 }, setup(), "x", NOW)).toBe("after_min: 15–180");
+  });
+  it("asked after each walk: said on the card; a session with no name is any gym session", () => {
+    const p = ok(makeProposal({ ...base, what: "Walks → more energy", question: "Better than before the walk?", cause_kind: "cardio", cause_name: "Walk", feel: "energy", after_min: 30 }, setup(), "w", NOW));
+    expect(p.label).toBe("Watch: Walks → more energy — ask “Better than before the walk?” 30 min after each walk for 14 days");
+    expect(ok(makeProposal({ ...base, what: "Gym → better mood", cause_kind: "workout" }, setup(), "g", NOW)).watch!.cause).toEqual({ kind: "workout", name: "gym" });
+  });
+});

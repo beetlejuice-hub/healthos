@@ -18,7 +18,7 @@ import { addDays, atMinute, clock, dayLabel, localDay, minuteOfDay } from "../ti
 import { logIntake, type Intake } from "../supplog";
 import { resolve } from "../stackcheck/check";
 import { EXPERIMENT_MEASURES, PACE_NAMES, PROPOSE_CHANGES, SURE, type ProposeChange } from "./tasks";
-import { WATCH, watchLive, type Watch, type WatchFind } from "../watch";
+import { CAUSES, FEELS, WATCH, watchLive, type Watch, type WatchCause, type WatchFeel, type WatchFind } from "../watch";
 
 type SetStatus = "taking" | "stopped" | "out";
 
@@ -264,7 +264,26 @@ export function makeProposal(input: Record<string, unknown>, s: Setup, id: strin
     if (live.some((w) => fold(w.what) === fold(what))) return `already watching ${what}`;
     if (live.length >= WATCH.max) return `already watching ${WATCH.max} things — they can stop one in the AI tab first`;
     const found = (Array.isArray(input.found) ? input.found : []).map(findOf).filter((f): f is WatchFind => !!f).slice(0, 3);
-    return { id, change, why, watch: { what, note, question, options, days, found }, label: `Watch: ${what} — ask “${question}” each evening for ${days} days` };
+    // what it's about in their data (phase 2): a supplement must be one in the stack, so its days can be found
+    let cause: WatchCause | undefined;
+    if (input.cause_kind != null) {
+      const kind = input.cause_kind as WatchCause["kind"], name = str(input.cause_name, 40) ?? (kind === "workout" ? "gym" : null);
+      if (!(CAUSES as readonly string[]).includes(kind)) return `cause_kind: ${CAUSES.join(", ")}`;
+      if (!name) return "cause_name: what it is in their log — the supplement, 'walk', the food or drink, the check-in tag";
+      if (kind === "supplement") {
+        const f = findSupp(s.supplements, name);
+        if (!f) return `cause_name: ${name} isn't in their stack — leave the cause out, or propose add_supplement first`;
+        if (Array.isArray(f)) return `cause_name: which one — ${f.map((x) => x.name).join(" or ")}`;
+        cause = { kind, name: f.name, suppId: f.id };
+      } else cause = { kind, name };
+    }
+    const feel = input.feel == null ? undefined : (FEELS as readonly string[]).includes(input.feel as string) ? (input.feel as WatchFeel) : null;
+    if (feel === null) return `feel: ${FEELS.join(", ")}`;
+    const afterMin = input.after_min == null ? undefined : int(input.after_min, 15, WATCH.afterMax);
+    if (afterMin === null) return `after_min: 15–${WATCH.afterMax}`;
+    if (afterMin && !cause) return "after_min needs cause_kind and cause_name — what to ask after";
+    const when = afterMin && cause ? `${afterMin} min after each ${cause.name.toLowerCase()}` : "each evening";
+    return { id, change, why, watch: { what, note, question, options, days, found, ...(cause ? { cause } : {}), ...(feel ? { feel } : {}), ...(afterMin ? { afterMin } : {}) }, label: `Watch: ${what} — ask “${question}” ${when} for ${days} days` };
   }
 
   if (change === "goals") {
