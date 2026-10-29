@@ -147,11 +147,17 @@ export async function handleHealth(req: Request, env: Env, f: typeof fetch = fet
     if (req.method !== "POST") return json({ error: "POST only" }, 405);
     const [id, secret] = (req.headers.get("authorization") ?? "").replace(/^Bearer\s+/i, "").trim().split(".");
     if (!id || !secret || !/^[\w-]{2,64}$/.test(id) || !/^[0-9a-f]{48}$/.test(secret)) return json({ error: "wrong key — make a new one in HealthOS → Settings → Apple Health" }, 401);
-    const raw = await req.text();
+    const raw = await req.text(), type = req.headers.get("content-type") ?? "";
     if (raw.length > 8192) return json({ error: "too big" }, 413);
-    let post: unknown;
-    try { post = JSON.parse(raw); } catch { return json({ error: "not JSON — check the Shortcut's request body is JSON" }, 400); }
-    return hub(id).fetch(new Request("https://band/health-in", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ hash: await sha256(secret), post }) }));
+    let post: unknown = null;
+    try { post = JSON.parse(raw); } catch { /* not JSON: maybe the Shortcut's body is set to Form */ }
+    // owner, 29 Oct: "now it says 400 bad request" — a Request Body left on Form sends the same fields as form data
+    if (post == null && /form/i.test(type)) {
+      try { post = Object.fromEntries([...(await new Response(raw, { headers: { "content-type": type } }).formData()).entries()].map(([k, v]) => [k, String(v)])); } catch { post = null; }
+    }
+    // unreadable: said back with what came (its type, size and start), and kept for Settings to show — owner, 29 Oct, Request Body set to JSON and still a 400
+    const fail = post == null || typeof post !== "object" ? `nothing readable came (${type || "no content type"}, ${raw.length} bytes${raw ? `: ${raw.slice(0, 160)}` : ""}) — Get Contents of URL → Request Body should be JSON with the 7 fields` : null;
+    return hub(id).fetch(new Request("https://band/health-in", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ hash: await sha256(secret), post: fail ? null : post, fail }) }));
   }
   if (op !== "key" && op !== "data") return json({ error: "not found" }, 404);
   const user = await whoIs(req, env, { fetch: (u, i) => f(u, i), now: Date.now });

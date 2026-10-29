@@ -127,6 +127,7 @@ a { color: inherit; }
 .cu-btns .pill-btn { min-height: 36px; white-space: nowrap; }
 /* reform T1: "Don't remember" sits after the answers, quieter; on a narrow phone it drops to its own line, never split */
 .applehealth h3 .note { font-weight: 400; margin-left: 6px; }
+.ah-fail { overflow-wrap: anywhere; }
 .ah-setup { display: grid; gap: 10px; }
 .ah-key { display: block; padding: 8px 10px; border-radius: 10px; background: var(--c-card-2); font: 12px/1.4 ui-monospace, monospace; overflow-wrap: anywhere; user-select: all; }
 .ah-steps { margin: 0; padding-left: 20px; display: grid; gap: 6px; font-size: 14px; color: var(--c-ink-2); }

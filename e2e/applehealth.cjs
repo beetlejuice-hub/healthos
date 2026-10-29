@@ -62,6 +62,12 @@ const SAMPLES = ['2026-10-27', '2026-10-28', '2026-10-29'].flatMap((d, i) => [
   await pg.locator('#applehealth').screenshot({ path: OUT + 'applehealth-320.png' });
   await ctx.close();
 
+  // a try that didn't work says what came (owner, 29 Oct: "now it says 400 bad request")
+  ({ ctx, pg, st } = await open(390, { samples: [], last: null, key: true, fail: { at: T('2026-10-29T10:20:00'), error: 'nothing readable came (application/json, 0 bytes) — Get Contents of URL → Request Body should be JSON with the 7 fields' } }));
+  await pg.goto(APP + '#settings'); await pg.waitForSelector('#applehealth');
+  check(`a failed try is shown with what came (${await pg.locator('#applehealth .ah-fail').innerText().catch(() => '')})`, /^Last try didn't work \(Thu 29 Oct 10:20\): nothing readable came \(application\/json, 0 bytes\)/.test(await pg.locator('#applehealth .ah-fail').innerText().catch(() => '')));
+  await ctx.close();
+
   ({ ctx, pg, st } = await open(390, { samples: [], last: null, key: false }));
   s = await st();
   await pg.goto(APP + '#settings'); await pg.waitForSelector('#applehealth');

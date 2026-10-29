@@ -261,12 +261,16 @@ export class BandHub {
     if (path === "health-in") {
       const hash = await this.storage.get<string>("health:key"), given = String(body.hash ?? "");
       if (!hash || hash.length !== given.length || [...hash].reduce((d, c, i) => d | (c.charCodeAt(0) ^ given.charCodeAt(i)), 0) !== 0) return json({ error: "wrong key — make a new one in HealthOS → Settings → Apple Health" }, 401);
+      if (typeof body.fail === "string") { await this.storage.put("health:fail", { at: this.now(), error: body.fail }); return json({ error: body.fail }, 400); }
       const got = readPost(body.post, this.now());
       await this.storage.put("health:samples", keepSamples((await this.storage.get<HealthSample[]>("health:samples")) ?? [], got, this.now()));
       await this.storage.put("health:last", { at: this.now(), types: got.map((s) => s.type) });
+      await this.storage.delete("health:fail");
+      // nothing usable in a readable post: say which fields came, so a wrong key name or an empty value shows
+      if (!got.length) { const keys = Object.keys((body.post ?? {}) as object); const fail = `came, but nothing usable — fields: ${keys.join(", ") || "none"}; values: ${JSON.stringify(body.post).slice(0, 160)}`; await this.storage.put("health:fail", { at: this.now(), error: fail }); return json({ ok: false, error: fail }); }
       return json({ ok: true, got: got.map((s) => s.type) });
     }
-    if (path === "health-data") return json({ samples: (await this.storage.get<HealthSample[]>("health:samples")) ?? [], last: (await this.storage.get("health:last")) ?? null, key: !!(await this.storage.get<string>("health:key")) });
+    if (path === "health-data") return json({ samples: (await this.storage.get<HealthSample[]>("health:samples")) ?? [], last: (await this.storage.get("health:last")) ?? null, fail: (await this.storage.get("health:fail")) ?? null, key: !!(await this.storage.get<string>("health:key")) });
     if (path === "status") return json(await this.status());
     if (path === "sync") {
       const s = await this.sync();

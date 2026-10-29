@@ -32,6 +32,7 @@ export function AppleHealth() {
           : h.key ? "Key made — nothing has come in yet. Run the Shortcut once to check."
             : "Brings your MovingLife weigh-ins (weight and body fat) and your walking speed in by themselves, once a day, through a Shortcut on your iPhone."}
       </p>
+      {h.fail && <p className="note err ah-fail">Last try didn't work ({dayLabel(h.fail.at)} {clock(h.fail.at)}): {h.fail.error}</p>}
       <div className="cu-btns">
         <button type="button" className={`pill-btn${h.key ? "" : " pri"}`} onClick={make}>{h.key || made ? "New key" : "Set up"}</button>
         {h.key && <button type="button" className="pill-btn" onClick={() => void refreshHealth()}>Check now</button>}

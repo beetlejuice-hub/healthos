@@ -12,9 +12,10 @@ import { weighInsToAdd, type HealthSample } from "./healthimport";
 
 export type HealthLast = { at: number; types: string[] } | null;
 /** "off": the server can't take it (503). null: not asked yet. */
-type State = { samples: HealthSample[]; last: HealthLast; key: boolean | null; off: boolean };
+/** `fail`: the last try that didn't work, with what came — shown in Settings until a good one. */
+type State = { samples: HealthSample[]; last: HealthLast; fail: { at: number; error: string } | null; key: boolean | null; off: boolean };
 
-let state: State = { samples: [], last: null, key: null, off: false };
+let state: State = { samples: [], last: null, fail: null, key: null, off: false };
 const subs = new Set<() => void>();
 const set = (p: Partial<State>) => { state = { ...state, ...p }; subs.forEach((f) => f()); };
 
@@ -41,8 +42,8 @@ function apply() {
 
 export async function refreshHealth(): Promise<void> {
   try {
-    const d = await api<{ samples: HealthSample[]; last: HealthLast; key: boolean }>("data");
-    set({ samples: d.samples ?? [], last: d.last ?? null, key: !!d.key });
+    const d = await api<{ samples: HealthSample[]; last: HealthLast; fail?: State["fail"]; key: boolean }>("data");
+    set({ samples: d.samples ?? [], last: d.last ?? null, fail: d.fail ?? null, key: !!d.key });
     apply();
   } catch { /* offline or not set up: Settings says so */ }
 }

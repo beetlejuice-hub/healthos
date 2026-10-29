@@ -511,6 +511,27 @@ describe("/api/health — Apple Health in (PLAN 184)", () => {
     expect((await handleHealth(call("/api/health/in", "POST", key, "x".repeat(9000)), e as never, f)).status).toBe(413);
     expect((await handleHealth(call("/api/health/in", "GET", key), e as never, f)).status).toBe(405);
   });
+  it("a Request Body left on Form works too (owner: \"now it says 400 bad request\"); an empty one says what's wrong", async () => {
+    const { e, f } = world();
+    const { key } = (await (await handleHealth(call("/api/health/key", "POST", "good"), e as never, f)).json()) as { key: string };
+    const form = new URLSearchParams(POST as Record<string, string | number> as Record<string, string>).toString();
+    const r1 = await handleHealth(new Request("https://healthos.example/api/health/in", { method: "POST", headers: { authorization: `Bearer ${key}`, "content-type": "application/x-www-form-urlencoded" }, body: form }), e as never, f);
+    expect(await r1.json()).toEqual({ ok: true, got: ["weight", "fat", "walk"] });
+    const fd = new FormData(); for (const [k, v] of Object.entries(POST)) fd.append(k, String(v));
+    const r2 = await handleHealth(new Request("https://healthos.example/api/health/in", { method: "POST", headers: { authorization: `Bearer ${key}` }, body: fd }), e as never, f);
+    expect(((await r2.json()) as { ok?: boolean }).ok).toBe(true);
+    const r3 = await handleHealth(new Request("https://healthos.example/api/health/in", { method: "POST", headers: { authorization: `Bearer ${key}` }, body: "" }), e as never, f);
+    expect(r3.status).toBe(400);
+    expect(((await r3.json()) as { error: string }).error).toMatch(/^nothing readable came \(.*0 bytes\) — Get Contents of URL → Request Body should be JSON/);
+    // what came is kept for Settings to show; a good post after clears it
+    const d = (await (await handleHealth(call("/api/health/data", "GET", "good"), e as never, f)).json()) as { fail: { error: string } | null };
+    expect(d.fail?.error).toMatch(/^nothing readable came/);
+    await handleHealth(call("/api/health/in", "POST", key, POST), e as never, f);
+    expect(((await (await handleHealth(call("/api/health/data", "GET", "good"), e as never, f)).json()) as { fail: unknown }).fail).toBeNull();
+    // readable but nothing usable (a field named wrong): says which fields came
+    const r4 = (await (await handleHealth(call("/api/health/in", "POST", key, { Weight: "82" }), e as never, f)).json()) as { ok: boolean; error: string };
+    expect([r4.ok, r4.error]).toEqual([false, 'came, but nothing usable — fields: Weight; values: {"Weight":"82"}']);
+  });
   it("the Shortcut running twice a day keeps one of each", async () => {
     const { e, f } = world();
     const { key } = (await (await handleHealth(call("/api/health/key", "POST", "good"), e as never, f)).json()) as { key: string };
