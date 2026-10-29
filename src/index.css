@@ -2082,7 +2082,7 @@ span.fd-score[data-band="none"] { background: none; min-width: 34px; }
 .pr-found a { color: var(--c-ink-2); white-space: nowrap; }
 .watchask b { font-size: 16px; font-weight: 600; }
 .watch-opts { display: flex; flex-wrap: wrap; gap: 8px; }
-.watchask small, .watch-item small { font-size: 12.5px; color: var(--c-dim); line-height: 1.4; }
+.watchask small, .watch-item small, .watchoffer small { font-size: 12.5px; color: var(--c-dim); line-height: 1.4; }
 .watchlist { gap: 0; }
 .watchlist h3 { margin-bottom: 6px; }
 .watch-item { display: grid; gap: 5px; padding: 10px 0; border-top: 1px solid var(--c-track); }
@@ -2101,3 +2101,10 @@ span.fd-score[data-band="none"] { background: none; min-width: 34px; }
 .sure.wd-early { color: var(--gym); background: color-mix(in srgb, var(--gym) 15%, transparent); }
 .sure.wd-clear { color: var(--ok); background: color-mix(in srgb, var(--ok) 15%, transparent); }
 .sure.wd-notclear { color: var(--c-dim); background: #ffffff0f; }
+/* Watching phase 3: your own fix when a check-in is low; what a finished watch showed */
+.watchoffer q { font-size: 15px; line-height: 1.4; }
+.watch-study { margin: 0; font-size: 13px; line-height: 1.45; color: var(--c-ink-2); }
+.watch-study > span:first-child, .watch-verdict > span:first-child { color: var(--c-ink); font-weight: 600; }
+.watch-study a { color: var(--c-ink-2); white-space: nowrap; }
+.watchdone p, .watch-verdict { margin: 0; font-size: 14px; line-height: 1.5; }
+.watch-verdict .linkish { padding: 0; font-size: 13px; }

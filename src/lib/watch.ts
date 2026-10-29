@@ -14,7 +14,11 @@
  * check-in says you were up to — ties it to the data. Your data on it: the evening answers on days it happened against
  * days it didn't (Welch, lib/stats difference), and for a feeling, the check-in after each time against the one before
  * (paired, t). Each says early (too few), not clear, or clear. And a watch can ask right after the thing itself (30 minutes
- * after a walk) instead of each evening. Pure.
+ * after a walk) instead of each evening.
+ *
+ * Phase 3 (owner: "do 3", "i mean phase 3"): a low check-in brings the watch that's about that feeling — "Energy 3. You
+ * said: 'i feel better after a walk'", your data, the studies — never one your own data says makes it worse; and a watch
+ * that's run its days says what it showed (watchVerdict), then two more weeks or done. Pure.
  */
 
 import type { Entry, Workout } from "./types";
@@ -37,6 +41,7 @@ export type Watch = {
   days: number;
   /** what's out there, with how sure */ found: WatchFind[];
   stopped?: number;
+  /** "Done" on what it showed: kept in the list, off Today */ closed?: number;
   /** what it's about in the data (phase 2) */ cause?: WatchCause;
   /** the check-in feeling it should move, if one: "better after a walk" → energy or mood */ feel?: WatchFeel;
   /** when it asks: each evening (the default), or this many minutes after each time it happened */ afterMin?: number;
@@ -86,7 +91,8 @@ export function watchDue(w: Watch, entries: Entry[], now: number, workouts: Work
 /** The time an after-ask is about, for its card: "you logged a walk at 17:05". */
 export const watchAfterOf = (w: Watch, d: WatchData, now: number) => (w.afterMin && w.cause ? causeTimes(w.cause, d).filter((t) => t <= now - w.afterMin! * MIN).at(-1) ?? null : null);
 
-export type WatchFinding = { text: string; label: "early" | "not clear" | "clear" };
+/** `change`: for the check-in one, how much the feeling moved (after − before) — which way it went. */
+export type WatchFinding = { text: string; label: "early" | "not clear" | "clear"; change?: number };
 const r1 = (n: number) => String(Math.round(n * 10) / 10);
 const plural = (n: number, w: string) => `${n} ${w}${n === 1 ? "" : "s"}`;
 
@@ -122,10 +128,49 @@ export function watchFindings(w: Watch, d: WatchData, now: number): WatchFinding
     const r = paired(diffs);
     const by = `${r ? r.value >= 0 ? "+" : "−" : ""}${r ? r1(Math.abs(r.value)) : ""}`;
     if (!r) out.push({ label: "early", text: tag ? `${plural(diffs.length, "check-in")} that said “${name}” with one before it so far — 3 before it can say` : `${plural(diffs.length, "time")} with a check-in before and after ${name} so far — 3 before it can say` });
-    else out.push({ label: r.clear ? "clear" : "not clear", text: tag ? `on ${r.n} check-ins that said “${name}”, ${f} was ${by} against the check-in before` : `after ${plural(r.n, name.replace(/s$/, ""))}, ${f} at your next check-in was ${by} against the one before` });
+    else out.push({ label: r.clear ? "clear" : "not clear", change: r.value, text: tag ? `on ${r.n} check-ins that said “${name}”, ${f} was ${by} against the check-in before` : `after ${plural(r.n, name.replace(/s$/, ""))}, ${f} at your next check-in was ${by} against the one before` });
   }
   return out;
 }
+
+/** Low: 4 or under of 10, stress 7 or over (lib/tips TIPS); a check-in counts for 3 hours. */
+export const LOW = { at: 4, stress: 7, withinH: 3 } as const;
+const lowBy = (f: WatchFeel, v: number) => (f === "stress" ? v - LOW.stress : LOW.at - v);
+export type WatchOffer = { w: Watch; feel: WatchFeel; value: number; check: Extract<Entry, { kind: "feel" }>; finding: WatchFinding | null };
+export const tryKey = (w: Pick<Watch, "id">) => `watchtry:${w.id}`;
+
+/**
+ * Your own fix, when a check-in is low: the latest check-in in the last 3 hours, a feeling at or past low, a live watch
+ * about that feeling. Never one your data clearly says goes the wrong way; a clear one first, then the lowest feeling.
+ * Once per check-in: a "Doing it" or "Not now" after it puts it away.
+ */
+export function watchOffer(watches: Watch[], d: WatchData, now: number): WatchOffer | null {
+  const check = d.entries.filter((e): e is Extract<Entry, { kind: "feel" }> => e.kind === "feel" && e.at <= now && e.at > now - LOW.withinH * 3_600_000).sort((a, b) => b.at - a.at)[0];
+  if (!check || d.entries.some((e) => e.kind === "answer" && e.key.startsWith("watchtry:") && e.at >= check.at)) return null;
+  const good = (f: WatchFeel, c: number) => (f === "stress" ? c < 0 : c > 0);
+  const offers = watches.filter((w) => watchLive(w, now) && w.feel && w.cause && check[w.feel] != null && lowBy(w.feel, check[w.feel]!) >= 0).map((w): WatchOffer => {
+    const finding = watchFindings(w, d, now).find((f) => f.change !== undefined || /check-in/.test(f.text)) ?? null;
+    return { w, feel: w.feel!, value: check[w.feel!]!, check, finding };
+  }).filter((o) => !(o.finding?.label === "clear" && o.finding.change !== undefined && !good(o.feel, o.finding.change)));
+  return offers.sort((a, b) => Number(b.finding?.label === "clear") - Number(a.finding?.label === "clear") || lowBy(b.feel, b.value) - lowBy(a.feel, a.value))[0] ?? null;
+}
+
+/**
+ * What a watch showed, once it's run its days (not stopped): its answers, the one given most, and your data on it with
+ * what the app's test says. Null while it runs, or when it was stopped.
+ */
+export function watchVerdict(w: Watch, d: WatchData, now: number): string | null {
+  if (w.stopped || watchDay(w, now) <= w.days) return null;
+  const as = watchAnswers(w, d.entries);
+  if (!as.length) return `No answers in its ${w.days} days — nothing to go on.`;
+  const count = new Map<string, number>();
+  for (const a of as) count.set(a.answer, (count.get(a.answer) ?? 0) + 1);
+  const [most, n] = [...count.entries()].sort((a, b) => b[1] - a[1])[0];
+  const fs = watchFindings(w, d, now).map((f) => ` ${f.text.replace(/^./, (c) => c.toUpperCase())} — ${f.label}.`).join("");
+  return `${plural(as.length, "answer")} in ${w.days} days to “${w.question}”: “${most}” ${n === as.length ? "every time" : `${n} times`}.${fs}`;
+}
+/** A finished watch is on Today for 3 days after its last one, until "Two more weeks" or "Done". */
+export const watchDone = (w: Watch, now: number) => !w.stopped && !w.closed && watchDay(w, now) > w.days && watchDay(w, now) <= w.days + 3;
 
 /** "Day 6 of 14 · 5 answers so far". */
 export function watchProgress(w: Watch, entries: Entry[], now: number): string {
@@ -140,7 +185,7 @@ export const watchSteps = (w: Watch, entries: Entry[]) => watchAnswers(w, entrie
 export function watchLines(watches: Watch[], d: WatchData, now: number): string[] {
   return watches.filter((w) => !w.stopped && watchDay(w, now) <= w.days + 7).map((w) => {
     const as = watchAnswers(w, d.entries).slice(-10).map((a) => `${dayLabel(a.at).split(" ").slice(0, 2).join(" ")} ${a.answer}`), fs = watchFindings(w, d, now);
-    const done = watchDay(w, now) > w.days;
-    return `${w.what} — my note: "${w.note}"; ${done ? `ended ${dayLabel(new Date(`${addDays(w.start, w.days - 1)}T12:00`).getTime())}` : `day ${watchDay(w, now)} of ${w.days}`}, asks "${w.question}" (${w.options.join(" / ")}) ${w.afterMin && w.cause ? `${w.afterMin} min after each ${w.cause.name.toLowerCase()}` : "each evening"}; answers: ${as.length ? as.join(", ") : "none yet"}${fs.length ? `; my data (the app's test): ${fs.map((f) => `${f.text} (${f.label})`).join("; ")}` : ""}${w.found.length ? `; found before: ${w.found.map((f) => `${f.text} (${f.sure})`).join("; ")}` : ""}`;
+    const done = watchDay(w, now) > w.days, v = watchVerdict(w, d, now);
+    return `${w.what} — my note: "${w.note}"; ${done ? `ended ${dayLabel(new Date(`${addDays(w.start, w.days - 1)}T12:00`).getTime())} — what it showed: ${v}` : `day ${watchDay(w, now)} of ${w.days}`}, asks "${w.question}" (${w.options.join(" / ")}) ${w.afterMin && w.cause ? `${w.afterMin} min after each ${w.cause.name.toLowerCase()}` : "each evening"}; answers: ${as.length ? as.join(", ") : "none yet"}${fs.length ? `; my data (the app's test): ${fs.map((f) => `${f.text} (${f.label})`).join("; ")}` : ""}${w.found.length ? `; found before: ${w.found.map((f) => `${f.text} (${f.sure})`).join("; ")}` : ""}`;
   });
 }

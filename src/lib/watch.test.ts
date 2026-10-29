@@ -108,7 +108,7 @@ describe("check-ins around each time", () => {
     const d = world(1.5);
     expect(causeTimes(WALK.cause!, d)).toHaveLength(6);
     const f = watchFindings(WALK, d, at("2026-10-07", "09:00"));
-    expect(f).toEqual([{ label: "clear", text: expect.stringMatching(/^after 6 walks, energy at your next check-in was \+1\.[3-7] against the one before$/) }]);
+    expect(f).toEqual([{ label: "clear", change: expect.closeTo(1.5, 0), text: expect.stringMatching(/^after 6 walks, energy at your next check-in was \+1\.[3-7] against the one before$/) }]);
   });
   it("control: no lift → not clear; two walks → early", () => {
     expect(watchFindings(WALK, world(0), at("2026-10-07", "09:00"))[0].label).not.toBe("clear");
@@ -118,7 +118,7 @@ describe("check-ins around each time", () => {
     const OUT: Watch = { ...WALK, cause: { kind: "doing", name: "outside" }, afterMin: undefined };
     const entries: Entry[] = days(4).flatMap((d, i): Entry[] => [{ id: `p${i}`, kind: "feel", at: at(d, "13:00"), mood: 5 }, { id: `o${i}`, kind: "feel", at: at(d, "17:00"), mood: 7, doing: ["outside"] }]);
     // every pair +2 exactly: no spread, so the range is a point — clear
-    expect(watchFindings({ ...OUT, feel: "mood" }, { entries, workouts: [] }, at("2026-10-05", "09:00"))).toEqual([{ label: "clear", text: "on 4 check-ins that said “outside”, mood was +2 against the check-in before" }]);
+    expect(watchFindings({ ...OUT, feel: "mood" }, { entries, workouts: [] }, at("2026-10-05", "09:00"))).toEqual([{ label: "clear", change: 2, text: "on 4 check-ins that said “outside”, mood was +2 against the check-in before" }]);
   });
   it("asked 30 minutes after each walk: not at 17:50, at 18:05, once — and again after the next", () => {
     const d = world(1.5, 1), as = (h: string) => watchDue(WALK, d.entries, at("2026-10-01", h), d.workouts);
@@ -128,5 +128,57 @@ describe("check-ins around each time", () => {
     const again = [...d.workouts, { id: "w9", template: "Walk", kind: "cardio" as const, startedAt: at("2026-10-01", "19:00"), endedAt: at("2026-10-01", "19:20"), cardio: { what: "Walk" } }];
     expect(watchDue(WALK, answered, at("2026-10-01", "19:55"), again)).toBe(true);
     expect(new Date(watchAfterOf(WALK, { entries: answered, workouts: again }, at("2026-10-01", "19:55"))!).getHours()).toBe(19);
+  });
+});
+
+// Phase 3 (owner: "do 3"): your own fix when a check-in is low, and what a watch showed when it ends.
+import { tryKey, watchDone, watchOffer, watchVerdict } from "./watch";
+
+describe("a low check-in brings your own fix", () => {
+  const WALK: Watch = { ...W, id: "wk", what: "Walks → more energy", note: "i feel better after a walk", question: "Better than before the walk?", options: ["Worse", "Same", "Better"], start: "2026-10-01", at: at("2026-10-01", "08:00"), days: 28,
+    cause: { kind: "cardio", name: "Walk" }, feel: "energy", afterMin: 30 };
+  const walks = (lift: number) => {
+    const entries: Entry[] = [], workouts: Workout[] = [];
+    days(6).forEach((d, i) => {
+      workouts.push({ id: `w${i}`, template: "Walk", kind: "cardio", startedAt: at(d, "17:00"), endedAt: at(d, "17:30"), cardio: { what: "Walk" } });
+      entries.push({ id: `b${i}`, kind: "feel", at: at(d, "16:00"), energy: 5 }, { id: `c${i}`, kind: "feel", at: at(d, "18:15"), energy: 5 + lift + (i % 2 ? 0.2 : -0.2) });
+    });
+    return { entries, workouts };
+  };
+  const low = (d: { entries: Entry[]; workouts: Workout[] }, energy: number, hm = "15:00"): { entries: Entry[]; workouts: Workout[] } => ({ ...d, entries: [...d.entries, { id: "now", kind: "feel", at: at("2026-10-10", hm), energy }] });
+  it("planted: energy 3 → the walk watch, with your data (clear, +1.5)", () => {
+    const o = watchOffer([WALK], low(walks(1.5), 3), at("2026-10-10", "15:30"))!;
+    expect([o.w.id, o.feel, o.value, o.finding?.label]).toEqual(["wk", "energy", 3, "clear"]);
+  });
+  it("controls: energy 6 isn't low; 3 hours later it's gone; after Doing it / Not now it's put away; a stopped watch never", () => {
+    expect(watchOffer([WALK], low(walks(1.5), 6), at("2026-10-10", "15:30"))).toBeNull();
+    expect(watchOffer([WALK], low(walks(1.5), 3), at("2026-10-10", "18:01"))).toBeNull();
+    const tried = low(walks(1.5), 3); tried.entries.push({ id: "t", kind: "answer", at: at("2026-10-10", "15:20"), key: tryKey(WALK), question: "q", answer: "not now" });
+    expect(watchOffer([WALK], tried, at("2026-10-10", "15:30"))).toBeNull();
+    expect(watchOffer([{ ...WALK, stopped: 1 }], low(walks(1.5), 3), at("2026-10-10", "15:30"))).toBeNull();
+  });
+  it("control: your data says walks bring energy down → not offered, even with energy at 2", () => {
+    expect(watchOffer([WALK], low(walks(-1.5), 2), at("2026-10-10", "15:30"))).toBeNull();
+  });
+  it("stress is the other way round: 8 is low; a watch that brings it down is offered", () => {
+    const CALM: Watch = { ...WALK, id: "cm", what: "Walks → calmer", feel: "stress" };
+    const d = walks(-1.5).entries.map((e) => (e.kind === "feel" ? { ...e, stress: e.energy, energy: undefined } : e));
+    expect(watchOffer([CALM], { entries: [...d, { id: "now", kind: "feel", at: at("2026-10-10", "15:00"), stress: 8 }], workouts: walks(0).workouts }, at("2026-10-10", "15:30"))?.w.id).toBe("cm");
+  });
+});
+
+describe("what a watch showed", () => {
+  const CR: Watch = { ...W, start: "2026-10-01", at: at("2026-10-01", "08:00"), days: 14, cause: { kind: "supplement", name: "Creatine", suppId: "cr5" } };
+  const as = days(14).map((d, i): Entry => ({ id: `a${i}`, kind: "answer", at: at(d, "20:30"), key: "watch:cr", question: W.question, answer: i < 3 ? "A bit" : "Very" }));
+  const took = days(14).filter((_, i) => i % 2 === 0).map((d, i): Entry => ({ id: `s${i}`, kind: "supp", at: at(d, "08:00"), suppId: "cr5", status: "taken" }));
+  it("while it runs: nothing; the day after its last: its answers, the most given, your data with the app's word", () => {
+    expect(watchVerdict(CR, { entries: [...as, ...took], workouts: [] }, at("2026-10-14", "21:00"))).toBeNull();
+    expect(watchVerdict(CR, { entries: [...as, ...took], workouts: [] }, at("2026-10-15", "09:00"))).toMatch(/^14 answers in 14 days to “Muscles feel full today\?”: “Very” 11 times\. On creatine days you answered “Very” \([\d.]+ of 2\), without “Very” \([\d.]+\) — not clear\.$/);
+    expect(watchVerdict(CR, { entries: [], workouts: [] }, at("2026-10-15", "09:00"))).toBe("No answers in its 14 days — nothing to go on.");
+    expect(watchVerdict({ ...CR, stopped: 1 }, { entries: as, workouts: [] }, at("2026-10-15", "09:00"))).toBeNull();
+  });
+  it("on Today for 3 days after it ends, not before, not after, not once stopped", () => {
+    expect([14, 15, 17, 18].map((d) => watchDone(CR, at(`2026-10-${d}`, "10:00")))).toEqual([false, true, true, false]);
+    expect(watchDone({ ...CR, stopped: 1 }, at("2026-10-15", "10:00"))).toBe(false);
   });
 });

@@ -3005,7 +3005,7 @@ both reads and the questions. Phases in that order; #152 RPE waits (owner).
    - [ ] Today "feels too empty" and he likes "charts and connecting dots, trying to find patterns in a lot of data
      points": a chart on Today (the day so far with its dots; a pattern with today's dot on it) — canvas first. Also
      changes the reform: don't cut the charts and grids he likes (i1–i3 to be reworded).
-   - [~] Watching: notes become things the AI looks out for ("creatine makes my muscles fuller", "better after a walk",
+   - [x] Watching: notes become things the AI looks out for ("creatine makes my muscles fuller", "better after a walk",
      "better after gym") — follow-up questions, papers and Reddit, offered when a check-in is low, and in the morning /
      night reads ("i liked that i mentioned getting sick and it showed me zinc w studies"). Owner, 28 Oct: "start
      watching task". Claimed 28 Oct — lib/watch.ts, propose "watch", components/Watching.tsx, Today asks, AI tab.
@@ -3022,8 +3022,15 @@ both reads and the questions. Phases in that order; #152 RPE waits (owner).
        question card, in the AI tab, and in what the AI is told. lib/stats paired + t95; watch.test (planted creatine
        days → clear, 5 random worlds → never clear, every day → "nothing to compare yet"; walks +1.5 → clear, no lift →
        not clear; after-ask timing), propose.test (stack, ambiguity, ranges); e2e watch2 (11 checks).
-     - [ ] Phase 3: offered when a check-in is low ("Energy 3. You said you feel better after a walk" — TipAsk's place)
-       with your data and the studies; the end of a watch gets a verdict like an experiment's.
+     - [x] Phase 3 (owner: "do 3", "i mean phase 3"): a low check-in (≤ 4, stress ≥ 7, last 3 h) leads For you with
+       the watch about that feeling — "Energy 3 · you said it helps", your note, your data, the study, "Start a walk"
+       (starts the walk timer, so its after-question follows) or "Doing it", "Not now" (once per check-in, kept as an
+       answer). Never one your data clearly says goes the wrong way; the same note isn't offered again as a plain tip.
+       A watch that's run its days says what it showed (its answers, the one given most, your data with the app's
+       word) in For you for 3 days and in the list — "Two more weeks" or "End it"; the reads say it once.
+       watch.test (planted offer, wrong-way control fails without its rule, stress the other way, timing; verdict),
+       e2e watch3 (12 checks; the no-duplicate-tip check fails without the dedupe).
+   - [x] Watching done (phases 1–3, 28–29 Oct).
    - [ ] More AI tools so it can do more inside the app (log, edit, watch, ask later, quiet, settings, workout).
      His picks (AskUserQuestion, 28 Oct): weekly = one scrolling report; Today = "a pattern, with today on it";
      Watching = "show me first"; AI tools first = "Log and edit from chat" + "Watch and ask later". Canvas row

@@ -28,7 +28,7 @@ import { ForYou, type Ask } from "../components/ForYou";
 import { NightCheckAsk } from "../components/NightCheckAsk";
 import { TipAsk } from "../components/TipAsk";
 import { WeekAsk } from "../components/WeekReport";
-import { WatchAsk } from "../components/Watching";
+import { WatchAsk, WatchDoneAsk, WatchOfferAsk } from "../components/Watching";
 import { FoldCard } from "../components/FoldCard";
 import type { Drink, Entry, EntryOf, Slot } from "../lib/types";
 import { answerSlot, SLOTS, slotsOf } from "../lib/types";
@@ -155,6 +155,8 @@ export function Today() {
   // The reads are in it only once there is one to read; until then the Now card says where it is.
   const mrShown = !!ai.digest && morningShown(ai.digest, ai.night, now), nrShown = !!ai.night && nightShown(ai.night, ai.digest, now);
   const asks: Ask[] = [
+    // a low check-in: the watch about that feeling first, your data and the studies with it (Watching phase 3)
+    { key: "watchoffer", name: "your own fix", node: <WatchOfferAsk now={now} /> },
     { key: "tip", name: "your own tip", node: <TipAsk now={now} /> },
     ...due.filter((it) => !later(it)).map(dueAsk),
     { key: "week", name: "your week", node: <WeekAsk now={now} />, read: true },
@@ -163,6 +165,8 @@ export function Today() {
     { key: "questions", name: "a quick question", node: <AiQuestions /> },
     // what you asked it to look out for: its evening question (lib/watch; owner, 28 Oct: "give me followup questions")
     ...(s.ai.watches ?? []).filter((w) => !w.stopped).map((w) => ({ key: `watch:${w.id}`, name: w.what.toLowerCase(), node: <WatchAsk w={w} now={now} /> })),
+    // a finished one: what it showed (a read: Done puts it away for today; "Done" on the card for good)
+    ...(s.ai.watches ?? []).filter((w) => !w.stopped && !w.closed).map((w) => ({ key: `watchdone:${w.id}`, name: `what ${w.what.toLowerCase()} showed`, node: <WatchDoneAsk w={w} now={now} />, read: true })),
     { key: "heart", name: "your heart", node: <HeartAsk now={now} /> },
     { key: "catchup", name: "yesterday", node: <CatchUp now={now} /> },
     { key: "ghost", name: "yesterday, drafted", node: <GhostCard now={now} /> },
