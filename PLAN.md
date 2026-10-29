@@ -2953,6 +2953,17 @@ both reads and the questions. Phases in that order; #152 RPE waits (owner).
      light (Windred 2024); psoriasis rating with lagged links; what to eat next; night-out mode; a monthly report card
      with body tests (push-ups, Yang 2019); experiments he plans (n-of-1, no coin flips). Honest note on the page:
      prompts alone did little in a 2023 trial (VALENTINE); plans you make yourself do better.
+   - Owner, 29 Oct, with the chat's answer about music ("The app can't test it yet because there's no music tag. For
+     better focus, add "music" to your check-in notes…"): "in the reform pls add options to make it more powerful, let
+     it add things to app. after ur finished, we'll start the reform". Added "AI powers" after Ideas: 2 questions (how
+     much it does without asking; what it may add) and X1–X10 — X1 fix: that answer was wrong twice (the check-in's
+     "up to" box takes your own words and detectors/between tests every tag; notes aren't tested, so two weeks of
+     "music" in notes would compare nothing; Watching, made for this, went unused) → the chat gets what the app can do;
+     X2 it adds a chip / question instead of homework; X3 the chat's compare takes any tag, food, tracker (today: 7
+     fixed things); X4 "in two weeks" becomes a dated answer in For you; X5 trackers from one sentence; X6 pin a chart
+     to Today; X7 if-then rules it runs; X8 program and meal changes; X9 everything it added in one list with Remove;
+     X10 a Wanted list for what it can't do. I1–I3 reworded to keep the charts and grids (his 28 Oct "I liked charts
+     and connecting dots"). 56 items now; none answered yet.
 182. [~] **28 Oct evening: his notes before the reform** (owner: "look at theese, brainstorm, and after we done w these
    can move on to questions and reform"). Claimed 28 Oct.
    - [x] For you is a cycle ("i should be able to cycle through it - rn i said skip to a couple items and they
@@ -3004,7 +3015,7 @@ both reads and the questions. Phases in that order; #152 RPE waits (owner).
      render loop there before it shipped).
    - [ ] Today "feels too empty" and he likes "charts and connecting dots, trying to find patterns in a lot of data
      points": a chart on Today (the day so far with its dots; a pattern with today's dot on it) — canvas first. Also
-     changes the reform: don't cut the charts and grids he likes (i1–i3 to be reworded).
+     changes the reform: don't cut the charts and grids he likes (i1–i3 reworded 29 Oct: the words repeat, the charts stay).
      - [x] "A pattern, with today on it" (owner, 29 Oct: "Today's pattern card"). Claimed 29 Oct — lib/todaypattern.ts,
        components/TodayPattern.tsx, Today.tsx. After For you: one of the scout's own tested links as a scatter — a dot
        a day of the last 60 (the second thing the next day when the link is next-day; only days that are over), a
