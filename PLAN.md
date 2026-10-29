@@ -3135,3 +3135,20 @@ both reads and the questions. Phases in that order; #152 RPE waits (owner).
      hurts you most, energy first; U3 "I feel flat"; U4 the weekly review; U5 the 12-week program; U6 the 4×4; U7 one
      wake time; U11 the monthly card, no photo; U12 experiments you plan; I1–I3 Insights; L1–L2 one box; a design pass
      over the screens he wants remade; notifications he picks one by one (Q4; lib/push exists).
+184. [~] **Apple Health in: body fat and weight from his scale, walking speed** (owner, 29 Oct, with what his Health app
+   has: "pls select all that are interesting or important and can help the app make predictions, changes, and is worth
+   to add tp the app, to track it"). Claimed 29 Oct — lib/healthimport.ts, worker (/api/health/*, BandHub storage),
+   lib/health-client.ts, Settings → Apple Health.
+   - Picked: weight (MovingLife writes it; not in his list but in Health → Body Measurements), body fat % (U5's number,
+     his "leaner"), lean mass worked out from them (fat loss vs muscle loss), walking speed as a test (passive; may go
+     with tired days — the pattern finder says, dropped after ~6 weeks if nothing). Skipped: distance, flights, active
+     energy (the Fitbit counts all day on the wrist; the phone only in a pocket), resting energy (a formula), BMI
+     (weight ÷ height²), blood oxygen and breathing (the Fitbit already sends them each night), steadiness (a fall-risk
+     score for older people), double support / asymmetry / step length (limp signals, noisy).
+   - How: a web app can't read Apple Health, so a daily Apple Shortcut (Find Health Samples → Get Details → Get
+     Contents of URL, a time-of-day automation) posts the newest weight, body fat and the day's walking speed to the
+     Worker with a personal key (Settings → Apple Health; "<account>.<secret>", only its hash kept; New key replaces
+     it). The Worker keeps 400 days per account in BandHub's storage; the app pulls on open and turns weight + body fat
+     into weigh-ins (ids from the sample; one you typed within 30 min isn't doubled; settings.healthUntil, synced, so a
+     deleted one doesn't come back). Paid alternative if the Shortcut is too fiddly: Health Webhook (~$15).
+   - Phase 1: weight + body fat → weigh-ins with lean mass. Phase 2: walking speed into the pattern finder.
