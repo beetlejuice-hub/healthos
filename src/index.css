@@ -1530,6 +1530,7 @@ a { color: inherit; }
 /* Insights → Training, A · your lifts (PLAN 64) */
 .tp { display: grid; gap: 12px; min-width: 0; margin-bottom: 4px; }
 .tp .sl-p { padding: 12px 14px; display: grid; gap: 8px; align-content: start; }
+.tp-today text { paint-order: stroke; stroke: var(--c-card); stroke-width: 4px; stroke-linejoin: round; }
 .tp-tiles { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px 14px; }
 @media (max-width: 700px) { .tp-tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 .tp-tile { display: grid; gap: 2px; min-width: 0; }
