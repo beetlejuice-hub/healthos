@@ -35,6 +35,8 @@ describe("what the Shortcut sends", () => {
     expect(why({ fat: "", fatAt: "", walk: "4.9", walkAt: at }).skipped.fat).toMatch(/^fat came empty — the Shortcut got no Body Fat Percentage from Health: iPhone Settings → Health → Data Access & Devices → Shortcuts/);
     expect(why({ walk: "4.9", walkAt: at }).skipped).toEqual({ fat: "no “fat” field came (fields: weight, weightAt, walk, walkAt)" });
     expect(why({ fat: 18.6, fatAt: at, walk: "", walkAt: "" }).skipped).toEqual({ walk: "no walking speed from Health today yet" });
+    // a one-item list (Find Health Samples gives a list even with Limit 1) is that item
+    expect(readPost({ fat: ["18.6"], fatAt: [at] }, NOW)).toEqual([{ type: "fat", at: Date.parse(at), value: 18.6 }]);
     // keys as typed: "Fat" / "FatAt " still count
     expect(readPost({ Fat: "18,6", "FatAt ": at }, NOW)).toEqual([{ type: "fat", at: Date.parse(at), value: 18.6 }]);
     // control: everything there → nothing left out

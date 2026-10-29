@@ -63,7 +63,8 @@ export function readPostWhy(body: unknown, now: number): { samples: HealthSample
   const samples: HealthSample[] = [], skipped: Partial<Record<HealthType, string>> = {};
   if (!body || typeof body !== "object") return { samples, skipped };
   // keys as typed in Shortcuts: "Fat", "fat " and "fatat" are fatAt's and fat's too
-  const b = Object.fromEntries(Object.entries(body as Record<string, unknown>).map(([k, v]) => [k.toLowerCase().replace(/\s/g, ""), v]));
+  // …and a one-item list (Find Health Samples gives a list even with Limit 1) is its one item
+  const b = Object.fromEntries(Object.entries(body as Record<string, unknown>).map(([k, v]) => [k.toLowerCase().replace(/\s/g, ""), Array.isArray(v) && v.length === 1 ? v[0] : v]));
   const came = Object.keys(body as object).join(", ") || "none";
   for (const type of ["weight", "fat", "walk"] as const) {
     const raw = b[type], rawAt = b[`${type}at`];
