@@ -105,6 +105,19 @@ export function dayScore(entries: Entry[], foods: Food[], goals: { kcal: number;
   return { day, score, word: dayWord(score), parts, left, kcal, known: share };
 }
 
+/**
+ * What's left out, in one plain line (reform I6; owner, 29 Oct: Yes to "Fibre, veg and sugar aren't scored yet: most
+ * foods you log don't carry them" — it said "Not in it yet: fibre (only 0 % of the day's calories have nutrients),
+ * fruit, veg, legumes (only 0 % …)"). "Too few", not "most": a day at 60 % is left out too. Null when nothing is.
+ */
+const LEFT_WORD: Record<string, string[]> = { fiber: ["fibre"], plants: ["veg"], limits: ["salt", "fat", "sugar"] };
+export function leftLine(left: DayScore["left"]): string | null {
+  if (!left.length) return null;
+  const w = left.flatMap((l) => LEFT_WORD[l.id] ?? [l.name.toLowerCase()]);
+  const list = w.length > 1 ? `${w.slice(0, -1).join(", ")} and ${w[w.length - 1]}` : w[0];
+  return `${list.charAt(0).toUpperCase()}${list.slice(1)} aren't scored yet: too few of the foods you logged carry them.`;
+}
+
 /** The part furthest from full, in a few words: "fibre low (14 g of 30)" — for the one-line places. */
 export function weakest(s: DayScore): string | null {
   const w = [...s.parts].sort((a, b) => a.got / a.max - b.got / b.max || b.max - a.max)[0];

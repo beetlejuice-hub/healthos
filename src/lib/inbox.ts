@@ -64,14 +64,19 @@ export function raisedNotice(r: Raised, now: number): Notice {
 /** Readiness under this ("take it easier") asks what happened (owner, 15 Oct: "can do"). */
 export const READY_ASK_UNDER = 60;
 
-/** A low morning, asked about: why it's low in a few words, what stood out about last night if anything, and the question. */
+/**
+ * A low morning, asked about: why it's low in a few words, what stood out about last night if anything, and the question.
+ * No score in it (reform A1; owner, 29 Oct: Yes to "Say what was off instead: “A rough night for your body: HRV and
+ * resting heart rate both well off your usual. What happened yesterday?”" — it said "Readiness 41 this morning", the
+ * number cut from Today).
+ */
 export function readinessNotice(r: Readiness, so: Pick<Standout, "label"> | null, now: number): Notice | null {
   if (r.score >= READY_ASK_UNDER) return null;
   const low = [...r.parts].sort((a, b) => a.got / a.max - b.got / b.max || b.max - a.max)[0];
   const why = r.cap ? `${r.cap.why[0].toUpperCase()}${r.cap.why.slice(1)}` : low ? `${low.name}: ${low.why}` : "";
   return {
     id: `readiness:${r.day}`, kind: "readiness", at: now, day: r.day,
-    title: `Readiness ${r.score} this morning`,
+    title: "A rough night for your body",
     text: `${why ? `${why}. ` : ""}${so ? `Last night: ${so.label}. ` : ""}What happened yesterday?`,
   };
 }

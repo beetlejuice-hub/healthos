@@ -35,7 +35,7 @@ function ZoneBar({ value, scale: [a, b], zones, zone, usual }: { value: number; 
   );
 }
 
-export function SleepScore({ s, label = "Sleep score", leftWhy = sleepLeft }: { s: Shown; label?: string; leftWhy?: (l: { id: string; name: string }) => string }) {
+export function SleepScore({ s, label = "Sleep score", leftWhy = sleepLeft, leftNote }: { s: Shown; label?: string; leftWhy?: (l: { id: string; name: string }) => string; /** the whole line, said its own way (the food score) */ leftNote?: string | null }) {
   const zoned = s.parts.some((p) => p.zones);
   return (
     <div className="sl-score" data-score={s.score} aria-label={`${label} ${s.score} out of 100, ${s.word}`}>
@@ -66,7 +66,7 @@ export function SleepScore({ s, label = "Sleep score", leftWhy = sleepLeft }: { 
           <span className="src">· ranges from sleep studies</span>
         </p>
       )}
-      {s.left.length > 0 && <p className="sl-note">Not in it yet: {s.left.map(leftWhy).filter((v, i, a) => a.indexOf(v) === i).join(", ")} — scored out of the rest.</p>}
+      {s.left.length > 0 && <p className="sl-note">{leftNote ?? <>Not in it yet: {s.left.map(leftWhy).filter((v, i, a) => a.indexOf(v) === i).join(", ")} — scored out of the rest.</>}</p>}
     </div>
   );
 }

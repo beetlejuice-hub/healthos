@@ -3114,6 +3114,14 @@ both reads and the questions. Phases in that order; #152 RPE waits (owner).
      pattern card above already draws it, else Noticed's top finding, else the next answer; the findings engine runs
      once (it ran twice) and every 10 minutes. e2e noticed (one line, the lead first; seen → Noticed) and todaypattern
      (the card's link isn't repeated — fails without the check). ScoutLine and DataCard removed.
+   - [x] I6 (29 Oct): the food score's left-out line is one plain sentence — "Fibre, veg, salt, fat and sugar aren't
+     scored yet: too few of the foods you logged carry them." ("too few", not his card's "most": a 60 % day is left out
+     too). dayscore.test + e2e dayscore (the line on Insights → Intake).
+   - [x] A1 (29 Oct): the low-morning message says "A rough night for your body" + what was off, no "Readiness 41";
+     the reads and chat still see the score to reason with, marked "never quote this number". inbox.test,
+     sections.test, e2e inbox.
+   - [x] A2 (29 Oct): the AI tab's intro is "Ask about anything you log." with a ? for the rest. e2e aiintro (390 +
+     320, opens and closes).
    - Phase 1, the decided cleanup and the AI's wrong answers (no canvas needed; small first, landed one or two at a
      time): X1 the chat knows what the app can do (his music answer); T1 yesterday's asks stay, each with "Don't
      remember"; T3 the morning read leaves at noon; T4 "From your data" one line; A1 no readiness number in messages;

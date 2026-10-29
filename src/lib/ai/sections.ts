@@ -15,7 +15,8 @@ const ymd = (t: number) => { const d = new Date(t); return `${d.getFullYear()}-$
 export function todayLines(r: Readiness | null): string[] {
   if (!r) return [];
   return [
-    `Readiness ${r.score}/100 (${r.word})${r.cap ? ` — held at ${r.cap.to}: ${r.cap.why} (the parts add to ${r.added})` : ""}.`,
+    // reform A1: the score is for working things out; they don't see it, so the AI says what was off instead
+    `Readiness ${r.score}/100 (${r.word})${r.cap ? ` — held at ${r.cap.to}: ${r.cap.why} (the parts add to ${r.added})` : ""}. Not shown to them: never quote this number — say what was off (the parts below).`,
     ...r.parts.map((p) => `${p.name}: ${r1(p.got)}/${p.max} (${p.zone}) — ${p.why}`),
     ...(r.left.length ? [`Not known yet: ${r.left.map((l) => l.name).join(", ")}.`] : []),
   ];

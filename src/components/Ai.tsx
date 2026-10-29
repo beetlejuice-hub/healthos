@@ -449,6 +449,7 @@ export function AiScreen() {
   const { on, busy } = useAiStatus();
   const [text, setText] = useState("");
   const [err, setErr] = useState<string | null>(null);
+  const [about, setAbout] = useState(false);
   const end = useRef<HTMLDivElement | null>(null);
   const inbox = ai.inbox ?? [], reviews = ai.reviews ?? [], now = Date.now();
   useEffect(() => { act.setAi({ seenAt: Date.now() }); }, [ai.chat.length, inbox.length, reviews.length]);
@@ -498,7 +499,11 @@ export function AiScreen() {
       <WatchList now={now} />
       <SavedCard />
       <div className="chat" aria-live="polite">
-        {thread.length === 0 && <p className="note">Ask me anything about your data — I see your numbers, patterns, stack and About me. The morning read and your day read back are on Today — ask me about them here. I only write here myself with something new: a heart-rate stretch the app can't explain, a new finding to comment on, your week and month.</p>}
+        {/* reform A2 (owner, 29 Oct: Yes to "One line: “Ask about anything you log.” The rest behind a small ?") */}
+        {thread.length === 0 && <div className="note ai-intro">
+          <p>Ask about anything you log. <button type="button" className="ai-q" aria-expanded={about} aria-label="What the AI sees and when it writes" onClick={() => setAbout((v) => !v)}>?</button></p>
+          {about && <p>I see your numbers, patterns, stack and About me. The morning read and your day read back are on Today — ask me about them here. I only write here myself with something new: a heart-rate stretch the app can't explain, a new finding to comment on, your week and month.</p>}
+        </div>}
         {days.map((g) => (g.open ? <Fragment key={g.day}>{g.items.map((x) => render(x, index.get(x.key)!))}</Fragment> : (
           <details key={g.day} className="day-fold">
             <summary><b>{dayLabel(atMinute(g.day, 720))}</b> · {g.items.length} message{g.items.length > 1 ? "s" : ""}{foldLine(g.items.map(said)) && <span> · {foldLine(g.items.map(said))}</span>}</summary>

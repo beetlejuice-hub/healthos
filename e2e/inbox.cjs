@@ -158,7 +158,7 @@ function world(wine = false) {
   check(`a wine morning: one message, readiness asking what happened (${m.map((n) => n.id).join(', ')})`, m.length === 1 && !!low && low.id === 'readiness:2026-10-15');
   await pg.waitForFunction((k) => JSON.parse(localStorage.getItem(k) || '{}').ai?.findingsDay === '2026-10-15', KEY, { timeout: 15000 }).catch(() => {});
   check(`a band worn 20 days: the day's grids are still read (findingsDay ${(await store(pg)).ai?.findingsDay})`, (await store(pg)).ai?.findingsDay === '2026-10-15');
-  check(`…in words (${low && low.title} · ${low && low.text})`, low && /^Readiness (1\d|2\d|3\d) this morning$/.test(low.title) && low.text === 'HRV and resting heart rate both well off your usual. What happened yesterday?');
+  check(`…in words (${low && low.title} · ${low && low.text})`, low && low.title === 'A rough night for your body' && low.text === 'HRV and resting heart rate both well off your usual. What happened yesterday?');
   await pg.locator('.tabs a[href="#ai"] .tabbadge').click(); await pg.waitForSelector('.msg.byapp[data-kind="readiness"]');
   const card = pg.locator('.msg.byapp[data-kind="readiness"]');
   check('…with your last-night tags to tap, and a way to log what wasn\'t', await card.getByRole('button', { name: 'out with friends' }).count() === 1 && await card.getByRole('button', { name: 'with gf' }).count() === 1 && await card.locator('a[href="#log"]').count() === 1);

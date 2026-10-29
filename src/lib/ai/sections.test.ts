@@ -10,7 +10,7 @@ describe("what the AI is told, organized (owner, 15 Oct: \"make sure app sees al
       parts: [{ id: "hrv", name: "HRV this morning", got: 0, max: 20, why: "33 ms · usual 47", zone: "poor" }, { id: "sleep", name: "Last night", got: 20, max: 25, why: "sleep score 80", zone: "ideal" }],
       left: [{ id: "load", name: "Training", max: 10 }] };
     expect(todayLines(r)).toEqual([
-      "Readiness 20/100 (take it easier) — held at 20: HRV and resting heart rate both well off your usual (the parts add to 47).",
+      "Readiness 20/100 (take it easier) — held at 20: HRV and resting heart rate both well off your usual (the parts add to 47). Not shown to them: never quote this number — say what was off (the parts below).",
       "HRV this morning: 0/20 (poor) — 33 ms · usual 47", "Last night: 20/25 (ideal) — sleep score 80", "Not known yet: Training."]);
     expect(todayLines(null)).toEqual([]);
   });

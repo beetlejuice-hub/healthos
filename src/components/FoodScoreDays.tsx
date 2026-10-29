@@ -7,7 +7,7 @@
 
 import { useMemo, useState } from "react";
 import { useStore } from "../lib/store";
-import { dayScore, type DayScore } from "../lib/dayscore";
+import { dayScore, leftLine, type DayScore } from "../lib/dayscore";
 import { atMinute, dayLabel } from "../lib/time";
 import { Panel } from "./Body";
 import { SleepScore } from "./SleepScore";
@@ -52,7 +52,7 @@ export function FoodScoreDays({ days, today }: { days: string[]; today: string }
       </div>
       <div className="fs-sel" data-day={sel.day}>
         <p className="fs-head"><b>{dayLabel(atMinute(sel.day, 720))}</b> · {Math.round(sel.s.kcal).toLocaleString("en-GB")} kcal logged</p>
-        <SleepScore s={sel.s} label="Food score" leftWhy={(l) => `${l.name.toLowerCase()} (${(sel.s.left.find((x) => x.id === l.id)?.why ?? "")})`} />
+        <SleepScore s={sel.s} label="Food score" leftNote={leftLine(sel.s.left)} />
       </div>
     </Panel>
   );

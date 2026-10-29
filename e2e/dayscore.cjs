@@ -65,6 +65,15 @@ const ENTRIES = [
   await pg.getByRole('button', { name: 'What the AI sees about me' }).click();
   const seen = await pg.locator('.ctx').innerText().catch(() => '');
   check('the AI is told yesterday\'s food score with its parts', /- Food score yesterday \(out of 100\): 32\/100 \(off goal\) — Protein 0\/25 \(46 g of 150\); Protein spread 3\/10/.test(seen));
+  // reform I6 (owner, 29 Oct: Yes to "Fibre, veg and sugar aren't scored yet: most foods you log don't carry them"): a day
+  // mostly of a home dish with no nutrients says what's left out in one plain line, no percentages
+  const HOME = { id: 'homemade', name: 'Homemade stew', per100: { kcal: 200, p: 8, c: 20, f: 9 }, source: 'custom' };
+  const home = (g, hm) => ({ id: 'h' + n++, kind: 'food', at: new Date(`${D2}T${hm}:00`).getTime(), foodId: 'homemade', name: HOME.name, grams: g, macros: { kcal: 2 * g, p: 0.08 * g, c: 0.2 * g, f: 0.09 * g } });
+  await pg.evaluate(([k, es, fs]) => { const s = JSON.parse(localStorage.getItem(k)); s.entries = es; s.foods = fs; localStorage.setItem(k, JSON.stringify(s)); }, [KEY, [...ENTRIES.filter((e) => !e.at || new Date(e.at).getDate() !== 20), home(500, '13:00'), home(400, '19:00'), eat(D2, 'chicken', 200, '19:00')], [...FOODS, HOME]]);
+  await pg.goto(APP + '#insights/intake'); await pg.reload(); await pg.waitForSelector('.gl-foodscore', { timeout: 10000 }).catch(() => {});
+  await pg.locator(`.gl-foodscore .fs-day[data-day="${D2}"]`).click().catch(() => {}); await pg.waitForTimeout(200);
+  const note = await pg.locator('.gl-foodscore .sl-note').innerText().catch(() => '');
+  check(`a day mostly without nutrients: one plain line (${note})`, note === "Fibre, veg, salt, fat and sugar aren't scored yet: too few of the foods you logged carry them.");
   console.log('errors:', JSON.stringify(errs));
   check('no page errors', errs.length === 0);
   await b.close();

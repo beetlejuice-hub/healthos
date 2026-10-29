@@ -96,7 +96,7 @@ describe("a low morning (owner, 15 Oct: \"can do\")", () => {
     { id: "sleep", name: "Last night", got: 20, max: 25, why: "sleep score 80", zone: "ideal" }] });
   it("held low: says why, what stood out last night, and asks", () => {
     const n = readinessNotice(R(20, { to: 20, why: "HRV and resting heart rate both well off your usual" }), { label: "4 drinks" }, at(TODAY, 9))!;
-    expect([n.id, n.kind, n.day, n.title]).toEqual([`readiness:${TODAY}`, "readiness", TODAY, "Readiness 20 this morning"]);
+    expect([n.id, n.kind, n.day, n.title]).toEqual([`readiness:${TODAY}`, "readiness", TODAY, "A rough night for your body"]);
     expect(n.text).toBe("HRV and resting heart rate both well off your usual. Last night: 4 drinks. What happened yesterday?");
   });
   it("low without a cap names the weakest part (the bigger one on a tie); nothing stood out → not said", () => {

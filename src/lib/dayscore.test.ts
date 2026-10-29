@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { dayScore, dayScoreLines, weakest } from "./dayscore";
+import { dayScore, dayScoreLines, leftLine, weakest } from "./dayscore";
 import { BASIC_FOODS } from "./foods-basic";
 import type { Entry, Food } from "./types";
 
@@ -83,6 +83,11 @@ describe("the day's food score", () => {
     expect(max).toBe(60);
     expect(s.score).toBe(Math.round((got / max) * 100));
     expect(dayScoreLines(s, "Food score yesterday")[0]).toMatch(/^Food score yesterday: \d+\/100 \(\w[\w ]*\) — Protein [\d.]+\/25 .*; not judged: Fibre, Fruit, veg, legumes, Salt, sat\. fat, sugar \(only 22 % of the day's calories have nutrients\)\.$/);
+  });
+  it("…said in one plain line on the page (reform I6), no percentages; nothing left out → no line", () => {
+    const s = dayScore([eat("homemade", 600, "13:00"), eat("chicken", 200, "19:00")], FOODS, GOALS, BED, DAY)!;
+    expect(leftLine(s.left)).toBe("Fibre, veg, salt, fat and sugar aren't scored yet: too few of the foods you logged carry them.");
+    expect(leftLine([])).toBeNull();
   });
 
   it("the built-in foods' nutrients count: a banana is 120 g of fruit", () => {
