@@ -16,7 +16,15 @@ export const SMOKE_LABEL: Record<SmokeBand, string> = { "0": "None", "1-2": "1�
 /** A band as a number, for the averages and the tests: its middle. */
 export const SMOKE_MID: Record<SmokeBand, number> = { "0": 0, "1-2": 1.5, "3-5": 4, "6+": 7 };
 export const smokeKey = (day: string) => `smoke:${day}`;
+/**
+ * "Don't remember" (reform T1; owner, 29 Oct: "keep it, w the option to skip, so if i dont remember something i can just
+ * skip"): kept as the day's answer so it isn't asked again — and never read as a number, so the day stays unknown.
+ */
+export const SMOKE_UNSURE = "don't remember";
 export const SMOKE_QUESTION = "Cigarettes that day?";
+
+/** The days with an answer of any kind, "don't remember" too: not asked again. */
+export const smokeAnswered = (entries: Entry[]) => new Set(entries.flatMap((e) => (e.kind === "answer" && e.key.startsWith("smoke:") ? [e.key.slice(6)] : [])));
 
 /** What you said, by day (the latest answer wins). */
 export function smokeSaid(entries: Entry[]): Map<string, SmokeBand> {
@@ -30,7 +38,7 @@ export function smokeSaid(entries: Entry[]): Map<string, SmokeBand> {
  * morning (until 14:00) when it wasn't answered. Never in the afternoon, never twice.
  */
 export function smokeAsk(entries: Entry[], now: number): { day: string; when: "tonight" | "yesterday" } | null {
-  const m = minuteOfDay(now), today = localDay(now), said = smokeSaid(entries);
+  const m = minuteOfDay(now), today = localDay(now), said = smokeAnswered(entries);
   if (m < SMOKE.nightEnds) { const d = addDays(today, -1); return said.has(d) ? null : { day: d, when: "tonight" }; }
   if (m >= SMOKE.askFrom) return said.has(today) ? null : { day: today, when: "tonight" };
   if (m < SMOKE.morningTo) { const d = addDays(today, -1); return said.has(d) ? null : { day: d, when: "yesterday" }; }
@@ -38,4 +46,4 @@ export function smokeAsk(entries: Entry[], now: number): { day: string; when: "t
 }
 
 /** The answer kept on that day, at 21:00 — so it's that day's however late it was given. */
-export const smokeEntry = (day: string, band: SmokeBand) => ({ kind: "answer" as const, at: atMinute(day, 21 * 60), key: smokeKey(day), question: SMOKE_QUESTION, answer: band });
+export const smokeEntry = (day: string, band: SmokeBand | typeof SMOKE_UNSURE) => ({ kind: "answer" as const, at: atMinute(day, 21 * 60), key: smokeKey(day), question: SMOKE_QUESTION, answer: band });

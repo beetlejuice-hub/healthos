@@ -101,5 +101,8 @@ export function ghostDrafts(entries: Entry[], supplements: Supplement[], today: 
   return { days, drafts: drafts.sort((a, b) => a.day.localeCompare(b.day) || a.minute - b.minute) };
 }
 
-/** What "Keep" / "None of it" logs: each day answered once (ghost:<day>), so it isn't drafted again. */
-export const ghostAnswers = (days: string[], kept: number) => days.map((d) => ({ kind: "answer" as const, at: atMinute(d, 12 * 60), key: ghostKey(d), question: GHOST_QUESTION, answer: kept ? `kept ${kept}` : "none" }));
+/**
+ * What "Keep" / "None of it" / "Don't remember" logs (null: reform T1, owner, 29 Oct: "if i dont remember something i can
+ * just skip, like foods i ate"): each day answered once (ghost:<day>), so it isn't drafted again; nothing else is logged.
+ */
+export const ghostAnswers = (days: string[], kept: number | null) => days.map((d) => ({ kind: "answer" as const, at: atMinute(d, 12 * 60), key: ghostKey(d), question: GHOST_QUESTION, answer: kept == null ? "don't remember" : kept ? `kept ${kept}` : "none" }));

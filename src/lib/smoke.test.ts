@@ -3,7 +3,7 @@
 import { describe, expect, it } from "vitest";
 import type { Entry } from "./types";
 import { atMinute, addDays } from "./time";
-import { smokeAsk, smokeEntry, smokeSaid } from "./smoke";
+import { SMOKE_UNSURE, smokeAsk, smokeEntry, smokeSaid } from "./smoke";
 import { dailyFacts } from "./insights";
 import { DEFAULT_SETTINGS } from "./store";
 import { scout } from "./scout";
@@ -36,6 +36,12 @@ describe("cigarettes, one question a day", () => {
   it("in the day's facts as a number (the band's middle); a day not answered is unknown, not smoke-free", () => {
     const f = dailyFacts([said(D, "3-5"), said(addDays(D, -1), "0")], [], DEFAULT_SETTINGS, addDays(D, -2), D);
     expect(f.map((d) => d.cigs)).toEqual([null, 0, 4]);
+  });
+  it("“Don't remember” (reform T1): not asked again, and the day stays unknown — never smoke-free", () => {
+    const es = [said(addDays(D, -1), SMOKE_UNSURE)];
+    expect(smokeAsk(es, at(D, "09:00"))).toBeNull();
+    expect(smokeSaid(es).has(addDays(D, -1))).toBe(false);
+    expect(dailyFacts(es, [], DEFAULT_SETTINGS, addDays(D, -1), addDays(D, -1))[0].cigs).toBeNull();
   });
   it("the AI reads it plainly", () => {
     const [none, some] = dailyFacts([said(D, "3-5"), said(addDays(D, -1), "0")], [], DEFAULT_SETTINGS, addDays(D, -1), D);

@@ -23,7 +23,8 @@ export const ATE: Record<Ate, { label: string; said: string; factor: number | nu
   usual: { label: "As usual", said: "ate about as usual", factor: 1 },
   more: { label: "More", said: "ate more than usual", factor: 1.25 },
   less: { label: "Less", said: "ate less than usual", factor: 0.75 },
-  unsure: { label: "Not sure", said: "not sure how they ate", factor: null },
+  // "Don't remember", like the other questions about yesterday (reform T1)
+  unsure: { label: "Don't remember", said: "doesn't remember how they ate", factor: null },
 };
 export const ateKey = (day: string) => `ate:${day}`;
 export const ATE_QUESTION = "How did you eat on a day you didn't log?";

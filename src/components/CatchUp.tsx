@@ -55,6 +55,8 @@ export function CatchUp({ now }: { now: number }) {
           <div className="cu-btns">
             <button type="button" className="pill-btn pri" onClick={() => answer(g, true)}>{g.kind === "supp" ? "Took it" : g.kind === "drink" ? "Had my usual" : "Log it"}</button>
             <button type="button" className="pill-btn" onClick={() => answer(g, false)}>{g.kind === "supp" ? "Didn't" : g.kind === "drink" ? "No" : "Skip"}</button>
+            {/* reform T1 (owner, 29 Oct: "if i dont remember something i can just skip"): put away, nothing kept — not "didn't" */}
+            {g.kind !== "meal" && <button type="button" className="linkish cu-unsure" onClick={() => dismiss([g.key])}>Don't remember</button>}
           </div>
         </div>
       ))}

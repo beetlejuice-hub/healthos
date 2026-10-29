@@ -32,7 +32,7 @@ const KEY = 'healthos.v1:u-test';
   // 1 · the evening
   let { ctx, pg } = await open('2026-10-27T21:30:00');
   const t = (await card(pg).innerText().catch(() => '')).replace(/\s+/g, ' ');
-  check(`21:30: Today asks, one tap (${t})`, /^Cigarettes today\? None 1–2 3–5 6\+$/i.test(t));
+  check(`21:30: Today asks, one tap (${t})`, /^Cigarettes today\? None 1–2 3–5 6\+ Don't remember$/i.test(t));
   check(`fits the phone (${await pg.evaluate(() => document.documentElement.scrollWidth)} px)`, await pg.evaluate(() => document.documentElement.scrollWidth) <= 390);
   await card(pg).evaluate((e) => e.scrollIntoView({ block: 'center' })); await card(pg).screenshot({ path: OUT + 'smoke-ask.png' });
   await card(pg).getByRole('button', { name: '3–5' }).click(); await pg.waitForTimeout(300);

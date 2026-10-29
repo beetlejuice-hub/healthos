@@ -56,6 +56,11 @@ describe("ghost logging (PLAN 177)", () => {
     const both = [...log(), ...ghostAnswers(["2026-10-24", "2026-10-25"], 0).map((e, i) => ({ ...e, id: `b${i}` }) as Entry)];
     expect(ghostDrafts(both, supps, today)).toBeNull();
   });
+  it("“Don't remember” (reform T1): the day is answered — not drafted again — and nothing is logged for it", () => {
+    const es = ghostAnswers(["2026-10-24"], null);
+    expect(es.map((e) => e.answer)).toEqual(["don't remember"]);
+    expect(ghostDrafts([...log(), ...es.map((e, i) => ({ ...e, id: `u${i}` }) as Entry)], supps, today)!.days).toEqual(["2026-10-25"]);
+  });
   it("control: nothing done 7 in 10 days — no drafts (half the days isn't usual)", () => {
     const g = ghostDrafts(log({ random: true }), supps, today)!;
     expect(g.drafts.filter((d) => !/Pancakes/.test(d.title))).toEqual([]);

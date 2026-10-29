@@ -38,7 +38,7 @@ const NOW = new Date('2026-10-26T09:00:00').getTime(), D = 864e5, KEY = 'healtho
     check(`drafts first, the question waits (${await ghost.count()} drafts card, ${await card.count()} question)`, await ghost.count() === 1 && await card.count() === 0);
     await ghost.getByRole('button', { name: 'None of it' }).click(); await pg.waitForTimeout(400);
     const t = (await card.innerText().catch(() => '')).replace(/\s+/g, ' ');
-    check(`Today asks once about the weekend, against the usual day (${t})`, /^Not logged Sat 24 – Sun 25 Oct How did you eat\? Kept as a guess — your usual day \(2,300 kcal\) and your goal leave these days out either way\. As usual More Less Not sure · Log them instead$/i.test(t));
+    check(`Today asks once about the weekend, against the usual day (${t})`, /^Not logged Sat 24 – Sun 25 Oct How did you eat\? Kept as a guess — your usual day \(2,300 kcal\) and your goal leave these days out either way\. As usual More Less Don't remember · Log them instead$/i.test(t));
     const meals = await pg.locator('#catchup .cu-row[data-kind=meal]').count();
     check(`…not meal by meal for Sunday as well (${meals} meal rows)`, meals === 0);
     check(`fits the phone (${await pg.evaluate(() => document.documentElement.scrollWidth)} px)`, await pg.evaluate(() => document.documentElement.scrollWidth) <= 390);

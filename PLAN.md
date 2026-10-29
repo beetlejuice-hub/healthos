@@ -3092,6 +3092,14 @@ both reads and the questions. Phases in that order; #152 RPE waits (owner).
      are the code's, a planted +2 focus after his own "music" tag is found at about +2 (7+ of 8 fake months), the
      same lift written only in the note isn't tested, a tag with nothing behind it isn't found. Not checkable here:
      what the real model answers now (the e2e AI is a fake).
+   - [x] T1 (29 Oct; his "keep it, w the option to skip, so if i dont remember something i can just skip, like foods i
+     ate"): yesterday's questions keep asking, and each has "Don't remember" — the catch-up's supplement and usual-drink
+     rows (put away; never "skipped"), the cigarettes card (kept as "don't remember": not asked again, the day stays
+     unknown, never 0), the drafts (both days answered, nothing logged), "how did you eat?" (its "Not sure" renamed).
+     At 320 the answers stay on one line and "Don't remember" drops under them (it split "Took it" in two first).
+     smoke.test + ghost.test (the cigarettes one fails without smokeAnswered); e2e dontremember (14 checks: A at 320,
+     B at 390, reloads, control: tonight's cigarettes still asks at 21:00; fails without the fix); smoke / foodgap
+     e2e updated for the new words.
    - Phase 1, the decided cleanup and the AI's wrong answers (no canvas needed; small first, landed one or two at a
      time): X1 the chat knows what the app can do (his music answer); T1 yesterday's asks stay, each with "Don't
      remember"; T3 the morning read leaves at noon; T4 "From your data" one line; A1 no readiness number in messages;

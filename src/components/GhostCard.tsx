@@ -20,9 +20,10 @@ export function GhostCard({ now }: { now: number }) {
   if (!g || !g.drafts.length) return null;
   const kept = g.drafts.filter((d) => !off.has(d.id));
   const weekend = g.days.length === 2 && new Date(`${g.days[0]}T12:00:00`).getDay() === 6;
-  const answer = (keep: boolean) => {
-    const ids = [...(keep ? kept.flatMap((d) => d.entries) : []), ...ghostAnswers(g.days, keep ? kept.length : 0)].map((e) => act.addEntry(e).id);
-    offerUndo(ids, keep ? `Kept ${kept.length} from ${daysWords(g.days, today)}` : `None kept from ${daysWords(g.days, today)}`);
+  // "Don't remember" (reform T1): answered, nothing kept, and not "none of it happened"
+  const answer = (keep: boolean | null) => {
+    const ids = [...(keep ? kept.flatMap((d) => d.entries) : []), ...ghostAnswers(g.days, keep == null ? null : keep ? kept.length : 0)].map((e) => act.addEntry(e).id);
+    offerUndo(ids, keep ? `Kept ${kept.length} from ${daysWords(g.days, today)}` : keep == null ? `Don't remember ${daysWords(g.days, today)}` : `None kept from ${daysWords(g.days, today)}`);
   };
   const toggle = (id: string) => setOff((s) => { const n = new Set(s); if (n.has(id)) n.delete(id); else n.add(id); return n; });
   return (
@@ -48,6 +49,7 @@ export function GhostCard({ now }: { now: number }) {
         {kept.length > 0 && <button type="button" className="pill-btn pri" onClick={() => answer(true)}>Keep the {kept.length} ticked</button>}
         <button type="button" className="pill-btn" onClick={() => answer(false)}>None of it</button>
       </div>
+      <p className="fg-more"><button type="button" className="linkish" onClick={() => answer(null)}>Don't remember</button></p>
     </section>
   );
 }
