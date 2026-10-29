@@ -3064,3 +3064,36 @@ both reads and the questions. Phases in that order; #152 RPE waits (owner).
      new: known answers, refusals); e2e chatlog (three cards, nothing before a tap, exactly what the card said, Today's
      kcal moves, Log → Food lists it, change + put back, reload, 320 px).
 
+183. [~] **The reform, from his answers** (owner, 29 Oct: "ok done answering the qiestions" — on the page: "good start,
+   we'll have to have a look on the designs too, possible remake some. Lets make sure to brainstorm and start working
+   based on these answers"). All 56 answered (page: https://claude.ai/artifact/CMe4ZKoeWzHF7gdCzGSFaa, store
+   "answers"). Claimed 29 Oct.
+   - His answers that steer everything: 3 months → leaner, energy all day, better sleep, fitter heart, fewer psoriasis
+     flare-ups, calmer / better focus; **the one: energy all day**; "Suggest it, I decide"; notifications "Only the
+     ones I pick"; 10+ minutes a day; has a smart scale with body fat ("nothing else i would buy rn"); what he knows →
+     "a button that i can push that makes the app not telling me that stuff"; daily help → "I dont want an app to
+     strictly tell me what to do, more like give options or advices..like telling me what is that ive been doing wrong
+     and hurts me the most"; no accountability partner; the AI does small things by itself with Undo, a card for the
+     rest; it may add all 8 kinds (tags/questions, trackers, pins, rules, program, meals and goals, supplements,
+     reminders).
+   - Yes: U1–U7, U12, X1–X10, every cleanup item. No: U8 (skin rating), U9 (what to eat next), U10 (night-out mode).
+     Change: U11 "no photo for now"; T1 "keep it, w the option to skip, so if i dont remember something i can just
+     skip, like foods i ate"; T2 "log supps at any time … ai should look into supps, possible side effects, dose
+     concerns, and long and short term effects, and watch how i react to the supps. ask if i feel any differnet, ask
+     related questions to side effects and good effects".
+   - Defaults I picked: energy is the number the plan works on first; U1 becomes options for today, not orders, led by
+     "what hurts you most" (Q8); U5 tracks body fat % from his scale instead of the waist (Q6); Q7's button is U2's
+     "I knew that". U8 is a no, but a skin tracker stays one sentence away once X5 exists.
+   - Phase 1, the decided cleanup and the AI's wrong answers (no canvas needed; small first, landed one or two at a
+     time): X1 the chat knows what the app can do (his music answer); T1 yesterday's asks stay, each with "Don't
+     remember"; T3 the morning read leaves at noon; T4 "From your data" one line; A1 no readiness number in messages;
+     A2 the AI tab's intro one line; I6 the food score's line; W1–W3 Workout; L3–L5 Log; S1 Settings order; I4 Sleep's
+     numbers once; I5 Data into Settings; T5 did your tip help; T6 tips from check-in notes; T2 one stack ask.
+   - Phase 2, AI powers (Q10: small things by itself with Undo): X3 the chat's test takes anything; X2 chips and
+     questions it adds; X9 "Added by the AI" with Remove; X4 dated promises; X10 Wanted; X6 pins; X7 rules + U2 "I
+     knew that"; X8 program and meals; X5 trackers from one sentence; T2's supplement watch (research, side effects,
+     dose, short and long term; the questions after starting or changing one).
+   - Phase 3, canvas first (his "have a look on the designs too, possible remake some"): U1 today's options + what
+     hurts you most, energy first; U3 "I feel flat"; U4 the weekly review; U5 the 12-week program; U6 the 4×4; U7 one
+     wake time; U11 the monthly card, no photo; U12 experiments you plan; I1–I3 Insights; L1–L2 one box; a design pass
+     over the screens he wants remade; notifications he picks one by one (Q4; lib/push exists).
