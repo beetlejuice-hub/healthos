@@ -3088,8 +3088,8 @@ both reads and the questions. Phases in that order; #152 RPE waits (owner).
      the App Store page doesn't say which numbers (some listings say weight and BMI only). A web app can't read Apple
      Health and Fitbit on iPhone doesn't either, so the free automatic way is an Apple Shortcut, once a day: the
      newest weight and body fat from Health → POST to the Worker with a personal key → weigh-ins arrive by themselves.
-     Waiting on him: does Health → Body Measurements → Body Fat Percentage list MovingLife? If not, a body fat % box
-     next to the weight in Log → Body. Home-scale body fat is rough in absolute terms; U5 uses its trend (7-day
+     Waiting on him: does Health → Body Measurements → Body Fat Percentage list MovingLife? If not, Today's weigh-in
+     already takes it ("fat %" next to the kg, found 29 Oct) — nothing to build. Home-scale body fat is rough in absolute terms; U5 uses its trend (7-day
      average, same time each morning), never one reading.
    - [x] X1 (29 Oct): the chat now carries what the app can already do (tasks APP_CAN): your own "up to" words are
      tags the check-in finder tests (4 stretches with, 4 without, 60 days), notes aren't tested, Watching for "X helps
@@ -3107,6 +3107,13 @@ both reads and the questions. Phases in that order; #152 RPE waits (owner).
      smoke.test + ghost.test (the cigarettes one fails without smokeAnswered); e2e dontremember (14 checks: A at 320,
      B at 390, reloads, control: tonight's cigarettes still asks at 21:00; fails without the fix); smoke / foodgap
      e2e updated for the new words.
+   - [x] T3 (29 Oct): the morning read goes to "Done today: morning read ›" by itself at 12:00 — never before it's had
+     2 hours (written at a first open at 13:00 → 15:00); a tap brings it back and that sticks through reloads (ForYou
+     `away` + `kept`). morning.test (3) + e2e readaway (6; the 12:05 check fails without it; control: the 13:00 read).
+   - [x] T4 (29 Oct): "From your data" says one thing (components/FromYourData): a lead you haven't seen, unless the
+     pattern card above already draws it, else Noticed's top finding, else the next answer; the findings engine runs
+     once (it ran twice) and every 10 minutes. e2e noticed (one line, the lead first; seen → Noticed) and todaypattern
+     (the card's link isn't repeated — fails without the check). ScoutLine and DataCard removed.
    - Phase 1, the decided cleanup and the AI's wrong answers (no canvas needed; small first, landed one or two at a
      time): X1 the chat knows what the app can do (his music answer); T1 yesterday's asks stay, each with "Don't
      remember"; T3 the morning read leaves at noon; T4 "From your data" one line; A1 no readiness number in messages;

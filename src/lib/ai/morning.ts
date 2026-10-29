@@ -45,6 +45,14 @@ export function morningShown(d: Read, night: Read, now: number): boolean {
   return now < atMinute(addDays(d.day, 1), SHOWN.morningUntil * 60);
 }
 
+/**
+ * When the morning read leaves For you by itself (reform T3: "At 12:00 it moves to “Done today: morning read ›” on its
+ * own. It's still one tap away."): noon, but never before it's had 2 hours — one written at your first open at 13:00
+ * stays till 15:00. Pure.
+ */
+export const AWAY = { morning: 12, minH: 2 } as const;
+export const morningAway = (d: Read, now: number): boolean => !!d && d.at != null && now >= Math.max(atMinute(d.day, AWAY.morning * 60), d.at + AWAY.minH * H);
+
 export function nightShown(n: Read, morning: Read, now: number): boolean {
   if (!n || n.at == null || now < n.at) return false;
   if (morning && freshRead(morning) && morning.day > n.day && morning.at! > n.at && morning.at! <= now) return false;

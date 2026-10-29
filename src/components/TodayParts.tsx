@@ -132,12 +132,3 @@ export function UsualPicker({ onDone }: { onDone: () => void }) {
   );
 }
 
-/** Below the fold: what the data says, in one card. */
-export function DataCard({ children }: { children: ReactNode }) {
-  return (
-    <section className="card t2-data" aria-label="From your data">
-      <h3>From your data</h3>
-      {children}
-    </section>
-  );
-}

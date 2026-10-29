@@ -13,9 +13,8 @@ import { checkWeight, type Guard } from "../lib/sanity";
 import { act, offerUndo, useStore } from "../lib/store";
 import { DRINKS } from "../lib/drinks";
 import { nowItems, QUIET_MS } from "../lib/today";
-import { notice } from "../lib/findings";
 import { StackAlert } from "../components/StackCheck";
-import { ScoutLine } from "../components/Scout";
+import { FromYourData } from "../components/FromYourData";
 import { AiQuestions, MorningRead, NightRead } from "../components/Ai";
 import { bloodMg, caffeineAt, caffeineInBlood, latestDoseFor } from "../lib/caffeine";
 import { bedtimeVerdict, CAF_SLEEP, chartMax, personalSleep, ratedNights, tierOf, tonightsBed, type Personal } from "../lib/caffeine-sleep";
@@ -23,7 +22,7 @@ import { caffeineDoses } from "../lib/insights";
 import { add, byDay, macrosOf, ZERO } from "../lib/nutrition";
 import { atMinute, clock, dayLabel, localDay, MIN, addDays, quarterDown } from "../lib/time";
 import { go, OPEN_CARD, openCard } from "../lib/nav";
-import { morningShown, nightShown } from "../lib/ai/morning";
+import { morningAway, morningShown, nightShown } from "../lib/ai/morning";
 import { ForYou, type Ask } from "../components/ForYou";
 import { NightCheckAsk } from "../components/NightCheckAsk";
 import { TipAsk } from "../components/TipAsk";
@@ -41,11 +40,10 @@ import { Tonight } from "../components/Tonight";
 import { RecoveryCard } from "../components/RecoveryCard";
 import { extrasOn } from "../lib/supplog";
 import { CatchUp } from "../components/CatchUp";
-import { DataCard, EveningRead, NowCard, Pad, Status, UsualPicker, useStackCount } from "../components/TodayParts";
+import { EveningRead, NowCard, Pad, Status, UsualPicker, useStackCount } from "../components/TodayParts";
 import { FoodDay } from "../components/FoodDay";
 import { dayNumbers, momentOf } from "../lib/moment";
 import { restDay } from "../lib/programs";
-import { currentKg } from "../lib/body";
 import { balance } from "../lib/burn";
 import { useBand } from "../lib/band-client";
 
@@ -161,7 +159,7 @@ export function Today() {
     { key: "tip", name: "your own tip", node: <TipAsk now={now} /> },
     ...due.filter((it) => !later(it)).map(dueAsk),
     { key: "week", name: "your week", node: <WeekAsk now={now} />, read: true },
-    ...(mrShown ? [{ key: "morning", name: "morning read", node: <MorningRead />, read: true }] : []),
+    ...(mrShown ? [{ key: "morning", name: "morning read", node: <MorningRead />, read: true, away: morningAway(ai.digest, now) }] : []),
     ...(nrShown ? [{ key: "night", name: "your day, read back", node: <NightRead />, read: true }] : []),
     { key: "questions", name: "a quick question", node: <AiQuestions /> },
     // what you asked it to look out for: its evening question (lib/watch; owner, 28 Oct: "give me followup questions")
@@ -213,11 +211,7 @@ export function Today() {
       <TodayPattern now={now} />
 
       {foodDay && <FoodDay day={foodDay} onClose={() => setFoodDay(null)} />}
-      <DataCard>
-        <NoticedLine />
-        <ScoutLine />
-        <NextAnswer />
-      </DataCard>
+      <FromYourData now={now} />
       <NoticeBox />
     </div>
   );
@@ -443,31 +437,6 @@ function Stack({ now, onClose }: { now: number; onClose: () => void }) {
   );
 }
 
-/**
- * One line from Noticed: the top finding, until you ✕ it. It comes back only when the finding
- * itself changes (a new number), so Today stays calm.
- */
-function NoticedLine() {
-  const now = useNow(10 * 60_000);
-  const entries = useStore((x) => x.entries);
-  const goals = useStore((x) => x.goals);
-  const settings = useStore((x) => x.settings);
-  const workouts = useStore((x) => x.workouts);
-  const supplements = useStore((x) => x.supplements);
-  // Today shows one line: the strongest finding that isn't just a description of you.
-  const top = useMemo(() => notice(entries, goals, now, currentKg(entries, settings.bodyKg, now), { workouts, supplements, settings }).found.find((f) => f.id !== "baseline"), [entries, goals, now, settings, workouts, supplements]);
-  const key = top ? `${top.id}:${top.value}` : "";
-  const [hidden, setHidden] = useState(() => { try { return localStorage.getItem("healthos.noticed.hidden") ?? ""; } catch { return ""; } });
-  if (!top || hidden === key) return null;
-  const hide = (e: React.MouseEvent) => { e.preventDefault(); setHidden(key); try { localStorage.setItem("healthos.noticed.hidden", key); } catch { /* private mode */ } };
-  return (
-    <a className="noticed-line" href={`#insights/connections`} onClick={() => setTimeout(() => document.getElementById(`n-${top.id}`)?.scrollIntoView({ behavior: "smooth" }), 150)}>
-      <span><small>Noticed</small>{top.title}.</span>
-      <button type="button" aria-label="Hide this" onClick={hide}>✕</button>
-    </a>
-  );
-}
-
 /** A workout left open shows here too, so it isn't only visible from the Workout tab. */
 function WorkoutRunning({ now }: { now: number }) {
   const w = useStore((x) => x.workouts.find((v) => v.endedAt === null));
@@ -516,20 +485,3 @@ function WeighIn({ lastKg }: { lastKg: number | null }) {
 }
 
 
-/** The nearest answer Noticed is working towards, and what it still needs — progress you can see. */
-function NextAnswer() {
-  const now = useNow(10 * 60_000);
-  const entries = useStore((x) => x.entries);
-  const goals = useStore((x) => x.goals);
-  const settings = useStore((x) => x.settings);
-  const workouts = useStore((x) => x.workouts);
-  const supplements = useStore((x) => x.supplements);
-  const next = useMemo(() => notice(entries, goals, now, currentKg(entries, settings.bodyKg, now), { workouts, supplements, settings }).checking[0], [entries, goals, now, settings, workouts, supplements]);
-  if (!next) return null;
-  return (
-    <a className="nextanswer" href="#insights">
-      <span><small>Next answer</small>{next.question}<em>needs {next.missing}</em></span>
-      <span className="bar" aria-label={`${Math.round(next.progress * 100)}% there`}><i style={{ width: `${Math.round(next.progress * 100)}%` }} /></span>
-    </a>
-  );
-}

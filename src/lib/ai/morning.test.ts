@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { digestDue, freshRead, morningShown, nightIn, nightShown } from "./morning";
+import { digestDue, freshRead, morningAway, morningShown, nightIn, nightShown } from "./morning";
 import type { SleepSession } from "../band";
 
 // Owner, 16 Oct: "looks like app does daily read based on yyesterdays data" — the 16 Oct read was written on the 15th at
@@ -75,5 +75,20 @@ describe("each read until the next one replaces it", () => {
     expect(nightShown(late, m21, at("21", "09:00"))).toBe(true); // the morning read came first
     expect(morningShown(m21, late, at("21", "09:00"))).toBe(true); // a read-back for yesterday doesn't hide today's
     expect(nightShown(late, m21, at("21", "12:01"))).toBe(false);
+  });
+});
+
+describe("the morning read leaves For you by itself (reform T3)", () => {
+  const D = "2026-10-29", at = (hm: string) => new Date(`${D}T${hm}:00`).getTime();
+  it("written at 08:00: on show at 11:59, away at 12:00", () => {
+    const d = { day: D, at: at("08:00") };
+    expect([morningAway(d, at("11:59")), morningAway(d, at("12:00"))]).toEqual([false, true]);
+  });
+  it("written at your first open at 13:00: it still gets 2 hours", () => {
+    const d = { day: D, at: at("13:00") };
+    expect([morningAway(d, at("14:59")), morningAway(d, at("15:00"))]).toEqual([false, true]);
+  });
+  it("no read, or one that doesn't say when it was written: never put away by itself", () => {
+    expect([morningAway(null, at("20:00")), morningAway({ day: D }, at("20:00"))]).toEqual([false, false]);
   });
 });

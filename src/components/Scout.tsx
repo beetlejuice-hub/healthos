@@ -93,18 +93,5 @@ export function WorthALook({ items, onShow }: { items: Scouted[]; onShow: (f: Gr
   );
 }
 
-/** Today: one line for a pattern you haven't looked at yet. */
-export function ScoutLine() {
-  const items = useScout();
-  const fresh = useMemo(() => items.find((x) => !x.memo), [items]);
-  if (!fresh) return null;
-  return (
-    <a className="noticed-line" href="#insights/connections" onClick={() => setTimeout(() => document.getElementById("scout")?.scrollIntoView({ behavior: "smooth" }), 150)}>
-      <span><small>New lead</small>{fresh.p.text} — {fresh.p.held} of {fresh.p.of} times.</span>
-      <span className="r">→</span>
-    </a>
-  );
-}
-
 /** For the Insights tab dot. */
 export const useScoutUnseen = () => useScout().filter((x) => !x.memo).length;

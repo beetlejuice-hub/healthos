@@ -56,6 +56,8 @@ function world(planted) {
     await pg.mouse.click(first.x + first.width / 2, first.y + first.height / 2); await pg.waitForTimeout(100);
     const hit = await card.locator('.tp-hit').innerText();
     check(`${width}: a tap on a dot names its day (${hit})`, /^\w{3} \d{1,2} \w{3}: \d+ mg → your sleep rating \d+ the next day$/.test(hit) && box.width > 0);
+    // reform T4: the lead the card draws isn't said again under "From your data"
+    check(`${width}: "From your data" doesn't repeat the card's link`, !/New lead[\s\S]*caffeine/i.test(await pg.locator('section.t2-data').innerText().catch(() => '')));
     const sw = await pg.evaluate(() => document.documentElement.scrollWidth);
     check(`${width}: fits (${sw} px)`, sw <= width);
     await card.screenshot({ path: OUT + `todaypattern-${width}.png` });

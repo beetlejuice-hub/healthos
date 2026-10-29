@@ -58,12 +58,17 @@ function Scatter({ c }: { c: PatternCard }) {
   );
 }
 
-export function TodayPattern({ now }: { now: number }) {
+/** The cards Today draws — also what "From your data" leaves out, so a lead isn't said twice. */
+export function useTodayPatterns(now: number): PatternCard[] {
   const scouted = useScout();
   const entries = useStore((s) => s.entries), workouts = useStore((s) => s.workouts), settings = useStore((s) => s.settings), band = useBand().data;
   const today = localDay(now);
   const facts = useMemo(() => withBand(dailyFacts(entries, workouts, settings, addDays(today, -PATTERN.days - 2), today), band, today), [entries, workouts, settings, today, band]);
-  const cards = useMemo(() => patternCards(scouted.map((x) => x.p), facts, today), [scouted, facts, today]);
+  return useMemo(() => patternCards(scouted.map((x) => x.p), facts, today), [scouted, facts, today]);
+}
+
+export function TodayPattern({ now }: { now: number }) {
+  const cards = useTodayPatterns(now);
   const [i, setI] = useState(0);
   if (!cards.length) return null;
   const k = i % cards.length, c = cards[k], next = cards.length > 1 ? cards[(k + 1) % cards.length] : null;

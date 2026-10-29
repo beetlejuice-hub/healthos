@@ -11,10 +11,12 @@
 
 import { useLayoutEffect, useRef, useState, type ReactNode } from "react";
 
-export type Ask = { key: string; name: string; node: ReactNode; /** a read: "Done" instead of "Skip" */ read?: boolean };
+export type Ask = { key: string; name: string; node: ReactNode; /** a read: "Done" instead of "Skip" */ read?: boolean;
+  /** a read that's had its time goes to "Done today" by itself (reform T3: the morning read at noon) */ away?: boolean };
 
-/** `away`: reads marked Done (a skip used to land here too; those are ignored now and come back). `cur`: the ask on show. */
-type Day = { day: string; seen: string[]; away: string[]; cur?: string };
+/** `away`: reads marked Done (a skip used to land here too; those are ignored now and come back). `kept`: reads that went
+ * by themselves and were tapped back. `cur`: the ask on show. */
+type Day = { day: string; seen: string[]; away: string[]; kept?: string[]; cur?: string };
 const KEY = "healthos.foryou";
 const load = (day: string): Day => {
   try { const d = JSON.parse(localStorage.getItem(KEY) ?? "null") as Day | null; if (d?.day === day) return d; } catch { /* blocked storage: today only, in memory */ }
@@ -48,7 +50,8 @@ export function ForYou({ asks, day }: { asks: Ask[]; day: string }) {
     return () => mo.disconnect();
   }, []);
   const isRead = (k: string) => asks.some((a) => a.key === k && a.read);
-  const left = present.filter((k) => !(isRead(k) && st.away.includes(k)));
+  const gone = (k: string) => st.away.includes(k) || (asks.some((a) => a.key === k && a.away) && !(st.kept ?? []).includes(k));
+  const left = present.filter((k) => !(isRead(k) && gone(k)));
   // the ask on show: the one you left it on; once that's answered, the one after it in Today's order
   const order = asks.map((a) => a.key), after = st.cur ? order.slice(order.indexOf(st.cur) + 1) : [];
   const cur = st.cur && left.includes(st.cur) ? st.cur : (after.find((k) => left.includes(k)) ?? left[0]);
@@ -57,8 +60,8 @@ export function ForYou({ asks, day }: { asks: Ask[]; day: string }) {
   const put = (n: Day) => { setState(n); save(n); };
   const step = (d: 1 | -1) => put({ ...st, cur: left[(i + d + left.length) % left.length] });
   const done = (k: string) => put({ ...st, away: [...st.away, k], cur: many ? left[(i + 1) % left.length] : undefined, seen: st.seen.includes(k) ? st.seen : [...st.seen, k] });
-  const back = (k: string) => put({ ...st, away: st.away.filter((x) => x !== k), cur: k });
-  const reads = asks.filter((a) => a.read && st.away.includes(a.key) && present.includes(a.key));
+  const back = (k: string) => put({ ...st, away: st.away.filter((x) => x !== k), kept: [...(st.kept ?? []).filter((x) => x !== k), k], cur: k });
+  const reads = asks.filter((a) => a.read && gone(a.key) && present.includes(a.key));
   return (
     <section className="card fy" aria-label="For you" data-n={left.length} hidden={!left.length && !reads.length}>
       {cur && <div className="fy-top">

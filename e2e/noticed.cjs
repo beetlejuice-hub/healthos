@@ -20,6 +20,15 @@ const { chromium, APP, OUT, handle } = require('./harness.cjs');
       await pg.goto(APP + '#settings'); await pg.getByRole('button', { name: /Load sample/ }).click(); await pg.waitForTimeout(300);
     }
     await pg.goto(APP + '#today'); await pg.waitForTimeout(400);
+    // reform T4 (owner, 29 Oct: Yes to "One line, the newest thing worth knowing"): "From your data" says one thing —
+    // a lead you haven't seen comes first; seen on Insights, Noticed's line is what's left
+    const lines = () => pg.locator('section.t2-data').locator('.noticed-line, .nextanswer');
+    if (name === 'phone') {
+      check(`phone: From your data says one thing, the new lead first (${(await lines().allInnerTexts()).join(' | ').replace(/\s+/g, ' ').slice(0, 140)})`, await lines().count() === 1 && /^new lead/i.test(await lines().first().innerText()));
+      await pg.goto(APP + '#insights/connections'); await pg.waitForTimeout(800);
+      await pg.goto(APP + '#today'); await pg.waitForTimeout(400);
+      check('phone: leads seen → still one line, now Noticed', await lines().count() === 1 && await nline().count() === 1);
+    }
     const line = await nline().innerText().catch(() => '');
     check(name + ': Today shows one Noticed line', /NOTICED|Noticed/.test(line) && /You burn about [\d,]+ kcal a day/.test(line));
     await pg.screenshot({ path: out + `n-today-${name}.png` });
