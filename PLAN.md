@@ -3084,6 +3084,13 @@ both reads and the questions. Phases in that order; #152 RPE waits (owner).
    - Defaults I picked: energy is the number the plan works on first; U1 becomes options for today, not orders, led by
      "what hurts you most" (Q8); U5 tracks body fat % from his scale instead of the waist (Q6); Q7's button is U2's
      "I knew that". U8 is a no, but a skin tracker stays one sentence away once X5 exists.
+   - His scale (owner, 29 Oct: "i use MovingLife"): MovingLife (Zhongshan Camry) saves to Apple Health on his iPhone;
+     the App Store page doesn't say which numbers (some listings say weight and BMI only). A web app can't read Apple
+     Health and Fitbit on iPhone doesn't either, so the free automatic way is an Apple Shortcut, once a day: the
+     newest weight and body fat from Health → POST to the Worker with a personal key → weigh-ins arrive by themselves.
+     Waiting on him: does Health → Body Measurements → Body Fat Percentage list MovingLife? If not, a body fat % box
+     next to the weight in Log → Body. Home-scale body fat is rough in absolute terms; U5 uses its trend (7-day
+     average, same time each morning), never one reading.
    - [x] X1 (29 Oct): the chat now carries what the app can already do (tasks APP_CAN): your own "up to" words are
      tags the check-in finder tests (4 stretches with, 4 without, 60 days), notes aren't tested, Watching for "X helps
      me" (music → cause doing / music / focus), experiments, own tips, compare's limits, no promise of a later
