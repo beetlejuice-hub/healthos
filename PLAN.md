@@ -3084,6 +3084,14 @@ both reads and the questions. Phases in that order; #152 RPE waits (owner).
    - Defaults I picked: energy is the number the plan works on first; U1 becomes options for today, not orders, led by
      "what hurts you most" (Q8); U5 tracks body fat % from his scale instead of the waist (Q6); Q7's button is U2's
      "I knew that". U8 is a no, but a skin tracker stays one sentence away once X5 exists.
+   - [x] X1 (29 Oct): the chat now carries what the app can already do (tasks APP_CAN): your own "up to" words are
+     tags the check-in finder tests (4 stretches with, 4 without, 60 days), notes aren't tested, Watching for "X helps
+     me" (music → cause doing / music / focus), experiments, own tips, compare's limits, no promise of a later
+     comparison unless a watch or experiment will run it. Cause, from the code: the chat saw the tags in the data but
+     nothing said how the app tests them. appcan.test: the chat carries it (fails without), its numbers and tag names
+     are the code's, a planted +2 focus after his own "music" tag is found at about +2 (7+ of 8 fake months), the
+     same lift written only in the note isn't tested, a tag with nothing behind it isn't found. Not checkable here:
+     what the real model answers now (the e2e AI is a fake).
    - Phase 1, the decided cleanup and the AI's wrong answers (no canvas needed; small first, landed one or two at a
      time): X1 the chat knows what the app can do (his music answer); T1 yesterday's asks stay, each with "Don't
      remember"; T3 the morning read leaves at noon; T4 "From your data" one line; A1 no readiness number in messages;
