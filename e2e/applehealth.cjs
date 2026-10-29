@@ -63,9 +63,11 @@ const SAMPLES = ['2026-10-27', '2026-10-28', '2026-10-29'].flatMap((d, i) => [
   await ctx.close();
 
   // a try that didn't work says what came (owner, 29 Oct: "now it says 400 bad request")
-  ({ ctx, pg, st } = await open(390, { samples: [], last: null, key: true, fail: { at: T('2026-10-29T10:20:00'), error: 'nothing readable came (application/json, 0 bytes) — Get Contents of URL → Request Body should be JSON with the 7 fields' } }));
+  ({ ctx, pg, st } = await open(390, { samples: [], last: { at: T('2026-10-29T10:25:00'), types: ['weight', 'walk'], skipped: { fat: "fatAt “Oct 29, 2026 at 7:31 AM” isn't a date — set its Date Format to ISO 8601 with the time on" } }, key: true, fail: { at: T('2026-10-29T10:20:00'), error: 'nothing readable came (application/json, 0 bytes) — Get Contents of URL → Request Body should be JSON with the 7 fields' } }));
   await pg.goto(APP + '#settings'); await pg.waitForSelector('#applehealth');
-  check(`a failed try is shown with what came (${await pg.locator('#applehealth .ah-fail').innerText().catch(() => '')})`, /^Last try didn't work \(Thu 29 Oct 10:20\): nothing readable came \(application\/json, 0 bytes\)/.test(await pg.locator('#applehealth .ah-fail').innerText().catch(() => '')));
+  // a field that came but was left out says why (owner, 29 Oct: "now it says got weight walk ok true")
+  check(`a field left out says why (${await pg.locator('#applehealth .ah-fail').first().innerText().catch(() => '')})`, /^body fat left out: fatAt “Oct 29, 2026 at 7:31 AM” isn't a date — set its Date Format to ISO 8601 with the time on$/.test(await pg.locator('#applehealth .ah-fail').first().innerText().catch(() => '')));
+  check(`a failed try is shown with what came (${await pg.locator('#applehealth .ah-fail').last().innerText().catch(() => '')})`, /^Last try didn't work \(Thu 29 Oct 10:20\): nothing readable came \(application\/json, 0 bytes\)/.test(await pg.locator('#applehealth .ah-fail').last().innerText().catch(() => '')));
   await ctx.close();
 
   ({ ctx, pg, st } = await open(390, { samples: [], last: null, key: false }));

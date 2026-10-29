@@ -15,7 +15,7 @@ import {
   type HrMinute, type Page, type RollUpPage, type SleepSession, type StepBucket,
 } from "../src/lib/band";
 import type { Vo2Day } from "../src/lib/vo2";
-import { keepSamples, readPost, type HealthSample } from "../src/lib/healthimport";
+import { keepSamples, readPostWhy, type HealthSample } from "../src/lib/healthimport";
 
 export type BandEnv = {
   GOOGLE_CLIENT_ID?: string; GOOGLE_CLIENT_SECRET?: string;
@@ -262,13 +262,13 @@ export class BandHub {
       const hash = await this.storage.get<string>("health:key"), given = String(body.hash ?? "");
       if (!hash || hash.length !== given.length || [...hash].reduce((d, c, i) => d | (c.charCodeAt(0) ^ given.charCodeAt(i)), 0) !== 0) return json({ error: "wrong key — make a new one in HealthOS → Settings → Apple Health" }, 401);
       if (typeof body.fail === "string") { await this.storage.put("health:fail", { at: this.now(), error: body.fail }); return json({ error: body.fail }, 400); }
-      const got = readPost(body.post, this.now());
+      const { samples: got, skipped } = readPostWhy(body.post, this.now());
       await this.storage.put("health:samples", keepSamples((await this.storage.get<HealthSample[]>("health:samples")) ?? [], got, this.now()));
-      await this.storage.put("health:last", { at: this.now(), types: got.map((s) => s.type) });
+      await this.storage.put("health:last", { at: this.now(), types: got.map((s) => s.type), ...(Object.keys(skipped).length ? { skipped } : {}) });
       await this.storage.delete("health:fail");
       // nothing usable in a readable post: say which fields came, so a wrong key name or an empty value shows
       if (!got.length) { const keys = Object.keys((body.post ?? {}) as object); const fail = `came, but nothing usable — fields: ${keys.join(", ") || "none"}; values: ${JSON.stringify(body.post).slice(0, 160)}`; await this.storage.put("health:fail", { at: this.now(), error: fail }); return json({ ok: false, error: fail }); }
-      return json({ ok: true, got: got.map((s) => s.type) });
+      return json({ ok: true, got: got.map((s) => s.type), ...(Object.keys(skipped).length ? { skipped } : {}) });
     }
     if (path === "health-data") return json({ samples: (await this.storage.get<HealthSample[]>("health:samples")) ?? [], last: (await this.storage.get("health:last")) ?? null, fail: (await this.storage.get("health:fail")) ?? null, key: !!(await this.storage.get<string>("health:key")) });
     if (path === "status") return json(await this.status());

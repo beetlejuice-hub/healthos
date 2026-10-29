@@ -10,7 +10,7 @@ import { act, getState } from "./store";
 import { onSyncSettled, syncSettled } from "./session";
 import { weighInsToAdd, type HealthSample } from "./healthimport";
 
-export type HealthLast = { at: number; types: string[] } | null;
+export type HealthLast = { at: number; types: string[]; /** a field that came but was left out, and why */ skipped?: Record<string, string> } | null;
 /** "off": the server can't take it (503). null: not asked yet. */
 /** `fail`: the last try that didn't work, with what came — shown in Settings until a good one. */
 type State = { samples: HealthSample[]; last: HealthLast; fail: { at: number; error: string } | null; key: boolean | null; off: boolean };

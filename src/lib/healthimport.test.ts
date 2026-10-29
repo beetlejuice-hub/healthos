@@ -3,7 +3,7 @@
 // readings that can't be right, from the future or too old are dropped; weigh-ins are made once, with the body fat
 // weighed with them, never doubling one you typed, never bringing back one you deleted.
 import { describe, expect, it } from "vitest";
-import { HEALTH, healthId, keepSamples, readPost, toUnit, weighInsToAdd, type HealthSample } from "./healthimport";
+import { HEALTH, healthId, keepSamples, readPost, readPostWhy, toUnit, weighInsToAdd, type HealthSample } from "./healthimport";
 import { bodyFat } from "./bodyfat";
 import type { Entry } from "./types";
 
@@ -21,6 +21,18 @@ describe("what the Shortcut sends", () => {
     expect(readPost({ weight: 82, weightAt: "2026-10-30T07:31:00+02:00" }, NOW)).toEqual([]);
     expect(readPost({ weight: 82, weightAt: new Date(NOW - 401 * DAY).toISOString() }, NOW)).toEqual([]);
     expect([readPost(null, NOW), readPost({}, NOW), readPost({ weight: 82 }, NOW)]).toEqual([[], [], []]);
+  });
+  it("a field that came but was left out says why (owner, 29 Oct: \"got weight walk ok true\" — body fat silently missing)", () => {
+    const at = "2026-10-29T07:31:00+02:00";
+    const why = (b: Record<string, unknown>) => readPostWhy({ weight: 82.4, weightAt: at, ...b }, NOW);
+    expect(why({ fat: 18.6, fatAt: "Oct 29, 2026 at 7:31 AM" }).skipped).toEqual({ fat: "fatAt “Oct 29, 2026 at 7:31 AM” isn't a date — set its Date Format to ISO 8601 with the time on" });
+    expect(why({ fat: 18.6 }).skipped).toEqual({ fat: "fatAt is missing" });
+    expect(why({ fat: "Body Fat Percentage", fatAt: at }).skipped).toEqual({ fat: "fat “Body Fat Percentage” isn't a number — pick its Value" });
+    expect(why({ fat: 85, fatAt: at }).skipped).toEqual({ fat: "fat “85” isn't believable (3–60 %)" });
+    expect(why({ fat: "", fatAt: at }).skipped).toEqual({ fat: "fatAt came but fat was empty" });
+    // controls: a good one has no reason; a field that didn't come at all isn't "left out"
+    expect(why({ fat: "18,6", fatAt: at })).toEqual({ samples: [{ type: "weight", at: Date.parse(at), value: 82.4 }, { type: "fat", at: Date.parse(at), value: 18.6 }], skipped: {} });
+    expect(why({}).skipped).toEqual({});
   });
   it("kept: the same reading twice is one; the newest post wins; by time; older than kept → gone", () => {
     const a: HealthSample = { type: "weight", at: NOW - DAY, value: 82 }, b: HealthSample = { type: "weight", at: NOW - 2 * DAY, value: 82.6 };

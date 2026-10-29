@@ -20,7 +20,8 @@ export const HEALTH = { keepDays: 400, sameWeighInMin: 30, fatWithWeightMin: 10,
 const MIN = 60_000, DAY = 86_400_000;
 
 const num = (v: unknown): number | null => {
-  const n = typeof v === "number" ? v : typeof v === "string" ? Number(v.replace(",", ".").replace(/[^\d.+-]/g, "")) : NaN;
+  // text without a digit isn't 0 (stripped, "Body Fat Percentage" was "" — and Number("") is 0)
+  const n = typeof v === "number" ? v : typeof v === "string" && /\d/.test(v) ? Number(v.replace(",", ".").replace(/[^\d.+-]/g, "")) : NaN;
   return Number.isFinite(n) ? n : null;
 };
 const when = (v: unknown): number | null => {
@@ -49,16 +50,31 @@ export function toUnit(type: HealthType, value: number, unit = ""): number | nul
  * What one post says: { weight, weightUnit, weightAt, fat, fatAt, walk, walkUnit, walkAt } (any of them; the Shortcut
  * leaves out what Health hasn't got). A reading from the future (an hour's slack) or older than we keep is dropped.
  */
-export function readPost(body: unknown, now: number): HealthSample[] {
-  if (!body || typeof body !== "object") return [];
-  const b = body as Record<string, unknown>, out: HealthSample[] = [];
+export const readPost = (body: unknown, now: number): HealthSample[] => readPostWhy(body, now).samples;
+
+const RANGE: Record<HealthType, string> = { weight: "20–400 kg", fat: `${FAT.lo}–${FAT.hi} %`, walk: "0.5–12 km/h" };
+const said = (v: unknown) => `“${String(v).slice(0, 40)}”`;
+
+/**
+ * …and why a field that came was left out (owner, 29 Oct, the first run: "now it says got weight walk ok true" — body
+ * fat missing and nothing to say why): said back to the Shortcut and shown in Settings.
+ */
+export function readPostWhy(body: unknown, now: number): { samples: HealthSample[]; skipped: Partial<Record<HealthType, string>> } {
+  const samples: HealthSample[] = [], skipped: Partial<Record<HealthType, string>> = {};
+  if (!body || typeof body !== "object") return { samples, skipped };
+  const b = body as Record<string, unknown>;
   for (const type of ["weight", "fat", "walk"] as const) {
-    const v = num(b[type]), at = when(b[`${type}At`]);
-    if (v == null || at == null || at > now + HEALTH.aheadMin * MIN || at < now - HEALTH.keepDays * DAY) continue;
+    const raw = b[type], rawAt = b[`${type}At`];
+    if (raw == null || raw === "") { if (rawAt != null && rawAt !== "") skipped[type] = `${type}At came but ${type} was empty`; continue; }
+    const v = num(raw), at = when(rawAt);
+    if (v == null) { skipped[type] = `${type} ${said(raw)} isn't a number — pick its Value`; continue; }
+    if (at == null) { skipped[type] = rawAt == null || rawAt === "" ? `${type}At is missing` : `${type}At ${said(rawAt)} isn't a date — set its Date Format to ISO 8601 with the time on`; continue; }
+    if (at > now + HEALTH.aheadMin * MIN || at < now - HEALTH.keepDays * DAY) { skipped[type] = `${type}At ${said(rawAt)} is ${at > now ? "in the future" : "over 400 days ago"}`; continue; }
     const value = toUnit(type, v, typeof b[`${type}Unit`] === "string" ? (b[`${type}Unit`] as string) : "");
-    if (value != null) out.push({ type, at, value });
+    if (value == null) { skipped[type] = `${type} ${said(raw)} isn't believable (${RANGE[type]})`; continue; }
+    samples.push({ type, at, value });
   }
-  return out;
+  return { samples, skipped };
 }
 
 /** The samples kept: new ones in, one per type and time (the newest post wins), nothing older than we keep, by time. */
