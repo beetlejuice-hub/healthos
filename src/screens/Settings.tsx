@@ -9,6 +9,7 @@ import { DailyGoals } from "../components/Energy";
 import { ResetAll } from "../components/ResetAll";
 import { Notifications } from "../components/Notifications";
 import { Band } from "../components/Band";
+import { AppleHealth } from "../components/AppleHealth";
 import { bandExport } from "../lib/band-client";
 
 const hhmm = (m: number) => `${String(Math.floor(m / 60)).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}`;
@@ -51,6 +52,7 @@ export function Settings({ tester, email }: { tester: boolean; email: string }) 
 
       <Notifications />
       <Band />
+      <AppleHealth />
 
       <div className="card">
         <h3>Sleep and body</h3>

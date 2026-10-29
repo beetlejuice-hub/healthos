@@ -130,6 +130,42 @@ export async function handleBand(req: Request, env: Env, f: typeof fetch = fetch
 }
 
 /**
+ * Apple Health in (PLAN 184; owner, 29 Oct: "i use MovingLife"). A daily Apple Shortcut on his phone posts the newest
+ * weight, body fat and walking speed; the app makes the key and pulls what came. Each account's samples live in its
+ * BandHub (no Google needed for this):
+ *   POST /api/health/key → { key, url } (signed in; a new key replaces the old — only its hash is kept)
+ *   POST /api/health/in  (Authorization: Bearer <account>.<secret>) ← { weight, weightUnit, weightAt, fat, fatAt, walk, walkUnit, walkAt }
+ *   GET  /api/health/data → { samples, last, key } (signed in)
+ */
+const sha256 = async (s: string) => [...new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(s)))].map((b) => b.toString(16).padStart(2, "0")).join("");
+
+export async function handleHealth(req: Request, env: Env, f: typeof fetch = fetch): Promise<Response> {
+  if (!env.BAND) return json({ error: "Apple Health isn't set up on this server" }, 503);
+  const url = new URL(req.url), op = url.pathname.replace(/^\/api\/health\/?/, "");
+  const hub = (id: string) => env.BAND!.get(env.BAND!.idFromName(id));
+  if (op === "in") {
+    if (req.method !== "POST") return json({ error: "POST only" }, 405);
+    const [id, secret] = (req.headers.get("authorization") ?? "").replace(/^Bearer\s+/i, "").trim().split(".");
+    if (!id || !secret || !/^[\w-]{2,64}$/.test(id) || !/^[0-9a-f]{48}$/.test(secret)) return json({ error: "wrong key — make a new one in HealthOS → Settings → Apple Health" }, 401);
+    const raw = await req.text();
+    if (raw.length > 8192) return json({ error: "too big" }, 413);
+    let post: unknown;
+    try { post = JSON.parse(raw); } catch { return json({ error: "not JSON — check the Shortcut's request body is JSON" }, 400); }
+    return hub(id).fetch(new Request("https://band/health-in", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ hash: await sha256(secret), post }) }));
+  }
+  if (op !== "key" && op !== "data") return json({ error: "not found" }, 404);
+  const user = await whoIs(req, env, { fetch: (u, i) => f(u, i), now: Date.now });
+  if (!user) return json({ error: "sign in first" }, 401);
+  if (op === "key") {
+    if (req.method !== "POST") return json({ error: "POST only" }, 405);
+    const secret = [...crypto.getRandomValues(new Uint8Array(24))].map((b) => b.toString(16).padStart(2, "0")).join("");
+    await hub(user.id).fetch(new Request("https://band/health-key", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ hash: await sha256(secret) }) }));
+    return json({ key: `${user.id}.${secret}`, url: `${url.origin}/api/health/in` });
+  }
+  return hub(user.id).fetch(new Request("https://band/health-data"));
+}
+
+/**
  * /now — the "How now?" check-in on its own. The same app page, but announcing itself as "How now?"
  * (title, icon, manifest), so "Add to Home Screen" from here makes a separate one-tap icon.
  */
@@ -148,6 +184,7 @@ export default {
     if (url.pathname === "/api/ai" || url.pathname === "/api/ai/usage") return handleAi(req, env, undefined, ctx);
     if (url.pathname.startsWith("/api/push/")) return handlePush(req, env);
     if (url.pathname.startsWith("/api/band/") || url.pathname === "/api/google/callback") return handleBand(req, env);
+    if (url.pathname.startsWith("/api/health/")) return handleHealth(req, env);
     if (url.pathname === "/now" || url.pathname === "/now/") {
       const page = await env.ASSETS.fetch(new Request(new URL("/", req.url)));
       return new Response(nowPage(await page.text()), { headers: { "content-type": "text/html; charset=utf-8", "cache-control": "no-cache" } });

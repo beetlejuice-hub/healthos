@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { BandHub, PULL_EVERY_MS } from "./band";
-import { handleBand } from "./index";
+import { handleBand, handleHealth } from "./index";
 import type { Storage } from "./push";
 import { readState } from "../src/lib/band";
 
@@ -469,5 +469,54 @@ describe("how fine the heart rate is", () => {
     await connect(h);
     await h.alarm();
     expect((await status(h)).gapSec).toBe(10);
+  });
+});
+
+describe("/api/health — Apple Health in (PLAN 184)", () => {
+  function world() {
+    const hubs = new Map<string, BandHub>();
+    const f = (async (input: RequestInfo | URL, init?: RequestInit) => {
+      const req = new Request(input, init);
+      if (new URL(req.url).pathname === "/auth/v1/user") return req.headers.get("authorization") === "Bearer good" ? Response.json({ id: "u1" }) : new Response("no", { status: 401 });
+      return new Response("no", { status: 404 });
+    }) as typeof fetch;
+    const BAND = { idFromName: (n: string) => n, get: (id: unknown) => { const k = String(id); if (!hubs.has(k)) hubs.set(k, new BandHub({ storage: fakeStorage() }, env, { now: () => NOW })); return hubs.get(k)!; } };
+    return { e: { BAND, ASSETS: { fetch: async () => new Response("") } }, f, hubs };
+  }
+  const NOW = Date.UTC(2026, 9, 29, 7, 0);
+  const call = (path: string, method: string, auth: string, body?: unknown) => new Request(`https://healthos.example${path}`, { method, headers: { authorization: `Bearer ${auth}`, "content-type": "application/json" }, body: body === undefined ? undefined : typeof body === "string" ? body : JSON.stringify(body) });
+  const POST = { weight: "82,4", weightUnit: "kg", weightAt: "2026-10-29T06:31:00Z", fat: 0.186, fatAt: "2026-10-29T06:31:00Z", walk: 4.9, walkUnit: "km/hr", walkAt: "2026-10-28T19:00:00Z" };
+
+  it("a key for you (signed in only); the Shortcut posts with it; the app pulls what came, in kg / % / km/h", async () => {
+    const { e, f, hubs } = world();
+    expect((await handleHealth(call("/api/health/key", "POST", "bad"), e as never, f)).status).toBe(401);
+    const { key, url } = (await (await handleHealth(call("/api/health/key", "POST", "good"), e as never, f)).json()) as { key: string; url: string };
+    expect(key).toMatch(/^u1\.[0-9a-f]{48}$/);
+    expect(url).toBe("https://healthos.example/api/health/in");
+    expect(JSON.stringify([...(hubs.get("u1")!.storage as ReturnType<typeof fakeStorage>).m.values()])).not.toContain(key.split(".")[1]); // only its hash
+    const r = await handleHealth(call("/api/health/in", "POST", key, POST), e as never, f);
+    expect(await r.json()).toEqual({ ok: true, got: ["weight", "fat", "walk"] });
+    const d = (await (await handleHealth(call("/api/health/data", "GET", "good"), e as never, f)).json()) as { samples: unknown[]; last: { at: number }; key: boolean };
+    expect(d.samples).toEqual([{ type: "walk", at: Date.parse("2026-10-28T19:00:00Z"), value: 4.9 }, { type: "weight", at: Date.parse("2026-10-29T06:31:00Z"), value: 82.4 }, { type: "fat", at: Date.parse("2026-10-29T06:31:00Z"), value: 18.6 }]);
+    expect([d.last.at, d.key]).toEqual([NOW, true]);
+  });
+  it("controls: a wrong key, no key, a key from before a new one, someone else's account → nothing kept", async () => {
+    const { e, f } = world();
+    const { key: old } = (await (await handleHealth(call("/api/health/key", "POST", "good"), e as never, f)).json()) as { key: string };
+    const { key } = (await (await handleHealth(call("/api/health/key", "POST", "good"), e as never, f)).json()) as { key: string };
+    for (const k of [old, `u1.${"0".repeat(48)}`, "u1", "", `u2.${key.split(".")[1]}`]) expect((await handleHealth(call("/api/health/in", "POST", k, POST), e as never, f)).status).toBe(401);
+    const d = (await (await handleHealth(call("/api/health/data", "GET", "good"), e as never, f)).json()) as { samples: unknown[] };
+    expect(d.samples).toEqual([]);
+    expect((await handleHealth(call("/api/health/in", "POST", key, "not json"), e as never, f)).status).toBe(400);
+    expect((await handleHealth(call("/api/health/in", "POST", key, "x".repeat(9000)), e as never, f)).status).toBe(413);
+    expect((await handleHealth(call("/api/health/in", "GET", key), e as never, f)).status).toBe(405);
+  });
+  it("the Shortcut running twice a day keeps one of each", async () => {
+    const { e, f } = world();
+    const { key } = (await (await handleHealth(call("/api/health/key", "POST", "good"), e as never, f)).json()) as { key: string };
+    await handleHealth(call("/api/health/in", "POST", key, POST), e as never, f);
+    await handleHealth(call("/api/health/in", "POST", key, POST), e as never, f);
+    const d = (await (await handleHealth(call("/api/health/data", "GET", "good"), e as never, f)).json()) as { samples: unknown[] };
+    expect(d.samples).toHaveLength(3);
   });
 });

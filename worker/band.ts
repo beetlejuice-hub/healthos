@@ -15,6 +15,7 @@ import {
   type HrMinute, type Page, type RollUpPage, type SleepSession, type StepBucket,
 } from "../src/lib/band";
 import type { Vo2Day } from "../src/lib/vo2";
+import { keepSamples, readPost, type HealthSample } from "../src/lib/healthimport";
 
 export type BandEnv = {
   GOOGLE_CLIENT_ID?: string; GOOGLE_CLIENT_SECRET?: string;
@@ -255,6 +256,17 @@ export class BandHub {
       await this.storage.setAlarm(this.now() + 2000); // first pull right away, in the background
       return json({ ok: true });
     }
+    // Apple Health in (PLAN 184): the key's hash (a new one replaces the old), what the Shortcut posts, what the app pulls
+    if (path === "health-key") { await this.storage.put("health:key", String(body.hash ?? "")); return json({ ok: true }); }
+    if (path === "health-in") {
+      const hash = await this.storage.get<string>("health:key"), given = String(body.hash ?? "");
+      if (!hash || hash.length !== given.length || [...hash].reduce((d, c, i) => d | (c.charCodeAt(0) ^ given.charCodeAt(i)), 0) !== 0) return json({ error: "wrong key — make a new one in HealthOS → Settings → Apple Health" }, 401);
+      const got = readPost(body.post, this.now());
+      await this.storage.put("health:samples", keepSamples((await this.storage.get<HealthSample[]>("health:samples")) ?? [], got, this.now()));
+      await this.storage.put("health:last", { at: this.now(), types: got.map((s) => s.type) });
+      return json({ ok: true, got: got.map((s) => s.type) });
+    }
+    if (path === "health-data") return json({ samples: (await this.storage.get<HealthSample[]>("health:samples")) ?? [], last: (await this.storage.get("health:last")) ?? null, key: !!(await this.storage.get<string>("health:key")) });
     if (path === "status") return json(await this.status());
     if (path === "sync") {
       const s = await this.sync();

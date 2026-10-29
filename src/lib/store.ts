@@ -103,6 +103,8 @@ export type Settings = {
   sex?: "male" | "female";
   /** The drink the one-tap button logs. Chosen on Today; ✕ clears it. */
   usualDrink: Drink | null;
+  /** The newest Apple Health weigh-in already brought in (PLAN 184): synced, so one you deleted doesn't come back. */
+  healthUntil?: number;
   /** Which reminders to send, once notifications are on (Settings → Notifications). */
   notify?: { checkins: boolean; supps: boolean; weigh: boolean; slump?: boolean };
   /** Two-week check-ins answered (lib/checkin): when, the rate then, and the calorie goal before/after. */
@@ -288,6 +290,11 @@ export const act = {
     const full = { ...e, id: newId() } as Entry;
     commit({ ...state, entries: [...state.entries, full].sort(byTime) });
     return full;
+  },
+  /** Entries that come with their own id (Apple Health's, the same on every phone): only the ones not here yet. */
+  importEntries(es: Entry[]) {
+    const have = new Set(state.entries.map((e) => e.id)), add = es.filter((e) => !have.has(e.id));
+    if (add.length) commit({ ...state, entries: [...state.entries, ...add].sort(byTime) });
   },
   updateEntry(id: string, patch: Partial<Entry>) {
     commit({ ...state, entries: state.entries.map((e) => (e.id === id ? ({ ...e, ...patch } as Entry) : e)).sort(byTime) });

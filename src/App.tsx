@@ -16,6 +16,7 @@ import { AiScreen, useAiAuto, useAiUnread } from "./components/Ai";
 import { useInbox } from "./components/useInbox";
 import { useEnergyGoal } from "./components/useEnergy";
 import { startBand } from "./lib/band-client";
+import { startHealth } from "./lib/health-client";
 
 /**
  * Four screens, one job each (owner, 29 Sept): Today = what needs you now; Log = add things;
@@ -38,7 +39,7 @@ export function App() {
 
   // The band's heart rate and sleep: pulled on open and every 15 minutes (lib/band-client).
   const signedIn = !!auth.session;
-  useEffect(() => { if (signedIn) startBand(); }, [signedIn]);
+  useEffect(() => { if (signedIn) { startBand(); startHealth(); } }, [signedIn]);
 
   // Forgotten workouts close themselves: on open, when the app comes back, and every few minutes.
   useEffect(() => {

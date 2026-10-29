@@ -3151,4 +3151,13 @@ both reads and the questions. Phases in that order; #152 RPE waits (owner).
      it). The Worker keeps 400 days per account in BandHub's storage; the app pulls on open and turns weight + body fat
      into weigh-ins (ids from the sample; one you typed within 30 min isn't doubled; settings.healthUntil, synced, so a
      deleted one doesn't come back). Paid alternative if the Shortcut is too fiddly: Health Webhook (~$15).
-   - Phase 1: weight + body fat → weigh-ins with lean mass. Phase 2: walking speed into the pattern finder.
+   - [x] Phase 1 (29 Oct): weight + body fat → weigh-ins (the body-fat summary reads them: 2-week averages, fat and lean
+     kg). Worker /api/health/{key,in,data} (keys "<account>.<48 hex>", only the SHA-256 kept, 8 kB cap); app
+     lib/health-client (on open, coming back, every 15 min; adds weigh-ins only once the sync has settled);
+     Settings → Apple Health (status, Set up / New key, the key with Copy, the 7 Shortcut steps). healthimport.test
+     (7: units — lb, a 0.186 fraction, m/s, mph, "82,4"; impossible / future / too-old readings dropped; typed within
+     30 min not doubled; deleted not back; a late body fat patched on; planted −1 point over a fortnight read by
+     bodyFat), worker band.test (3: key, wrong/old/other keys refused, twice a day keeps one), e2e applehealth (8 at 390
+     + 320; control: no key → Set up). Not checked: the Shortcut itself on his iPhone — the steps are from Apple's
+     actions as documented; his first run answers ok or says what's wrong.
+   - [ ] Phase 2: walking speed into the pattern finder.
