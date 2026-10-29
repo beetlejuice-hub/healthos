@@ -25,14 +25,30 @@ describe("what the Shortcut sends", () => {
   it("a field that came but was left out says why (owner, 29 Oct: \"got weight walk ok true\" — body fat silently missing)", () => {
     const at = "2026-10-29T07:31:00+02:00";
     const why = (b: Record<string, unknown>) => readPostWhy({ weight: 82.4, weightAt: at, ...b }, NOW);
-    expect(why({ fat: 18.6, fatAt: "Oct 29, 2026 at 7:31 AM" }).skipped).toEqual({ fat: "fatAt “Oct 29, 2026 at 7:31 AM” isn't a date — set its Date Format to ISO 8601 with the time on" });
-    expect(why({ fat: 18.6 }).skipped).toEqual({ fat: "fatAt is missing" });
-    expect(why({ fat: "Body Fat Percentage", fatAt: at }).skipped).toEqual({ fat: "fat “Body Fat Percentage” isn't a number — pick its Value" });
-    expect(why({ fat: 85, fatAt: at }).skipped).toEqual({ fat: "fat “85” isn't believable (3–60 %)" });
-    expect(why({ fat: "", fatAt: at }).skipped).toEqual({ fat: "fatAt came but fat was empty" });
-    // controls: a good one has no reason; a field that didn't come at all isn't "left out"
-    expect(why({ fat: "18,6", fatAt: at })).toEqual({ samples: [{ type: "weight", at: Date.parse(at), value: 82.4 }, { type: "fat", at: Date.parse(at), value: 18.6 }], skipped: {} });
-    expect(why({}).skipped).toEqual({});
+    const w = { walk: 4.9, walkAt: at };
+    expect(why({ ...w, fat: 18.6, fatAt: "Oct 29, 2026 at 7:31 AM" }).skipped).toEqual({ fat: "fatAt “Oct 29, 2026 at 7:31 AM” isn't a date — set its Date Format to ISO 8601 with the time on" });
+    expect(why({ ...w, fat: 18.6 }).skipped).toEqual({ fat: "fatAt is missing" });
+    expect(why({ ...w, fat: "Body Fat Percentage", fatAt: at }).skipped).toEqual({ fat: "fat “Body Fat Percentage” isn't a number — pick its Value" });
+    expect(why({ ...w, fat: 85, fatAt: at }).skipped).toEqual({ fat: "fat “85” isn't believable (3–60 %)" });
+    expect(why({ fat: "", fatAt: at, walk: "4.9", walkAt: at }).skipped).toEqual({ fat: "fatAt came but fat was empty" });
+    // owner, 29 Oct: "it doesnt mention fat" — both empty: Health gave the Shortcut none; not sent at all: which fields came
+    expect(why({ fat: "", fatAt: "", walk: "4.9", walkAt: at }).skipped.fat).toMatch(/^fat came empty — the Shortcut got no Body Fat Percentage from Health: iPhone Settings → Health → Data Access & Devices → Shortcuts/);
+    expect(why({ walk: "4.9", walkAt: at }).skipped).toEqual({ fat: "no “fat” field came (fields: weight, weightAt, walk, walkAt)" });
+    expect(why({ fat: 18.6, fatAt: at, walk: "", walkAt: "" }).skipped).toEqual({ walk: "no walking speed from Health today yet" });
+    // keys as typed: "Fat" / "FatAt " still count
+    expect(readPost({ Fat: "18,6", "FatAt ": at }, NOW)).toEqual([{ type: "fat", at: Date.parse(at), value: 18.6 }]);
+    // control: everything there → nothing left out
+    expect(why({ fat: "18,6", fatAt: at, walk: 4.9, walkAt: at })).toEqual({ samples: [{ type: "weight", at: Date.parse(at), value: 82.4 }, { type: "fat", at: Date.parse(at), value: 18.6 }, { type: "walk", at: Date.parse(at), value: 4.9 }], skipped: {} });
+  });
+  it("owner, 29 Oct: \"sometimes i log manually my weight and it will send no new info … or it sends a prevoius one so make sure to catch that\"", () => {
+    const old: HealthSample = { type: "weight", at: NOW - DAY, value: 82.4 };
+    const first = weighInsToAdd([old], [], 0);
+    expect(first.add).toHaveLength(1);
+    // the next day the Shortcut sends the same reading again; you typed today's weight yourself
+    const typed: Entry = { id: "t", kind: "weight", at: NOW - 60 * MIN, kg: 82.1 };
+    const kept = keepSamples([old], [old], NOW);
+    expect(kept).toEqual([old]);
+    expect(weighInsToAdd(kept, [...first.add, typed], first.until)).toEqual({ add: [], fat: [], until: first.until });
   });
   it("kept: the same reading twice is one; the newest post wins; by time; older than kept → gone", () => {
     const a: HealthSample = { type: "weight", at: NOW - DAY, value: 82 }, b: HealthSample = { type: "weight", at: NOW - 2 * DAY, value: 82.6 };

@@ -62,15 +62,25 @@ const said = (v: unknown) => `“${String(v).slice(0, 40)}”`;
 export function readPostWhy(body: unknown, now: number): { samples: HealthSample[]; skipped: Partial<Record<HealthType, string>> } {
   const samples: HealthSample[] = [], skipped: Partial<Record<HealthType, string>> = {};
   if (!body || typeof body !== "object") return { samples, skipped };
-  const b = body as Record<string, unknown>;
+  // keys as typed in Shortcuts: "Fat", "fat " and "fatat" are fatAt's and fat's too
+  const b = Object.fromEntries(Object.entries(body as Record<string, unknown>).map(([k, v]) => [k.toLowerCase().replace(/\s/g, ""), v]));
+  const came = Object.keys(body as object).join(", ") || "none";
   for (const type of ["weight", "fat", "walk"] as const) {
-    const raw = b[type], rawAt = b[`${type}At`];
-    if (raw == null || raw === "") { if (rawAt != null && rawAt !== "") skipped[type] = `${type}At came but ${type} was empty`; continue; }
+    const raw = b[type], rawAt = b[`${type}at`];
+    const empty = (v: unknown) => v == null || (typeof v === "string" && !v.trim());
+    // owner, 29 Oct: "i ran the shortcut again, it doesnt mention fat" — a field that came empty, or not at all, says so too
+    if (empty(raw)) {
+      skipped[type] = !(type in b) && !(`${type}at` in b) ? `no “${type}” field came (fields: ${came})`
+        : !empty(rawAt) ? `${type}At came but ${type} was empty`
+          : type === "walk" ? "no walking speed from Health today yet"
+            : `${type} came empty — the Shortcut got no ${type === "fat" ? "Body Fat Percentage" : "Weight"} from Health: iPhone Settings → Health → Data Access & Devices → Shortcuts → turn it on, and check Health has ${type === "fat" ? "body fat" : "weight"} readings`;
+      continue;
+    }
     const v = num(raw), at = when(rawAt);
     if (v == null) { skipped[type] = `${type} ${said(raw)} isn't a number — pick its Value`; continue; }
     if (at == null) { skipped[type] = rawAt == null || rawAt === "" ? `${type}At is missing` : `${type}At ${said(rawAt)} isn't a date — set its Date Format to ISO 8601 with the time on`; continue; }
     if (at > now + HEALTH.aheadMin * MIN || at < now - HEALTH.keepDays * DAY) { skipped[type] = `${type}At ${said(rawAt)} is ${at > now ? "in the future" : "over 400 days ago"}`; continue; }
-    const value = toUnit(type, v, typeof b[`${type}Unit`] === "string" ? (b[`${type}Unit`] as string) : "");
+    const value = toUnit(type, v, typeof b[`${type}unit`] === "string" ? (b[`${type}unit`] as string) : "");
     if (value == null) { skipped[type] = `${type} ${said(raw)} isn't believable (${RANGE[type]})`; continue; }
     samples.push({ type, at, value });
   }
