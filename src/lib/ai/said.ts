@@ -30,13 +30,19 @@ export function topicKey(raw: unknown, fallback = ""): string {
   return slug(fallback).split("-").filter((w) => w.length > 2 && !STOP.has(w)).slice(0, 3).join("-") || "other";
 }
 const words = (k: string) => new Set(k.split("-").filter((w) => w.length > 2 && !STOP.has(w)));
-/** The same topic in other words: one's words all in the other's ("protein-breakfast" / "high-protein-breakfast"). */
+/**
+ * The same topic in other words: one's words all in the other's ("protein-breakfast" / "high-protein-breakfast") — when
+ * the smaller has two words at least. A one-word topic is only itself: "sleep" said yesterday took "sleep-regularity",
+ * "deep-sleep-alcohol" and every other sleep item with it (owner, 31 Oct: "the morning read has only one study/graph
+ * linked instead of the 3"). "other" (no topic, no title) is never the same as anything.
+ */
 export function sameTopic(a: string, b: string): boolean {
+  if (a === "other" || b === "other") return false;
   if (a === b) return true;
   const x = words(a), y = words(b);
   if (!x.size || !y.size) return false;
   const [small, big] = x.size <= y.size ? [x, y] : [y, x];
-  return [...small].every((w) => big.has(w));
+  return small.size >= 2 && [...small].every((w) => big.has(w));
 }
 
 type Item = { title: string; tip?: string; topic?: string };
@@ -64,6 +70,9 @@ export function dropSaid<T extends { topic?: string }>(xs: T[], said: Said[], no
   }
   return { kept, dropped };
 }
+
+/** The morning read's items to show: its 3, the spare standing in for one said lately; never more than 3. */
+export const readItems = <T extends { topic?: string }>(xs: T[], said: Said[], now: number, title: (x: T) => string): T[] => dropSaid(xs, said, now, title).kept.slice(0, 3);
 
 /** What's been said, by topic, newest first: how often, the first and last time, and until when it rests. */
 export function saidTopics(said: Said[], now: number): { topic: string; n: number; first: number; last: Said; restUntil: number | null }[] {

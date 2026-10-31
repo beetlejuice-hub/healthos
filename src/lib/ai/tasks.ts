@@ -404,6 +404,7 @@ Items, exactly 3 (owner, 21 Oct: "it was just too long, too much info w no visua
 - one "try" (owner: "recommend me new stuff … studies, workout splits, and supps, foods, everything … or perhaps look at forums too"): search the web for the kind of thing "## This morning" names; something new to them — not in their stack, not already shown — with why it fits their goals and their data, and its source. A forum find is anecdotes: say so;
 - the third: the kind "## This morning" names — a "connection" (see below), or a study or fun fact with its source, or one protocol to try as an experiment (concrete: what to do, for how many days, what the app will measure);
 - on a training day ("Today's plan"), one may be for that session.
+- and a 4th, a spare of any kind, on a topic that isn't resting: the app shows it only when one of the first three was already said lately (owner, 31 Oct: "the morning read has only one study/graph linked instead of the 3").
 Titles hook: specific and curious ("Your 3 pm dip has a suspect", "Deep sleep came early — that's normal"), never a topic label ("Sleep tips"); under 60 characters.
 SHORT — it's read on a phone at wake-up. "text": at most 2 short sentences (under 200 characters), with the one number that matters. "tip": one line, what to do today, starting with a verb ("Have the protein coffee before 10"), under 100 characters. "measure": the one of their numbers the item is about — sleep (their sleep rating), protein, kcal, mood, energy, focus, stress, caffeine, alcohol, weight or lifting (kg lifted) — and the app draws its last 14 days beside the item, so don't recite what the chart shows; leave it out when none fits.
 Answer with ONLY a JSON object, no prose:
@@ -501,14 +502,14 @@ export function checkAsk(qs: unknown, max = 2): Question[] {
 }
 
 /** Three short items at most (PLAN 150: "too long, too much info"), each with its tip and chart when given — both reads. */
-export function checkItems(raw: unknown): DigestItem[] {
+export function checkItems(raw: unknown, max = 3): DigestItem[] {
   return (Array.isArray(raw) ? (raw as DigestItem[]) : []).filter((i) => typeof i?.title === "string" && i.title.trim() && typeof i?.text === "string" && i.text.trim())
     // A fact or study without a real link isn't shown: no source, no claim.
     .filter((i) => !(i.type === "fact" || i.type === "study" || i.type === "try") || (i.source && /^https?:\/\//.test(i.source.url)))
     // a connection is its chain: 2 links at least, each with how sure; one that leans on studies needs its source
     .map((i) => (i.type === "connection" ? { ...i, chain: (Array.isArray(i.chain) ? i.chain : []).filter((c) => typeof c?.step === "string" && c.step.trim() && isSure(c.sure)).slice(0, 4).map((c) => ({ step: short(c.step, 110), sure: c.sure })) } : i))
     .filter((i) => i.type !== "connection" || (i.chain!.length >= 2 && (!i.chain!.some((c) => c.sure === "strong" || c.sure === "some") || (i.source && /^https?:\/\//.test(i.source.url)))))
-    .slice(0, 3)
+    .slice(0, max)
     .map((i): DigestItem => {
       const { tip, measure, sure, chain, ...rest } = i, t = typeof tip === "string" ? short(tip, 120) : "";
       return { ...rest, title: short(i.title, 70), text: short(i.text, 240), topic: topicKey(i.topic, i.title), ...(isSure(sure) ? { sure } : {}), ...(i.type === "connection" ? { chain } : {}),
@@ -518,7 +519,8 @@ export function checkItems(raw: unknown): DigestItem[] {
 }
 
 export function checkDigest(a: DigestAnswer): DigestAnswer {
-  const items = checkItems(a.items);
+  // the morning read's 3 and its spare (shown only in place of one said lately — lib/ai/said readItems)
+  const items = checkItems(a.items, 4);
   // news: a real link, short, and not one of the items (it's a message, not a repeat of Today)
   const n = a.news, ok = n && typeof n.title === "string" && n.title.trim() && typeof n.text === "string" && n.text.trim() && n.source && /^https:\/\//.test(n.source.url ?? "")
     && !items.some((i) => i.title.trim().toLowerCase() === n.title.trim().toLowerCase());

@@ -4,7 +4,7 @@
 // stays. Five days after the last one it may come back. Controls: no history drops nothing; a different protein topic
 // ("protein-dinner-timing") isn't the breakfast one; two of one topic in a read keeps the first.
 import { describe, expect, it } from "vitest";
-import { addThreads, adviceOf, closeThreads, dropSaid, keepSaid, sameTopic, saidLines, SAID, threadLines, topicKey, type Said } from "./said";
+import { addThreads, adviceOf, closeThreads, dropSaid, keepSaid, readItems, sameTopic, saidLines, SAID, threadLines, topicKey, type Said } from "./said";
 
 const DAY = 86_400_000, NOW = new Date("2026-10-28T08:00:00").getTime();
 const week: Said[] = Array.from({ length: 7 }, (_, k) => ({ topic: "protein-breakfast", text: `Breakfast protein, take ${k + 1} — Add 30 g at breakfast`, at: NOW - (7 - k) * DAY, from: k % 2 ? "evening" : "morning" }));
@@ -21,6 +21,32 @@ describe("topics", () => {
     expect(sameTopic("protein-at-breakfast", "breakfast-protein")).toBe(true);
     expect(sameTopic("protein-breakfast", "protein-dinner-timing")).toBe(false);
     expect(sameTopic("caffeine-cutoff", "walk-after-lunch")).toBe(false);
+  });
+  it("a one-word topic is only itself (owner, 31 Oct: \"the morning read has only one study/graph linked instead of the 3\")", () => {
+    expect([sameTopic("sleep", "sleep-regularity"), sameTopic("deep-sleep-alcohol", "sleep"), sameTopic("protein", "protein-breakfast")]).toEqual([false, false, false]);
+    expect(sameTopic("sleep", "sleep")).toBe(true);
+    expect(sameTopic("other", "other")).toBe(false);
+  });
+});
+
+describe("a read the day after a broad \"sleep\" item (owner, 31 Oct: one item of three)", () => {
+  const said: Said[] = [{ topic: "sleep", text: "Sleep — bed by 23:00", at: NOW - DAY, from: "morning" }];
+  const read = [
+    { title: "Regular wake time beats long lie-ins", topic: "sleep-regularity" },
+    { title: "Drinks cut your deep sleep by a third", topic: "deep-sleep-alcohol" },
+    { title: "Creatine timing barely matters", topic: "creatine-timing" },
+  ];
+  it("all three stay — before, the two with \"sleep\" in them were dropped and one item was left", () => {
+    expect(dropSaid(read, said, NOW, title).kept.map((i) => i.topic)).toEqual(["sleep-regularity", "deep-sleep-alcohol", "creatine-timing"]);
+  });
+  it("control: the same broad topic again is still a repeat", () => {
+    expect(dropSaid([{ title: "Sleep more", topic: "sleep" }], said, NOW, title).dropped).toHaveLength(1);
+  });
+  it("the spare: shown in place of one said lately; not shown when all three are new; never more than 3", () => {
+    const spare = { title: "Walk after lunch", topic: "walk-after-lunch" };
+    expect(readItems([{ title: "Sleep more", topic: "sleep" }, ...read.slice(1), spare], said, NOW, title).map((i) => i.topic)).toEqual(["deep-sleep-alcohol", "creatine-timing", "walk-after-lunch"]);
+    expect(readItems([...read, spare], said, NOW, title)).toHaveLength(3);
+    expect(readItems([...read, spare], said, NOW, title).map((i) => i.topic)).not.toContain("walk-after-lunch");
   });
 });
 

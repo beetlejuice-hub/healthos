@@ -321,8 +321,8 @@ describe("news from the morning read goes to the chat only when it's real (owner
 
 describe("the morning read is short: three items, two sentences, a tip and a chart each (owner, 21 Oct: \"just too long, too much info w no visual\")", () => {
   const pat = (n: number) => ({ type: "pattern" as const, title: `Pattern ${n}`, text: "Protein was 108 g on your low days." });
-  it("keeps three items at most", () => {
-    expect(checkDigest({ greeting: "Hi", items: [pat(1), pat(2), pat(3), pat(4), pat(5)] }).items.map((i) => i.title)).toEqual(["Pattern 1", "Pattern 2", "Pattern 3"]);
+  it("keeps three items and the spare at most (the spare is shown only in place of one said lately — said.test readItems)", () => {
+    expect(checkDigest({ greeting: "Hi", items: [pat(1), pat(2), pat(3), pat(4), pat(5)] }).items.map((i) => i.title)).toEqual(["Pattern 1", "Pattern 2", "Pattern 3", "Pattern 4"]);
   });
   it("a long text is cut at a sentence when one fits, else at a word", () => {
     const long = "Your focus was 3 after short nights and 7 after long ones, across 11 mornings. " + "That gap is bigger than any other thing logged, coffee included, and it held on weekends and on workdays alike. ".repeat(2);
