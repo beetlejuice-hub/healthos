@@ -3161,3 +3161,20 @@ both reads and the questions. Phases in that order; #152 RPE waits (owner).
      + 320; control: no key → Set up). Not checked: the Shortcut itself on his iPhone — the steps are from Apple's
      actions as documented; his first run answers ok or says what's wrong.
    - [ ] Phase 2: walking speed into the pattern finder.
+185. [~] **31 Oct: his notes after the Apple Health set-up.** Claimed 31 Oct.
+   - [x] Apple Health body fat (owner: "ok it works, i had to put it at first place, otherwise wouldnt work"): the
+     Shortcut's body fat Find came back empty unless it was the first action, on his iPhone. The steps in Settings
+     now put it first, with Set Variable names. On the way the Worker learned to say why a field is left out (empty,
+     missing, not a date, not a number, out of range), to read a Form body, a one-item list, "Fat"/"fatAt " keys;
+     15 payload variants through the real handler. His "sometimes i log manually … or it sends a prevoius one so make
+     sure to catch that": tested (the same reading again adds nothing).
+   - [x] Stack check (screenshot, "Not checked yet: L-theanine — the AI phase will research these": "Feel like this part
+     is not working"): what the list doesn't know shows the AI's look-up (existed in the stack editor, never here) or
+     offers it; "Looking it up…" only while it is; offered unless the server says the AI is off; the table stacks at
+     320 (the card was 379 px). e2e stackunknown (control: AI off).
+   - [x] Morning read ("only one study/graph linked instead of the 3…why?"): the repeat log counted a one-word topic
+     ("sleep") as the same as every topic with that word, so one broad item dropped the next morning's others, and
+     nothing refilled. One-word topics match only themselves; the read writes a spare shown only in place of a
+     repeat. said.test (fails without), ai.test. Not checked: his own read log (no access) — it fits his "1 of 3".
+   - [ ] "If there's an insight, finding like alcohol and training day correlation i should be able to just say my
+     opinion to ai like it makes no sense to me. It's fun to see it though" — a way to answer any finding where it is.
