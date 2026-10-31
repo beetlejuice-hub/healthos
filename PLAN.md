@@ -3160,7 +3160,8 @@ both reads and the questions. Phases in that order; #152 RPE waits (owner).
      bodyFat), worker band.test (3: key, wrong/old/other keys refused, twice a day keeps one), e2e applehealth (8 at 390
      + 320; control: no key → Set up). Not checked: the Shortcut itself on his iPhone — the steps are from Apple's
      actions as documented; his first run answers ok or says what's wrong.
-   - [ ] Phase 2: walking speed into the pattern finder.
+   - [~] Phase 2: walking speed into the pattern finder (owner, 31 Oct: "do 2"). Claimed 31 Oct — healthimport
+     (walkByDay), daysband (withHealth), insights DayFacts, scout signals, the finder's callers, Settings → Apple Health.
 185. [x] **31 Oct: his notes after the Apple Health set-up.** Claimed 31 Oct.
    - [x] Apple Health body fat (owner: "ok it works, i had to put it at first place, otherwise wouldnt work"): the
      Shortcut's body fat Find came back empty unless it was the first action, on his iPhone. The steps in Settings
