@@ -4,7 +4,8 @@
  * Calls: lib/ai/client.ts → Worker /api/ai. Contract and checks: lib/ai/tasks.ts.
  */
 
-import { withBand } from "../lib/daysband";
+import { withBand, withHealth } from "../lib/daysband";
+import { healthNow } from "../lib/health-client";
 import { SourceLink } from "./SourceLink";
 import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import { act, getState, newId, useStore, type Experiment } from "../lib/store";
@@ -194,7 +195,7 @@ async function writeReview(d: Due) {
   // the overall check rides the month read (PLAN 137): the findings on show, with their evidence, by id
   const now = Date.now(), today = localDay(now);
   const found = d.kind === "month" ? notice(s.entries, s.goals, now, currentKg(s.entries, s.settings.bodyKg, now), { workouts: s.workouts, supplements: s.supplements, settings: s.settings }).found.filter((x) => !(s.ai.checks ?? []).some((c) => c.id === `n:${x.id}` && c.hidden)) : [];
-  const pats = d.kind === "month" ? scout(withBand(dailyFacts(s.entries, s.workouts, s.settings, addDays(today, -90), addDays(today, -1)), bandNow(), today), s.supplements, (id) => !!s.scout[id]?.dismissed) : [];
+  const pats = d.kind === "month" ? scout(withHealth(withBand(dailyFacts(s.entries, s.workouts, s.settings, addDays(today, -90), addDays(today, -1)), bandNow(), today), healthNow()), s.supplements, (id) => !!s.scout[id]?.dismissed) : [];
   const list = checkList(found, pats), offered = new Map([...found.map((x): [string, string] => [`n:${x.id}`, x.title]), ...pats.map((p): [string, string] => [`s:${p.id}`, p.text])]);
   const check = list.length ? `\n## Findings on show — the overall check (name the ones that look like noise or plain sense, by [id])\n${list.join("\n")}` : "";
   const r = await askAi({ task: "review", kind: d.kind, from: d.from, to: d.to, context: `${contextNow()}\n${lines.join("\n")}${check}` });

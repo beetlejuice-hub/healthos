@@ -3135,7 +3135,7 @@ both reads and the questions. Phases in that order; #152 RPE waits (owner).
      hurts you most, energy first; U3 "I feel flat"; U4 the weekly review; U5 the 12-week program; U6 the 4×4; U7 one
      wake time; U11 the monthly card, no photo; U12 experiments you plan; I1–I3 Insights; L1–L2 one box; a design pass
      over the screens he wants remade; notifications he picks one by one (Q4; lib/push exists).
-184. [~] **Apple Health in: body fat and weight from his scale, walking speed** (owner, 29 Oct, with what his Health app
+184. [x] **Apple Health in: body fat and weight from his scale, walking speed** (owner, 29 Oct, with what his Health app
    has: "pls select all that are interesting or important and can help the app make predictions, changes, and is worth
    to add tp the app, to track it"). Claimed 29 Oct — lib/healthimport.ts, worker (/api/health/*, BandHub storage),
    lib/health-client.ts, Settings → Apple Health.
@@ -3160,8 +3160,16 @@ both reads and the questions. Phases in that order; #152 RPE waits (owner).
      bodyFat), worker band.test (3: key, wrong/old/other keys refused, twice a day keeps one), e2e applehealth (8 at 390
      + 320; control: no key → Set up). Not checked: the Shortcut itself on his iPhone — the steps are from Apple's
      actions as documented; his first run answers ok or says what's wrong.
-   - [~] Phase 2: walking speed into the pattern finder (owner, 31 Oct: "do 2"). Claimed 31 Oct — healthimport
-     (walkByDay), daysband (withHealth), insights DayFacts, scout signals, the finder's callers, Settings → Apple Health.
+   - [x] Phase 2: walking speed into the pattern finder (owner, 31 Oct: "do 2"). Each day's speed is the Shortcut's
+     latest run that day (the day's average so far — at 11:00 by itself, so mostly the morning's walking); it joins
+     the days the finder reads next to the band's steps and sleep: Leads, Today's pattern card, the month read's check,
+     the morning read's lead and the AI's look-ups. Its own family (a steps lead, or one dismissed, doesn't hide it),
+     never paired with steps (the phone measures it while walking). Settings → Apple Health: "Walking speed: N days in".
+     walkspeed.test: planted 0.4 km/h slower after drinks found in 8+ of 10 worlds; nothing planted → ≤ 1 in 20; speed
+     rising with steps → never a lead (each fails with its part taken out). e2e walkspeed (planted → "Alcohol and
+     next-day walking speed move opposite ways", drawn; controls: unplanted, none sent). Not done: a walking-speed lane
+     on the master graph ("Show on graph" opens the other thing's lane, as for steps); dropping it after ~6 weeks if
+     it never finds anything — that's a look in mid-December.
 185. [x] **31 Oct: his notes after the Apple Health set-up.** Claimed 31 Oct.
    - [x] Apple Health body fat (owner: "ok it works, i had to put it at first place, otherwise wouldnt work"): the
      Shortcut's body fat Find came back empty unless it was the first action, on his iPhone. The steps in Settings

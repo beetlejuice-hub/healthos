@@ -9,7 +9,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useStore } from "../lib/store";
 import { dailyFacts } from "../lib/insights";
-import { withBand } from "../lib/daysband";
+import { withBand, withHealth } from "../lib/daysband";
+import { useHealth } from "../lib/health-client";
 import { useBand } from "../lib/band-client";
 import { PATTERN, patternCards, todayWords, type PatternCard } from "../lib/todaypattern";
 import { addDays, dayLabel, localDay } from "../lib/time";
@@ -61,9 +62,9 @@ function Scatter({ c }: { c: PatternCard }) {
 /** The cards Today draws — also what "From your data" leaves out, so a lead isn't said twice. */
 export function useTodayPatterns(now: number): PatternCard[] {
   const scouted = useScout();
-  const entries = useStore((s) => s.entries), workouts = useStore((s) => s.workouts), settings = useStore((s) => s.settings), band = useBand().data;
+  const entries = useStore((s) => s.entries), workouts = useStore((s) => s.workouts), settings = useStore((s) => s.settings), band = useBand().data, health = useHealth().samples;
   const today = localDay(now);
-  const facts = useMemo(() => withBand(dailyFacts(entries, workouts, settings, addDays(today, -PATTERN.days - 2), today), band, today), [entries, workouts, settings, today, band]);
+  const facts = useMemo(() => withHealth(withBand(dailyFacts(entries, workouts, settings, addDays(today, -PATTERN.days - 2), today), band, today), health), [entries, workouts, settings, today, band, health]);
   return useMemo(() => patternCards(scouted.map((x) => x.p), facts, today), [scouted, facts, today]);
 }
 

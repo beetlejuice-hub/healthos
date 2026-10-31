@@ -6,7 +6,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { act, useStore } from "../lib/store";
 import { dailyFacts } from "../lib/insights";
-import { withBand } from "../lib/daysband";
+import { withBand, withHealth } from "../lib/daysband";
+import { useHealth } from "../lib/health-client";
 import { useBand } from "../lib/band-client";
 import { scout, since, verdict, type Pattern, type ScoutMemo } from "../lib/scout";
 import { addDays, dayLabel, atMinute, localDay } from "../lib/time";
@@ -29,8 +30,9 @@ export function useScout(): Scouted[] {
   const today = localDay(Date.now());
   // Today isn't over, so it's left out; 90 days back, like the effect engine.
   // with the band's sleep and steps (lib/daysband; owner, 27 Oct: connections with "feeling weak")
-  const band = useBand().data;
-  const facts = useMemo(() => withBand(dailyFacts(entries, workouts, settings, addDays(today, -90), addDays(today, -1)), band, today), [entries, workouts, settings, today, band]);
+  // …and Apple Health's walking speed (PLAN 184 phase 2)
+  const band = useBand().data, health = useHealth().samples;
+  const facts = useMemo(() => withHealth(withBand(dailyFacts(entries, workouts, settings, addDays(today, -90), addDays(today, -1)), band, today), health), [entries, workouts, settings, today, band, health]);
   return useMemo(() => scout(facts, supplements, (id) => !!memo[id]?.dismissed)
     .map((p) => { const m = memo[p.id]; const s = m ? since(p, m, facts) : null; return { p, memo: m, since: s, verdict: verdict(s) }; })
     .filter((x) => x.verdict !== "faded"), [facts, supplements, memo]);

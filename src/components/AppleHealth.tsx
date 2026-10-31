@@ -4,16 +4,20 @@
  * day; this card makes its key, shows the steps once, and says what last came in.
  */
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useStore } from "../lib/store";
 import { newHealthKey, refreshHealth, useHealth } from "../lib/health-client";
 import { clock, dayLabel } from "../lib/time";
+import { walkByDay } from "../lib/healthimport";
+import { SCOUT } from "../lib/scout";
 
 const WORDS: Record<string, string> = { weight: "weight", fat: "body fat", walk: "walking speed" };
 
 export function AppleHealth() {
   const h = useHealth();
   const brought = useStore((s) => s.entries.filter((e) => e.kind === "weight" && e.id.startsWith("health-weight-")).length);
+  // PLAN 184 phase 2: the days of walking speed the pattern finder has (it tests a pair from 14 days with both)
+  const walked = useMemo(() => walkByDay(h.samples).size, [h.samples]);
   const [made, setMade] = useState<{ key: string; url: string } | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const [copied, setCopied] = useState<string | null>(null);
@@ -32,6 +36,7 @@ export function AppleHealth() {
           : h.key ? "Key made — nothing has come in yet. Run the Shortcut once to check."
             : "Brings your MovingLife weigh-ins (weight and body fat) and your walking speed in by themselves, once a day, through a Shortcut on your iPhone."}
       </p>
+      {walked > 0 && <p className="note ah-walk">Walking speed: <b>{walked} day{walked === 1 ? "" : "s"}</b> in — {walked < SCOUT.minDays ? `the pattern finder starts testing it at ${SCOUT.minDays}` : "tested against drinks, sleep, training and how you feel (Insights → Leads)"}.</p>}
       {h.last?.skipped && Object.entries(h.last.skipped).map(([t, why]) => <p key={t} className="note err ah-fail">{WORDS[t] ?? t} left out: {why}</p>)}
       {h.fail && <p className="note err ah-fail">Last try didn't work ({dayLabel(h.fail.at)} {clock(h.fail.at)}): {h.fail.error}</p>}
       <div className="cu-btns">

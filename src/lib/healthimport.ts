@@ -11,6 +11,7 @@
 
 import type { Entry } from "./types";
 import { FAT } from "./bodyfat";
+import { localDay } from "./time";
 
 export type HealthType = "weight" | "fat" | "walk";
 export type HealthSample = { type: HealthType; at: number; value: number };
@@ -93,6 +94,20 @@ export function keepSamples(kept: HealthSample[], add: HealthSample[], now: numb
   const by = new Map<string, HealthSample>();
   for (const s of [...kept, ...add]) by.set(`${s.type}:${s.at}`, s);
   return [...by.values()].filter((s) => s.at >= now - HEALTH.keepDays * DAY).sort((a, b) => a.at - b.at);
+}
+
+/**
+ * Walking speed per local day, km/h (PLAN 184 phase 2). The Shortcut sends the day's average so far each time it runs
+ * (11:00 by itself, or when he taps it), stamped with when it ran: the day's latest covers the most of it.
+ */
+export function walkByDay(samples: HealthSample[]): Map<string, number> {
+  const latest = new Map<string, HealthSample>();
+  for (const s of samples) {
+    if (s.type !== "walk") continue;
+    const d = localDay(s.at), had = latest.get(d);
+    if (!had || s.at > had.at) latest.set(d, s);
+  }
+  return new Map([...latest].map(([d, s]) => [d, s.value]));
 }
 
 /** The id a weigh-in from Health gets: the same on every phone, so two devices pulling it make one. */

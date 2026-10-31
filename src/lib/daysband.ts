@@ -9,6 +9,7 @@ import type { BandData } from "./band";
 import type { DayFacts } from "./insights";
 import { nights } from "./sleep";
 import { stepsByDay } from "./steps";
+import { walkByDay, type HealthSample } from "./healthimport";
 
 const cache = new WeakMap<BandData, { today: string; slept: Map<string, number>; steps: Map<string, number> }>();
 
@@ -18,6 +19,16 @@ function ofBand(band: BandData, today: string) {
   const v = { today, slept: new Map(nights(band.sleep, [], band.rhr, band.hrv).map((n) => [n.day, n.asleep])), steps: stepsByDay(band.steps ?? [], band.hr, today) };
   cache.set(band, v);
   return v;
+}
+
+/**
+ * …and Apple Health's side (PLAN 184 phase 2; owner, 29 Oct, his Health app's list — walking speed "may go with tired
+ * days"): the day's walking speed. Days stay as they were without any.
+ */
+export function withHealth(days: DayFacts[], samples: HealthSample[]): DayFacts[] {
+  const walk = walkByDay(samples);
+  if (!walk.size || !days.length) return days;
+  return days.map((d) => ({ ...d, walkKmh: walk.get(d.day) ?? null }));
 }
 
 export function withBand(days: DayFacts[], band: BandData | null, today: string): DayFacts[] {

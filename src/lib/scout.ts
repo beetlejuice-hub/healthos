@@ -75,6 +75,9 @@ export function signals(supplements: Supplement[], facts: DayFacts[] = [], allWo
     { id: "asleep", family: "sleep", name: "sleep", unit: "h", get: (d) => (d.asleepMin != null ? d.asleepMin / 60 : null) },
     { id: "sleepRating", family: "sleep", name: "your sleep rating", get: (d) => d.sleep },
     { id: "steps", family: "move", name: "steps", plural: true, unit: "steps", get: (d) => d.steps ?? null },
+    // Apple Health's (lib/daysband withHealth). Its own family, so a steps lead (or one you dismissed) doesn't hide it;
+    // never against steps — the phone measures speed while you walk, so a day of more walking has more of it
+    { id: "walk", family: "walk", name: "walking speed", unit: "km/h", notWith: ["move"], get: (d) => d.walkKmh ?? null },
     { id: "gym", family: "gym", name: "gym", yes: "a gym day", get: (d) => (d.trained ? 1 : 0), lane: "gym" },
     { id: "volume", family: "gym", name: "training volume", unit: "kg", get: (d) => d.volumeKg, lane: "gym" },
     { id: "energy", family: "feel", name: "energy", get: (d) => d.energy, lane: "energy" },

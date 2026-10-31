@@ -55,6 +55,9 @@ export async function newHealthKey(): Promise<{ key: string; url: string }> {
   return r;
 }
 
+/** What came, for code outside React (the AI's context, the reads). */
+export const healthNow = (): HealthSample[] => state.samples;
+
 export function useHealth(): State {
   return useSyncExternalStore((f) => { subs.add(f); return () => { subs.delete(f); }; }, () => state);
 }

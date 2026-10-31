@@ -141,6 +141,8 @@ export type DayFacts = {
   /** From the band (lib/daysband withBand): minutes asleep the night that ended this morning, and the day's steps. */
   asleepMin?: number | null;
   steps?: number | null;
+  /** From Apple Health (lib/daysband withHealth): the day's average walking speed, km/h — PLAN 184 phase 2. */
+  walkKmh?: number | null;
 };
 
 /** Food entries within 45 minutes of each other are one meal; the largest meal's kcal. */
