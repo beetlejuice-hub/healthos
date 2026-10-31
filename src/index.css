@@ -127,6 +127,16 @@ a { color: inherit; }
 .cu-btns .pill-btn { min-height: 36px; white-space: nowrap; }
 /* reform T1: "Don't remember" sits after the answers, quieter; on a narrow phone it drops to its own line, never split */
 .applehealth h3 .note { font-weight: 400; margin-left: 6px; }
+/* The stack check's four columns don't fit a phone: each row stacks — the chip and what, why, the evidence (it made
+   the card 379 px at 320, clipping the doctor notes) */
+@media (max-width: 560px) {
+  #stackcheck table, #stackcheck tbody, #stackcheck tr, #stackcheck td { display: block; width: auto; }
+  #stackcheck thead { display: none; }
+  #stackcheck tr { padding: 8px 0; border-bottom: 1px solid var(--c-track); }
+  #stackcheck td { padding: 2px 0; border: 0; }
+}
+.sc-unknown { display: grid; gap: 8px; }
+.sc-unk { display: grid; gap: 2px; }
 .ah-fail { overflow-wrap: anywhere; }
 .ah-setup { display: grid; gap: 10px; }
 .ah-key { display: block; padding: 8px 10px; border-radius: 10px; background: var(--c-card-2); font: 12px/1.4 ui-monospace, monospace; overflow-wrap: anywhere; user-select: all; }

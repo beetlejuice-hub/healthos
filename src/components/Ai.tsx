@@ -42,7 +42,7 @@ import { ReadItems } from "./ReadItems";
 import { digestDue, freshRead, morningShown, nightIn, nightShown } from "../lib/ai/morning";
 import { attempt, onRetryDue, tryNow } from "../lib/ai/attempts";
 import { dayTotals, dayWindow, eveningOf, nightDue, nightStale, STALE } from "../lib/ai/nightread";
-import { addThreads, adviceOf, closeThreads, dropSaid, keepSaid, saidTopics } from "../lib/ai/said";
+import { addThreads, adviceOf, closeThreads, dropSaid, keepSaid, readItems, saidTopics } from "../lib/ai/said";
 import { onSyncSettled, syncSettled } from "../lib/session";
 import { WatchList } from "./Watching";
 import { byDay, foldLine } from "../lib/ai/thread";
@@ -86,7 +86,7 @@ async function writeDigest(day: string) {
   if (!r.ok) return r;
   // advice on a topic said in the last 5 days goes, whatever it's called now (lib/ai/said; owner, 28 Oct: "in the last
   // liike 7 days it only recommended me to take in more protein w breakfast… it can repeat sometimes but not every day")
-  const n = r.answer.news, at = Date.now(), fresh = dropSaid(r.answer.items, getState().ai.said ?? [], at, (i) => i.title).kept;
+  const n = r.answer.news, at = Date.now(), fresh = readItems(r.answer.items, getState().ai.said ?? [], at, (i) => i.title);
   const items = withLead(fresh, lead), led = lead && items.some((i) => i.lead);
   const qs = keepNew(r.answer.questions ?? [], `${day}:m`);
   act.setAi((a) => ({
@@ -553,10 +553,13 @@ export async function researchSupplement(s: Supplement) {
 
 export function SuppResearch({ s }: { s: Supplement }) {
   const found = useStore((st) => st.ai.research[s.id]);
-  const { on, busy } = useAiStatus();
+  const { on } = useAiStatus();
   const [open, setOpen] = useState(false);
   const [err, setErr] = useState<string | null>(null);
-  if (!found) return on ? <button type="button" className="linkish" disabled={busy > 0} onClick={async () => { const r = await researchSupplement(s); if (r && !r.ok) setErr(r.message); }}>{busy > 0 ? "Looking it up…" : "AI: what is it?"}{err && <small className="err"> {err}</small>}</button> : null;
+  // its own "Looking it up…": the app's busy count said it whenever any read was being written
+  const [asking, setAsking] = useState(false);
+  // "on" is null until this session's first AI call: only a server that said "no key" hides the look-up
+  if (!found) return on !== false ? <button type="button" className="linkish" disabled={asking} onClick={async () => { setAsking(true); setErr(null); const r = await researchSupplement(s); setAsking(false); if (r && !r.ok) setErr(r.message); }}>{asking ? "Looking it up…" : "AI: what is it?"}{err && <small className="err"> {err}</small>}</button> : null;
   const flagged = found.interactions.filter((i) => i.verdict !== "none");
   return (
     <div className="research">

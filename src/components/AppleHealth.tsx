@@ -45,15 +45,16 @@ export function AppleHealth() {
         <div className="cu-btns"><button type="button" className="pill-btn pri" onClick={() => void copy("key", `Bearer ${made.key}`)}>{copied === "key" ? "Copied" : "Copy “Bearer …” for the header"}</button><button type="button" className="pill-btn" onClick={() => void copy("url", made.url)}>{copied === "url" ? "Copied" : "Copy the URL"}</button></div>
         <ol className="ah-steps">
           <li>Shortcuts → <b>+</b> → name it <b>HealthOS</b>.</li>
-          <li><b>Find Health Samples</b>: Weight · Sort by Start Date · Latest First · Limit 1.</li>
-          <li><b>Find Health Samples</b> again: Body Fat Percentage, the same.</li>
-          <li><b>Find Health Samples</b> again: Walking Speed · Start Date is today. Then <b>Calculate Statistics</b>: Average of its Value.</li>
-          <li><b>Get Contents of URL</b>: the URL · Method POST · Header <b>Authorization</b> = what you copied · Request Body JSON, all as Text:
-            <br /><code>weight</code> = 1st samples → Value · <code>weightUnit</code> = → Unit · <code>weightAt</code> = → Start Date, ISO 8601
-            <br /><code>fat</code> = 2nd samples → Value · <code>fatAt</code> = → Start Date, ISO 8601
-            <br /><code>walk</code> = the Average · <code>walkAt</code> = Current Date, ISO 8601</li>
-          <li>Run it once: allow Health, and it answers <code>ok</code> with what it sent.</li>
-          <li>Automation → <b>+</b> → Time of Day, 10:00, Daily → <b>Run Immediately</b> → HealthOS.</li>
+          {/* body fat first: on his iPhone it came back empty anywhere else (owner, 31 Oct: "i had to put it at first place, otherwise wouldnt work") */}
+          <li><b>Find Health Samples</b>: Body Fat Percentage · Sort by Start Date · Latest First · Limit 1 — <b>keep this one first</b>. Then <b>Set Variable</b> <code>Fat</code>.</li>
+          <li><b>Find Health Samples</b> again: Weight, the same. <b>Set Variable</b> <code>Weight</code>.</li>
+          <li><b>Find Health Samples</b> again: Walking Speed · Start Date is today. Then <b>Calculate Statistics</b>: Average of its Value. <b>Set Variable</b> <code>Walk</code>.</li>
+          <li><b>Get Contents of URL</b>: the URL · Method POST · Header <b>Authorization</b> = what you copied · Request Body JSON, all as Text (tap a variable's bubble to pick its part):
+            <br /><code>fat</code> = Fat → Value · <code>fatAt</code> = Fat → Start Date, ISO 8601 + time
+            <br /><code>weight</code> = Weight → Value · <code>weightUnit</code> = Weight → Unit · <code>weightAt</code> = Weight → Start Date, ISO 8601 + time
+            <br /><code>walk</code> = Walk · <code>walkAt</code> = Current Date, ISO 8601 + time</li>
+          <li>Run it once: allow Health, and it answers <code>ok</code> with what it got — a field it left out says why.</li>
+          <li>Automation → <b>+</b> → Time of Day, 11:00, Daily → <b>Run Immediately</b> → HealthOS.</li>
         </ol>
         <p className="note">A weigh-in you also type in the app within half an hour isn't counted twice; delete one that came in and it stays deleted.</p>
       </div>}

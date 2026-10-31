@@ -8,6 +8,8 @@ import { act, useStore, type Profile } from "../lib/store";
 import { badgeFor, check, resolveAll, type Badge, type Flag, type Report } from "../lib/stackcheck/check";
 import type { Verdict } from "../lib/stackcheck/kb";
 import { DAY } from "../lib/time";
+import { useAiStatus } from "../lib/ai/client";
+import { SuppResearch } from "./Ai";
 
 const WORD: Record<Verdict | "unknown", string> = { avoid: "Avoid", caution: "Caution", timing: "Timing", mixed: "Mixed evidence", "may-help": "May help", none: "No known link", unknown: "Not checked yet" };
 
@@ -73,7 +75,7 @@ function Tags({ label, hint, values, onChange, recognise }: { label: string; hin
         <input value={draft} placeholder={hint} aria-label={label} onChange={(e) => setDraft(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); add(); } }} />
         <button type="button" className="pill-btn" disabled={!draft.trim()} onClick={add}>Add</button>
       </div>
-      {recognise && draft.trim().length > 2 && <small className="note">{known.length ? `Recognised: ${known.map((k) => k.name).join(", ")}` : "Not in the checked list yet — it's saved, and the AI phase will look it up."}</small>}
+      {recognise && draft.trim().length > 2 && <small className="note">{known.length ? `Recognised: ${known.map((k) => k.name).join(", ")}` : "Not in the checked list yet — it's saved, and the AI sees it in every read and chat."}</small>}
     </div>
   );
 }
@@ -98,7 +100,13 @@ export function AboutMe() {
 
 export function StackCheckPanel() {
   const r = useStackCheck();
-  const profile = useStore((s) => s.profile);
+  const profile = useStore((s) => s.profile), supplements = useStore((s) => s.supplements), research = useStore((s) => s.ai.research);
+  const { on } = useAiStatus();
+  // not in the checked list: a supplement shows what the AI found about it, or a way to look it up (owner, 29 Oct, of
+  // "Not checked yet: L-theanine — the AI phase will research these": "Feel like this part is not working" — the
+  // look-up existed in the stack editor, this card never showed it)
+  const unStack = r.unknown.filter((t) => t.from === "stack").map((t) => ({ t, s: supplements.find((x) => x.name.trim().toLowerCase() === t.label.trim().toLowerCase()) }));
+  const unOther = r.unknown.filter((t) => t.from !== "stack");
   const real = r.flags.filter((f) => f.rule.verdict !== "none");
   const quiet = r.flags.filter((f) => f.rule.verdict === "none");
   return (
@@ -119,7 +127,10 @@ export function StackCheckPanel() {
       {quiet.length > 0 && <p className="note">Checked, no link found: {quiet.map((f) => `${f.a.label} + ${f.b.label}`).join(", ")}.</p>}
       {r.ask.length > 0 && <div className="sub"><h3>Worth asking your doctor about</h3>
         <ul className="notes">{r.ask.map((a) => <li key={a.item}>{a.say} <a href={a.sources[0].url} target="_blank" rel="noreferrer">source</a></li>)}</ul></div>}
-      {r.unknown.length > 0 && <p className="note">Not checked yet: {r.unknown.map((t) => t.label).join(", ")} — the AI phase will research these.</p>}
+      {r.unknown.length > 0 && <div className="sub sc-unknown"><h3>Not in the checked list</h3>
+        {unStack.map(({ t, s }) => <div key={t.label} className="sc-unk"><b>{t.label}</b>{s && (research[s.id] || on !== false) ? <SuppResearch s={s} /> : <small className="note">the AI is off — turn it on in Settings to look it up</small>}</div>)}
+        {unOther.length > 0 && <p className="note">{unOther.map((t) => t.label).join(", ")} — the AI sees {unOther.length > 1 ? "them" : "it"} in every read; ask about {unOther.length > 1 ? "them" : "it"} in the AI tab.</p>}
+      </div>}
       <p className="note">Curated from guidelines, drug labels and studies; every row links its source. Not medical advice — talk to your doctor before starting or stopping anything.</p>
     </section>
   );
