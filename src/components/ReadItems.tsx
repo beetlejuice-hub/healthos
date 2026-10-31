@@ -55,7 +55,7 @@ export function ReadItems({ items, open, onOpen, tip, from, day }: { items: Dige
             {i.source && <SourceLink s={i.source} />}
             {/* talk back to it (PLAN 164): "for me it's the opposite", or what food or supplement helps */}
             <AskAbout key={`${day}:${i.title}`} about={aboutItem(i, from, day)} label={`Re “${i.title}”`} placeholder="Ask or tell the AI about this…"
-              starters={["For me it's the opposite", "What food or supplement helps with this?"]} />
+              starters={["Makes no sense to me", "I knew that", "For me it's the opposite", "What food or supplement helps with this?"]} />
             <div className="mr-acts">
               {i.protocol && (running.includes(i.protocol.name)
                 ? <p className="note">Running — see Insights → Experiments.</p>

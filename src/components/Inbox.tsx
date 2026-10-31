@@ -13,7 +13,8 @@ import { act, getState, useStore } from "../lib/store";
 import { atMinute, clock, dayLabel, localDay } from "../lib/time";
 import type { Entry } from "../lib/types";
 
-const FINDING_REPLIES = ["Makes sense", "Surprising"];
+// owner, 31 Oct: "i should be able to just say my opinion to ai like it makes no sense to me"
+const FINDING_REPLIES = ["Makes sense", "Makes no sense to me", "I knew that", "Surprising"];
 /** Beside your last-night tags, for a low morning. */
 const LOW_MORNING = ["ill", "stressed"];
 

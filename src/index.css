@@ -135,6 +135,7 @@ a { color: inherit; }
   #stackcheck tr { padding: 8px 0; border-bottom: 1px solid var(--c-track); }
   #stackcheck td { padding: 2px 0; border: 0; }
 }
+.tell-ai { display: grid; gap: 8px; justify-items: start; }
 .sc-unknown { display: grid; gap: 8px; }
 .sc-unk { display: grid; gap: 2px; }
 .ah-fail { overflow-wrap: anywhere; }

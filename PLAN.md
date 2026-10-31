@@ -3161,7 +3161,7 @@ both reads and the questions. Phases in that order; #152 RPE waits (owner).
      + 320; control: no key → Set up). Not checked: the Shortcut itself on his iPhone — the steps are from Apple's
      actions as documented; his first run answers ok or says what's wrong.
    - [ ] Phase 2: walking speed into the pattern finder.
-185. [~] **31 Oct: his notes after the Apple Health set-up.** Claimed 31 Oct.
+185. [x] **31 Oct: his notes after the Apple Health set-up.** Claimed 31 Oct.
    - [x] Apple Health body fat (owner: "ok it works, i had to put it at first place, otherwise wouldnt work"): the
      Shortcut's body fat Find came back empty unless it was the first action, on his iPhone. The steps in Settings
      now put it first, with Set Variable names. On the way the Worker learned to say why a field is left out (empty,
@@ -3176,5 +3176,12 @@ both reads and the questions. Phases in that order; #152 RPE waits (owner).
      ("sleep") as the same as every topic with that word, so one broad item dropped the next morning's others, and
      nothing refilled. One-word topics match only themselves; the read writes a spare shown only in place of a
      repeat. said.test (fails without), ai.test. Not checked: his own read log (no access) — it fits his "1 of 3".
-   - [ ] "If there's an insight, finding like alcohol and training day correlation i should be able to just say my
-     opinion to ai like it makes no sense to me. It's fun to see it though" — a way to answer any finding where it is.
+   - [x] "If there's an insight, finding like alcohol and training day correlation i should be able to just say my
+     opinion to ai like it makes no sense to me. It's fun to see it though" — he said "go" to: every finding gets a small
+     **Tell the AI** with one-tap "Makes no sense to me" / "I knew that". Where: each Noticed card, Training's strong
+     sessions sentence (new button, TellAi); Leads and the morning/evening read items (the chips they had, plus the two);
+     Inbox findings (replies). The chat gets the finding under its own heading; "Makes no sense to me" → how it was
+     found, what else could explain it (training and drinking both on weekends, chance), asks him, remembers his reason;
+     "I knew that" → remembered as "Knows: …". The morning and evening reads treat "Knows:" (and an Inbox "I knew that")
+     as never news, and a "Makes no sense to me" finding isn't restated as fact. tellai.test (fails without), e2e tellai
+     (control: AI off → no button; 320) and trainingb. Not checked: a real AI's answer to it (fake AI in tests).

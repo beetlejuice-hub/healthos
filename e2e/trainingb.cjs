@@ -53,6 +53,11 @@ function world() {
   const w = world();
   const ctx = await b.newContext({ viewport: { width: 390, height: 900 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true });
   await ctx.route('https://ubfvaewfdbmecowoeuni.supabase.co/**', handle);
+  // the AI on, for "Tell the AI" on the strong-sessions sentence (owner, 31 Oct: "i should be able to just say my opinion to ai")
+  const chats = [];
+  await ctx.route('**/api/ai/usage**', (r) => r.fulfill({ contentType: 'application/json', body: JSON.stringify({ usage: null, cap: 50, on: true }) }));
+  await ctx.route('**/api/ai?**', (r) => { const body = r.request().postDataJSON(); if (body.task !== 'chat') return r.fulfill({ status: 500, contentType: 'application/json', body: '{"error":"not in this test"}' });
+    chats.push(body); r.fulfill({ contentType: 'application/json', body: JSON.stringify({ answer: { reply: 'Fair — here is how it was found.', remember: [] }, usage: null, costUsd: 0.01, model: 'sonnet' }) }); });
   await ctx.route(/\/api\/band\//, (rt) => {
     const u = new URL(rt.request().url()), op = u.pathname.split('/').pop(), from = +u.searchParams.get('from'), to = +u.searchParams.get('to');
     const st = { connected: true, needsReconnect: false, connectedAt: NOW - 100 * D, lastSync: NOW - 3 * MIN, latest: w.hr.at(-1)[0], error: null, gapSec: 300 };
@@ -73,6 +78,15 @@ function world() {
   await pg.waitForFunction(() => /under 6 h 30/.test(document.querySelector('.tp-bwords .mp-big')?.textContent ?? ''), null, { timeout: 15000 }).catch(() => {});
   const words = await pg.locator('.tp-bwords .mp-big').innerText();
   check(`in words: carbs before and the short night (${words})`, /carbs ≥ 60 g in the 4 h before \(\+\d\.\d %, (clear|likely)\)/.test(words) && /under 6 h 30 asleep the night before \(−\d\.\d %, (clear|likely)\)/.test(words) && !/coffee/i.test(words));
+  // Tell the AI on it: the sentence goes to the chat under its own heading
+  const tb = pg.locator('.tp-bwords');
+  await tb.getByRole('button', { name: 'Tell the AI' }).click();
+  await tb.getByRole('button', { name: 'Makes no sense to me' }).click();
+  await tb.locator('.ask-reply:not(.typing)').waitFor({ timeout: 5000 }).catch(() => {});
+  const tc = chats.at(-1);
+  check(`Tell the AI: "Makes no sense to me" goes with the sentence (${tc?.messages.at(-1)?.text})`, tc?.messages.at(-1)?.text === 'Re “Your strong sessions”: Makes no sense to me'
+    && (tc.context.split("## The app's finding this message is about (Insights → Training, your strong sessions)\n")[1] ?? '').startsWith(words) && /how it was found/.test(await tb.locator('.ask-reply').innerText().catch(() => '')));
+  await tb.getByRole('button', { name: 'Tell the AI' }).click();
   const cell = (f, o) => pg.locator('.tp-b .sl-cell').evaluateAll((els, [f, o]) => { const e = els.find((x) => x.getAttribute('aria-label')?.startsWith(`${f} and ${o}:`)); return e ? [e.dataset.sure, e.dataset.toward, e.textContent] : null; }, [f, o]);
   const c1 = await cell('Carbs ≥ 60 g in the 4 h before', 'Strength'), c2 = await cell('Coffee in the 2 h before', 'Strength'), c3 = await cell('Creatine that day', 'Strength');
   check(`grid: carbs → strength, planted +3.5 %, found (${c1})`, c1 && (c1[0] === 'clear' || c1[0] === 'likely') && c1[1] === 'better');

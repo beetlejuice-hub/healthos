@@ -22,6 +22,7 @@ import type { EntryOf } from "../lib/types";
 import type { HrMinute } from "../lib/band";
 import { useWidth } from "./useWidth";
 import { TrainingAfter } from "./TrainingAfter";
+import { TellAi } from "./TellAi";
 
 const kg0 = (v: number) => Math.round(v).toLocaleString("en-GB");
 const sgn = (v: number, d = 1) => { const t = Math.abs(v).toFixed(d); return Number(t) === 0 ? `±${t}` : `${v > 0 ? "+" : "−"}${t}`; };
@@ -209,6 +210,7 @@ function StrongSessions({ ss, facts, supplements, w, wide }: { ss: Session[]; fa
       <section className="sl-p tp-bwords" aria-label="Your strong sessions">
         <span className="cmp-k">Your strong sessions · {measured} sessions</span>
         <p className="mp-big" data-found={found.map((c) => c.factor).join(",")}>{words}</p>
+        {found.length > 0 && <TellAi where="Insights → Training, your strong sessions" label="Your strong sessions" finding={`${words} From ${measured} sessions, each measured against its lift's own trend; sessions with the thing against sessions without — goes with, not proof of cause.`} />}
       </section>
       {measured >= 2 && <SessionLanes ss={ss} facts={facts} supps={factors.filter((f) => f.id.startsWith("supp:")).map((f) => ({ id: f.id.slice(5), name: f.name.replace(/ that day$/, "") }))} w={w} />}
       <div className={`tp-row${wide ? " wide" : ""}`}>

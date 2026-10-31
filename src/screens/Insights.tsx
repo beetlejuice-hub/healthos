@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { TellAi } from "../components/TellAi";
 import { readRoute } from "../lib/nav";
 import { swipeTo } from "../lib/swipe";
 import { useStore } from "../lib/store";
@@ -250,6 +251,7 @@ function Noticed({ report: all }: { report: Report }) {
             {f.chart?.kind === "compare" && <CompareBars c={f.chart} />}
             <p className="ev">{f.evidence}</p>
             <AiCheckLabel id={`n:${f.id}`} />
+            <TellAi where="Insights → Noticed" label={f.title} finding={`${f.title} — ${f.value}${f.unit ? ` ${f.unit}` : ""} (${f.area}, ${f.sure}). ${f.detail} Evidence: ${f.evidence}`} />
           </article>
         ))}
       </div>}

@@ -82,7 +82,7 @@ export function WorthALook({ items, onShow }: { items: Scouted[]; onShow: (f: Gr
             </div>
             {/* PLAN 137: hiding it after the check is "Not interesting" too */}
             <AiCheckLabel id={`s:${p.id}`} onHide={() => act.setScout({ ...memo, [p.id]: { first: m?.first ?? today, sign: p.sign, seen: true, dismissed: true } })} />
-            {asking === p.id && <AskAbout about={aboutLead(p)} label={`Re “${p.text}”`} placeholder="Ask or tell the AI about this…" starters={["Why might this be?", "Is this real or chance?", "What can I do about it?"]} />}
+            {asking === p.id && <AskAbout about={aboutLead(p)} label={`Re “${p.text}”`} placeholder="Ask or tell the AI about this…" starters={["Why might this be?", "Makes no sense to me", "I knew that", "Is this real or chance?"]} />}
           </article>
           );
         })}
