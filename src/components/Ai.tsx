@@ -44,6 +44,8 @@ import { digestDue, freshRead, morningShown, nightIn, nightShown } from "../lib/
 import { attempt, onRetryDue, tryNow } from "../lib/ai/attempts";
 import { dayTotals, dayWindow, eveningOf, nightDue, nightStale, STALE } from "../lib/ai/nightread";
 import { addThreads, adviceOf, closeThreads, dropSaid, keepSaid, readItems, saidTopics } from "../lib/ai/said";
+import { discoveryLines, keepDiscovery } from "../lib/ai/discover";
+import { DiscoveryCard, DiscoveryList } from "./Discovery";
 import { onSyncSettled, syncSettled } from "../lib/session";
 import { WatchList } from "./Watching";
 import { byDay, foldLine } from "../lib/ai/thread";
@@ -85,7 +87,7 @@ async function writeDigest(day: string) {
     ...(ai.night && ai.night.day >= addDays(day, -1) ? ai.night.change.map((c) => `${ai.night!.day} read-back: ${c.what}`) : []),
   ];
   // it may check its claims with the app's own numbers first (PLAN 160)
-  const r = await askRead({ task: "digest", context: `${contextNow()}\n${brief.join("\n")}\n${lead ? `${leadLines(lead).join("\n")}\n` : ""}${askFor(day, "morning", follow).join("\n")}`, shown: ai.shown.slice(-40) });
+  const r = await askRead({ task: "digest", context: `${contextNow()}\n${brief.join("\n")}\n${lead ? `${leadLines(lead).join("\n")}\n` : ""}${askFor(day, "morning", follow).join("\n")}\n${discoveryLines(day, "morning", ai.discoveries).join("\n")}`, shown: ai.shown.slice(-40) });
   if (!r.ok) return r;
   // advice on a topic said in the last 5 days goes, whatever it's called now (lib/ai/said; owner, 28 Oct: "in the last
   // liike 7 days it only recommended me to take in more protein w breakfast… it can repeat sometimes but not every day")
@@ -94,6 +96,7 @@ async function writeDigest(day: string) {
   const qs = keepNew(r.answer.questions ?? [], `${day}:m`);
   act.setAi((a) => ({
     digest: { day, at, greeting: r.answer.greeting, ...checkDay(r.answer, true), items, ...(r.answer.looked ? { looked: r.answer.looked } : {}) },
+    discoveries: keepDiscovery(a.discoveries, r.answer.discovery, day, "morning", at),
     ...(led ? { leads: [...(a.leads ?? []), { id: lead.id, day }].slice(-60) } : {}),
     ...(qs.length ? { questions: { day, list: qs, from: "morning" as const, at }, asked: [...a.asked, ...qs.map((q) => q.text)].slice(-60), daily: tracked(a.daily, qs) } : {}),
     shown: [...a.shown, ...items.map((i) => i.title), ...(n ? [n.title] : [])].slice(-80),
@@ -161,7 +164,7 @@ async function writeNight(day: string, force: boolean, auto = false) {
   // the day's totals it's written from: when what's logged moves past them, the card says so (owner, 28 Oct: "i ate around
   // 1900 kcal (160 left), yet ai digest says i ate 650 something")
   const tot = dayTotals(getState().entries, day), redone = (ai.night?.day === day ? ai.night.redone ?? 0 : 0) + (auto ? 1 : 0);
-  const r = await askRead({ task: "night", day, context: [nightContext(day), ...eveningBrief(ai.shown), ...askFor(day, "evening", follow)].join("\n") });
+  const r = await askRead({ task: "night", day, context: [nightContext(day), ...eveningBrief(ai.shown), ...askFor(day, "evening", follow), ...discoveryLines(day, "evening", ai.discoveries)].join("\n") });
   if (!r.ok) return r;
   const at = Date.now(), qs = keepNew(r.answer.questions ?? [], `${day}:e`);
   // no advice on a topic said in the last 5 days (lib/ai/said) — a rewrite of the same evening replaces its own, so that's
@@ -171,6 +174,7 @@ async function writeNight(day: string, force: boolean, auto = false) {
   const change = dropSaid(r.answer.change, [...said, ...adviceOf({ items }, "evening", at)], at, (c) => c.what).kept;
   act.setAi((a) => ({
     night: { ...r.answer, items, change, day, at, tot, redone },
+    discoveries: keepDiscovery(a.discoveries, r.answer.discovery, day, "evening", at),
     shown: [...a.shown, ...items.map((i) => i.title)].slice(-80),
     said: keepSaid((a.said ?? []).filter((x) => x.at !== before), adviceOf({ items, change }, "evening", at), at),
     threads: addThreads(closeThreads(a.threads ?? [], r.answer.looked_into), r.answer.look_into, at, () => newId().slice(0, 6)),
@@ -341,6 +345,7 @@ export function MorningRead() {
       {d.summary && <p className={`rd-sum${open ? "" : " clamp2"}`} onClick={() => !open && setOpen(true)}>{d.summary}</p>}
       {open && <DayLines slept={d.slept} felt={d.felt} feltLabel="Yesterday" />}
       <ReadItems key={String(open)} items={d.items} open={open} onOpen={() => setOpen(true)} tip="Today" from="morning" day={d.day} />
+      <DiscoveryCard day={d.day} slot="morning" open={open} onOpen={() => setOpen(true)} />
       {open && d.fun && <p className="rd-fun"><small>One more thing</small>{d.fun}</p>}
       {open && <Looked names={d.looked} />}
     </section>
@@ -402,6 +407,7 @@ export function NightRead() {
       </>}
       {/* the evening's study, thing to try and noticed (PLAN 157; owner, 21 Oct: "the same studt, try, and notiiced session at Eod") */}
       {(n.items?.length ?? 0) > 0 && <ReadItems key={String(open)} items={n.items!} open={open} onOpen={() => setOpen(true)} tip="Tomorrow" from="evening" day={n.day} />}
+      <DiscoveryCard day={n.day} slot="evening" open={open} onOpen={() => setOpen(true)} />
       {open && n.fun && <p className="rd-fun"><small>One more thing</small>{n.fun}</p>}
       {open && <Looked names={n.looked} />}
       {newer && !stale && <button type="button" className="linkish" onClick={() => void makeNight(n.day, true)}>You logged more since — read it again</button>}
@@ -517,6 +523,7 @@ export function AiScreen() {
       <div className="head"><span>Your AI</span><a href="#settings">Settings</a></div>
       <DeepDive onRepick={makeDive} />
       <WatchList now={now} />
+      <DiscoveryList />
       <SavedCard />
       <div className="chat" aria-live="polite">
         {/* reform A2 (owner, 29 Oct: Yes to "One line: “Ask about anything you log.” The rest behind a small ?") */}

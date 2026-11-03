@@ -3262,7 +3262,12 @@ both reads and the questions. Phases in that order; #152 RPE waits (owner).
    the kiwi study and i am trying it rn. can be health, brain, body, training etc."; "And go harder on the app studying
    me, seeing connections, asking ab them, figuring things out, etc...pls"). Claimed 3 Nov.
    - Gemini: dropped. The routing built in 186-3 stays, off without the keys — nothing changes.
-   - [ ] Phase 1 — Discoveries, 1–2 a day, random: each read (morning and evening) gets one, its topic and kind picked
+   - [x] Phase 1 — Discoveries, 1–2 a day, random (built 3 Nov: lib/ai/discover + components/Discovery; each read is
+     told "## Today's discovery" — 11 topics × study / forum post / older study, seeded by day and read, no topic of the
+     last 5 — and what was shown; checked on the server and in the app; "Try it" goes through the watch proposal's own
+     rules (a feeling or cause they don't take is dropped, so it starts); the AI tab keeps the last 20 not put away.
+     discover.test, links.test, e2e discovery at 320. Found on the way: the AI tab's new list read the store as a fresh []
+     with no discoveries — a render loop that blanked the tab; e2e watch / watch2 / watch3 caught it): each read (morning and evening) gets one, its topic and kind picked
      at random by the app (fat loss, brain fog, training, sleep, a supplement, a food, mood, recovery, the body, living
      longer, weird-but-true × a recent study / a Reddit or forum "this changed my life" post / an older surprising
      study), never a topic of the last few. Its link checked like the reads' items; a forum post says it's one person's

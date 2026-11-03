@@ -11,6 +11,7 @@ import { useSyncExternalStore } from "react";
 import type { Saved } from "./ai/saved";
 import type { Said, Thread } from "./ai/said";
 import type { Watch } from "./watch";
+import type { KeptDiscovery } from "./ai/discover";
 import type { Drink, Entry, Food, Goals, Supplement, Template, Workout } from "./types";
 import { DEFAULT_GOALS, slotOf, slotsOf, slotTime } from "./types";
 import { tidyWorkouts } from "./training";
@@ -46,6 +47,8 @@ export type AiState = {
   said?: Said[]; threads?: Thread[];
   /** What you asked it to look out for, from your notes, each with its evening question (lib/watch; owner, 28 Oct). */
   watches?: Watch[];
+  /** The reads' discoveries, newest last (PLAN 187: one random study or forum post a read) — and what you did with each. */
+  discoveries?: KeptDiscovery[];
   /** The latest questions and the read that brought them — shown while that read is (PLAN 155–156); "fallback": the cheap call. */
   questions: { day: string; list: Question[]; from?: "morning" | "evening" | "fallback"; at?: number } | null;
   /** What's tracked: a tracking question's key and its latest words — re-worded every time it's asked (PLAN 156; before 21 Oct these were asked word for word every day). */

@@ -9,6 +9,7 @@
  */
 
 import { topicKey } from "./said";
+import { checkDiscovery, type Discovery } from "./discover";
 
 export type Task = "describe" | "supplement" | "chat" | "questions" | "digest" | "night" | "review" | "dive" | "verdict";
 export type ModelChoice = "opus" | "sonnet" | "haiku";
@@ -199,7 +200,7 @@ export type DigestNews = { title: string; text: string; source: { title: string;
  * summary"): a short summary, last night in one line, how the day felt in one line, one fun or useful thing.
  */
 export type ReadDay = { summary?: string; slept?: string; felt?: string; fun?: string };
-export type DigestAnswer = Threads & ReadDay & { greeting: string; items: DigestItem[]; news?: DigestNews | null; /** 1–2, the kinds the app picked (PLAN 156). */ questions?: Question[] };
+export type DigestAnswer = Threads & ReadDay & { /** PLAN 187: one random study or forum post a read */ discovery?: Discovery | null; greeting: string; items: DigestItem[]; news?: DigestNews | null; /** 1–2, the kinds the app picked (PLAN 156). */ questions?: Question[] };
 /**
  * The weekly deep dive (PLAN 160): the question it picked and why (from their data), what their own numbers say (from the
  * app's look-ups), 2–3 studies with their links, the verdict and how sure, and one experiment to try.
@@ -252,7 +253,7 @@ export function checkReadCalls(calls: unknown[], turn: unknown): ReadLooks {
  */
 export type Threads = { look_into?: string[]; looked_into?: string[] };
 /** The nightly read-back of your day (owner, 2 Oct: "summarizing what happened, what i should change"). */
-export type NightAnswer = Threads & Omit<ReadDay, "summary"> & { summary: string; happened: string[]; notes: string; change: { what: string; why: string; /** lib/ai/said */ topic?: string }[]; /** Lasting patterns worth remembering (kept in AI memory). */ remember: string[];
+export type NightAnswer = Threads & Omit<ReadDay, "summary"> & { discovery?: Discovery | null; summary: string; happened: string[]; notes: string; change: { what: string; why: string; /** lib/ai/said */ topic?: string }[]; /** Lasting patterns worth remembering (kept in AI memory). */ remember: string[];
   /** On a day with a workout (PLAN 129): how it went against last time, what went up, one thing for next time. */
   workout?: { summary: string; better: string[]; next: string };
   /** The evening's three (PLAN 157; owner, 21 Oct: "the same studt, try, and notiiced session at Eod"), and its questions (PLAN 156). */
@@ -345,9 +346,10 @@ ${SAID_RULES}
 - questions: 1–2 about this day, the kinds "## Questions this time" names; for a study, its "source" (searched, https).
 ${ASK_RULES}
 Use "goes with", never "causes". No medical advice; anything health-worrying → "worth asking a doctor".
+DISCOVERY (owner, 3 Nov: "I like the app trying out new things, finding new studies, random ones, random supplement studies related to fat loss, brain fog, trainign etc. or reddit forums that talk ab things that changed their lives, random posts, etc. one or 2 for each day. completely random. like it sent me the kiwi study and i am trying it rn"): "## Today's discovery" names a topic and a kind the app picked at random — search the web for ONE of that kind on that topic, not under "## Discoveries already shown"; it needn't be about today or their data. "discovery": "topic" and "kind" as given; "title" hooks (under 70 characters); "text" 2–3 sentences — what was found (the number) or what the person said happened; "why" one line on why it might be worth it for them (their goals, About me, their data — "" if nothing fits); "sure" for a study (strong / some), "anecdote" for a forum post — say it's one person's story; "source" its real link (the thread, the paper). "try" only when there's something they could try for 1–4 weeks and feel the difference: "what" ("Kiwi before bed → sleep"), "question" one evening question about the effect, "options" 2–4 short answers low to high, "days" 7–28, and when it shows in their log "cause_kind" (food, drink, supplement, doing, workout, cardio) and "cause_name", and "feel" (mood, energy, focus or stress) when it's one of those. Not something they already take or were already shown; nothing risky (no prescription drugs, no extreme fasting); "discovery": null only when the search found nothing real.
 THE DAY AROUND IT (owner, 3 Nov: "… how i slept, how i felt thoughout the day, some funny or interesting or helpful advice … w a summary"): "summary" is the day in 2–3 sentences; "slept": last night in one line of numbers (the band, their rating), "" when nothing's known; "felt": today through its check-ins in one line ("energy 7 at 9, 4 at 15, 6 at 21 — the dip after the big lunch"), "" with none; "fun": one line, funny or surprising or useful, about their day — not a repeat of an item or a change; never shaming; no medical claims.
 Answer with ONLY a JSON object, no prose:
-{"summary":"","slept":"","felt":"","fun":"","happened":[""],"notes":"","change":[{"what":"","why":"","topic":""}],"remember":[],"look_into":[],"looked_into":[],"workout":{"summary":"","better":[""],"next":""},"items":[{"type":"study|try|noticed|connection","topic":"","title":"","text":"","sure":"${SURE.join("|")}","chain":[{"step":"","sure":""}],"tip":"","measure":"","source":{"title":"","url":""}}],"questions":[{"kind":"${Q_KINDS.join("|")}","text":"","options":["",""],"why":"","key":"","source":{"title":"","url":""}}]}
+{"summary":"","slept":"","felt":"","fun":"","discovery":{"topic":"","kind":"","title":"","text":"","why":"","sure":"strong|some|anecdote","source":{"title":"","url":""},"try":{"what":"","question":"","options":[""],"days":14,"cause_kind":"","cause_name":"","feel":""}},"happened":[""],"notes":"","change":[{"what":"","why":"","topic":""}],"remember":[],"look_into":[],"looked_into":[],"workout":{"summary":"","better":[""],"next":""},"items":[{"type":"study|try|noticed|connection","topic":"","title":"","text":"","sure":"${SURE.join("|")}","chain":[{"step":"","sure":""}],"tip":"","measure":"","source":{"title":"","url":""}}],"questions":[{"kind":"${Q_KINDS.join("|")}","text":"","options":["",""],"why":"","key":"","source":{"title":"","url":""}}]}
 Leave "workout" out on a day without one.`;
 
 export const SYSTEM: Record<Task, string> = {
@@ -418,10 +420,11 @@ THE DAY AROUND THEM (owner, 3 Nov: "Morning and night read should include a bit 
 - "slept": last night in one line of numbers ("6 h 40 asleep, usual 7 h 10 · rated 7 · HRV 48, usual 52"); "" when nothing's known.
 - "felt": yesterday through its check-ins in one line ("energy 7 at 9, 4 at 15, 6 at 21 — the dip after the big lunch"); "" with no check-ins.
 - "fun": one line, funny or surprising or useful, about them or their day — a deadpan observation, a curious fact tied to one of their numbers, a small trick. Not one of the items again; never shaming; no medical claims.
+DISCOVERY (owner, 3 Nov: "I like the app trying out new things, finding new studies, random ones, random supplement studies related to fat loss, brain fog, trainign etc. or reddit forums that talk ab things that changed their lives, random posts, etc. one or 2 for each day. completely random. like it sent me the kiwi study and i am trying it rn"): "## Today's discovery" names a topic and a kind the app picked at random — search the web for ONE of that kind on that topic, not under "## Discoveries already shown"; it needn't be about today or their data. "discovery": "topic" and "kind" as given; "title" hooks (under 70 characters); "text" 2–3 sentences — what was found (the number) or what the person said happened; "why" one line on why it might be worth it for them (their goals, About me, their data — "" if nothing fits); "sure" for a study (strong / some), "anecdote" for a forum post — say it's one person's story; "source" its real link (the thread, the paper). "try" only when there's something they could try for 1–4 weeks and feel the difference: "what" ("Kiwi before bed → sleep"), "question" one evening question about the effect, "options" 2–4 short answers low to high, "days" 7–28, and when it shows in their log "cause_kind" (food, drink, supplement, doing, workout, cardio) and "cause_name", and "feel" (mood, energy, focus or stress) when it's one of those. Not something they already take or were already shown; nothing risky (no prescription drugs, no extreme fasting); "discovery": null only when the search found nothing real.
 Titles hook: specific and curious ("Your 3 pm dip has a suspect", "Deep sleep came early — that's normal"), never a topic label ("Sleep tips"); under 60 characters.
 SHORT — it's read on a phone at wake-up. "text": at most 2 short sentences (under 200 characters), with the one number that matters. "tip": one line, what to do today, starting with a verb ("Have the protein coffee before 10"), under 100 characters. "measure": the one of their numbers the item is about — sleep (their sleep rating), protein, kcal, mood, energy, focus, stress, caffeine, alcohol, weight or lifting (kg lifted) — and the app draws its last 14 days beside the item, so don't recite what the chart shows; leave it out when none fits.
 Answer with ONLY a JSON object, no prose:
-{"greeting":"one short line","summary":"","slept":"","felt":"","fun":"","items":[{"type":"fact|study|pattern|protocol|try|connection","topic":"","title":"","text":"1–2 short sentences","sure":"${SURE.join("|")}","chain":[{"step":"","sure":""}],"tip":"one line for today","measure":"${DIGEST_MEASURES.join("|")}","source":{"title":"","url":""},"protocol":{"name":"","how":"","days":14,"measure":"energy|mood|focus|stress|sleep|weight"}}],"questions":[{"kind":"${Q_KINDS.join("|")}","text":"","options":["",""],"why":"","key":"","source":{"title":"","url":""}}],"news":null,"look_into":[],"looked_into":[]}
+{"greeting":"one short line","summary":"","slept":"","felt":"","fun":"","discovery":{"topic":"","kind":"","title":"","text":"","why":"","sure":"strong|some|anecdote","source":{"title":"","url":""},"try":{"what":"","question":"","options":[""],"days":14,"cause_kind":"","cause_name":"","feel":""}},"items":[{"type":"fact|study|pattern|protocol|try|connection","topic":"","title":"","text":"1–2 short sentences","sure":"${SURE.join("|")}","chain":[{"step":"","sure":""}],"tip":"one line for today","measure":"${DIGEST_MEASURES.join("|")}","source":{"title":"","url":""},"protocol":{"name":"","how":"","days":14,"measure":"energy|mood|focus|stress|sleep|weight"}}],"questions":[{"kind":"${Q_KINDS.join("|")}","text":"","options":["",""],"why":"","key":"","source":{"title":"","url":""}}],"news":null,"look_into":[],"looked_into":[]}
 "source" is required for facts, studies and tries. "protocol" only on protocol items, "chain" only on a connection. Don't repeat titles listed as already shown.
 ${SURE_RULES}
 ${CONNECTION_RULES}
@@ -539,7 +542,8 @@ export function checkDigest(a: DigestAnswer): DigestAnswer {
     && !items.some((i) => i.title.trim().toLowerCase() === n.title.trim().toLowerCase());
   const news = ok ? { title: n.title.trim().slice(0, 90), text: n.text.trim().slice(0, 500), source: { title: String(n.source.title ?? "Source").slice(0, 90), url: n.source.url } } : null;
   const questions = checkAsk(a.questions);
-  return { greeting: typeof a.greeting === "string" ? a.greeting : "Morning!", items, news, ...checkDay(a, true), ...(questions.length ? { questions } : {}), ...checkThreads(a) };
+  const discovery = checkDiscovery(a.discovery);
+  return { greeting: typeof a.greeting === "string" ? a.greeting : "Morning!", items, news, ...checkDay(a, true), ...(discovery ? { discovery } : {}), ...(questions.length ? { questions } : {}), ...checkThreads(a) };
 }
 
 /** The read's day lines (ReadDay): trimmed, short, and only the ones it wrote. The evening's summary is its own. */
@@ -573,6 +577,7 @@ export function checkNight(a: NightAnswer): NightAnswer {
     change: (a.change ?? []).filter((c) => line(c?.what, 200)).slice(0, 2).map((c) => ({ what: line(c.what, 200), why: line(c.why, 240), topic: topicKey(c.topic, c.what) })),
     remember: (a.remember ?? []).map((x) => line(x, 180)).filter((x) => x.length > 8).slice(0, 2),
     ...checkDay(a, false),
+    ...(() => { const discovery = checkDiscovery(a.discovery); return discovery ? { discovery } : {}; })(),
     ...checkThreads(a),
     ...(a.workout && line(a.workout.summary, 600) ? { workout: { summary: line(a.workout.summary, 600), better: (a.workout.better ?? []).map((x) => line(x, 200)).filter(Boolean).slice(0, 3), next: line(a.workout.next, 300) } } : {}),
     ...(() => { const items = checkItems(a.items).filter((i) => ["study", "try", "noticed", "connection"].includes(i.type)), questions = checkAsk(a.questions);

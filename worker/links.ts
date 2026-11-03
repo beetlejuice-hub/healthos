@@ -81,10 +81,12 @@ const mark = <T extends Src | undefined>(v: Map<string, LinkVerdict>, s: T): T =
 
 /** A read's answer (morning or evening) with every cited link checked: dead or mismatched ones' items dropped, good ones marked. */
 export async function checkReadLinks<A extends DigestAnswer | NightAnswer>(a: A, f: typeof fetch): Promise<A> {
-  const items = a.items ?? [], qs = a.questions ?? [], news = "news" in a ? a.news : null;
-  const v = await verdicts([...items.map((i) => i.source), ...qs.map((q) => q.source), news?.source].filter((s): s is Src => !!s), f);
+  const items = a.items ?? [], qs = a.questions ?? [], news = "news" in a ? a.news : null, disc = a.discovery ?? null;
+  const v = await verdicts([...items.map((i) => i.source), ...qs.map((q) => q.source), news?.source, disc?.source].filter((s): s is Src => !!s), f);
   return {
     ...a,
+    // the day's discovery (PLAN 187): a dead link, or a page about something else, and it goes
+    ...(disc ? { discovery: keep(v, disc.source) ? { ...disc, source: mark(v, disc.source) } : null } : {}),
     ...(a.items ? { items: items.filter((i) => keep(v, i.source)).map((i) => (i.source ? { ...i, source: mark(v, i.source) } : i)) } : {}),
     ...(a.questions ? { questions: qs.filter((q) => keep(v, q.source)).map((q) => (q.source ? { ...q, source: mark(v, q.source) } : q)) } : {}),
     ...(news ? { news: keep(v, news.source) ? { ...news, source: mark(v, news.source) } : null } : {}),

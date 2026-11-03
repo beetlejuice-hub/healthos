@@ -92,6 +92,13 @@ describe("a read's links", () => {
     expect(opened.filter((u) => u === ok)).toHaveLength(1);
     expect(a.greeting).toBe("Morning");
   });
+  it("the day's discovery (PLAN 187): a dead link and it goes; a matching one is marked", async () => {
+    const disc = { topic: "sleep", kind: "study", title: "Kiwi before bed", text: "Faster asleep.", why: "", sure: "some", source: { title: "Kiwifruit and sleep", url: "https://gone.example.com/kiwi" } } as const;
+    const { f } = web({ "https://gone.example.com/kiwi": { status: 410 }, "https://pubmed.example.com/kiwi": { html: "<title>Effect of kiwifruit consumption on sleep quality</title>" } });
+    expect((await checkReadLinks({ greeting: "Hi", items: [], discovery: disc } as DigestAnswer, f)).discovery).toBeNull();
+    const ok = await checkReadLinks({ greeting: "Hi", items: [], discovery: { ...disc, source: { title: "Kiwifruit and sleep quality", url: "https://pubmed.example.com/kiwi" } } } as DigestAnswer, f);
+    expect(ok.discovery?.source).toEqual({ title: "Kiwifruit and sleep quality", url: "https://pubmed.example.com/kiwi", checked: true });
+  });
   it("nothing to check: as it was", async () => {
     const { f, opened } = web({});
     const plain: DigestAnswer = { greeting: "Hi", items: [{ type: "pattern", title: "x", text: "y" }] };

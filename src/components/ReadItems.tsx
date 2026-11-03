@@ -22,7 +22,7 @@ import { aboutItem } from "../lib/ai/chat";
 
 const KIND: Record<DigestItem["type"], string> = { fact: "Fun fact", study: "New study", pattern: "Your data", protocol: "Try this", try: "New to try", noticed: "Noticed", connection: "Connection" };
 /** How sure, in words (owner, 22 Oct: "make ai more smarter and cautious"). */
-const SURE_WORDS: Record<Sure, string> = { yours: "your data", strong: "strong studies", some: "some studies", anecdote: "anecdote, not studied" };
+export const SURE_WORDS: Record<Sure, string> = { yours: "your data", strong: "strong studies", some: "some studies", anecdote: "anecdote, not studied" };
 
 export function ReadItems({ items, open, onOpen, tip, from, day }: { items: DigestItem[]; open: boolean; onOpen: () => void; tip: "Today" | "Tomorrow"; from: "morning" | "evening"; day: string }) {
   const experiments = useStore((s) => s.ai.experiments), saved = useStore((s) => s.ai.saved);
