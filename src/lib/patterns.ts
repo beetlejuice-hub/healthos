@@ -12,6 +12,7 @@
 import type { Entry } from "./types";
 import type { GlanceDay } from "./glance";
 import { difference, mean, quantile, sd, type Range } from "./stats";
+import { clearTogether } from "./regress";
 import { localDay } from "./time";
 import { loggedInFull } from "./dayscore";
 
@@ -62,6 +63,12 @@ export function patterns(days: GlanceDay[], entries: Entry[]): Patterns {
   };
   const worst = { ...side((m) => m <= lo), cut: lo }, best = { ...side((m) => m >= hi), cut: hi };
   if (worst.days.length < PATTERN_MIN.perSide || best.days.length < PATTERN_MIN.perSide) return { need: 1 };
+  // both sides' rows tested together (PLAN 188): at 95 % each, one turned "clear" by chance in 18 of 30 worlds with
+  // nothing planted (engines audit); only Benjamini–Hochberg 10 % survivors stay clear
+  const all = [...worst.rows, ...best.rows], held = clearTogether(all.map((r) => r.diff));
+  all.forEach((r, i) => { r.diff = held[i]; });
+  const byClear = (x: Row, y: Row) => Number(!!y.diff?.clear) - Number(!!x.diff?.clear) || y.size - x.size;
+  worst.rows.sort(byClear); best.rows.sort(byClear);
   return { worst, best, rated: rated.length };
 }
 

@@ -8,6 +8,7 @@
  * how often chance alone does as well, with a stricter bar for "clear" because the grid tries many pairs at once.
  */
 
+import { bh } from "./regress";
 import type { HrMinute, SleepSession } from "./band";
 import { addDays, atMinute, localDay, minuteOfDay, startOfDay, MIN, HOUR } from "./time";
 import { usualSteps } from "./steps";
@@ -283,10 +284,16 @@ export function goesWith<N = Night, E = Evening>(ns: N[], evs: E[], opts: { perm
       }
       g.forEach((cell, c) => {
         const p = (hits[c] + 1) / (perms + 1), d = obs[c];
-        done.set(`${r.f.id}|${cell.o.id}`, { factor: r.f.id, outcome: cell.o.id, nWith, nWithout, diff: d, p, sure: p < bar.clear ? "clear" : p < bar.likely ? "likely" : "not clear", toward: d === 0 ? null : d * cell.o.better > 0 ? "better" : "worse" });
+        done.set(`${r.f.id}|${cell.o.id}`, { factor: r.f.id, outcome: cell.o.id, nWith, nWithout, diff: d, p, sure: p < bar.clear ? "clear" : "not clear", toward: d === 0 ? null : d * cell.o.better > 0 ? "better" : "worse" });
       });
     }
   }
+  // "likely": p under 1 ÷ cells AND past Benjamini–Hochberg at 10 % across every cell tried (PLAN 188). The bar alone
+  // turned one "likely" by chance in 4 of 10 grids with nothing planted (engines audit); BH alone was looser next to real
+  // effects — on Training's small grid it called unplanted coffee and evening sessions likely beside the real two
+  // (e2e trainingb). Both: never looser than before, near 1 in 10 on a quiet grid.
+  const tested = [...done.values()].filter((c) => c.p != null), pass = bh(tested.map((c) => c.p!), 0.1);
+  tested.forEach((c, k) => { if (pass[k] && c.sure === "not clear" && c.p! < bar.likely) c.sure = "likely"; });
   return fs.flatMap((f) => os.map((o) => done.get(`${f.id}|${o.id}`)!));
 }
 

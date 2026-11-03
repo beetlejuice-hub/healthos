@@ -15,6 +15,7 @@ import { feltOn } from "./bodywords";
 import { currentKg } from "./body";
 import { atMinute, localDay, minuteOfDay, addDays, startOfDay, DAY, MIN } from "./time";
 import { correlation, difference, mean, median, sd, type Range } from "./stats";
+import { clearTogether } from "./regress";
 import { suppByDay } from "./suppdays";
 import { volume } from "./training";
 import { macrosOf } from "./nutrition";
@@ -269,7 +270,10 @@ export function suppEffects(facts: DayFacts[], supplements: Supplement[]): SuppE
       out.push({ suppId: s.id, metric, on: on.length, off: off.length, diff: need ? null : difference(on, off), need });
     }
   }
-  return out;
+  // every supplement × feeling tested together (PLAN 188): at 95 % each, a supplement "worked" in 18 of 30 worlds where
+  // none does anything (engines audit); only Benjamini–Hochberg 10 % survivors stay clear
+  const held = clearTogether(out.map((x) => x.diff));
+  return out.map((x, i) => ({ ...x, diff: held[i] }));
 }
 
 /** The day's body words and how much (lib/bodywords feltOn), as DayFacts holds them. */

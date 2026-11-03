@@ -12,6 +12,7 @@
 import type { Supplement } from "./types";
 import type { GlanceDay } from "./glance";
 import { correlation, difference, type Range } from "./stats";
+import { clearTogether } from "./regress";
 import { suppDay } from "./insights";
 
 export const MIN_EACH = 5;
@@ -71,6 +72,10 @@ export function comparisons(days: GlanceDay[], supplements: Supplement[] = []): 
     rows.push(row(`supp-${s.id}-energy`, "Energy", `${s.name} taken`, "energy next day", 1, took, nextDay("energy")));
     if (s.slot === "evening") rows.push(row(`supp-${s.id}-sleep`, "Sleep", `${s.name} taken`, "that night's sleep rating", 1, took, thatNight));
   }
+  // tested together (PLAN 188): "clear" only past Benjamini–Hochberg 10 % across every row — at 95 % each, a page of
+  // 20 rows turned one clear by chance in 23 of 30 worlds with nothing planted (engines audit)
+  const held = clearTogether(rows.map((r) => r.diff));
+  rows.forEach((r, i) => { r.diff = held[i]; });
   // Grouped for the chart (stable: the order above within a group).
   const order = ["Mood", "Energy", "Stress", "Sleep"];
   return rows.map((r, i) => [r, i] as const).sort((a, b) => order.indexOf(a[0].group) - order.indexOf(b[0].group) || a[1] - b[1]).map(([r]) => r);

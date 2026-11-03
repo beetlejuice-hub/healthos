@@ -3317,10 +3317,16 @@ both reads and the questions. Phases in that order; #152 RPE waits (owner).
      adjust for what comes together (weekends, drinking and late nights); (4) only Leads checks itself on new days, and
      nothing keeps score of what the app said; (5) each page its own words.
    - The fix — one engine, one bar, one record:
-     - [ ] Phase 1 (now): the loose ones held to the bar — Connections, best/worst days and supplement effects say
-       "clear" only past Benjamini–Hochberg at 10 % across their rows (the rest still drawn, as not clear); Leads needs
-       8 days on each side of a yes/no; the grids' "likely" is BH 10 % across the grid. The audit becomes a test that
-       runs every time: under 0.15 false claims a world for every engine, planted effects still found.
+     - [x] Phase 1 (done 3 Nov): the loose ones held to the bar — Connections, best/worst days and supplement effects
+       say "clear" only past Benjamini–Hochberg at 10 % across their rows (regress clearTogether; the rest still drawn,
+       not clear); stats difference uses Welch's t for its range (5 days against 55 can't claim 1.96); Leads needs 8 days
+       each side of a yes/no; the grids' "likely" needs its old bar AND BH 10 % (BH alone was looser beside real effects:
+       Training's grid called unplanted coffee "likely" — e2e trainingb). After, with nothing planted (30 worlds):
+       Connections 23 → 4, best/worst days 18 → 5, supplement effects 18 → 4, grids' chance "likely" 4 of 10 → 0 of 10;
+       planted still found: Connections 29 of 30, Noticed 29, Leads strong 27, best/worst days 26 (13 of 20 on the
+       test's seeds — the honest range costs it some power). engines.audit.test runs every time (fails on the old code
+       in 4 of 5 checks). Leads' "early · could be chance" still shows in about half of quiet worlds — by design the
+       "worth a look" list; phase 3's re-checking is what fades the chance ones.
      - [ ] Phase 2: lib/evidence — one catalogue of questions (cause → outcome, lag, what can't cause what), one
        adjusted test (the outcome against the thing with the usual suspects alongside: weekend, yesterday, drift,
        drinks, late caffeine, sleep, training), BH across every question the app asks at once, split-half replication;

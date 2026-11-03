@@ -120,7 +120,7 @@ export function ownSignal(key: string): Signal {
  * minWordDays: a body word joins once it's in your notes on this many days. basePairs: pairs tested on the bench world
  * (lib/bench feelWorld, 90 days, no supplements) the bars below were calibrated on (PLAN 176, 27 Oct).
  */
-export const SCOUT = { minDays: 14, minR: 0.35, maxP: 0.005, show: 5, minWordDays: 4, basePairs: 186 };
+export const SCOUT = { minDays: 14, minR: 0.35, maxP: 0.005, show: 5, minWordDays: 4, basePairs: 186, /** days on each side of a yes/no (PLAN 188: "On a Creatine day, training volume tends to be lower" came from 57 days against 3) */ minSide: 8 };
 /** How many pairs scout tested last (for calibration and tests). */
 export let lastTested = 0;
 
@@ -182,6 +182,8 @@ export function pair(a: Signal, b: Signal, lag: 0 | 1, facts: DayFacts[]): Patte
   });
   const n = xs.length;
   if (n < SCOUT.minDays || new Set(xs).size < 2 || new Set(ys).size < 2) return null;
+  // a yes/no needs enough days each way: two drinking nights among three "without" days aren't a pattern
+  if (a.yes) { const on = xs.filter((x) => x > 0).length; if (on < SCOUT.minSide || n - on < SCOUT.minSide) return null; }
   const r = corr(rankCentred(xs, we), rankCentred(ys, we));
   if (!Number.isFinite(r) || Math.abs(r) >= 1) return null;
   const t = r * Math.sqrt((n - 2) / (1 - r * r));

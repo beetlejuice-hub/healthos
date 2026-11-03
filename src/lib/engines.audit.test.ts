@@ -35,6 +35,8 @@ function engines(seed: number, effects: boolean) {
   const btw = between(entries, workouts, names, NOW).filter((r) => r.found);
   return {
     leads: leads.length, strong: leads.filter((p) => leadGrade(p) === "strong").length, leadText: leads.map((p) => p.text),
+    // each yes/no lead's days with and without (held/of counts the "with" days)
+    yesSides: leads.filter((p) => p.a.yes).map((p) => [p.of, p.n - p.of] as const),
     noticed: eff.length, noticedText: eff.map((f) => f.title),
     connections: cmp.length, connText: cmp.map((c) => `${c.what} → ${c.outcome}`),
     patterns: patClear.length, supps: sup.length, between: btw.length,
@@ -52,6 +54,38 @@ function nullGrid(seed: number) {
   const cells = goesWith(ns, evs, { perms: 2000, seed });
   return { tried: cells.filter((c) => c.sure !== "too few").length, clear: cells.filter((c) => c.sure === "clear").length, likely: cells.filter((c) => c.sure === "likely").length };
 }
+
+// PLAN 188 phase 1: every engine held to one bar, checked every run. Before it (3 Nov), with nothing planted:
+// Connections "clear" in 23 of 30 worlds, best/worst days 18 of 30, supplement effects 18 of 30, Sleep grid "likely" 4 of 10.
+describe("one bar for every engine (PLAN 188)", () => {
+  const N = 20;
+  const ctl = Array.from({ length: N }, (_, s) => engines(2000 + s, false)), fx = Array.from({ length: N }, (_, s) => engines(2000 + s, true));
+  const worlds = (rows: ReturnType<typeof engines>[], k: "strong" | "noticed" | "connections" | "patterns" | "supps") => rows.filter((x) => x[k] > 0).length;
+  it("nothing planted: each engine says something in at most 5 of 20 worlds (about 1 in 10 is the bar)", () => {
+    for (const k of ["strong", "noticed", "connections", "patterns", "supps"] as const) expect(worlds(ctl, k), k).toBeLessThanOrEqual(5);
+  });
+  it("planted: the same engines still find what's there", () => {
+    expect(worlds(fx, "noticed")).toBeGreaterThanOrEqual(18);
+    expect(worlds(fx, "strong")).toBeGreaterThanOrEqual(16);
+    expect(worlds(fx, "connections")).toBeGreaterThanOrEqual(18);
+    // best/worst days compare small groups (the top and bottom fifth): the honest small-sample range costs it some power
+    expect(worlds(fx, "patterns")).toBeGreaterThanOrEqual(12);
+  });
+  it("supplements do nothing in the sample: a supplement 'works' in at most 5 of 20 worlds with the effects on too", () => {
+    expect(worlds(fx, "supps")).toBeLessThanOrEqual(5);
+  });
+  it("the night grids: nothing clear on pure chance, and a chance 'likely' in at most 2 of 10 grids", () => {
+    const g = Array.from({ length: 10 }, (_, s) => nullGrid(700 + s));
+    // "clear" is p under 0.1 ÷ cells: by design about one grid in ten gets one by chance
+    expect(g.filter((x) => x.clear > 0).length).toBeLessThanOrEqual(2);
+    expect(g.filter((x) => x.likely > 0).length).toBeLessThanOrEqual(2);
+  });
+  it("Leads: a yes/no needs 8 days each way", () => {
+    const sides = [...ctl, ...fx].flatMap((x) => x.yesSides);
+    expect(sides.length).toBeGreaterThan(0);
+    for (const [on, off] of sides) expect(Math.min(on, off)).toBeGreaterThanOrEqual(8);
+  });
+});
 
 describe.skipIf(!process.env.AUDIT)("engines audit", () => {
   it("each engine on the same worlds: false alarms with nothing planted, finds with effects", () => {

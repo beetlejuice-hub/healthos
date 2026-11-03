@@ -44,7 +44,7 @@ export function pearson(xs: number[], ys: number[]): number {
   return b === 0 || c === 0 ? NaN : a / Math.sqrt(b * c);
 }
 
-export type Range = { value: number; lo: number; hi: number; n: number; clear: boolean };
+export type Range = { value: number; lo: number; hi: number; n: number; clear: boolean; /** a difference's Welch degrees of freedom */ df?: number };
 
 /** Correlation with a 95% range (Fisher z). Needs at least 5 pairs. */
 export function correlation(xs: number[], ys: number[]): Range | null {
@@ -58,8 +58,13 @@ export function correlation(xs: number[], ys: number[]): Range | null {
 /** Difference of means `a − b` with a 95% range (Welch). Needs 3 in each group. */
 export function difference(a: number[], b: number[]): Range | null {
   if (a.length < 3 || b.length < 3) return null;
-  const d = mean(a) - mean(b), se = Math.sqrt(sd(a) ** 2 / a.length + sd(b) ** 2 / b.length);
-  return { value: d, lo: d - 1.96 * se, hi: d + 1.96 * se, n: a.length + b.length, clear: d - 1.96 * se > 0 || d + 1.96 * se < 0 };
+  // Welch: each side its own spread, and a t for the degrees of freedom the two sides really give — 5 days against 55
+  // can't claim the normal 1.96 (PLAN 188: with it, supplement effects came up "clear" in 18 of 30 worlds where no
+  // supplement does anything)
+  const va = sd(a) ** 2 / a.length, vb = sd(b) ** 2 / b.length, d = mean(a) - mean(b), se = Math.sqrt(va + vb);
+  const df = va + vb > 0 ? (va + vb) ** 2 / (va ** 2 / (a.length - 1) + vb ** 2 / (b.length - 1)) : a.length + b.length - 2;
+  const t = t95(Math.max(1, Math.floor(df)));
+  return { value: d, lo: d - t * se, hi: d + t * se, n: a.length + b.length, clear: d - t * se > 0 || d + t * se < 0, df };
 }
 
 /** Two-sided 95% t value for `df` degrees of freedom: a handful of pairs can't claim the normal 1.96. */

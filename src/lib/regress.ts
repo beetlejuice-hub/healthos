@@ -3,6 +3,8 @@
  * effect engine uses to compare days fairly (feeling = thing + weekend + yesterday + drift).
  */
 
+import { t95 } from "./stats";
+
 /** Solve A·x = b (Gauss–Jordan with partial pivoting). Null when singular. */
 function solve(A: number[][], b: number[]): number[] | null {
   const n = A.length, M = A.map((r, i) => [...r, b[i]]);
@@ -88,4 +90,22 @@ export function bh(ps: number[], q = 0.1): boolean[] {
   const pass = ps.map(() => false);
   for (let r = 0; r <= cut; r++) pass[idx[r][1]] = true;
   return pass;
+}
+
+/**
+ * Ranges tested together (PLAN 188; owner, 3 Nov: "come up w a better fixd solution"): a page that tests twenty rows at
+ * 95 % turns one "clear" by chance most of the time (the audit: Connections 1.77 false "clear" a world with nothing
+ * planted). Each range's two-sided p (its estimate over its standard error, the range's own width, t with n − 2), then
+ * Benjamini–Hochberg at q across all of them: only the survivors stay clear. Rows without a range are left as they are.
+ */
+export function clearTogether<R extends { value: number; lo: number; hi: number; n: number; clear: boolean; df?: number }>(ranges: (R | null)[], q = 0.1): (R | null)[] {
+  const ps = ranges.map((r) => {
+    if (!r) return null;
+    // the range was drawn with the t for its degrees of freedom (stats difference: Welch), so its width gives the error back
+    const df = Math.max(1, Math.floor(r.df ?? r.n - 2)), se = (r.hi - r.lo) / (2 * t95(df));
+    return se > 0 ? pTwoSided(r.value / se, df) : 1;
+  });
+  const live = ps.flatMap((p, i) => (p == null ? [] : [i])), pass = bh(live.map((i) => ps[i]!), q);
+  const ok = new Set(live.filter((_, k) => pass[k]));
+  return ranges.map((r, i) => (r ? { ...r, clear: r.clear && ok.has(i) } : r));
 }
