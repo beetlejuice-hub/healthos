@@ -22,7 +22,7 @@ import { notice } from "../lib/findings";
 import { scout } from "../lib/scout";
 import { currentKg } from "../lib/body";
 import { Proposals } from "./Proposal";
-import { MODELS, estimateMonthUsd, type ModelChoice, type Question, type Tier } from "../lib/ai/tasks";
+import { MODELS, checkDay, estimateMonthUsd, type ModelChoice, type Question, type Tier } from "../lib/ai/tasks";
 import { askLines, KIND_LABEL, questionKinds, tracking, type Tracked } from "../lib/ai/asking";
 import { savedFollowups } from "../lib/ai/saved";
 import { SavedCard } from "./Saved";
@@ -93,7 +93,7 @@ async function writeDigest(day: string) {
   const items = withLead(fresh, lead), led = lead && items.some((i) => i.lead);
   const qs = keepNew(r.answer.questions ?? [], `${day}:m`);
   act.setAi((a) => ({
-    digest: { day, at, greeting: r.answer.greeting, items, ...(r.answer.looked ? { looked: r.answer.looked } : {}) },
+    digest: { day, at, greeting: r.answer.greeting, ...checkDay(r.answer, true), items, ...(r.answer.looked ? { looked: r.answer.looked } : {}) },
     ...(led ? { leads: [...(a.leads ?? []), { id: lead.id, day }].slice(-60) } : {}),
     ...(qs.length ? { questions: { day, list: qs, from: "morning" as const, at }, asked: [...a.asked, ...qs.map((q) => q.text)].slice(-60), daily: tracked(a.daily, qs) } : {}),
     shown: [...a.shown, ...items.map((i) => i.title), ...(n ? [n.title] : [])].slice(-80),
@@ -337,9 +337,24 @@ export function MorningRead() {
         <span className="chev" aria-hidden="true">{open ? "▴" : "▾"}</span>
       </button>
       <p className="greet">{d.greeting}</p>
+      {/* the day around the items (owner, 3 Nov): the summary always, its two lines when open */}
+      {d.summary && <p className={`rd-sum${open ? "" : " clamp2"}`} onClick={() => !open && setOpen(true)}>{d.summary}</p>}
+      {open && <DayLines slept={d.slept} felt={d.felt} feltLabel="Yesterday" />}
       <ReadItems key={String(open)} items={d.items} open={open} onOpen={() => setOpen(true)} tip="Today" from="morning" day={d.day} />
+      {open && d.fun && <p className="rd-fun"><small>One more thing</small>{d.fun}</p>}
       {open && <Looked names={d.looked} />}
     </section>
+  );
+}
+
+/** Last night and how the day felt, one line each (owner, 3 Nov: "how i slept, how i felt thoughout the day"). */
+function DayLines({ slept, felt, feltLabel }: { slept?: string; felt?: string; feltLabel: string }) {
+  if (!slept && !felt) return null;
+  return (
+    <dl className="rd-day">
+      {slept && <><dt>Last night</dt><dd>{slept}</dd></>}
+      {felt && <><dt>{feltLabel}</dt><dd>{felt}</dd></>}
+    </dl>
   );
 }
 
@@ -376,6 +391,7 @@ export function NightRead() {
       {stale && <p className="night-stale">Written at {clock(n.at)} — since then you {stale.kcal >= 0 ? "logged" : "took off"} {num(stale.kcal)} kcal{stale.p ? ` and ${num(stale.p)} g protein` : ""}. The day now: <b>{stale.now.kcal.toLocaleString("en-GB")} kcal, {stale.now.p} g protein</b>.{" "}
         <button type="button" className="linkish" onClick={() => void makeNight(n.day, true)}>Read it again</button></p>}
       {open && <>
+        <DayLines slept={n.slept} felt={n.felt} feltLabel="Today" />
         {n.happened.length > 0 && <ul className="night-list">{n.happened.map((h, i) => <li key={i}>{h}</li>)}</ul>}
         {n.notes && <p className="night-notes"><small>Your notes</small>{n.notes}</p>}
         {/* PLAN 129: on a workout day, the session against the last one — in the same call, no extra one */}
@@ -386,6 +402,7 @@ export function NightRead() {
       </>}
       {/* the evening's study, thing to try and noticed (PLAN 157; owner, 21 Oct: "the same studt, try, and notiiced session at Eod") */}
       {(n.items?.length ?? 0) > 0 && <ReadItems key={String(open)} items={n.items!} open={open} onOpen={() => setOpen(true)} tip="Tomorrow" from="evening" day={n.day} />}
+      {open && n.fun && <p className="rd-fun"><small>One more thing</small>{n.fun}</p>}
       {open && <Looked names={n.looked} />}
       {newer && !stale && <button type="button" className="linkish" onClick={() => void makeNight(n.day, true)}>You logged more since — read it again</button>}
     </section>

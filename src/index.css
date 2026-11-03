@@ -2173,3 +2173,12 @@ span.fd-score[data-band="none"] { background: none; min-width: 34px; }
 .fa-time { grid-template-columns: auto; justify-items: start; }
 .fa-btns { display: flex; flex-wrap: wrap; gap: 8px; }
 .fa-del { color: var(--hr); }
+
+/* The reads' day around the items (owner, 3 Nov: "how i slept, how i felt thoughout the day … w a summary") */
+.rd-sum { margin: 2px 0 0; font-size: 14px; line-height: 1.45; color: var(--c-ink); }
+.rd-day { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 4px 10px; margin: 8px 0 2px; font-size: 13px; }
+.rd-day dt { color: var(--c-ink-2); font-weight: 700; font-size: 11px; letter-spacing: .06em; text-transform: uppercase; padding-top: 2px; }
+.rd-day dd { margin: 0; color: var(--c-ink); overflow-wrap: anywhere; }
+.rd-fun { margin: 10px 0 0; padding: 10px 12px; border-radius: 12px; background: var(--c-card-2); font-size: 14px; line-height: 1.4; }
+.rd-fun small { display: block; color: var(--c-ink-2); font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; margin-bottom: 2px; }
+.rd-sum.clamp2 { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; cursor: pointer; }

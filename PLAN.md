@@ -3226,8 +3226,12 @@ both reads and the questions. Phases in that order; #152 RPE waits (owner).
      train; billing on a project ends its free quota, hence two keys; paid Flash costs more than Haiku per token — the
      saving is the free quota. The big spend is the reads and chat (Sonnet + web search): moving those is a quality
      call → a side-by-side for him first.
-   - [ ] 4. Fuller morning and evening reads: a short summary, how you slept (band + your rating), how the day felt
-     (the check-ins' arc), one fun or surprising or useful thing — then the items.
+   - [x] 4. Fuller morning and evening reads: a short summary, how you slept (band + your rating), how the day felt
+     (the check-ins' arc), one fun or surprising or useful thing — then the items. Both prompts ask for "summary",
+     "slept", "felt", "fun" (their numbers only, nothing invented, never shaming); checkDay keeps them short and only
+     when written; the morning shows its summary folded (two lines), "Last night" / "Yesterday" and "One more thing"
+     opened; the evening adds "Last night" / "Today" and its fun line. readday.test, e2e readday (through the app's own
+     read path at 320; control: an older read as it was). Not checked: a real AI's wording (fake AI in tests).
    - [ ] 5. Prediction vs real: each evening the app predicts tonight's sleep and tomorrow's readiness from what the
      day had (drinks, training, late caffeine, a late meal, bedtime) using his own history; the morning shows
      predicted vs real and what pushed it. Plan + canvas first.

@@ -33,7 +33,7 @@ export type AiState = {
   /** charts: what the AI asked to show under its reply (PLAN 67) — drawn from the app's data when shown. looked: the tools it used. */
   chat: { role: "user" | "assistant"; text: string; at: number; unprompted?: boolean; charts?: ChartSpec[]; looked?: string[]; /** Changes it proposed, applied only on your tap (PLAN 98). */ proposals?: Proposal[]; /** A news message's source (#109). */ source?: { title: string; url: string } }[];
   /** The morning read, for the day it's for. */
-  digest: { day: string; /** When it was written (lib/ai/morning). */ at?: number; greeting: string; items: DigestItem[]; read?: boolean; /** When you first opened it (16 Oct: highlighted until then). */ seen?: number;
+  digest: { day: string; /** When it was written (lib/ai/morning). */ at?: number; greeting: string; items: DigestItem[]; /** The day around the items (3 Nov). */ summary?: string; slept?: string; felt?: string; fun?: string; read?: boolean; /** When you first opened it (16 Oct: highlighted until then). */ seen?: number;
     /** The app's look-ups it was checked with (PLAN 160). */ looked?: string[] } | null;
   /** The nightly read-back of a day (optional: older synced docs don't have it). */
   night?: (NightAnswer & { day: string; at: number; /** When you first opened it — a re-read is new again. */ seen?: number; /** The app's look-ups (PLAN 160). */ looked?: string[];
