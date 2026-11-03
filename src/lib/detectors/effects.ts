@@ -170,7 +170,7 @@ export function effectFindings(facts: DayFacts[], supplements: Supplement[]): Ef
     const sorted = [...rs].sort((a, b) => Math.abs(b.b!) / b.o.minEffect - Math.abs(a.b!) / a.o.minEffect);
     const lead = toFinding(sorted[0]);
     const others = sorted.slice(1).map((r) => `${r.o.name} ${r.b! > 0 ? "+" : "−"}${Math.abs(r.b!).toFixed(1)}${r.q.id !== sorted[0].q.id ? ` (${r.q.kind === "dose" ? `per ${r.q.phrase}` : r.q.thing.toLowerCase()})` : ""}`);
-    return { ...lead, id: `fx-${sorted[0].q.group}-${sorted[0].o.key}`, covers: rs.map((r) => `fx-${r.q.id}-${r.o.key}`), detail: others.length ? `Also ${others.join(", ")}. ${lead.detail}` : lead.detail };
+    return { ...lead, id: `fx-${sorted[0].q.group}-${sorted[0].o.key}`, covers: sorted.map((r) => `fx-${r.q.id}-${r.o.key}`), detail: others.length ? `Also ${others.join(", ")}. ${lead.detail}` : lead.detail };
   });
   const none = results.filter((r) => r.status === "none" && !best.has(`${r.q.group}:${r.o.key}`) && r.q.kind === "binary")
     .map((r) => ({ id: `none-${r.q.id}-${r.o.key}`, text: `${r.q.thing} → ${r.q.lag ? "next-day " : ""}${r.o.name}: no effect bigger than ${(Math.max(Math.abs(r.lo), Math.abs(r.hi))).toFixed(r.o.key === "kcal" ? 0 : 1)} ${r.o.unit} (${r.n} days)` }));

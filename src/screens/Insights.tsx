@@ -29,6 +29,8 @@ import type { Range } from "../lib/stats";
 import { addDays, atMinute, dayLabel, localDay } from "../lib/time";
 import { useNow } from "./Today";
 import { notice, WINDOW_DAYS, type Report } from "../lib/findings";
+import { noticedClaim } from "../lib/record";
+import { RecordLine, useKeepClaims, useRecord } from "../components/Record";
 import { StackCheckPanel } from "../components/StackCheck";
 import { useScout, WorthALook } from "../components/Scout";
 import { Experiments } from "../components/Ai";
@@ -229,6 +231,9 @@ function Noticed({ report: all }: { report: Report }) {
   const checks = useStore((s) => s.ai.checks);
   const hidden = new Set((checks ?? []).filter((c) => c.hidden).map((c) => c.id));
   const report = { ...all, found: all.found.filter((f) => !hidden.has(`n:${f.id}`)) };
+  // each finding shown is kept in the app's record and re-checked on the days since (PLAN 188 phase 3)
+  const rec = useRecord();
+  useKeepClaims(useMemo(() => report.found.flatMap((f) => noticedClaim(f, "") ?? []), [report.found.map((f) => f.id).join("|")])); // eslint-disable-line react-hooks/exhaustive-deps
   if (!all.found.length && !report.checking.length && !report.none.length) return null;
   return (
     <section className="noticed" id="noticed" aria-label="Noticed">
@@ -239,6 +244,7 @@ function Noticed({ report: all }: { report: Report }) {
             <div className="k">{f.area} · {f.sure}</div>
             <h3>{f.title}</h3>
             <div className="v">{f.value}<small>{f.unit}</small></div>
+            {noticedClaim(f, "") && <RecordLine id={noticedClaim(f, "")!.id} rec={rec} />}
             <p>{f.detail}</p>
             {f.chart?.kind === "trend" && (() => {
               const c = f.chart, days = c.days ?? WINDOW_DAYS;

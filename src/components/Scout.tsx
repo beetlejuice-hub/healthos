@@ -10,13 +10,15 @@ import { withBand, withHealth } from "../lib/daysband";
 import { useHealth } from "../lib/health-client";
 import { useBand } from "../lib/band-client";
 import { scout, since, verdict, type Pattern, type ScoutMemo } from "../lib/scout";
-import { addDays, dayLabel, atMinute, localDay } from "../lib/time";
+import { addDays, localDay } from "../lib/time";
 import type { GraphFocus } from "./MasterGraph";
 import { AiCheckLabel, HiddenByYou } from "./AiCheck";
 import { LeadChart } from "./LeadChart";
 import { AskAbout } from "./AskAbout";
 import { aboutLead, leadGrade, leadRef, leadTest } from "../lib/ai/lead";
 import { startExperiment } from "../lib/ai/experiment";
+import { leadClaim } from "../lib/record";
+import { DidntHold, RecordLine, RecordScore, useKeepClaims, useRecord } from "./Record";
 
 export type Scouted = { p: Pattern; memo?: ScoutMemo; since: { held: number; of: number } | null; verdict: ReturnType<typeof verdict> };
 
@@ -33,9 +35,12 @@ export function useScout(): Scouted[] {
   // …and Apple Health's walking speed (PLAN 184 phase 2)
   const band = useBand().data, health = useHealth().samples;
   const facts = useMemo(() => withHealth(withBand(dailyFacts(entries, workouts, settings, addDays(today, -90), addDays(today, -1)), band, today), health), [entries, workouts, settings, today, band, health]);
+  // what didn't hold on the days since it was said goes (lib/record; PLAN 188 phase 3) — before, "held on fewer than half
+  // of 5+ new days" dropped it, which in the audit dropped a third of the real ones
+  const rec = useRecord();
   return useMemo(() => scout(facts, supplements, (id) => !!memo[id]?.dismissed)
     .map((p) => { const m = memo[p.id]; const s = m ? since(p, m, facts) : null; return { p, memo: m, since: s, verdict: verdict(s) }; })
-    .filter((x) => x.verdict !== "faded"), [facts, supplements, memo]);
+    .filter((x) => rec.get(`lead:${x.p.id}`)?.r.state !== "didn't hold"), [facts, supplements, memo, rec]);
 }
 
 const lanesOf = (p: Pattern) => [...new Set([p.a.lane, p.b.lane].filter((x): x is string => !!x))];
@@ -51,6 +56,9 @@ export function WorthALook({ items, onShow }: { items: Scouted[]; onShow: (f: Gr
   const [asking, setAsking] = useState<string | null>(null);
   const sorted = useMemo(() => [...items].sort((x, y) => Number(leadGrade(y.p) === "strong") - Number(leadGrade(x.p) === "strong")), [items]);
   const today = localDay(Date.now());
+  // each one shown is kept in the app's record, from the day it was first shown (PLAN 188 phase 3)
+  const rec = useRecord();
+  useKeepClaims(useMemo(() => items.map((x) => leadClaim(x.p, x.memo?.first ?? "")), [items]));
   // Seeing a pattern here starts its forward check (and clears it from Today).
   useEffect(() => {
     const fresh = items.filter((x) => !x.memo?.seen);
@@ -59,19 +67,20 @@ export function WorthALook({ items, onShow }: { items: Scouted[]; onShow: (f: Gr
   }, [items, memo, today]);
   // hidden after the overall check: still listed here, so the section stays while any are (PLAN 137)
   const checks = useStore((s) => s.ai.checks), anyHidden = (checks ?? []).some((c) => c.hidden && c.id.startsWith("s:"));
-  if (!items.length && !anyHidden) return null;
+  if (!items.length && !anyHidden && !rec.size) return null;
   return (
     <section className="scout" id="scout" aria-label="Leads">
       <h2>Leads <span>things that move together in your days, tested · strongest first · re-checked on every new day</span></h2>
+      <RecordScore rec={rec} />
       <div className="scards">
-        {sorted.map(({ p, memo: m, since: s, verdict: v }) => {
-          const strong = leadGrade(p) === "strong", test = leadTest(p);
+        {sorted.map(({ p, memo: m }) => {
+          const strong = leadGrade(p) === "strong", test = leadTest(p), st = rec.get(`lead:${p.id}`)?.r.state;
           return (
           <article className="scard" key={p.id} data-grade={strong ? "strong" : "early"}>
-            <div className="k">{strong ? "strong · tested" : v === "confirmed" ? "holding up" : s ? "watching · could be chance" : "early · could be chance"}</div>
+            <div className="k">{strong ? "strong · tested" : st === "held" ? "held up on new days" : st && st !== "checking" ? "being checked · could be chance" : "early · could be chance"}</div>
             <h3>{p.text}</h3>
             <p className="held">Held on <b>{p.held} of {p.of}</b> {p.a.yes ? `${p.a.yes.replace(/^a /, "")}${p.a.yes.startsWith("a ") ? "s" : " days"}` : `of your highest-${p.a.name} days`}{p.lag ? ", looking at the next day" : ""}</p>
-            {s && m && <p className="since">Since {dayLabel(atMinute(m.first, 12 * 60))}: held on <b>{s.held} of {s.of}</b> new days{v === "confirmed" ? " — it keeps holding" : ""}</p>}
+            <RecordLine id={`lead:${p.id}`} rec={rec} />
             <LeadChart lead={leadRef(p)} days={28} />
             <p className="ev">{p.n} days · correlation {p.r >= 0 ? "+" : "−"}{Math.abs(p.r).toFixed(2)} · weekends compared separately · p {(p.q ?? p.p) < 0.0001 ? "< 0.0001" : (p.q ?? p.p).toFixed(4)}{strong ? " · chance gets this ~1 in 30" : ""}</p>
             <div className="sacts">
@@ -89,6 +98,7 @@ export function WorthALook({ items, onShow }: { items: Scouted[]; onShow: (f: Gr
           );
         })}
       </div>
+      <DidntHold rec={rec} />
       <HiddenByYou prefix="s:" onBack={(id) => { const k = id.slice(2); if (memo[k]) act.setScout({ ...memo, [k]: { ...memo[k], dismissed: false } }); }} />
       <p className="note-i">"Early" ones are flagged on purpose before they're sure: in tests with made-up people and nothing real to find, about one at a time is chance — so each keeps being checked on days it hasn't seen: real ones hold up, flukes fade away. "Strong" ones cleared a bar chance reaches about 1 time in 30; the strongest leads a morning read. "Goes with", never "causes" — "Test it" is how you find out.</p>
     </section>

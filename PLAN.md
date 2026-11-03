@@ -3332,10 +3332,24 @@ both reads and the questions. Phases in that order; #152 RPE waits (owner).
        drinks, late caffeine, sleep, training), BH across every question the app asks at once, split-half replication;
        one word set: early → likely → clear, and "no effect" when there's enough data and it's too small. Noticed,
        Leads, Connections, best/worst days and supplement effects read from it, so the pages can't disagree.
-     - [ ] Phase 3: the record — every claim kept with the day it was first said, re-checked on each new day: "said 3
+     - [~] Phase 3: the record — every claim kept with the day it was first said, re-checked on each new day: "said 3
        Oct · held 9 of 11 days since" → confirmed / didn't hold, on every page that shows it and in the AI's context
        (owner: "see if it was right or no"). PLAN 187's new signals (lowest heart rate time, social jetlag, weather,
        moon) join the catalogue here, found by it, not set up.
+       - [x] The record (3 Nov; owner, 3 Nov: "Do that"; canvas https://claude.ai/artifact/AaxQmCowWZvNsjqrUeiFum, built A —
+         on each card — as the default while he picks). lib/record: each lead and Noticed finding shown is kept
+         (ai.record) with the day it was first said (a lead's first showing, from before the record too), and re-checked
+         on the days since only, with Noticed's adjusted test: checking (under 8 + 8 new days, or 20) → holding so far →
+         held (the same way, clear) / didn't hold (the other way, or too small to matter). Worked out fresh each day, never
+         stopped at a good day. Measured (record.audit.test, 16 worlds of 120 days, claims found on the first 60): the old
+         "held k of n new days" confirmed 21 % of real leads and **faded 33 % of them — dropped from view**; the record: real
+         claims held 52 % at 30 days, 90 % at 60, never "didn't hold"; chance claims never held, "didn't hold" 29 % → 64 %.
+         On screen: Leads opens with the score ("The app's calls since September: 3 held · 2 checking · 1 didn't hold"),
+         each lead and Noticed card has its line, what didn't hold leaves the list for a "Didn't hold" fold (the old fade
+         filter is gone). The AI is told the record (context: "What the app said, re-checked on the days since").
+       - [ ] The new signals in the catalogue (lowest heart rate time, social jetlag, weather, moon), found by it.
+       - [ ] The record for the other engines (Connections, best/worst days, supplement effects, the grids) — with phase 2's
+         one catalogue.
      - [ ] Phase 4: asking — an early claim asks the one question that would settle it; surprise days (forecast misses).
 
 189. [x] **Experiments ask each morning: did you do it yesterday?** (owner, 3 Nov: "It should follow up every morning on

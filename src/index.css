@@ -2231,3 +2231,17 @@ span.fd-score[data-band="none"] { background: none; min-width: 34px; }
 .xp-sq.out { background: transparent; border-color: var(--c-dim); background-image: linear-gradient(135deg, transparent 45%, var(--c-dim) 45%, var(--c-dim) 55%, transparent 55%); }
 .xp-sq.tocome, .xp-sq.stopped { background: transparent; border-color: var(--c-track); cursor: default; }
 .xp-sq:disabled { cursor: default; }
+
+/* The app's track record (lib/record; PLAN 188 phase 3; owner, 3 Nov: "see if it was right or no") — on each lead and Noticed card */
+.rec-line { margin: 0; font-size: 12.5px; line-height: 1.45; color: var(--i-ink-2, var(--c-ink-2)); }
+.rec-chip { display: inline-block; margin-right: 2px; padding: 0 7px; border-radius: 999px; font-size: 11.5px; font-weight: 600; line-height: 18px; vertical-align: 1px; }
+.rec-held { background: color-mix(in srgb, var(--z-ideal) 32%, transparent); color: var(--i-ink, var(--c-ink)); }
+.rec-holding { background: var(--i-line-2, var(--c-track)); color: var(--i-ink, var(--c-ink)); }
+.rec-checking { box-shadow: inset 0 0 0 1px var(--i-line-2, var(--c-track)); color: var(--i-dim, var(--c-dim)); }
+.rec-didnthold { background: color-mix(in srgb, var(--z-fair) 34%, transparent); color: var(--i-ink, var(--c-ink)); }
+.rec-score { margin: 2px 0 10px; font-size: 13px; color: var(--i-ink-2, var(--c-ink-2)); }
+.rec-score .rec-n { font-weight: 600; background: none; padding: 0; color: var(--i-ink, var(--c-ink)); }
+.rec-gone { margin-top: 12px; border: 1px solid var(--i-line); border-radius: 8px; padding: 10px 14px; background: var(--i-panel); }
+.rec-gone summary { cursor: pointer; font-size: 13.5px; }
+.rec-gone .rec-row { display: grid; gap: 4px; padding-top: 10px; }
+.rec-gone .rec-row b { font-size: 13.5px; font-weight: 600; color: var(--i-ink-2); }

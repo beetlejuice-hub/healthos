@@ -12,13 +12,14 @@ import { creatineFrom } from "../checkin";
 import type { State } from "../store";
 import type { Entry } from "../types";
 import { macrosOf } from "../nutrition";
-import type { DayFacts } from "../insights";
+import { dailyFacts, type DayFacts } from "../insights";
 import { ATE, ateSaid, isGap, usualBefore, type Ate } from "../foodgaps";
 import { SMOKE_BANDS, SMOKE_LABEL, SMOKE_MID } from "../smoke";
 import type { Finding } from "../findings";
 import type { Pattern } from "../scout";
 import { addDays, atMinute, clock, dayLabel, localDay } from "../time";
 import { xpEnd, xpSkipped } from "./xpdays";
+import { recordLines } from "../record";
 import { weekly } from "../weekly";
 import { personalSleep, ratedNights } from "../caffeine-sleep";
 import { doseCompare } from "../dose";
@@ -275,6 +276,8 @@ function baseContext({ state, now, days, findings, patterns, weight, today = [],
     ...((l) => (l.length ? ["## What the reads already told me, by topic (last 30 days; a resting topic doesn't come back, an older one only with something new)", ...l.map((x) => `- ${x}`)] : []))(saidLines(ai.said ?? [], now)),
     ...((l) => (l.length ? ["## What I'm watching (from my notes, each with its evening question and my answers — when a read has something new on one, say it; the chat proposes a watch for a new one)", ...l.map((x) => `- ${x}`)] : []))(watchLines(ai.watches ?? [], { entries: state.entries, workouts: state.workouts ?? [] }, now)),
     ...((l) => (l.length ? ["## On my list to look into (from earlier reads — the deep dive takes these first)", ...l.map((x) => `- ${x}`)] : []))(threadLines(ai.threads ?? [], now)),
+    // what the app said and how each has held on the days since (PLAN 188 phase 3: "see if it was right or no")
+    ...(!ai.record?.length || !state.settings ? [] : recordLines(ai.record, dailyFacts(state.entries, state.workouts ?? [], state.settings, addDays(localDay(now), -150), addDays(localDay(now), -1)), supplements, localDay(now))),
     ...(ai.experiments.filter((x) => !x.ended).length ? ["## Experiments running", ...ai.experiments.filter((x) => !x.ended).map((x) => `- ${x.name} since ${x.start} (${x.days} days, measuring ${x.measure}${xpSkipped(x).length ? `; ${xpSkipped(x).length} day${xpSkipped(x).length === 1 ? "" : "s"} they said they didn't do it — left out, so it runs to ${addDays(xpEnd(x), -1)}` : ""})`)] : []),
     slim ? "## Last 7 days" : "## Last 14 days",
     ...days.slice(slim ? -7 : -14).map((d) => `- ${dayLine(d, names, gaps)}`),
