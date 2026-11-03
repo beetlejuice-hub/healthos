@@ -66,6 +66,14 @@ const SAID = ymd(NOW - 45 * D);
   check(`…its card: checking on the days since (${nline})`, /^checking Said Tue 27 Oct · checking it on the days since \(0 with, 0 without — 8 of each before it can say\)$/.test(nline));
   check(`390: fits (${await pg.evaluate(() => document.documentElement.scrollWidth)} px)`, await pg.evaluate(() => document.documentElement.scrollWidth) <= 390);
 
+  // best and worst days (Insights → Mind): a clear row joins the record today, and says it's checking (PLAN 188)
+  await pg.goto(APP + '#insights/mind'); await pg.waitForSelector('.gl-patterns', { timeout: 8000 }).catch(() => {}); await pg.waitForTimeout(800);
+  const pats = (await record()).filter((c) => c.from === 'pattern');
+  const pline = (await pg.locator('.gl-patterns .pt-row.clear .rec-line').first().innerText().catch(() => '')).replace(/\s+/g, ' ');
+  check(`best/worst days: a clear row kept from today, checking on the days since (${JSON.stringify(pats.map((c) => [c.id, c.said]))} · ${pline})`, pats.length >= 1 && pats.every((c) => c.said === '2026-10-27' && c.cut != null) && /^checking Said Tue 27 Oct · checking it on the days since \(0 (lowest|best) days, 0 others — 5 of each before it can say\)$/.test(pline));
+  await pg.locator('.gl-patterns .pt-best').screenshot({ path: OUT + 'record-patterns.png' }).catch(() => {});
+  await pg.goto(APP + '#insights/connections'); await pg.waitForSelector('#scout', { timeout: 8000 }).catch(() => {});
+
   // the lead's own record the wrong way: it leaves Leads for the fold
   await pg.evaluate(([k, id]) => { const s = JSON.parse(localStorage.getItem(k)); s.ai.record = s.ai.record.map((c) => (c.id === id ? { ...c, sign: 1 } : c)); localStorage.setItem(k, JSON.stringify(s)); }, [KEY, lead.id]);
   await pg.reload(); await pg.waitForSelector('#scout', { timeout: 8000 }).catch(() => {}); await pg.waitForTimeout(800);

@@ -20,6 +20,7 @@ import type { Pattern } from "../scout";
 import { addDays, atMinute, clock, dayLabel, localDay } from "../time";
 import { xpEnd, xpSkipped } from "./xpdays";
 import { recordLines } from "../record";
+import { glanceDays } from "../glance";
 import { researchLines } from "./research";
 import { scheduleToday, scheduleWords } from "../schedule";
 import { weekly } from "../weekly";
@@ -281,7 +282,9 @@ function baseContext({ state, now, days, findings, patterns, weight, today = [],
     // what the app researched on its own lately (PLAN 192), so the reads build on it
     ...researchLines(ai.researched ?? [], localDay(now)),
     // what the app said and how each has held on the days since (PLAN 188 phase 3: "see if it was right or no")
-    ...(!ai.record?.length || !state.settings ? [] : recordLines(ai.record, dailyFacts(state.entries, state.workouts ?? [], state.settings, addDays(localDay(now), -150), addDays(localDay(now), -1)), supplements, localDay(now))),
+    ...(!ai.record?.length || !state.settings ? [] : recordLines(ai.record, dailyFacts(state.entries, state.workouts ?? [], state.settings, addDays(localDay(now), -150), addDays(localDay(now), -1)), supplements, localDay(now),
+      // best/worst-days claims read the day summaries (PLAN 188) — only when there are some
+      ai.record.some((c) => c.from === "pattern") ? glanceDays(state.entries, state.workouts ?? [], state.settings, addDays(localDay(now), -150), addDays(localDay(now), -1)) : undefined)),
     ...(ai.experiments.filter((x) => !x.ended).length ? ["## Experiments running", ...ai.experiments.filter((x) => !x.ended).map((x) => `- ${x.name} since ${x.start} (${x.days} days, measuring ${x.measure}${xpSkipped(x).length ? `; ${xpSkipped(x).length} day${xpSkipped(x).length === 1 ? "" : "s"} they said they didn't do it — left out, so it runs to ${addDays(xpEnd(x), -1)}` : ""})`)] : []),
     slim ? "## Last 7 days" : "## Last 14 days",
     ...days.slice(slim ? -7 : -14).map((d) => `- ${dayLine(d, names, gaps)}`),

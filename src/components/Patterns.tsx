@@ -5,6 +5,8 @@
  */
 
 import { useMemo } from "react";
+import { patternClaim } from "../lib/record";
+import { RecordLine, useKeepClaims, useRecord } from "./Record";
 import { useStore } from "../lib/store";
 import type { GlanceDay } from "../lib/glance";
 import { patterns, type Row, type Side } from "../lib/patterns";
@@ -28,7 +30,7 @@ const pct = (v: number, max: number) => Math.max(0, Math.min(100, (v / max) * 10
 /** Red when the thing goes with a lower mood (more often before your lowest days, less before your best), green the other way. */
 const toneOf = (kind: "worst" | "best", group: number, rest: number) => ((group > rest) === (kind === "worst") ? "worse" : "better");
 
-function SideCol({ side, kind }: { side: Side; kind: "worst" | "best" }) {
+function SideCol({ side, kind, rec }: { side: Side; kind: "worst" | "best"; rec: ReturnType<typeof useRecord> }) {
   const rows = side.rows.filter((r) => r.diff);
   const clear = rows.filter((r) => r.diff!.clear);
   const others = rows.length ? Math.max(...rows.map((r) => r.nRest)) : 0;
@@ -52,7 +54,9 @@ function SideCol({ side, kind }: { side: Side; kind: "worst" | "best" }) {
                 <i className="o" style={{ left: `${pct(r.rest, max)}%` }} /><i className="t" style={{ left: `${pct(r.group, max)}%` }} />
               </span>
               <span className="vals"><b>{fmt(r, r.group)}</b> vs {fmt(r, r.rest)} <small>{unitOf(r)}</small></span>
-              <span className={`tag ${r.diff!.clear ? "s" : "w"}`}>{r.diff!.clear ? "clear" : "too early"}</span>
+              <span className={`tag ${r.diff!.clear ? "s" : "w"}`}>{r.diff!.clear ? "clear" : "early"}</span>
+              {/* how it has done since it was said (PLAN 188: the record for best/worst days too) */}
+              <RecordLine id={`pattern:${kind}:${r.f.k}`} rec={rec} />
             </div>
           );
         })}
@@ -65,6 +69,9 @@ function SideCol({ side, kind }: { side: Side; kind: "worst" | "best" }) {
 export function Patterns({ days }: { days: GlanceDay[] }) {
   const entries = useStore((s) => s.entries);
   const p = useMemo(() => patterns(days, entries), [days, entries]);
+  // each clear row kept in the app's record from the day it was first shown, re-checked on the days since (PLAN 188)
+  const rec = useRecord();
+  useKeepClaims(useMemo(() => ("need" in p ? [] : (["worst", "best"] as const).flatMap((k) => p[k].rows.filter((r) => r.diff?.clear).map((r) => patternClaim(k, r, p[k].cut, "")))), [p]));
   if ("need" in p) return days.some((d) => d.mood != null) ? (
     <section className="gp gl-patterns" aria-label="Before your best and worst days">
       <header className="gp-h"><div><span className="gp-k">Patterns</span><h2>Before your best and worst days</h2><p className="gp-ans">Needs {p.need} more day{p.need === 1 ? "" : "s"} with a mood check-in — then this compares what came before your lowest and best days.</p></div></header>
@@ -75,7 +82,7 @@ export function Patterns({ days }: { days: GlanceDay[] }) {
       <header className="gp-h"><div><span className="gp-k">Patterns</span><h2>Before your best and worst days</h2>
         <p className="gp-ans">Your lowest and best fifth of days by mood, and what came before each — the night's sleep, the evening before, training, food — against all your other days. A % is how many of those days it happened on.</p></div>
         <span className="gp-meta">{p.rated} rated days</span></header>
-      <div className="pt-cols"><SideCol side={p.worst} kind="worst" /><SideCol side={p.best} kind="best" /></div>
+      <div className="pt-cols"><SideCol side={p.worst} kind="worst" rec={rec} /><SideCol side={p.best} kind="best" rec={rec} /></div>
       <footer className="gp-f"><span className="lgd"><i style={{ background: "var(--sh-r)" }} />the gap goes with a lower mood</span><span className="lgd"><i style={{ background: "var(--sh-g)" }} />with a better one</span><span className="gl-dim">Clear: a gap this big is unlikely to be chance. Too early: faint, not enough days to tell yet. Goes with, not causes — a night out and a bad week can land together. Days not logged in full (under 1,000 kcal) are left out of calories.</span></footer>
     </section>
   );

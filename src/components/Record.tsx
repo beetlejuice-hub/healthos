@@ -12,7 +12,8 @@ import { withBand, withHealth } from "../lib/daysband";
 import { useHealth } from "../lib/health-client";
 import { useBand } from "../lib/band-client";
 import { signals } from "../lib/scout";
-import { recheck, recheckWords, remember, STATE_WORDS, type Claim, type ClaimState, type Recheck } from "../lib/record";
+import { recheck, recheckPattern, recheckWords, remember, STATE_WORDS, type Claim, type ClaimState, type Recheck } from "../lib/record";
+import { glanceDays } from "../lib/glance";
 import { addDays, localDay } from "../lib/time";
 import { useWeather } from "../lib/weather-client";
 import { withWeather } from "../lib/weather";
@@ -31,7 +32,9 @@ export function useRecord(): Map<string, { c: Claim; r: Recheck }> {
     if (!kept.length) return out;
     const facts = withWeather(withHealth(withBand(dailyFacts(entries, workouts, settings, addDays(today, -RECORD_DAYS), addDays(today, -1)), band, today), health), weather);
     const sigs = signals(supplements, facts);
-    for (const c of kept) { if (c.said < addDays(today, -120)) continue; const r = recheck(c, facts, supplements, sigs); if (r) out.set(c.id, { c, r }); }
+    // best/worst-days claims read the app's day summaries (lib/glance), only when there are some (PLAN 188)
+    const glance = kept.some((c) => c.from === "pattern") ? glanceDays(entries, workouts, settings, addDays(today, -RECORD_DAYS), addDays(today, -1)) : [];
+    for (const c of kept) { if (c.said < addDays(today, -120)) continue; const r = c.from === "pattern" ? recheckPattern(c, glance) : recheck(c, facts, supplements, sigs); if (r) out.set(c.id, { c, r }); }
     return out;
   }, [kept, entries, workouts, supplements, settings, band, health, weather, today]);
 }

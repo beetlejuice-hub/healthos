@@ -19,20 +19,24 @@ import type { Supplement } from "./types";
 import { answer, questions, type Outcome, type Question } from "./detectors/effects";
 import { signals, type Pattern, type Signal } from "./scout";
 import type { Finding } from "./findings";
-import { mean, median } from "./stats";
+import { difference, mean, median } from "./stats";
+import type { GlanceDay } from "./glance";
+import { FEATURES as PATTERN_FEATURES, type Row as PatternRow } from "./patterns";
 import { addDays, dayLabel } from "./time";
 
 /** What the app said: where it came from, the two things, which way, and the day it first said it. */
 export type Claim = {
-  id: string; from: "lead" | "noticed"; text: string;
+  id: string; from: "lead" | "noticed" | "pattern"; text: string;
   /** the first day it was said (it was found on the days before) */ said: string;
   /** lead: the two signals' ids; noticed: the question's id and the outcome's key */ x: string; y: string; lag: 0 | 1;
   sign: 1 | -1;
+  /** a best/worst-days claim (PLAN 188): x the feature, y "worst" or "best", and the mood cut it was found with */
+  cut?: number;
 };
 export type ClaimState = "checking" | "holding" | "held" | "didn't hold";
 export type Recheck = { state: ClaimState; days: number; on: number; off: number; b: number | null; lo: number; hi: number; need: number; meanOn: number; meanOff: number; binary: boolean;
   /** the outcome's name, and the cause's (for an amount: "more alcohol than usual") */ name: string; cause: string; minEffect: number };
-export const RECORD = { keep: 200 } as const;
+export const RECORD = { keep: 200, /** a best/worst-days claim: days on each side since it was said before it can say */ patternSide: 5 } as const;
 export const STATE_WORDS: Record<ClaimState, string> = { checking: "checking", holding: "holding so far", held: "held", "didn't hold": "didn't hold" };
 
 /** A lead as a claim (its id is the pattern's: the same pair stays the same claim). */
@@ -42,6 +46,28 @@ export function noticedClaim(f: Finding, said: string): Claim | null {
   const card = /^fx-(.+)-(energy|mood|focus|stress|kcal|sleep)$/.exec(f.id), q = /^fx-(.+)-(energy|mood|focus|stress|kcal|sleep)$/.exec(f.covers?.[0] ?? f.id);
   if (!card || !q) return null;
   return { id: `noticed:${card[1]}:${card[2]}`, from: "noticed", text: f.title, said, x: q[1], y: q[2], lag: 0, sign: f.value.startsWith("−") ? -1 : 1 };
+}
+
+/** A best/worst-days row as a claim: "before your lowest days, the sleep rating that morning is lower" (PLAN 188). */
+export const patternClaim = (side: "worst" | "best", r: PatternRow, cut: number, said: string): Claim =>
+  ({ id: `pattern:${side}:${r.f.k}`, from: "pattern", text: `Before your ${side === "worst" ? "lowest" : "best"} days: ${r.f.name.charAt(0).toLowerCase()}${r.f.name.slice(1)} ${r.diff!.value >= 0 ? "higher" : "lower"}`, said, x: r.f.k, y: side, lag: 0, sign: r.diff!.value >= 0 ? 1 : -1, cut });
+
+/**
+ * A best/worst-days claim on the days since it was said: the days with mood past the same cut against the rest, the
+ * feature's difference with its range (Welch) — held when the same way and clear, didn't hold the other way or too small.
+ */
+export function recheckPattern(c: Claim, days: GlanceDay[]): Recheck | null {
+  const f = PATTERN_FEATURES.find((x) => x.k === c.x);
+  if (!f || c.cut == null) return null;
+  const since = days.map((d, i) => ({ d, prev: days[i - 1] })).filter((x) => x.d.day >= c.said && x.d.mood != null);
+  const inG = (m: number) => (c.y === "worst" ? m <= c.cut! : m >= c.cut!);
+  const a = since.filter((x) => inG(x.d.mood!)).map((x) => f.get(x.d, x.prev)).filter((v): v is number => v != null);
+  const b = since.filter((x) => !inG(x.d.mood!)).map((x) => f.get(x.d, x.prev)).filter((v): v is number => v != null);
+  const all = [...a, ...b], m = all.length ? all.reduce((s, v) => s + v, 0) / all.length : 0, spread = Math.sqrt(all.reduce((s, v) => s + (v - m) ** 2, 0) / Math.max(1, all.length - 1)) || 1;
+  const base = { days: since.length, on: a.length, off: b.length, need: Math.max(0, RECORD.patternSide - Math.min(a.length, b.length)), meanOn: mean(a), meanOff: mean(b), binary: true, name: f.name.charAt(0).toLowerCase() + f.name.slice(1), cause: c.y === "worst" ? "lowest" : "best", minEffect: 0.2 * spread };
+  if (a.length < RECORD.patternSide || b.length < RECORD.patternSide) return { ...base, state: "checking", b: null, lo: NaN, hi: NaN };
+  const d = difference(a, b)!, way = d.value * c.sign, clear = c.sign > 0 ? d.lo > 0 : d.hi < 0, small = d.lo > -base.minEffect && d.hi < base.minEffect;
+  return { ...base, b: d.value, lo: d.lo, hi: d.hi, state: way > 0 && clear ? "held" : way <= 0 || small ? "didn't hold" : "holding" };
 }
 
 /**
@@ -74,6 +100,7 @@ function asQuestion(c: Claim, before: DayFacts[], supplements: Supplement[], sig
 
 /** How a claim has done on the days since it was said. Null when it can't be asked any more (a supplement gone, say). */
 export function recheck(c: Claim, facts: DayFacts[], supplements: Supplement[], sigs: Signal[] = signals(supplements, facts)): Recheck | null {
+  if (c.from === "pattern") return null; // its own days: recheckPattern
   const before = facts.filter((d) => d.day < c.said), after = facts.filter((d) => d.day >= c.said);
   const qo = asQuestion(c, before, supplements, sigs);
   if (!qo) return null;
@@ -97,6 +124,11 @@ export function recheck(c: Claim, facts: DayFacts[], supplements: Supplement[], 
  */
 export function recheckWords(c: Claim, r: Recheck, state = true): string {
   const when = `Said ${dayLabel(new Date(`${c.said}T12:00`).getTime())}`;
+  if (c.from === "pattern") {
+    if (r.state === "checking") return `${when} · checking it on the days since (${r.on} ${r.cause} days, ${r.off} others — ${RECORD.patternSide} of each before it can say)`;
+    const g = (v: number) => (Math.abs(v) >= 100 ? Math.round(v).toLocaleString("en-GB") : v.toFixed(1));
+    return `${when} · since: ${r.on} of your ${r.cause} days, ${r.off} others — ${r.name} ${g(r.meanOn)} vs ${g(r.meanOff)}${state ? ` · ${STATE_WORDS[r.state]}` : ""}`;
+  }
   if (r.state === "checking") return `${when} · checking it on the days since (${r.binary ? `${r.on} with, ${r.off} without — 8 of each` : `${r.days} days — 20`} before it can say)`;
   const f = (v: number) => (Math.abs(v) >= 100 ? Math.round(v).toLocaleString("en-GB") : v.toFixed(1));
   const what = r.binary ? `${r.on} days with, ${r.off} without` : `${r.on} days with more ${r.cause} than usual, ${r.off} with less`;
@@ -104,8 +136,8 @@ export function recheckWords(c: Claim, r: Recheck, state = true): string {
 }
 
 /** For the AI: what the app said lately and how each has held, so it doesn't repeat one that didn't. */
-export function recordLines(kept: Claim[], facts: DayFacts[], supplements: Supplement[], today: string): string[] {
+export function recordLines(kept: Claim[], facts: DayFacts[], supplements: Supplement[], today: string, days?: GlanceDay[]): string[] {
   const sigs = signals(supplements, facts);
-  const rows = kept.filter((c) => c.said >= addDays(today, -120)).flatMap((c) => { const r = recheck(c, facts, supplements, sigs); return r ? [`- "${c.text}" — ${recheckWords(c, r)}`] : []; });
+  const rows = kept.filter((c) => c.said >= addDays(today, -120)).flatMap((c) => { const r = c.from === "pattern" ? (days ? recheckPattern(c, days) : null) : recheck(c, facts, supplements, sigs); return r ? [`- "${c.text}" — ${recheckWords(c, r)}`] : []; });
   return rows.length ? ["## What the app said, re-checked on the days since (held / didn't hold / still checking)", ...rows.slice(-12)] : [];
 }

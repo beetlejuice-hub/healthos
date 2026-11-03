@@ -3342,7 +3342,7 @@ both reads and the questions. Phases in that order; #152 RPE waits (owner).
        30. Not done: best/worst days keep their own test (they describe days, they don't ask cause → outcome); the old
        supplement-effects function (lib/insights suppEffects) isn't shown anywhere — left for its tests; Leads stay the
        looser "worth a look" list, in the record.
-     - [~] Phase 3: the record — every claim kept with the day it was first said, re-checked on each new day: "said 3
+     - [x] Phase 3: the record — every claim kept with the day it was first said, re-checked on each new day: "said 3
        Oct · held 9 of 11 days since" → confirmed / didn't hold, on every page that shows it and in the AI's context
        (owner: "see if it was right or no"). PLAN 187's new signals (lowest heart rate time, social jetlag, weather,
        moon) join the catalogue here, found by it, not set up.
@@ -3369,8 +3369,12 @@ both reads and the questions. Phases in that order; #152 RPE waits (owner).
          the record). Tests: signals.test (planted found 8+ / 7+ of 10, chance at most 1 of 10), e2e settle (the rain on
          Noticed; Open-Meteo unreachable: nothing, no errors). Not verified: Open-Meteo from his phone (CORS is open; the
          e2e fakes it), his own rain/late-night findings.
-       - [ ] The record for the other engines (Connections, best/worst days, supplement effects, the grids) — with phase 2's
-         one catalogue.
+       - [x] The record for the other engines (claimed 3 Nov, owner: "lets do 1"): Connections' clear rows (with phase 2,
+         under Noticed's ids) and best/worst days (record recheckPattern: the days since with mood past the same cut
+         against the rest, Welch, 5 of each before it says; its line on each row, in the Leads score and the "Didn't
+         hold" fold, and the AI's record lines). The old supplement-effects function isn't shown anywhere; the night grids
+         (Sleep, Heart, Mind, Training) re-find themselves each day and aren't claims yet. Social jetlag already shows on
+         the Sleep page ("Friday and Saturday nights run about … later") and in the body clock.
      - [x] Phase 4 (claimed 3 Nov, owner: "do 1 and 2"): asking — an early claim asks the one question that would settle it;
        surprise days (forecast misses — the morning card's "something it didn't see?" since PLAN 187 phase 2).
        Plan: the finding nearest to settled (likely first, then early with a week or less to go) is a For you ask —

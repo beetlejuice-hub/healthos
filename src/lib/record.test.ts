@@ -2,8 +2,9 @@
 // said, and only those. Planted: energy +1.5 on gym days, only after the day it was said → held; nothing after → not held;
 // what came before can't change the answer; new claims take today, kept ones keep their day.
 import { describe, expect, it } from "vitest";
-import { feelWorld } from "./bench";
-import { leadClaim, noticedClaim, recheck, recheckWords, recordLines, remember, RECORD, type Claim } from "./record";
+import { feelWorld, rng } from "./bench";
+import { leadClaim, noticedClaim, patternClaim, recheck, recheckPattern, recheckWords, recordLines, remember, RECORD, type Claim } from "./record";
+import type { GlanceDay } from "./glance";
 import { addDays } from "./time";
 import type { DayFacts } from "./insights";
 import type { Finding } from "./findings";
@@ -70,5 +71,32 @@ describe("the AI is told the record", () => {
     expect(lines[0]).toMatch(/^## What the app said, re-checked on the days since/);
     expect(lines[1]).toMatch(/^- "On gym days, your energy is 1\.5 points higher" — Said Wed 30 Sep · since: .* · held$/);
     expect(recordLines([{ ...gym, said: "2026-01-01" }], world(2, 1.5), [], today)).toEqual([]);
+  });
+});
+
+// PLAN 188: the record for best/worst days too. Planted after it was said: on the days with mood at or under the cut,
+// that morning's sleep rating 2 lower → held; nothing planted after → not held; before it was said doesn't count.
+describe("the record for best and worst days", () => {
+  const glance = (seed: number, after: number, before = 0) => {
+    const { r, g } = rng(seed);
+    return Array.from({ length: 100 }, (_, i) => {
+      const day = addDays("2026-08-01", i), mood = Math.round(6 + g() * 1.5), low = mood <= 5, lift = low ? (day >= SAID ? after : before) : 0;
+      return { day, mood, sleep: Math.max(1, Math.min(10, Math.round(7 + g() - lift))), checkins: 1, kcal: 2000, drinks: r() < 0.2 ? 1 : 0 } as unknown as GlanceDay;
+    });
+  };
+  const c: Claim = { id: "pattern:worst:sleep", from: "pattern", text: "Before your lowest days: sleep rating that morning lower", said: SAID, x: "sleep", y: "worst", lag: 0, sign: -1, cut: 5 };
+  it("planted after it was said: held; nothing after: not held; before it doesn't count", () => {
+    const held = Array.from({ length: 12 }, (_, s) => recheckPattern(c, glance(s + 1, 2))!.state);
+    const none = Array.from({ length: 12 }, (_, s) => recheckPattern(c, glance(s + 1, 0, 2))!.state);
+    expect(held.filter((x) => x === "held").length).toBeGreaterThanOrEqual(10);
+    expect(none.filter((x) => x === "held").length).toBeLessThanOrEqual(1);
+  });
+  it("in words; too few days: checking; a row as a claim", () => {
+    const r = recheckPattern(c, glance(3, 2))!;
+    expect(recheckWords(c, r)).toMatch(/^Said Wed 30 Sep · since: \d+ of your lowest days, \d+ others — sleep rating that morning \d\.\d vs \d\.\d · held$/);
+    expect(recheckPattern({ ...c, said: addDays("2026-08-01", 97) }, glance(3, 2))!.state).toBe("checking");
+    const row = { f: { k: "sleep", name: "Sleep rating that morning" }, diff: { value: -1.6 } } as never;
+    expect(patternClaim("worst", row, 5, "")).toMatchObject({ id: "pattern:worst:sleep", from: "pattern", text: "Before your lowest days: sleep rating that morning lower", x: "sleep", y: "worst", sign: -1, cut: 5 });
+    expect(recheck(c, [], [])).toBeNull();
   });
 });
