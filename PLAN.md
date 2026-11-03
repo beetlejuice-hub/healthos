@@ -3274,7 +3274,14 @@ both reads and the questions. Phases in that order; #152 RPE waits (owner).
      story. "Try it" when there's something to try: it starts a watch (the evening question, its data, what it showed
      at the end — PLAN 182), so a kiwi before bed gets its verdict. lib/ai/discover, the reads' prompts and checks,
      a Discovery block in each read.
-   - [ ] Phase 2 — Forecast B (his pick on the canvas): at night "The app bets on a 74 tonight · usual 80 · mostly the
+   - [x] Phase 2 — Forecast B (built 3 Nov: lib/forecast + components/Forecast on Today: a ridge fit on his last 90 band
+     nights — drinks, caffeine at bed, training, training late, a meal within 2 h of bed, evening stress (7+), bedtime vs
+     usual → that night's sleep score; fit only on nights before the one it bets on, so no bet is stored and none can be
+     rewritten; range = the middle 80 % of its misses on nights left out; nothing under 21 nights. forecast.test (planted
+     −3 a drink / −4 a late meal / −4 an hour late recovered in 17+ of 20 worlds; control: no "mostly" in 17+ of 20; the
+     range holds 65–97 % of unseen nights; later nights don't change a bet; fails with the fit crippled), e2e forecast
+     at 320 (a rough night "Missed by 27" → Stressed tags it; 2 beers → under usual, mostly the drinks; control). Not yet:
+     readiness and HRV bets (the canvas showed sleep score only), and a miss's answer feeding the fit as its own input): at night "The app bets on a 74 tonight · usual 80 · mostly the
      2 beers (−6)"; in the morning "72 · the app bet 74 · Called it ±2" or "Missed by 13 — something it didn't see?"
      (the answer becomes a night tag the finder tests), and the week of hits. lib/forecast (plan in 186-5).
    - [ ] Phase 3 — The app finds the canvas's findings by itself and tracks them: new signals in the pattern finder —

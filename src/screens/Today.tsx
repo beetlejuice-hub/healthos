@@ -38,6 +38,7 @@ import { SuppAmount } from "../components/SuppAmount";
 import { SuppQuick } from "../components/SuppQuick";
 import { Tonight } from "../components/Tonight";
 import { RecoveryCard } from "../components/RecoveryCard";
+import { ForecastCard } from "../components/Forecast";
 import { extrasOn } from "../lib/supplog";
 import { CatchUp } from "../components/CatchUp";
 import { EveningRead, NowCard, Pad, Status, UsualPicker, useStackCount } from "../components/TodayParts";
@@ -196,6 +197,7 @@ export function Today() {
       <Pad now={now} stack={stack} onPickUsual={() => setPickUsual(true)} />
       {pickUsual && <UsualPicker onDone={() => setPickUsual(false)} />}
       <RecoveryCard now={now} />
+      <ForecastCard now={now} />
 
       <NowCard moment={moment}>
         <WorkoutRunning now={now} />

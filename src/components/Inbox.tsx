@@ -23,7 +23,7 @@ const LOW_MORNING = ["ill", "stressed"];
  * Today. The sleep entry is made if the morning wasn't rated yet — inside the morning window, or it wouldn't be that
  * night's (lib/sleep's evenings read mornings 04:00–14:00).
  */
-function tagMorning(day: string, tag: string) {
+export function tagMorning(day: string, tag: string) {
   const e = getState().entries.find((x): x is Extract<Entry, { kind: "sleep" }> => x.kind === "sleep" && localDay(x.at) === day);
   if (e) { if (!(e.tags ?? []).includes(tag)) act.updateEntry(e.id, { tags: [...(e.tags ?? []), tag] } as Partial<Entry>); return; }
   const now = Date.now(), h = new Date(now).getHours();
