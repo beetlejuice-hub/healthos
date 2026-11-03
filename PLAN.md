@@ -3357,10 +3357,20 @@ both reads and the questions. Phases in that order; #152 RPE waits (owner).
          On screen: Leads opens with the score ("The app's calls since September: 3 held · 2 checking · 1 didn't hold"),
          each lead and Noticed card has its line, what didn't hold leaves the list for a "Didn't hold" fold (the old fade
          filter is gone). The AI is told the record (context: "What the app said, re-checked on the days since").
-       - [ ] The new signals in the catalogue (lowest heart rate time, social jetlag, weather, moon), found by it.
+       - [~] The new signals in the catalogue (claimed 3 Nov, owner: "do 1 and 2"): weather (Open-Meteo, free, no key;
+         the city from the time zone): a rainy day, daylight hours, a hot day → mood, energy, that night's sleep; bed an
+         hour or more past your usual (the band's nights) → next-day energy, mood, focus. The lowest heart rate's time is
+         already the Sleep grid's "Low at" outcome (tested against drinks, late meals, caffeine, training) — not doubled.
+         Social jetlag and the moon: later. Found by the engine like every other question; Noticed, Connections' record
+         and the reads see them.
        - [ ] The record for the other engines (Connections, best/worst days, supplement effects, the grids) — with phase 2's
          one catalogue.
-     - [ ] Phase 4: asking — an early claim asks the one question that would settle it; surprise days (forecast misses).
+     - [~] Phase 4 (claimed 3 Nov, owner: "do 1 and 2"): asking — an early claim asks the one question that would settle it;
+       surprise days (forecast misses — the morning card's "something it didn't see?" since PLAN 187 phase 2).
+       Plan: the finding nearest to settled (likely first, then early with a week or less to go) is a For you ask —
+       what it is, what would settle it ("6 more days without Saffron"), and when the short side is days without a
+       supplement, caffeine after 14:00, drinks or eating late, "Try 7 days without" starts that experiment; never one to
+       do more of. "Not now" rests it 2 weeks. lib/settle (pure), tests, e2e settle.
 
 189. [x] **Experiments ask each morning: did you do it yesterday?** (owner, 3 Nov: "It should follow up every morning on
    last days experiment- if i did it or not. If not it should skip that day from experiment. Like i cant guarantee I'll
