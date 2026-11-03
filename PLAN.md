@@ -3292,3 +3292,42 @@ both reads and the questions. Phases in that order; #152 RPE waits (owner).
    - [ ] Phase 4 — Asking harder: surprise days (far from the forecast) asked about; an early lead asks the question
      that would settle it; the reads ask about the strongest open lead.
    - [ ] Year in pixels on Insights → Mind (a chart, not a finding).
+
+188. [~] **One way of being sure: the findings and compare engines, investigated and fixed** (owner, 3 Nov: "make a
+   thorough investigation of how findings, and compare engines work and come up w wa better fixd solution"). Claimed
+   3 Nov.
+   - What there is: at least twelve engines that say "these two go together", each with its own test, bar and words —
+     Noticed (detectors/effects: regression with weekend, yesterday and drift, Benjamini–Hochberg 10 %, split-half
+     replication), check-in gaps (detectors/between: regression for the rebound and time of day, BH), Leads (scout:
+     rank correlation, weekends centred, p scaled by pairs tried, re-checked on new days), Compare (within-day slots,
+     whole-day shuffles, delay search), the Sleep / Heart / Mind / Training grids (sleep goesWith: a shuffle per cell,
+     bar ÷ cells), Body lab (slopes, shuffles), Connections' forest plot (95 % ranges), "before your best and worst
+     days" (95 % ranges), supplement effects (95 % ranges), dose changes, after a supplement, Watching's verdicts
+     (Welch / paired t), the chat's compare tool — and now the forecast. "Clear" means a different thing on each page.
+   - Measured (src/lib/engines.audit.test.ts, AUDIT=1: 30 sample worlds with nothing planted, 30 with its planted
+     effects, each engine through its own data path). False claims with nothing planted: Noticed 2 of 30 worlds (0.07 a
+     world); Leads "strong" 1 of 30; Leads at all ("early · could be chance") 18 of 30 (0.87); **Connections "clear" 23
+     of 30 (1.77 a world); best/worst days "clear" 18 of 30 (1.07); supplement effects "clear" 18 of 30 (0.80 — and 18
+     of 30 with effects on, where no supplement does anything)**; Sleep grid "clear" 0, "likely" 4 of 10 grids. With
+     effects on: Noticed 29 of 30, Leads strong 27 of 30, Connections 30 of 30.
+   - Why: (1) three engines test every row at 95 % with nothing for testing many rows at once — on a page of 20 rows,
+     one turns "clear" by chance most of the time; (2) Leads has no minimum per side — "On a Creatine day, training volume
+     tends to be lower (2,193 kg vs 10,404 kg)" came from 57 days against 3; with a skewed number (alcohol: mostly 0, a few
+     big nights) two drinking days among three make a big "difference"; (3) only Noticed, check-in gaps and Compare
+     adjust for what comes together (weekends, drinking and late nights); (4) only Leads checks itself on new days, and
+     nothing keeps score of what the app said; (5) each page its own words.
+   - The fix — one engine, one bar, one record:
+     - [ ] Phase 1 (now): the loose ones held to the bar — Connections, best/worst days and supplement effects say
+       "clear" only past Benjamini–Hochberg at 10 % across their rows (the rest still drawn, as not clear); Leads needs
+       8 days on each side of a yes/no; the grids' "likely" is BH 10 % across the grid. The audit becomes a test that
+       runs every time: under 0.15 false claims a world for every engine, planted effects still found.
+     - [ ] Phase 2: lib/evidence — one catalogue of questions (cause → outcome, lag, what can't cause what), one
+       adjusted test (the outcome against the thing with the usual suspects alongside: weekend, yesterday, drift,
+       drinks, late caffeine, sleep, training), BH across every question the app asks at once, split-half replication;
+       one word set: early → likely → clear, and "no effect" when there's enough data and it's too small. Noticed,
+       Leads, Connections, best/worst days and supplement effects read from it, so the pages can't disagree.
+     - [ ] Phase 3: the record — every claim kept with the day it was first said, re-checked on each new day: "said 3
+       Oct · held 9 of 11 days since" → confirmed / didn't hold, on every page that shows it and in the AI's context
+       (owner: "see if it was right or no"). PLAN 187's new signals (lowest heart rate time, social jetlag, weather,
+       moon) join the catalogue here, found by it, not set up.
+     - [ ] Phase 4: asking — an early claim asks the one question that would settle it; surprise days (forecast misses).

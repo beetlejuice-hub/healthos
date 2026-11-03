@@ -37,9 +37,9 @@ const SPLIT: [string, string[]][] = [
 /** What's planted, by how much (the tests read these). */
 export const PLANTED = { cafSleep: -1.6, cafBedMg: 30, alcSleepPerG: -0.05, proteinMid: 160, proteinPerPoint: 25, sleepAt: 7 * 60 + 20, bedMinute: 23 * 60 };
 
-export function makeSample(now = Date.now(), days = 60, o: { effects?: boolean } = {}): { entries: Entry[]; workouts: Workout[] } {
+export function makeSample(now = Date.now(), days = 60, o: { effects?: boolean; /** Another world of the same kind (the audit runs many); the sample itself is always the default. */ seed?: number } = {}): { entries: Entry[]; workouts: Workout[] } {
   const fx = o.effects === false ? 0 : 1;
-  const r = rng(29092026);
+  const r = rng(o.seed ?? 29092026);
   const g = () => { let u = 0; while (!u) u = r(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * r()); };
   const entries: Entry[] = [], workouts: Workout[] = [];
   let n = 0;
