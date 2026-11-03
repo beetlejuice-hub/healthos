@@ -83,6 +83,8 @@ export type AiState = {
   failed?: { at: number; task: string; error: string; message: string }[];
 };
 export type Experiment = { id: string; name: string; how: string; days: number; measure: string; start: string; ended?: string;
+  /** Each morning's answer about the day before (PLAN 189): did you do it? A "no" day is left out and the experiment runs a day longer. */
+  did?: Record<string, boolean>;
   /** When it ended (PLAN 160): the AI's words on the app's result, what to do next, studies it leaned on. */
   verdict?: { at: number; state: "better" | "worse" | "no-clear-change"; text: string; next: string; found: DiveStudy[]; /** You opened it from Today. */ seen?: number };
   /** An ended one's line on Today was tapped (PLAN 160). */ seen?: number };
@@ -385,14 +387,16 @@ export const act = {
  * can't undo if it was an accident"). Separate from the state so undoing doesn't itself need undo.
  */
 /** `put`: entries to put back as they were — a deleted or changed one (owner, 3 Nov: press and hold a food, delete it). */
-export type Undo = { ids: string[]; label: string; at: number; put?: Entry[] };
+/** `back`: puts back something that isn't an entry (PLAN 189: an experiment's "did you?" answer). */
+export type Undo = { ids: string[]; label: string; at: number; put?: Entry[]; back?: () => void };
 let undo: Undo | null = null;
 const undoListeners = new Set<() => void>();
 const emitUndo = () => undoListeners.forEach((l) => l());
-export const offerUndo = (ids: string[], label: string, put?: Entry[]) => { undo = { ids, label, at: Date.now(), ...(put?.length ? { put } : {}) }; emitUndo(); };
+export const offerUndo = (ids: string[], label: string, put?: Entry[], back?: () => void) => { undo = { ids, label, at: Date.now(), ...(put?.length ? { put } : {}), ...(back ? { back } : {}) }; emitUndo(); };
 export const clearUndo = () => { undo = null; emitUndo(); };
 export const runUndo = () => {
   if (!undo) return;
+  undo.back?.();
   const ids = new Set([...undo.ids, ...(undo.put ?? []).map((e) => e.id)]);
   commit({ ...state, entries: [...state.entries.filter((e) => !ids.has(e.id)), ...(undo.put ?? [])].sort(byTime) });
   clearUndo();

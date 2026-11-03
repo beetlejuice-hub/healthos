@@ -12,6 +12,7 @@ import type { DayFacts } from "../insights";
 import type { Experiment } from "../store";
 import { ols, tCrit } from "../regress";
 import { addDays } from "../time";
+import { xpCounted, xpEnd } from "./xpdays";
 
 const fold = (s: string) => s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[^a-z0-9]+/g, " ").trim();
 
@@ -46,20 +47,22 @@ const MEASURES: Measure[] = ["energy", "mood", "focus", "stress", "sleep"];
  */
 export function judge(x: Experiment, days: DayFacts[], today: string): Verdict {
   const m: Measure = (MEASURES as string[]).includes(x.measure) ? (x.measure as Measure) : "energy";
-  const from = addDays(x.start, -14), end = x.ended ?? today;
+  // its days: from the start to its end (PLAN 189: later when you said you didn't do it), or to when you stopped it
+  const last = xpEnd(x), stop = [x.ended ?? today, last].sort()[0], from = addDays(x.start, -14);
   const next = new Map(days.map((d) => [d.day, d.sleep]));
   const value = (d: DayFacts): number | null => (m === "sleep" ? next.get(addDays(d.day, 1)) ?? null : (d[m] as number | null));
-  const rows = days.filter((d) => d.day >= from && d.day < end && value(d) != null);
+  // a day you said you didn't do it is left out — it's neither before nor during
+  const rows = days.filter((d) => d.day >= from && d.day < stop && value(d) != null && x.did?.[d.day] !== false);
   const before = rows.filter((d) => d.day < x.start), during = rows.filter((d) => d.day >= x.start);
   const mean = (r: DayFacts[]) => (r.length ? r.reduce((a, d) => a + value(d)!, 0) / r.length : null);
-  const daysIn = Math.max(0, Math.round((Date.parse(end) - Date.parse(x.start)) / 86_400_000));
+  const daysIn = xpCounted(x, stop), going = stop < last;
   const base = { daysIn, before: mean(before), during: mean(during), n: [before.length, during.length] as [number, number] };
-  if (before.length < 5 || during.length < 5) return { ...base, state: daysIn < x.days ? "running" : "too-few" };
+  if (before.length < 5 || during.length < 5) return { ...base, state: going ? "running" : "too-few" };
   const fit = ols(rows.map((d) => [1, d.day >= x.start ? 1 : 0, d.weekend ? 1 : 0]), rows.map((d) => value(d)!));
   if (!fit) return { ...base, state: "too-few" };
   const diff = fit.coef[1], half = tCrit(fit.df) * fit.se[1];
   const ci: [number, number] = [diff - half, diff + half];
   const good = m === "stress" ? -1 : 1;
-  const state = daysIn < x.days ? "running" : ci[0] > 0 ? (good > 0 ? "better" : "worse") : ci[1] < 0 ? (good > 0 ? "worse" : "better") : "no-clear-change";
+  const state = going ? "running" : ci[0] > 0 ? (good > 0 ? "better" : "worse") : ci[1] < 0 ? (good > 0 ? "worse" : "better") : "no-clear-change";
   return { ...base, state, diff, ci };
 }

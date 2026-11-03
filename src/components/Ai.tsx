@@ -31,6 +31,8 @@ import { Looked } from "./Looked";
 import { NightPending, ReadPending } from "./ReadPending";
 import { DIVE, diveBrief, diveDue } from "../lib/ai/dive";
 import { RESULT_WORDS, verdictLines, verdictsDue } from "../lib/ai/experiment";
+import { xpSkipped } from "../lib/ai/xpdays";
+import { ExperimentDays } from "./ExperimentStrip";
 import { judge } from "../lib/ai/apply";
 import { dailyFacts } from "../lib/insights";
 import { addDays, atMinute, clock, dayLabel, localDay, stamp } from "../lib/time";
@@ -614,13 +616,14 @@ export function Experiments() {
   if (!xs.length) return null;
   return (
     <section className="p w12" id="experiments">
-      <h2>Experiments <span>protocols you chose to try · the 14 days before vs the days since, weekends accounted for</span></h2>
+      <h2>Experiments <span>protocols you chose to try · the 14 days before vs the days you did it, weekends accounted for · a day you didn't is left out (tap a square to change it)</span></h2>
       <div className="list">{xs.map((x) => {
         const v = judge(x, days, today);
         return (
           <div key={x.id} className="li exp">
             <span><b>{x.name}</b><small>{x.how}</small>
-              <small>Day {Math.min(v.daysIn, x.days)} of {x.days} · {x.measure}: {v.before != null ? v.before.toFixed(1) : "–"} before → {v.during != null ? v.during.toFixed(1) : "–"} since ({v.n[0]} + {v.n[1]} rated days) · <b>{x.ended && v.state === "running" ? "ended early — too few days to tell" : STATE_TEXT[v.state]}</b>{v.ci ? ` (${v.diff! >= 0 ? "+" : ""}${v.diff!.toFixed(1)}, 95% ${v.ci[0].toFixed(1)} to ${v.ci[1].toFixed(1)})` : ""}</small>
+              <ExperimentDays x={x} today={today} />
+              <small>Day {Math.min(v.daysIn, x.days)} of {x.days}{xpSkipped(x).length ? ` · ${xpSkipped(x).length} left out` : ""} · {x.measure}: {v.before != null ? v.before.toFixed(1) : "–"} before → {v.during != null ? v.during.toFixed(1) : "–"} since ({v.n[0]} + {v.n[1]} rated days) · <b>{x.ended && v.state === "running" ? "ended early — too few days to tell" : STATE_TEXT[v.state]}</b>{v.ci ? ` (${v.diff! >= 0 ? "+" : ""}${v.diff!.toFixed(1)}, 95% ${v.ci[0].toFixed(1)} to ${v.ci[1].toFixed(1)})` : ""}</small>
               {/* when it ended: the AI's words on the app's result, what next, the studies (PLAN 160) */}
               {x.verdict && <span className={`exp-v v-${x.verdict.state}`}><b className="exp-chip">{RESULT_WORDS[x.verdict.state]}</b> {x.verdict.text}
                 {x.verdict.next && <span className="exp-next"><b>Next:</b> {x.verdict.next}</span>}

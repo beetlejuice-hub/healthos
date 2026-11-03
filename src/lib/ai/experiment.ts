@@ -4,6 +4,7 @@ import { act, newId, type Experiment } from "../store";
 import type { DigestItem } from "./tasks";
 import { addDays, localDay } from "../time";
 import { judge, type Verdict } from "./apply";
+import { xpCounted, xpEnd, xpOver, xpSkipped, xpToAsk } from "./xpdays";
 import type { DayFacts } from "../insights";
 
 export function startExperiment(p: NonNullable<DigestItem["protocol"]>) {
@@ -22,7 +23,7 @@ const isFinal = (s: Verdict["state"]): s is Final => s in RESULT_WORDS;
  * stopped early, or with too few ratings, gets none — the app says so itself.
  */
 export function verdictsDue(xs: Experiment[], days: DayFacts[], today: string): { x: Experiment; v: Verdict & { state: Final } }[] {
-  return xs.filter((x) => !x.verdict && addDays(x.start, x.days) <= (x.ended ?? today)).flatMap((x) => {
+  return xs.filter((x) => !x.verdict && xpOver(x, today)).flatMap((x) => {
     const v = judge(x, days, today);
     return isFinal(v.state) ? [{ x, v: v as Verdict & { state: Final } }] : [];
   });
@@ -34,7 +35,7 @@ export function verdictLines(x: Experiment, v: Verdict & { state: Final }): stri
   return [
     "## The experiment",
     `- ${x.name}: ${x.how}`,
-    `- ${x.days} days from ${x.start}, measured on ${x.measure} (1–10)`,
+    `- ${x.days} days from ${x.start}, measured on ${x.measure} (1–10)${xpSkipped(x).length ? `; ${xpSkipped(x).length} day${xpSkipped(x).length === 1 ? "" : "s"} they said they didn't do it left out (${xpSkipped(x).join(", ")})` : ""}`,
     `- The app's result: ${RESULT_WORDS[v.state]} — ${x.measure} ${f(v.before)} in the 14 days before vs ${f(v.during)} during (${v.n[0]} + ${v.n[1]} rated days)${v.diff != null && v.ci ? `; difference ${sgn(v.diff)}, 95% range ${sgn(v.ci[0])} to ${sgn(v.ci[1])}, weekends accounted for` : ""}`,
   ];
 }
@@ -47,8 +48,11 @@ export function verdictLines(x: Experiment, v: Verdict & { state: Final }): stri
 export type StripLine = { id: string; done: boolean; text: string; sub: string };
 export function experimentStrip(xs: Experiment[], today: string, result: (x: Experiment) => Verdict["state"]): StripLine[] {
   return xs.flatMap((x): StripLine[] => {
-    const end = addDays(x.start, x.days), day = Math.round((Date.parse(today) - Date.parse(x.start)) / 86_400_000) + 1;
-    if (!x.ended && end > today) return [{ id: x.id, done: false, text: x.name, sub: `day ${Math.max(1, day)} of ${x.days}${x.how ? ` — today: ${x.how.charAt(0).toLowerCase()}${x.how.slice(1)}` : ""}` }];
+    const end = xpEnd(x), out = xpSkipped(x).filter((d) => d < today).length, day = xpCounted(x, today) + 1;
+    const left = out ? ` · ${out} left out` : "", todo = x.how ? ` — today: ${x.how.charAt(0).toLowerCase()}${x.how.slice(1)}` : "";
+    if (!x.ended && end > today) return [{ id: x.id, done: false, text: x.name, sub: `day ${Math.max(1, day)} of ${x.days}${left}${todo}` }];
+    // its days are in, but the last one isn't answered yet: it waits for that
+    if (!x.ended && !x.verdict && xpToAsk(x, today).length) return [{ id: x.id, done: false, text: x.name, sub: `${x.days} of ${x.days} days${left} — did you do it yesterday?` }];
     if (x.verdict) return !x.verdict.seen && x.verdict.at >= Date.parse(today) - 7 * 86_400_000 ? [{ id: x.id, done: true, text: x.name, sub: `${RESULT_WORDS[x.verdict.state]} · see why` }] : [];
     // stopped early, or done with no verdict yet: say what the app knows, for a week after it ended
     const ended = x.ended && x.ended < end ? x.ended : end;

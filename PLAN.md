@@ -3338,7 +3338,7 @@ both reads and the questions. Phases in that order; #152 RPE waits (owner).
        moon) join the catalogue here, found by it, not set up.
      - [ ] Phase 4: asking — an early claim asks the one question that would settle it; surprise days (forecast misses).
 
-189. [~] **Experiments ask each morning: did you do it yesterday?** (owner, 3 Nov: "It should follow up every morning on
+189. [x] **Experiments ask each morning: did you do it yesterday?** (owner, 3 Nov: "It should follow up every morning on
    last days experiment- if i did it or not. If not it should skip that day from experiment. Like i cant guarantee I'll
    do 14 days w no phone at night"). Claimed 3 Nov.
    - Each morning (from 04:00), For you asks about each running experiment: "Yesterday — did you?" Did it / Didn't, for
@@ -3351,3 +3351,5 @@ both reads and the questions. Phases in that order; #152 RPE waits (owner).
      come), a tap on a past one changes it; the AI is told the days left out. Undo on the answer.
    - Tests: verdict.test (a planted effect on done days only: found with the "didn't" days left out, diluted without;
      the end moves; the cap), e2e xpdid (the ask, Didn't → day left out and end moved, Undo, the strip, the squares).
+   - Done 3 Nov (lib/ai/xpdays; ExperimentDid in For you after the reads; ExperimentDays on Insights). Also fixed: an
+     experiment's test counted the days after its end as "during" (a 21-day one read on day 25 counted 25).

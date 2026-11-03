@@ -2219,3 +2219,15 @@ span.fd-score[data-band="none"] { background: none; min-width: 34px; }
 .fc-ask { display: grid; gap: 8px; font-size: 14px; }
 .fc-ask .chips { display: flex; flex-wrap: wrap; gap: 8px; }
 .fc-none { background: transparent; box-shadow: inset 0 0 0 1px #ffffff22; }
+
+/* An experiment's morning question and its days (PLAN 189; owner, 3 Nov: "if i did it or not. If not it should skip that day") */
+.xpdid b { font-size: 16px; font-weight: 600; }
+.xpdid small { font-size: 12.5px; color: var(--c-dim); line-height: 1.4; }
+.xpdid-row { display: grid; gap: 6px; margin-top: 4px; }
+.xpdid-row > span { font-size: 14px; }
+.xp-days { display: flex; flex-wrap: wrap; gap: 3px; margin: 6px 0 2px; }
+.xp-sq { width: 14px; height: 14px; padding: 0; border-radius: 3px; border: 1.5px solid var(--z-ideal); background: var(--z-ideal); cursor: pointer; }
+.xp-sq.unsaid { background: color-mix(in srgb, var(--z-ideal) 45%, transparent); }
+.xp-sq.out { background: transparent; border-color: var(--c-dim); background-image: linear-gradient(135deg, transparent 45%, var(--c-dim) 45%, var(--c-dim) 55%, transparent 55%); }
+.xp-sq.tocome, .xp-sq.stopped { background: transparent; border-color: var(--c-track); cursor: default; }
+.xp-sq:disabled { cursor: default; }

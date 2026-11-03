@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { dayScore, weakest, type DayScore } from "../lib/dayscore";
-import { ExperimentStrip } from "../components/ExperimentStrip";
+import { ExperimentDid, ExperimentStrip } from "../components/ExperimentStrip";
 import { CheckInCard } from "../components/CheckIn";
 import { AUTO_END } from "../lib/training";
 import { NoticeBox } from "../components/NoticeBox";
@@ -162,6 +162,8 @@ export function Today() {
     { key: "week", name: "your week", node: <WeekAsk now={now} />, read: true },
     ...(mrShown ? [{ key: "morning", name: "morning read", node: <MorningRead />, read: true, away: morningAway(ai.digest, now) }] : []),
     ...(nrShown ? [{ key: "night", name: "your day, read back", node: <NightRead />, read: true }] : []),
+    // each morning, each running experiment: yesterday — did you? (PLAN 189)
+    ...s.ai.experiments.filter((x) => !x.ended && !x.verdict).map((x) => ({ key: `xpdid:${x.id}`, name: `did you: ${x.name.toLowerCase()}`, node: <ExperimentDid x={x} now={now} /> })),
     { key: "questions", name: "a quick question", node: <AiQuestions /> },
     // what you asked it to look out for: its evening question (lib/watch; owner, 28 Oct: "give me followup questions")
     ...(s.ai.watches ?? []).filter((w) => !w.stopped).map((w) => ({ key: `watch:${w.id}`, name: w.what.toLowerCase(), node: <WatchAsk w={w} now={now} /> })),

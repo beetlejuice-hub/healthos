@@ -60,7 +60,8 @@ describe("experiments: before vs during", () => {
     expect(judge(sx, slept, addDays(sx.start, 25)).state).toBe("no-clear-change");
     // The start day's own morning (the night before it began) counts as "before", not "during".
     const v = judge(sx, slept, addDays(sx.start, 25));
-    expect(v.n[0]).toBe(14); expect(v.n[1]).toBe(25);
+    // …and the days after its 21 aren't "during" (PLAN 189: before, a verdict read on day 25 counted 25)
+    expect(v.n[0]).toBe(14); expect(v.n[1]).toBe(21);
     // A great night just before the start (rated on the start day's morning) is "before": it can't flatter the protocol.
     const flat = base.map((d) => ({ ...d, sleep: d.day === sx.start ? 10 : 6 }));
     const f = judge(sx, flat, addDays(sx.start, 25));
