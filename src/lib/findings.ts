@@ -7,6 +7,7 @@
  *  - numbers come from here (tested), never from AI.
  */
 
+import type { DayFacts } from "./insights";
 import type { Entry, Goals, Supplement, Workout } from "./types";
 import { bodyDays, realBurn, weightTrend, BURN_MIN, KCAL_PER_KG, TREND_MIN, type BodyDay } from "./tdee";
 import { addDays, localDay } from "./time";
@@ -121,7 +122,8 @@ export function bodyFindings(days: BodyDay[], goals: Goals): Omit<Report, "none"
 export const WINDOW_DAYS = 28;
 
 /** What the effect engine and the other detectors need besides your entries. */
-export type NoticeContext = { workouts: Workout[]; supplements: Supplement[]; settings: Settings };
+/** `enrich`: the band's and the weather's side of each day (PLAN 188, the new signals) — the same days the engine reads. */
+export type NoticeContext = { workouts: Workout[]; supplements: Supplement[]; settings: Settings; enrich?: (days: DayFacts[]) => DayFacts[] };
 
 /** Everything Noticed has to say today. Today is left out of food and feelings (the day isn't over). */
 export function notice(entries: Entry[], goals: Goals, now: number, bodyKg = 78, ctx?: NoticeContext): Report {
@@ -133,7 +135,7 @@ export function notice(entries: Entry[], goals: Goals, now: number, bodyKg = 78,
   const parts: Omit<Report, "none">[] = [bodyFindings(days, goals), caffeineFindings(entries, today, kg, WINDOW_DAYS)];
   let none: Quiet[] = [];
   if (ctx) {
-    const facts = dailyFacts(entries, ctx.workouts, ctx.settings, addDays(today, -EFFECT_DAYS), addDays(today, -1));
+    const raw = dailyFacts(entries, ctx.workouts, ctx.settings, addDays(today, -EFFECT_DAYS), addDays(today, -1)), facts = ctx.enrich ? ctx.enrich(raw) : raw;
     const fx = effectFindings(facts, ctx.supplements);
     const b = baseline(facts), pr = proteinPerKg(facts, kg);
     parts.push({ found: [...(b ? [b] : []), ...(pr ? [pr] : []), ...strengthTrends(entries, now), ...fx.found], checking: fx.checking });

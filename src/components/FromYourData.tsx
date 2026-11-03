@@ -13,6 +13,7 @@ import { currentKg } from "../lib/body";
 import { useScout } from "./Scout";
 import { useTodayPatterns } from "./TodayPattern";
 import { useBand } from "../lib/band-client";
+import { useEnrich } from "./useEvidence";
 import { allPhases, MI_KM, newBests, paceText, type DistUnit } from "../lib/cardiostats";
 
 const HIDDEN = "healthos.noticed.hidden";
@@ -24,7 +25,8 @@ export function FromYourData({ now }: { now: number }) {
   const scouted = useScout(), drawn = useTodayPatterns(now);
   // the findings engine every 10 minutes, not on every tick of Today's clock
   const slow = Math.floor(now / SLOW) * SLOW;
-  const n = useMemo(() => notice(entries, goals, slow, currentKg(entries, settings.bodyKg, slow), { workouts, supplements, settings }), [entries, goals, slow, settings, workouts, supplements]);
+  const enrich = useEnrich();
+  const n = useMemo(() => notice(entries, goals, slow, currentKg(entries, settings.bodyKg, slow), { workouts, supplements, settings, enrich }), [enrich, entries, goals, slow, settings, workouts, supplements]);
   const [hidden, setHidden] = useState(() => { try { return localStorage.getItem(HIDDEN) ?? ""; } catch { return ""; } });
   const lead = scouted.find((x) => !x.memo && !drawn.some((c) => c.id === x.p.id));
   // a cardio best in the last 2 days (PLAN 191 phase 2: "personal bests on Today")

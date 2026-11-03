@@ -63,6 +63,14 @@ export function questions(supplements: Supplement[], usualKcal: number | null): 
     { id: "protein", group: "protein", area: "food", kind: "dose", lag: 1, thing: "Protein", phrase: "30 g of protein", x: (d) => (d.proteinG == null ? null : d.proteinG / 30), outcomes: FEEL },
     { id: "weekend", group: "weekend", area: "food", kind: "binary", lag: 0, thing: "Weekend", phrase: "On weekends", x: (d) => (d.weekend ? 1 : 0), outcomes: [KCAL], adjustWeekend: false },
   ];
+  // the new signals (PLAN 188): asked of every account, answered only where there are days of them — a band's nights,
+  // the weather where you live
+  qs.push(
+    { id: "bed-late", group: "bed-late", area: "feel", kind: "binary", lag: 1, thing: "Bed an hour past your usual", phrase: "The day after going to bed an hour or more past your usual", x: (d) => (d.bedLateH == null ? null : d.bedLateH >= 1 ? 1 : d.bedLateH < 0.5 ? 0 : null), outcomes: FEEL, more: ["late nights", "usual nights"] },
+    { id: "rain", group: "rain", area: "feel", kind: "binary", lag: 0, thing: "A rainy day", phrase: "On rainy days", x: (d) => (d.rainMm == null ? null : d.rainMm >= 2 ? 1 : d.rainMm < 0.2 ? 0 : null), outcomes: FEEL, more: ["rainy days", "dry days"] },
+    { id: "daylight", group: "daylight", area: "feel", kind: "dose", lag: 0, thing: "Hours of daylight", phrase: "hour of daylight", x: (d) => d.daylightH ?? null, outcomes: FEEL },
+    { id: "hot", group: "hot", area: "feel", kind: "binary", lag: 0, thing: "A hot day (28 °C+)", phrase: "On hot days", x: (d) => (d.tMax == null ? null : d.tMax >= 28 ? 1 : d.tMax < 24 ? 0 : null), outcomes: [SLEEP], more: ["hot days", "cooler days"] },
+  );
   if (usualKcal) qs.push({ id: "kcal-dev", group: "kcal-dev", area: "food", kind: "dose", lag: 1, thing: "Calories vs your usual", phrase: "500 kcal above your usual", x: (d) => (d.kcal == null ? null : (d.kcal - usualKcal) / 500), outcomes: FEEL });
   // Every supplement, paused or out included: out-of-stock days are exactly the "off" days that answer the question.
   for (const s of supplements) {

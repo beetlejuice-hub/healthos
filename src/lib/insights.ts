@@ -144,6 +144,9 @@ export type DayFacts = {
   steps?: number | null;
   /** From Apple Health (lib/daysband withHealth): the day's average walking speed, km/h — PLAN 184 phase 2. */
   walkKmh?: number | null;
+  /** PLAN 188, the new signals: how many hours past your usual you went to bed that evening (the band's nights), and the
+   * day's weather where you live (Open-Meteo: rain in mm, the day's high in °C, hours of daylight). */
+  bedLateH?: number | null; rainMm?: number | null; tMax?: number | null; daylightH?: number | null;
 };
 
 /** Food entries within 45 minutes of each other are one meal; the largest meal's kcal. */

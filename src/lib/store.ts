@@ -53,6 +53,8 @@ export type AiState = {
   record?: Claim[];
   /** The app's own research on your data, newest last (lib/ai/research; PLAN 192); `researchOff`: turned off in Settings → AI. */
   researched?: Researched[]; researchOff?: boolean;
+  /** "Not now" on a "Nearly sure?" ask: its key and the day it can ask again (lib/settle; PLAN 188 phase 4). */
+  settleRest?: Record<string, string>;
   /** The reads' discoveries, newest last (PLAN 187: one random study or forum post a read) — and what you did with each. */
   discoveries?: KeptDiscovery[];
   /** The latest questions and the read that brought them — shown while that read is (PLAN 155–156); "fallback": the cheap call. */

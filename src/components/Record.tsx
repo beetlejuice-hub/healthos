@@ -14,6 +14,8 @@ import { useBand } from "../lib/band-client";
 import { signals } from "../lib/scout";
 import { recheck, recheckWords, remember, STATE_WORDS, type Claim, type ClaimState, type Recheck } from "../lib/record";
 import { addDays, localDay } from "../lib/time";
+import { useWeather } from "../lib/weather-client";
+import { withWeather } from "../lib/weather";
 
 const NONE: Claim[] = [];
 /** How far back the record looks: a claim said up to 120 days ago, and a month before it for its scale. */
@@ -23,15 +25,15 @@ export const RECORD_DAYS = 150;
 export function useRecord(): Map<string, { c: Claim; r: Recheck }> {
   const entries = useStore((s) => s.entries), workouts = useStore((s) => s.workouts), supplements = useStore((s) => s.supplements), settings = useStore((s) => s.settings);
   const kept = useStore((s) => s.ai.record) ?? NONE;
-  const band = useBand().data, health = useHealth().samples, today = localDay(Date.now());
+  const band = useBand().data, health = useHealth().samples, weather = useWeather(), today = localDay(Date.now());
   return useMemo(() => {
     const out = new Map<string, { c: Claim; r: Recheck }>();
     if (!kept.length) return out;
-    const facts = withHealth(withBand(dailyFacts(entries, workouts, settings, addDays(today, -RECORD_DAYS), addDays(today, -1)), band, today), health);
+    const facts = withWeather(withHealth(withBand(dailyFacts(entries, workouts, settings, addDays(today, -RECORD_DAYS), addDays(today, -1)), band, today), health), weather);
     const sigs = signals(supplements, facts);
     for (const c of kept) { if (c.said < addDays(today, -120)) continue; const r = recheck(c, facts, supplements, sigs); if (r) out.set(c.id, { c, r }); }
     return out;
-  }, [kept, entries, workouts, supplements, settings, band, health, today]);
+  }, [kept, entries, workouts, supplements, settings, band, health, weather, today]);
 }
 
 /** Keep what a page is showing: new claims join with the day they were first said. */

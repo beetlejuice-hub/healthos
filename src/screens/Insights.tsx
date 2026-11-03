@@ -31,6 +31,7 @@ import { useNow } from "./Today";
 import { notice, WINDOW_DAYS, type Report } from "../lib/findings";
 import { noticedClaim } from "../lib/record";
 import { RecordLine, useKeepClaims, useRecord } from "../components/Record";
+import { useEnrich } from "../components/useEvidence";
 import { StackCheckPanel } from "../components/StackCheck";
 import { useScout, WorthALook } from "../components/Scout";
 import { Experiments } from "../components/Ai";
@@ -122,7 +123,8 @@ export function Insights() {
   }, [shown, tabs, openTab, phone]);
   useEffect(() => { const on = () => { const t = tabOf(readRoute()[1]); if (t) setTab(t); if (t === "timeline") setCmp(location.hash.split("/")[2] === "compare"); }; addEventListener("hashchange", on); return () => removeEventListener("hashchange", on); }, []);
   const showOnGraph = (f: GraphFocus) => { setFocus(f); cmpRef.current = false; setCmp(false); openTab("timeline"); };
-  const report = useMemo(() => notice(s.entries, s.goals, now, currentKg(s.entries, s.settings.bodyKg, now), { workouts: s.workouts, supplements: s.supplements, settings: s.settings }), [s.entries, s.goals, now, s.settings, s.workouts, s.supplements]);
+  const enrich = useEnrich();
+  const report = useMemo(() => notice(s.entries, s.goals, now, currentKg(s.entries, s.settings.bodyKg, now), { workouts: s.workouts, supplements: s.supplements, settings: s.settings, enrich }), [enrich, s.entries, s.goals, now, s.settings, s.workouts, s.supplements]);
   // Show a section only once there's something in it; list the rest in one line each, so a new
   // account sees a short page instead of ten empty panels (owner: "looks really complex").
   const has = useMemo(() => {
