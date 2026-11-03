@@ -41,6 +41,8 @@ import { currentKg } from "../body";
 export type AiStatus = { on: boolean | null; usage: UsageDoc | null; cap: number; budget: number; busy: number; gemini: { free: boolean; paid: boolean } };
 let status: AiStatus = { on: null, usage: null, cap: 50, budget: MONTHLY_USD, busy: 0, gemini: { free: false, paid: false } };
 const subs = new Set<() => void>();
+/** The status now, outside React (the background jobs: PLAN 192 checks the month's spend before researching). */
+export const aiStatusNow = () => status;
 const set = (p: Partial<AiStatus>) => { status = { ...status, ...p }; subs.forEach((f) => f()); };
 export const useAiStatus = () => useSyncExternalStore((f) => { subs.add(f); return () => subs.delete(f); }, () => status);
 

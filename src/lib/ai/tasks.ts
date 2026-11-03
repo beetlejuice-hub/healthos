@@ -11,7 +11,7 @@
 import { topicKey } from "./said";
 import { checkDiscovery, type Discovery } from "./discover";
 
-export type Task = "describe" | "supplement" | "chat" | "questions" | "digest" | "night" | "review" | "dive" | "verdict";
+export type Task = "describe" | "supplement" | "chat" | "questions" | "digest" | "night" | "review" | "dive" | "verdict" | "research";
 export type ModelChoice = "opus" | "sonnet" | "haiku";
 /**
  * Light = food, photos and quick questions (many small calls); everyday = the chat; reads = the morning and night reads
@@ -29,7 +29,7 @@ export const MODELS: Record<ModelChoice, { id: string; label: string; inUsd: num
 /** Web search is billed per search on top of tokens. */
 export const WEB_SEARCH_USD = 0.01;
 
-export const TIER: Record<Task, Tier> = { describe: "light", chat: "everyday", questions: "light", supplement: "research", digest: "reads", night: "reads", review: "reads", dive: "research", verdict: "research" };
+export const TIER: Record<Task, Tier> = { describe: "light", chat: "everyday", questions: "light", supplement: "research", digest: "reads", night: "reads", review: "reads", dive: "research", verdict: "research", research: "reads" };
 export type Models = Record<Tier, ModelChoice>;
 /**
  * Cheap where it's simple, the strongest where it matters. Owner, 27 Oct ("ai is in fact spending around 50 cent to 1
@@ -208,6 +208,21 @@ export type DigestAnswer = Threads & ReadDay & { /** PLAN 187: one random study 
 export type DiveStudy = { title: string; text: string; source: { title: string; url: string; checked?: boolean } };
 export type DiveAnswer = Pick<Threads, "looked_into"> & { topic: string; why: string; yourData: string; found: DiveStudy[]; verdict: string; sure: "strong" | "moderate" | "weak";
   experiment?: { name: string; how: string; days: number; measure: (typeof EXPERIMENT_MEASURES)[number] } };
+/**
+ * The app's own research on one thing in his data (PLAN 192; owner, 3 Nov: "Ai should do researches on its own but do not
+ * let it soend way too much credits"): a title, what's known (from 2–3 studies), what it means for him from his numbers,
+ * one thing to try, how sure.
+ */
+export type ResearchAnswer = { title: string; known: string; forYou: string; tip: string; found: DiveStudy[]; sure: "strong" | "moderate" | "weak" };
+export function checkResearch(a: ResearchAnswer): ResearchAnswer {
+  const str = (x: unknown, n: number) => (typeof x === "string" ? x.trim().slice(0, n) : "");
+  const title = str(a?.title, 120), known = str(a?.known, 700);
+  if (!title || !known) throw new SyntaxError("research needs its title and what's known");
+  const found = (Array.isArray(a.found) ? a.found : []).filter((f) => f && str(f.title, 1) && /^https:\/\//.test(f.source?.url ?? "")).slice(0, 3)
+    .map((f) => ({ title: str(f.title, 120), text: str(f.text, 400), source: { title: str(f.source.title, 160) || str(f.title, 120), url: f.source.url } }));
+  return { title, known, forYou: str(a.forYou, 600), tip: str(a.tip, 300), found, sure: a.sure === "strong" || a.sure === "moderate" ? a.sure : "weak" };
+}
+
 export function checkDive(a: DiveAnswer): DiveAnswer {
   const str = (x: unknown, n: number) => (typeof x === "string" ? x.trim().slice(0, n) : "");
   const topic = str(a?.topic, 140), verdict = str(a?.verdict, 700);
@@ -269,7 +284,7 @@ const str = { type: "string" } as const, num = { type: "number" } as const;
 const obj = (properties: Record<string, unknown>, required = Object.keys(properties)) => ({ type: "object", properties, required, additionalProperties: false });
 const arr = (items: unknown) => ({ type: "array", items });
 
-export const SCHEMAS: Record<Exclude<Task, "supplement" | "digest" | "chat" | "night" | "dive" | "verdict">, unknown> = {
+export const SCHEMAS: Record<Exclude<Task, "supplement" | "digest" | "chat" | "night" | "dive" | "verdict" | "research">, unknown> = {
   describe: obj({
     items: arr(obj({
       kind: { type: "string", enum: ["food", "drink"] }, name: str, amount: str,
@@ -354,6 +369,17 @@ Leave "workout" out on a day without one.`;
 
 export const SYSTEM: Record<Task, string> = {
   night: NIGHT,
+  research: `${VOICE}
+Task: the app's own research on ONE thing in their life (owner, 3 Nov: "Ai should do researches on its own … research on what i take what i eat how i train how much i move my heartrate"). "## The topic" says what it is and gives their numbers on it; "## About me" who they are. Keep it small: 1–3 web searches, the best evidence (a review or meta-analysis beats one small trial; recent where you can; a forum report only as one, said so).
+- "title": what you looked into, as a question or a plain line, under 90 characters ("Creatine at 5 g: does the timing matter?");
+- "known": 2–4 sentences — what the evidence says about it, plainly, with how strong it is;
+- "forYou": 1–3 sentences — what that means for THEM, using their numbers from "## The topic" (their dose, how often, their pace, their steps); say when their data can't tell;
+- "tip": one concrete thing to try or keep, starting with a verb — or "Nothing to change" when that's the truth;
+- "found": the 1–3 sources you leaned on, each with what it found in one sentence and its real https link;
+- "sure": strong, moderate or weak.
+Goes with, never causes, unless a trial showed it; no medical advice — dosing beyond the label or anything with a condition or medication in About me: say to check with a doctor or pharmacist. Never repeat a title listed under "Already researched".
+Answer with ONLY a JSON object, no prose:
+{"title":"","known":"","forYou":"","tip":"","found":[{"title":"","text":"","source":{"title":"","url":""}}],"sure":"strong|moderate|weak"}`,
   dive: `${VOICE}
 Task: this week's deep dive (owner, 21 Oct: make the AI smarter, "do more research"; the AI picks the topic). "## This week's deep dive" says how to pick: ONE question from THEIR data, never a past topic — and "## On my list to look into" first, when one there fits (the reads put it there for this; owner, 28 Oct: "what it should dive in more, what it should research"): then put its [t:…] id in "looked_into". Then dig:
 - their own numbers first — use the app's look-ups (compare, series, nights, day, find, sessions) and put what they say in "yourData", with the numbers ("sleep 6.4 after magnesium vs 6.6 without over 40 nights — not clear");
@@ -623,9 +649,11 @@ export type AiRequest =
   /** The weekly deep dive (PLAN 160), with its look-up rounds like the reads'. */
   | { task: "dive"; context: string; turn?: ChatTurn[]; final?: boolean }
   /** An experiment that ended (PLAN 160): the app's own numbers in the context; the AI adds what studies say and what next. */
-  | { task: "verdict"; context: string };
+  | { task: "verdict"; context: string }
+  /** The app's own research on one topic from his data (PLAN 192): no look-up rounds, 3 searches at most. */
+  | { task: "research"; context: string };
 
-export type AiAnswer<T extends Task> = T extends "describe" ? { items: DescribedItem[]; dropped: string[] } : T extends "supplement" ? SupplementAnswer : T extends "chat" ? ChatAnswer : T extends "questions" ? QuestionsAnswer : T extends "night" ? NightAnswer : T extends "review" ? ReviewAnswer : T extends "dive" ? DiveAnswer : T extends "verdict" ? VerdictAnswer : DigestAnswer;
+export type AiAnswer<T extends Task> = T extends "describe" ? { items: DescribedItem[]; dropped: string[] } : T extends "supplement" ? SupplementAnswer : T extends "chat" ? ChatAnswer : T extends "questions" ? QuestionsAnswer : T extends "night" ? NightAnswer : T extends "review" ? ReviewAnswer : T extends "dive" ? DiveAnswer : T extends "research" ? ResearchAnswer : T extends "verdict" ? VerdictAnswer : DigestAnswer;
 
 /**
  * Why an AI call failed, in plain words, each with its code (owner, 27 Oct: "we need error codes for stuff, like if ai cant
@@ -688,6 +716,8 @@ export const TYPICAL: Record<Task, { perDay: number; in: number; out: number; se
   // an experiment's verdict (PLAN 160): one when it ends
   verdict: { perDay: 1 / 21, in: 12000, out: 1200, searches: 3 },
   supplement: { perDay: 0.2, in: 9000, out: 2000, searches: 3 },
+  // the app's own research (PLAN 192): 4 a week at most, a small context, 3 searches
+  research: { perDay: 4 / 7, in: 6000, out: 1200, searches: 3 },
 };
 const TASKS = Object.keys(TYPICAL) as Task[];
 

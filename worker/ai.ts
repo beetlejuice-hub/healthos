@@ -11,7 +11,7 @@
 import { callGemini, forGemini, geminiOrder, geminiUsd, GeminiMiss, type GeminiEnv } from "./gemini";
 import Anthropic from "@anthropic-ai/sdk";
 import {
-  AI_ERRORS, type AiError, type Usage, DAILY_CAP, MODELS, MONTHLY_USD, RECENT_CALLS, SCHEMAS, logOf, SYSTEM, TIER, checkChat, modelFor, checkDescribe, checkDigest, checkNight, checkQuestions, checkReview, checkSupplement, costUsd, jsonFrom, DESCRIBE_SHAPE, CHAT_TOOLS, CHAT_ROUNDS, READ_ROUNDS, READ_TOOLS, checkReadCalls, checkDive, checkVerdict, type ChatTurn,
+  AI_ERRORS, type AiError, type Usage, DAILY_CAP, MODELS, MONTHLY_USD, RECENT_CALLS, SCHEMAS, logOf, SYSTEM, TIER, checkChat, modelFor, checkDescribe, checkDigest, checkNight, checkQuestions, checkReview, checkSupplement, costUsd, jsonFrom, DESCRIBE_SHAPE, CHAT_TOOLS, CHAT_ROUNDS, READ_ROUNDS, READ_TOOLS, checkReadCalls, checkDive, checkResearch, checkVerdict, type ChatTurn,
   type AiRequest, type DigestAnswer, type DiveAnswer, type VerdictAnswer, type ModelChoice, type NightAnswer, type SupplementAnswer, type Task, type UsageDoc,
 } from "../src/lib/ai/tasks";
 import { checkFoundLinks, checkReadLinks, checkSupplementLinks } from "./links";
@@ -103,6 +103,7 @@ function validate(b: AiRequest): string | null {
     case "review": return !["week", "month"].includes(b.kind) || ![b.from, b.to].every((d) => /^\d{4}-\d{2}-\d{2}$/.test(String(d))) ? "bad review" : long(b.context, 60000) ? "context too long" : null;
     case "dive": return long(b.context, 60000) ? "context too long" : badTurn(b.turn, READ_ROUNDS) ? "bad look-ups" : null;
     case "verdict": return long(b.context, 40000) ? "context too long" : null;
+    case "research": return long(b.context, 24000) ? "context too long" : null;
     default: return "unknown task";
   }
 }
@@ -124,6 +125,7 @@ function messagesFor(b: AiRequest, today: string): Anthropic.Beta.BetaMessagePar
     case "night": return [{ role: "user", content: [{ type: "text", text: `Read back my day, ${b.day}.\n\nMy data:\n${b.context}`, cache_control: { type: "ephemeral" } }] }, ...((b.turn ?? []) as Anthropic.Beta.BetaMessageParam[])];
     case "review": return [{ role: "user", content: `Write my ${b.kind} read: ${b.from} to ${b.to}.\n\nMy data:\n${b.context}` }];
     case "verdict": return [{ role: "user", content: `My experiment ended. Give me its verdict.\n\n${b.context}` }];
+    case "research": return [{ role: "user", content: `Today is ${today}. Research this for me.\n\n${b.context}` }];
     case "dive": return [{ role: "user", content: [{ type: "text", text: `Today is ${today}. Do this week's deep dive.\n\nMy data:\n${b.context}`, cache_control: { type: "ephemeral" } }] }, ...((b.turn ?? []) as Anthropic.Beta.BetaMessageParam[])];
   }
 }
@@ -148,7 +150,7 @@ export async function callModel(b: AiRequest, choice: ModelChoice, apiKey: strin
   // structured output don't mix, so that answer is parsed from text like the research tasks'.
   const lookup = b.task === "describe" && !!b.lookup && !!b.text && !b.image, chat = b.task === "chat";
   // the evening read searches too (PLAN 157: its study and its thing to try need real sources)
-  const web = task === "supplement" || task === "digest" || task === "night" || task === "dive" || task === "verdict" || lookup || chat;
+  const web = task === "supplement" || task === "digest" || task === "night" || task === "dive" || task === "verdict" || task === "research" || lookup || chat;
   const schema = web ? undefined : (SCHEMAS as Record<string, unknown>)[task];
   const client = new Anthropic({ apiKey, fetch: deps.fetch, maxRetries: 1 });
   const effort = TIER[task] === "research" ? "medium" : "low";
@@ -166,7 +168,7 @@ export async function callModel(b: AiRequest, choice: ModelChoice, apiKey: strin
   // down). propose goes non-strict: the app checks each one itself before it becomes a card (lib/ai/propose).
   const tools = chat ? [...CHAT_TOOLS.map((t) => ({ ...t, strict: !LOOSE.has(t.name) })), { type: m.web, name: "web_search" as const, max_uses: 3 }]
     : read ? [...READ_TOOLS.map((t) => ({ ...t, strict: true })), { type: m.web, name: "web_search" as const, max_uses: b.task === "dive" ? 10 : 4 }]
-    : web ? [{ type: m.web, name: "web_search" as const, max_uses: lookup ? 2 : task === "verdict" ? 3 : 4 }] : null;
+    : web ? [{ type: m.web, name: "web_search" as const, max_uses: lookup ? 2 : task === "verdict" || task === "research" ? 3 : 4 }] : null;
   // A search that comes back "unavailable" (Anthropic: "an internal error occurred") is tried again once, the whole
   // request, with the search called directly instead of from dynamic filtering's code — a different path to the same
   // search (owner, 28 Oct: "Ai says web search is down..why?"). Failing again, it's said with the answer as before.
@@ -227,11 +229,11 @@ export async function callModel(b: AiRequest, choice: ModelChoice, apiKey: strin
   }
   const text = textOf(res.content);
   const raw = schema ? JSON.parse(text) : jsonFrom(text);
-  const checked = task === "describe" ? checkDescribe(raw) : task === "supplement" ? checkSupplement(raw) : task === "chat" ? checkChat(raw) : task === "questions" ? checkQuestions(raw) : task === "night" ? checkNight(raw) : task === "review" ? checkReview(raw) : task === "dive" ? checkDive(raw) : task === "verdict" ? checkVerdict(raw) : checkDigest(raw);
+  const checked = task === "describe" ? checkDescribe(raw) : task === "supplement" ? checkSupplement(raw) : task === "chat" ? checkChat(raw) : task === "questions" ? checkQuestions(raw) : task === "night" ? checkNight(raw) : task === "review" ? checkReview(raw) : task === "dive" ? checkDive(raw) : task === "verdict" ? checkVerdict(raw) : task === "research" ? checkResearch(raw) : checkDigest(raw);
   // every link it cites, opened: a dead one or one about something else takes its item with it (PLAN 160)
   const answer = task === "digest" || task === "night" ? await checkReadLinks(checked as DigestAnswer | NightAnswer, deps.fetch)
     : task === "supplement" ? await checkSupplementLinks(checked as SupplementAnswer, deps.fetch)
-    : task === "dive" || task === "verdict" ? await checkFoundLinks(checked as DiveAnswer | VerdictAnswer, deps.fetch) : checked;
+    : task === "dive" || task === "verdict" || task === "research" ? await checkFoundLinks(checked as DiveAnswer | VerdictAnswer, deps.fetch) : checked;
   return { refused: false as const, answer, usage };
 }
 

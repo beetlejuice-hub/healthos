@@ -9,7 +9,7 @@ import { healthNow } from "../lib/health-client";
 import { SourceLink } from "./SourceLink";
 import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import { act, getState, newId, useStore, type Experiment } from "../lib/store";
-import { askAi, askRead, bandForRead, chatContext, contextNow, leadNow, nightContext, refreshAiStatus, useAiStatus } from "../lib/ai/client";
+import { aiStatusNow, askAi, askRead, bandForRead, chatContext, contextNow, leadNow, nightContext, refreshAiStatus, useAiStatus } from "../lib/ai/client";
 import { leadLines, withLead } from "../lib/ai/lead";
 import { askChat } from "../lib/ai/chat";
 import { bandNow, bandSettled, onBandSettled, onNights } from "../lib/band-client";
@@ -48,6 +48,8 @@ import { dayTotals, dayWindow, eveningOf, nightDue, nightStale, STALE } from "..
 import { addThreads, adviceOf, closeThreads, dropSaid, keepSaid, readItems, saidTopics } from "../lib/ai/said";
 import { discoveryLines, keepDiscovery } from "../lib/ai/discover";
 import { DiscoveryCard, DiscoveryList } from "./Discovery";
+import { ResearchList } from "./Research";
+import { keepResearch, nextResearch, RESEARCH, researchContext, researchTopics, researchUsd, type Topic } from "../lib/ai/research";
 import { onSyncSettled, syncSettled } from "../lib/session";
 import { WatchList } from "./Watching";
 import { byDay, foldLine } from "../lib/ai/thread";
@@ -57,7 +59,7 @@ const k = (n: number) => (n >= 1000 ? `${(n / 1000).toFixed(1)}k` : String(Math.
 const clockOf = (t: number) => new Date(t).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
 /** Who answered a light job instead of Claude (3 Nov). */
 const VIA = { "gemini-free": "Gemini (free)", gemini: "Gemini (credit)" } as const;
-const TASK_WORDS: Record<string, string> = { describe: "food", questions: "questions", chat: "chat", digest: "morning read", night: "night read", supplement: "supplement", review: "week / month read", dive: "deep dive", verdict: "experiment verdict" };
+const TASK_WORDS: Record<string, string> = { research: "research", describe: "food", questions: "questions", chat: "chat", digest: "morning read", night: "night read", supplement: "supplement", review: "week / month read", dive: "deep dive", verdict: "experiment verdict" };
 
 /* ------------------------------------------------------------------ background: morning read + questions */
 
@@ -148,6 +150,26 @@ const makeVerdict = (x: Experiment, v: Parameters<typeof verdictLines>[1]) => at
   }));
   return r;
 }, { onFail: keepFail("verdict") });
+
+/**
+ * The app's own research (PLAN 192; owner, 3 Nov: "Ai should do researches on its own but do not let it soend way too much
+ * credits"): the next topic from your data, when the budget allows (lib/ai/research), one small call, kept with its cost.
+ */
+const makeResearch = (t: Topic) => attempt(`research:${t.key}:${localDay(Date.now())}`, async () => {
+  const s = getState();
+  if ((s.ai.researched ?? []).some((r) => r.day === localDay(Date.now()))) return null;
+  const r = await askAi({ task: "research", context: researchContext(t, s.profile, s.ai.researched ?? []) });
+  if (!r.ok) return r;
+  act.setAi((a) => ({ researched: keepResearch(a.researched ?? [], t, r.answer, r.costUsd, Date.now()) }));
+  return r;
+}, { onFail: keepFail("research") });
+
+/** What's due now, from the state, the band and the month's spend so far. */
+export function researchNow(now = Date.now()) {
+  const s = getState(), st = aiStatusNow();
+  const topics = () => researchTopics({ entries: s.entries, workouts: s.workouts, supplements: s.supplements, settings: s.settings, goals: s.goals }, bandNow(), now);
+  return nextResearch(topics, s.ai.researched ?? [], now, { monthUsd: st.usage ? (st.usage.month === localDay(now).slice(0, 7) ? st.usage.monthUsd : 0) : st.on ? 0 : null, budget: st.budget }, !!s.ai.researchOff);
+}
 
 /** Anything logged in that day's evening-to-04:00 window (#107: a beer at 00:40 is that evening's). */
 const loggedOn = (day: string) => { const [from, to] = dayWindow(day); return getState().entries.some((e) => e.at >= from && e.at < to); };
@@ -288,6 +310,10 @@ export function useAiAuto(userId: string | undefined) {
       // the weekly deep dive, from Sunday 09:00 (PLAN 160)
       const dive = diveDue(now.getTime(), ai.dive, getState().entries);
       if (dive) void makeDive(dive);
+      // the app's own research: one topic a day at most, on its own small budget (PLAN 192) — on its own, so a dive that
+      // keeps failing doesn't hold it up
+      const next = researchNow(now.getTime());
+      if ("topic" in next) void makeResearch(next.topic);
       // an experiment that ended gets its verdict (PLAN 160) — the 120 days of facts only when one might be due
       const st = getState();
       if (ai.experiments.some((x) => !x.verdict && addDays(x.start, x.days) <= (x.ended ?? today)))
@@ -526,6 +552,7 @@ export function AiScreen() {
       <DeepDive onRepick={makeDive} />
       <WatchList now={now} />
       <DiscoveryList />
+      <ResearchList />
       <SavedCard />
       <div className="chat" aria-live="polite">
         {/* reform A2 (owner, 29 Oct: Yes to "One line: “Ask about anything you log.” The rest behind a small ?") */}
@@ -668,6 +695,9 @@ export function AiSettings() {
       <label className="field">Food, photos and quick questions<select value={ai.models.light} onChange={(e) => pick("light", e.target.value as ModelChoice)}>{option("light")}</select></label>
       <label className="field">Chat (your questions about your data)<select value={ai.models.everyday} onChange={(e) => pick("everyday", e.target.value as ModelChoice)}>{option("everyday")}</select></label>
       <label className="field">Daily reads (morning, night and the week read — with web search)<select value={ai.models.reads} onChange={(e) => pick("reads", e.target.value as ModelChoice)}>{option("reads")}</select></label>
+      {/* PLAN 192: "do not let it soend way too much credits" */}
+      <label className="check ai-research-on"><input type="checkbox" checked={!ai.researchOff} onChange={(e) => act.setAi({ researchOff: !e.target.checked })} />
+        <span>The app researches your data on its own — what you take, eat, how you train, move, your heart: at most {RESEARCH.perWeek} a week, {usd(RESEARCH.monthUsd)} a month, none once the month is past half its {usd(budget)}{(ai.researched ?? []).length ? ` · this month ${usd(researchUsd(ai.researched ?? [], localDay(now.getTime())))}` : ""}</span></label>
       <label className="field">Research (the weekly deep dive, experiment verdicts, supplement look-ups)<select value={ai.models.research} onChange={(e) => pick("research", e.target.value as ModelChoice)}>{option("research")}</select></label>
       <p className="note">Estimate for a month with these: ≈ {usd(est.total)} — {est.measured ? `from your last ${est.measured} call${est.measured > 1 ? "s" : ""}` : "a first guess until you've used it"}. Past {usd(budget)} in a month everything drops to {MODELS.haiku.label} until the 1st; hard stop at {cap} calls a day.</p>
       {(recent.length > 0 || failed.length > 0) && <details className="ai-calls"><summary>Last calls — what each cost{failed.length ? `, and ${failed.length} that failed` : ""}</summary>

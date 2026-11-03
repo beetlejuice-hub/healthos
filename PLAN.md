@@ -3404,3 +3404,25 @@ both reads and the questions. Phases in that order; #152 RPE waits (owner).
      kind with a distance (average pace and best, distance, heart rate and peak, beats a mile, pace each session as dots on
      an axis around them — bars from 0 hid an 11:45 → 11:05 change — and the first 3 against the last 3); the AI's
      cardio line lists the phases. Tests: cardiostats.test (known answers), e2e cardiophases.
+
+192. [x] **The AI researches you on its own — on a small budget** (owner, 3 Nov: "Ai should do researches on its own but do
+   not let it soend way too much credits. Like researxh on what i take what i eat how i train how much i move my heartrate
+   etc etc etc"). Claimed 3 Nov.
+   - Today: a weekly deep dive (the AI picks one question), a look-up when a supplement is added, one discovery a read.
+     Nothing goes through his own stack, food, training, movement and heart one by one.
+   - What: the app (not the AI — no call to choose) keeps a list of topics from his data: each supplement he's taking (its
+     dose in the key, so a new dose is a new topic), his most-eaten foods, his training, each cardio kind with its pace,
+     his steps, his resting heart rate and HRV. One a day at most, 4 a week, the area researched longest ago first; a
+     topic comes back after 45 days. Each: one call on the reads' model (Sonnet), no look-up rounds, 3 web searches at
+     most, only that topic's lines and About me — about $0.07. Its own cap: $2.50 a month, and none once the month's AI
+     spend is past half the $20 budget. Answers: what's known (2–3 studies with checked links), what it means for him
+     from his numbers, one thing to try, how sure. "Researched for you" in the AI tab; the reads are told (so they build
+     on it, not repeat it); Settings → AI: on/off and this month's research spend.
+   - How: task "research" (lib/ai/tasks: prompt, checkResearch, TYPICAL; worker: 3 searches, links checked); lib/ai/research
+     (pure: topics, the next due, the budget); Ai.tsx runs it with the other background jobs. Tests: research.test (topics
+     from a planted state; due: once a day, 4 a week, 45 days, a dose change, both caps), the worker against a fake
+     internet, e2e research (fake AI).
+   - Done 3 Nov: as above, built in the Discovery list's style (no canvas: a list of reads like the ones he has). Research
+     runs on its own, not after the deep dive (a dive that keeps failing would have held it up). A month with no AI
+     calls yet counts as $0 once the AI is known to be on; before that, it waits. Not verified: the real AI's answers
+     (the fake one in e2e), the cost per call on his account (estimated $0.07: Sonnet, ~6k tokens in, 3 searches).

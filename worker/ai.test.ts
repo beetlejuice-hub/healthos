@@ -310,6 +310,23 @@ describe("/api/ai", () => {
     expect(JSON.stringify(w.sent[0].body.system)).toContain("The app's result is THE result");
   });
 
+  it("the app's own research: 3 searches at most, on the reads' model, its sources' links checked, an empty answer refused (PLAN 192)", async () => {
+    const a = { title: "Creatine at 5 g: does the timing matter?", known: "Daily intake matters more than timing; 3–5 g a day saturates muscle in about a month.", forYou: "You take 5 g on 14 of 14 days — that's the dose studied.", tip: "Keep it daily, any time", sure: "strong",
+      found: [{ title: "ISSN position stand", text: "3–5 g/day is effective and safe.", source: { title: "ISSN position stand: creatine", url: "https://pubmed.ncbi.nlm.nih.gov/28615996/" } }, { title: "no link", text: "dropped", source: { title: "x", url: "ftp://x" } }] };
+    const w = world([{ text: JSON.stringify(a), searches: 2 }], { pages: { "https://pubmed.ncbi.nlm.nih.gov/28615996/": { html: "<title>International Society of Sports Nutrition position stand: safety and efficacy of creatine supplementation - PubMed</title>" } } });
+    const res = await handleAi(post({ task: "research", context: "## About me\n## The topic (the app's pick, from my data)\n- What: a supplement I take — Creatine, 5 g" }), env, w.deps);
+    const body = (await res.json()) as { answer: { title: string; found: { source: { checked?: boolean } }[] } };
+    expect(res.status).toBe(200);
+    expect(body.answer.title).toBe(a.title);
+    expect(body.answer.found).toHaveLength(1);
+    expect(body.answer.found[0].source.checked).toBe(true);
+    expect((w.sent[0].body.tools as { name: string; max_uses: number }[])).toEqual([expect.objectContaining({ name: "web_search", max_uses: 3 })]);
+    expect(w.sent[0].body.model).toBe("claude-sonnet-5-5");
+    expect(JSON.stringify(w.sent[0].body.system)).toContain("the app's own research on ONE thing");
+    const bad = world([{ text: JSON.stringify({ title: "", known: "" }) }]);
+    expect((await handleAi(post({ task: "research", context: "c" }), env, bad.deps)).status).not.toBe(200);
+  });
+
   it("night: the day is read back with web search (its study and thing to try need sources), from text, and checked", async () => {
     const night = { summary: "A steady day; stress peaked at 14:00 with the deadline you noted.", happened: ["2 coffees, last 13:00", "gym 18:00", "x", "y", "dropped"], notes: "You wrote 'deadline' at 14:00 — the stress 8 fits that.", change: [{ what: "Walk after lunch", why: "your 15:00 dip" }, { what: "b", why: "" }, { what: "dropped", why: "" }], remember: ["Stress runs high on deadline days."],
       // PLAN 157: the evening's three — a study and a try need a real link; the morning's other kinds aren't the evening's
@@ -471,7 +488,7 @@ describe("strict schemas stay inside the API's limits", () => {
     chat: { task: "chat", messages: [{ role: "user", text: "hi" }], context: "c" },
     digest: { task: "digest", context: "c", shown: [] }, night: { task: "night", day: "2026-10-28", context: "c" }, dive: { task: "dive", context: "c" },
     questions: { task: "questions", context: "c", asked: [] }, describe: { task: "describe", text: "2 eggs" },
-    supplement: { task: "supplement", name: "Creatine", context: "c" }, verdict: { task: "verdict", context: "c" },
+    supplement: { task: "supplement", name: "Creatine", context: "c" }, verdict: { task: "verdict", context: "c" }, research: { task: "research", context: "c" },
   };
   for (const [task, body] of Object.entries(bodies)) it(task, async () => {
     const w = world([{ text: "{}" }]);

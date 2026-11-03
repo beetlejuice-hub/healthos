@@ -17,6 +17,7 @@ import { DEFAULT_GOALS, slotOf, slotsOf, slotTime } from "./types";
 import { tidyWorkouts } from "./training";
 import type { ScoutMemo } from "./scout";
 import type { Claim } from "./record";
+import type { Researched } from "./ai/research";
 import type { Energy } from "./energy";
 import type { LeadMark } from "./ai/lead";
 import { DEFAULT_MODELS, MODELS_V, modelsNow, type DigestItem, type Models, type NightAnswer, type Question, type ReviewAnswer, type SupplementAnswer, type DiveAnswer, type DiveStudy } from "./ai/tasks";
@@ -50,6 +51,8 @@ export type AiState = {
   watches?: Watch[];
   /** What the app said — leads and Noticed findings — each with the day it was first said, re-checked on the days since (lib/record; PLAN 188 phase 3). */
   record?: Claim[];
+  /** The app's own research on your data, newest last (lib/ai/research; PLAN 192); `researchOff`: turned off in Settings → AI. */
+  researched?: Researched[]; researchOff?: boolean;
   /** The reads' discoveries, newest last (PLAN 187: one random study or forum post a read) — and what you did with each. */
   discoveries?: KeptDiscovery[];
   /** The latest questions and the read that brought them — shown while that read is (PLAN 155–156); "fallback": the cheap call. */
