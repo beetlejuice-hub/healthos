@@ -13,6 +13,7 @@ import { DRINKS } from "../lib/drinks";
 import { forGrams } from "../lib/nutrition";
 import { alcoholGrams } from "../lib/alcohol";
 import { addDays, atMinute, clock, dayLabel, localDay } from "../lib/time";
+import { CYCLES, scheduleToday, scheduleWords } from "../lib/schedule";
 import { labelOf } from "../lib/feel";
 import { bodyLine } from "../lib/bodywords";
 import { readRoute, go, LOG_FOR_KEY } from "../lib/nav";
@@ -874,7 +875,7 @@ function StackTab() {
   };
   return (
     <div className="card">
-      <h3>Your stack <span>ticked daily on Today · checked against <a href="#settings">About me</a></span></h3>
+      <h3>Your stack <span>ticked on Today — daily, in cycles, or logged when needed · checked against <a href="#settings">About me</a></span></h3>
       {/* log one now, like food — again tonight if you take it twice (PLAN 87) */}
       <SuppQuick now={now} label="Took one now?" />
       <div className="list">
@@ -885,11 +886,29 @@ function StackTab() {
               <DoseField s={s} />
             </div>
             <StackBadge name={s.name} report={report} hideNone={quiet} />
-            <div className="field">When <span className="note">tap more than one if you take it more than once a day</span>
+            {/* how often (lib/schedule; owner, 3 Nov: "not as daily but cycling, taking only when needing it like l theanine") */}
+            <div className="field">How often
+              <div className="seg soften" role="group" aria-label="How often you take it">
+                <button type="button" aria-pressed={!s.schedule} onClick={() => upd(s.id, { schedule: undefined })}>Every day</button>
+                <button type="button" aria-pressed={s.schedule?.kind === "cycle"} onClick={() => upd(s.id, { schedule: { kind: "cycle", on: 5, off: 2, from: localDay(now) } })}>In cycles</button>
+                <button type="button" aria-pressed={s.schedule?.kind === "needed"} onClick={() => upd(s.id, { schedule: { kind: "needed" } })}>When needed</button>
+              </div>
+              {s.schedule?.kind === "cycle" && (() => { const c = s.schedule; return <div className="cycle-edit">
+                <div className="chips">{CYCLES.map((x) => <button key={x.label} type="button" className="pill-btn" aria-pressed={c.on === x.on && c.off === x.off} onClick={() => upd(s.id, { schedule: { ...c, on: x.on, off: x.off } })}>{x.label}</button>)}</div>
+                <div className="row2">
+                  <label className="field">Days on<input inputMode="numeric" value={c.on} onChange={(e) => { const v = Math.max(1, Math.min(365, Math.round(Number(e.target.value) || 1))); upd(s.id, { schedule: { ...c, on: v } }); }} /></label>
+                  <label className="field">Days off<input inputMode="numeric" value={c.off} onChange={(e) => { const v = Math.max(1, Math.min(365, Math.round(Number(e.target.value) || 1))); upd(s.id, { schedule: { ...c, off: v } }); }} /></label>
+                </div>
+                <div className="row2"><span className="note">Today: {scheduleToday(s, localDay(now))}</span>
+                  <button type="button" className="linkish" onClick={() => upd(s.id, { schedule: { ...c, from: localDay(now) } })}>Start the cycle today</button></div>
+              </div>; })()}
+              <p className="note">{!s.schedule ? "On Today's list each day, ticked and reminded." : s.schedule.kind === "needed" ? "Not on the daily list and never asked about — log it with + when you take it. Days without it count as days off, so the app can still tell what it does." : "On Today's list on its on days only; nothing is asked on the off days, and they count as days off."}</p>
+            </div>
+            {s.schedule?.kind !== "needed" && <div className="field">When <span className="note">tap more than one if you take it more than once a day</span>
               <div className="seg sslots" role="group" aria-label="When you take it">
                 {SLOTS.map((x) => <button key={x.id} type="button" aria-pressed={slotsOf(s).includes(x.id)} onClick={() => toggleSlot(s, x.id)}>{x.name} · {hhmm(x.at)}</button>)}
               </div>
-            </div>
+            </div>}
             <div className="seg sstatus" role="group" aria-label="Status">
               {STATUSES.map(([v, label]) => <button key={v} type="button" aria-pressed={statusOf(s) === v} onClick={() => upd(s.id, STATUS_PATCH[v])}>{label}</button>)}
             </div>
@@ -901,7 +920,7 @@ function StackTab() {
           </div>
         ) : (
           <div key={s.id} className={`li supp-row${s.active ? "" : " paused"}`}>
-            <span>{s.name}{s.dose ? <em> {s.dose}</em> : null}<small>{s.active ? `${slotName(s)}${s.status === "low" ? " · running low" : ""}` : s.status === "out" ? "ran out — back when you restock" : s.status === "stopped" ? "stopped" : "paused"}</small><StackBadge name={s.name} report={report} hideNone={quiet} /><SuppResearch s={s} /></span>
+            <span>{s.name}{s.dose ? <em> {s.dose}</em> : null}<small>{s.active ? `${s.schedule?.kind === "needed" ? "when needed" : `${slotName(s)}${s.schedule ? ` · ${scheduleWords(s)} · ${scheduleToday(s, localDay(now))}` : ""}`}${s.status === "low" ? " · running low" : ""}` : s.status === "out" ? "ran out — back when you restock" : s.status === "stopped" ? "stopped" : "paused"}</small><StackBadge name={s.name} report={report} hideNone={quiet} /><SuppResearch s={s} /></span>
             <button type="button" className="pill-btn" onClick={() => setEditing(s.id)}>Edit</button>
           </div>
         ))}

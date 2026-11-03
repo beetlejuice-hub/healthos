@@ -102,6 +102,8 @@ export type Supplement = {
   /** Until when Today stays quiet about it being low or out (owner, 28 Oct: "i see that i am out of vit d and saffron
    *  everyday, i know it, there should be a button to say okay, and it silences that thing for like a week"). */
   quietUntil?: number;
+  /** How often (lib/schedule; PLAN 190): none = every day; "needed" = logged when taken, never asked; a cycle = on its on days. */
+  schedule?: import("./schedule").Schedule;
 };
 
 /** Where a supplement stands, as the stack editor shows it, and the patch that puts it there. */

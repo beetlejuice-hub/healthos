@@ -10,6 +10,7 @@ import { answerSlot, SLOTS, slotsOf } from "./types";
 import { type Dose } from "./caffeine";
 import { bedtimeVerdict, personalSleep, ratedNights, tonightsBed } from "./caffeine-sleep";
 import { localDay, minuteOfDay } from "./time";
+import { dueOn } from "./schedule";
 
 export type NowItem =
   | { id: string; kind: "supp-missed" | "supp-due"; slot: Slot; suppIds: string[]; title: string; body: string }
@@ -41,7 +42,8 @@ export function nowItems(c: NowContext): NowItem[] {
   // A supplement taken in two slots (theanine with each coffee) is due twice, each answered on its own.
   const answered = new Set(todays.flatMap((e) => (e.kind === "supp" ? [`${e.suppId}|${answerSlot(e, c.supplements.find((x) => x.id === e.suppId))}`] : [])));
   for (const slot of SLOTS) {
-    const group = c.supplements.filter((s) => s.active && slotsOf(s).includes(slot.id) && !answered.has(`${s.id}|${slot.id}`));
+    // not on the list: one taken when needed, a cycle's off days (lib/schedule)
+    const group = c.supplements.filter((s) => s.active && dueOn(s, day) && slotsOf(s).includes(slot.id) && !answered.has(`${s.id}|${slot.id}`));
     if (!group.length) continue;
     const at = slot.at, names = group.map((s) => s.name).join(", ");
     const title = group.length === 1 ? `${group[0].name} ${group[0].dose}`.trim() : `${slot.name} stack: ${names}`;

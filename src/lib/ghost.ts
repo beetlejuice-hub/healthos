@@ -11,6 +11,7 @@ import { isGap, openGap } from "./foodgaps";
 import { bodyDays } from "./tdee";
 import { addDays, atMinute, localDay, minuteOfDay } from "./time";
 import type { Entry, Supplement } from "./types";
+import { dueOn } from "./schedule";
 
 /**
  * history: days looked back from the first day not logged; minLogged: logged days before anything is drafted; share:
@@ -75,6 +76,8 @@ export function ghostDrafts(entries: Entry[], supplements: Supplement[], today: 
     for (const [kk, os] of occ) {
       const [k, nth] = [kk.slice(0, kk.lastIndexOf("#")), +kk.slice(kk.lastIndexOf("#") + 1)];
       if ((have.get(k) ?? 0) >= nth) continue;
+      // a supplement not on that day's list (taken when needed, a cycle's off day) is never drafted (PLAN 190)
+      if (k.startsWith("supp:")) { const s = supps.get(k.split(":")[1]); if (s && !dueOn(s, day)) continue; }
       const onDays = new Set(os.map((o) => o.day)), all = onDays.size / logged.length;
       const wdOn = sameWd.filter((d) => onDays.has(d)).length;
       const daily = all >= GHOST.share, weekly = sameWd.length > 0 && wdOn >= GHOST.wdMin && wdOn / sameWd.length >= GHOST.wdShare;

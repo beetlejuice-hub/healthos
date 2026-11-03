@@ -10,6 +10,7 @@
 
 import { answerSlot, SLOTS, slotsOf, type Entry, type EntryOf, type Slot, type Supplement } from "./types";
 import { addDays, atMinute, localDay, minuteOfDay } from "./time";
+import { dueOn } from "./schedule";
 
 /** Days looked back over to learn what's usual (before yesterday). */
 export const HABIT_DAYS = 14;
@@ -32,7 +33,7 @@ export function yesterdayGaps(entries: Entry[], supplements: Supplement[], today
   const logged = new Set(past.map((e) => localDay(e.at))), n = logged.size, gaps: Gap[] = [];
   // Supplements: every slot of every one you're taking and have ticked before.
   for (const s of supplements) {
-    if (!s.active || s.status === "out" || s.status === "stopped") continue;
+    if (!s.active || s.status === "out" || s.status === "stopped" || !dueOn(s, yday)) continue;
     if (!entries.some((e) => e.kind === "supp" && e.suppId === s.id && localDay(e.at) < yday)) continue;
     for (const slot of slotsOf(s)) {
       if (ys.some((e) => e.kind === "supp" && e.suppId === s.id && answerSlot(e, s) === slot)) continue;

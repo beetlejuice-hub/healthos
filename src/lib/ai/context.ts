@@ -20,6 +20,7 @@ import type { Pattern } from "../scout";
 import { addDays, atMinute, clock, dayLabel, localDay } from "../time";
 import { xpEnd, xpSkipped } from "./xpdays";
 import { recordLines } from "../record";
+import { scheduleToday, scheduleWords } from "../schedule";
 import { weekly } from "../weekly";
 import { personalSleep, ratedNights } from "../caffeine-sleep";
 import { doseCompare } from "../dose";
@@ -269,7 +270,7 @@ function baseContext({ state, now, days, findings, patterns, weight, today = [],
     ...(today.length ? ["## This morning (readiness — worked out for you, no longer shown in the app — the night check and yesterday's food score)", ...today.map((l) => `- ${l}`)] : []),
     ...(onToday.length ? ["## On Today right now, from you (the user reads these there; they aren't in this chat)", ...onToday.map((l) => (l.startsWith("  ") ? l : `- ${l}`))] : []),
     "## My stack",
-    ...supplements.map((s) => `- ${s.name}${s.dose ? ` ${s.dose}` : ""} (${s.slot})${s.status ? ` — ${s.status === "low" ? "running low" : s.status === "out" ? "ran out" : "stopped"}` : s.active ? "" : " — paused"}`),
+    ...supplements.map((s) => `- ${s.name}${s.dose ? ` ${s.dose}` : ""} (${s.schedule ? `${scheduleWords(s)}${s.schedule.kind === "cycle" ? ` — ${scheduleToday(s, localDay(now))}` : ""}` : s.slot})${s.status ? ` — ${s.status === "low" ? "running low" : s.status === "out" ? "ran out" : "stopped"}` : s.active ? "" : " — paused"}`),
     ...(ai.memory.length ? ["## What you remember about me", ...ai.memory.map((m) => `- ${m.text}`)] : []),
     // owner, 28 Oct: "should keep a log of what it said, what it thinks of me, what it should dive in more, what it should
     // research etc, so it doesnt forget things it already said a million trimes"

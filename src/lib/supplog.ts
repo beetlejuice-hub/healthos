@@ -9,6 +9,7 @@
 
 import { answerSlot, slotOf, slotsOf, type Entry, type EntryOf, type Supplement } from "./types";
 import { localDay, minuteOfDay } from "./time";
+import { dueOn } from "./schedule";
 
 export type Intake = { op: "add"; entry: Omit<EntryOf<"supp">, "id"> } | { op: "update"; id: string; patch: Partial<EntryOf<"supp">> };
 
@@ -25,7 +26,8 @@ export function extrasOn(entries: Entry[], supplements: Supplement[], day: strin
   return entries.filter((e): e is EntryOf<"supp"> => {
     if (e.kind !== "supp" || e.status !== "taken" || localDay(e.at) !== day) return false;
     const s = supplements.find((x) => x.id === e.suppId);
-    return !!s && (!!e.again || !slotsOf(s).includes(answerSlot(e, s)));
+    // one not on the day's list (taken when needed, a cycle's off day): every intake is shown as one
+    return !!s && (!!e.again || !dueOn(s, day) || !slotsOf(s).includes(answerSlot(e, s)));
   });
 }
 

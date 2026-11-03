@@ -3367,3 +3367,16 @@ both reads and the questions. Phases in that order; #152 RPE waits (owner).
      the end moves; the cap), e2e xpdid (the ask, Didn't → day left out and end moved, Undo, the strip, the squares).
    - Done 3 Nov (lib/ai/xpdays; ExperimentDid in For you after the reads; ExperimentDays on Insights). Also fixed: an
      experiment's test counted the days after its end as "during" (a 21-day one read on day 25 counted 25).
+
+190. [x] **Supplements: every day, in cycles, or when needed** (owner, 3 Nov: "Should be able to set supplements not as daily
+   but cycling, taking only when needing it like l theanine so i should have rhe option to log it but not every day i need
+   it"). Claimed and done 3 Nov.
+   - Log → Stack → Edit: How often — Every day (as before) · In cycles (5 days on · 2 off, 3 weeks on · 1 off, 8 weeks on · 4
+     off, or any days on / off; "Start the cycle today") · When needed (no time of day to pick).
+   - When needed: never on Today's list, never reminded, never asked about the next morning, never drafted as "your usual";
+     "+ L-theanine" logs it and it shows with the day's stack as taken. A cycle: on the list, reminded and asked about on
+     its on days only; the stack says "Ashwagandha: off — back on Mon 9 Nov". The list says how often; the AI is told.
+   - The engines are unchanged: a day it isn't logged on still counts as not taken (lib/suppdays, 20 Oct), so a
+     when-needed one's days without it, and a cycle's off days, are the "without" days its comparisons need.
+   - lib/schedule (dueOn, cycleOn, words); used by today (Now), Today's stack and tile, push/plan, catchup, ghost, supplog
+     extras. Tests: schedule.test (each place, fails with the schedule ignored), e2e suppschedule.

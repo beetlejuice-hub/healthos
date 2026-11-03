@@ -32,6 +32,7 @@ import { TodayPattern } from "../components/TodayPattern";
 import { FoldCard } from "../components/FoldCard";
 import type { Drink, Entry, EntryOf, Slot } from "../lib/types";
 import { answerSlot, SLOTS, slotsOf } from "../lib/types";
+import { dueOn, scheduleToday } from "../lib/schedule";
 import { parseFat } from "../lib/bodyfat";
 import { HowNow } from "../components/HowNow";
 import { SuppAmount } from "../components/SuppAmount";
@@ -383,7 +384,8 @@ function Stack({ now, onClose }: { now: number; onClose: () => void }) {
   const all = useStore((s) => s.supplements);
   const entries = useStore((s) => s.entries);
   const day = localDay(now);
-  const supps = all.filter((x) => x.active);
+  // today's list: not one taken when needed, nor a cycle's off days (lib/schedule; PLAN 190)
+  const supps = all.filter((x) => x.active && dueOn(x, day)), aside = all.filter((x) => x.active && x.status !== "stopped" && !dueOn(x, day));
   // One answer per supplement per slot: theanine at breakfast and again at lunch are two ticks.
   const key = (id: string, slot: Slot) => `${id}|${slot}`;
   // the plan's answers only: another intake logged on top (`again`) never stands in for the tick
@@ -435,8 +437,9 @@ function Stack({ now, onClose }: { now: number; onClose: () => void }) {
           </div>
         );
       })}
+      {aside.length > 0 && <p className="note stack-aside">{aside.map((s) => `${s.name}: ${scheduleToday(s, day)}`).join(" · ")}</p>}
       <SuppQuick now={now} />
-      {supps.length === 0 && <p className="note">No supplements set up. Add your stack in Log → Stack.</p>}
+      {supps.length === 0 && !aside.length && <p className="note">No supplements set up. Add your stack in Log → Stack.</p>}
     </FoldCard>
   );
 }

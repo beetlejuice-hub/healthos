@@ -10,6 +10,7 @@
 import type { Entry, Supplement } from "../types";
 import { SLOTS, answerSlot, slotsOf } from "../types";
 import { atMinute, localDay, addDays } from "../time";
+import { dueOn } from "../schedule";
 import { slumpOf } from "../bodyclock";
 
 export type Reminder = { at: number; title: string; body: string; url: string; tag: string };
@@ -56,7 +57,7 @@ export function plan(c: Ctx): Reminder[] {
     }
 
     if (c.prefs.supps) for (const slot of SLOTS) {
-      const open = c.supplements.filter((s) => s.active && slotsOf(s).includes(slot.id) && !todays.some((e) => e.kind === "supp" && e.suppId === s.id && answerSlot(e, s) === slot.id));
+      const open = c.supplements.filter((s) => s.active && dueOn(s, day) && slotsOf(s).includes(slot.id) && !todays.some((e) => e.kind === "supp" && e.suppId === s.id && answerSlot(e, s) === slot.id));
       if (open.length) add(slot.at + PLAN.suppAfterMin, { title: `${slot.name} stack`, body: `${open.map((s) => `${s.name}${s.dose ? ` ${s.dose}` : ""}`).join(", ")}: tick it once you've had it.`, url: "/#today", tag: `supp-${slot.id}` });
     }
 

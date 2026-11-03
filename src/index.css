@@ -2245,3 +2245,10 @@ span.fd-score[data-band="none"] { background: none; min-width: 34px; }
 .rec-gone summary { cursor: pointer; font-size: 13.5px; }
 .rec-gone .rec-row { display: grid; gap: 4px; padding-top: 10px; }
 .rec-gone .rec-row b { font-size: 13.5px; font-weight: 600; color: var(--i-ink-2); }
+
+/* How often a supplement is taken (lib/schedule; PLAN 190) */
+.soften { flex-wrap: wrap; }
+.cycle-edit { display: grid; gap: 8px; margin-top: 8px; }
+.cycle-edit .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.cycle-edit .pill-btn[aria-pressed="true"] { background: var(--k-ink, var(--c-ink)); color: var(--k-bg, var(--c-bg)); }
+.stack-aside { margin: 0; }

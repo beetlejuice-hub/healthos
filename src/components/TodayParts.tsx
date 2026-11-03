@@ -10,6 +10,7 @@ import { DRINKS } from "../lib/drinks";
 import { go, openCard } from "../lib/nav";
 import { clock, localDay } from "../lib/time";
 import { answerSlot, slotsOf, type Drink } from "../lib/types";
+import { dueOn } from "../lib/schedule";
 import { MOMENT_TITLE, type Moment } from "../lib/moment";
 
 const fmt = (n: number) => Math.round(n).toLocaleString("en-GB");
@@ -18,7 +19,7 @@ const fmt = (n: number) => Math.round(n).toLocaleString("en-GB");
 export function useStackCount(now: number) {
   const supplements = useStore((s) => s.supplements), entries = useStore((s) => s.entries);
   const day = localDay(now);
-  const doses = supplements.filter((x) => x.active).flatMap((s) => slotsOf(s).map((slot) => `${s.id}|${slot}`));
+  const doses = supplements.filter((x) => x.active && dueOn(x, day)).flatMap((s) => slotsOf(s).map((slot) => `${s.id}|${slot}`));
   const taken = new Set(entries.flatMap((e) => (e.kind === "supp" && e.status === "taken" && localDay(e.at) === day ? [`${e.suppId}|${answerSlot(e, supplements.find((x) => x.id === e.suppId))}`] : [])));
   return { total: doses.length, taken: doses.filter((d) => taken.has(d)).length };
 }
