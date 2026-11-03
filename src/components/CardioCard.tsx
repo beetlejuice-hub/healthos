@@ -4,9 +4,10 @@
  * sessions with the band's heart rate and about how many kcal (lib/cardio).
  */
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { Bars, LineChart } from "./Charts";
-import { cardioHr, cardioKcal, cardioSpans, cardioWeeks, minutesOf } from "../lib/cardio";
+import { cardioHr, cardioSpans, cardioWeeks, minutesOf, spanKcal } from "../lib/cardio";
+import { PhaseRows } from "./CardioSession";
 import { currentKg } from "../lib/body";
 import { useStore } from "../lib/store";
 import { dayLabel } from "../lib/time";
@@ -19,6 +20,7 @@ export function CardioCard({ now, hr }: { now: number; hr: HrMinute[] }) {
   const kg = currentKg(entries, 0, now) || null;
   const spans = useMemo(() => cardioSpans(workouts, now).filter((s) => !s.running), [workouts, now]);
   const weeks = useMemo(() => cardioWeeks(spans, kg, now, 8), [spans, kg, now]);
+  const [editing, setEditing] = useState<string | null>(null);
   if (!spans.length) return null;
   const cur = weeks[weeks.length - 1], before = weeks.slice(-4, -1), usual = Math.round(before.reduce((a, w) => a + w.min, 0) / before.length);
   return (
@@ -28,8 +30,11 @@ export function CardioCard({ now, hr }: { now: number; hr: HrMinute[] }) {
       <Bars label="Cardio minutes a week, the last 8 weeks" h={80} pts={weeks.map((w, i): [number, number] => [i, w.min])} lo={0} hi={Math.max(30, ...weeks.map((w) => w.min)) * 1.1} xs={[0, weeks.length - 1]} color="var(--ok)"
         yfmt={(v) => String(Math.round(v))} xlabels={[[0, dayLabel(weeks[0].week).replace(/^\w+ /, "")], [weeks.length - 1, "this week"]]} />
       <ul className="tp-cardio-list">{spans.slice(-3).reverse().map((s) => {
-        const h = cardioHr(hr, s.start, s.end), kc = cardioKcal(s.what, minutesOf(s), kg);
-        return <li key={s.workoutId + s.start}><b>{s.what}</b> <span>{dayLabel(s.start)} · {minutesOf(s)} min{h ? ` · avg ${h.avg} bpm` : ""}{kc ? ` · ~${kc.kcal} kcal` : ""}{s.own ? "" : " · after lifting"}</span>{h && <ZoneBar hr={hr} start={s.start} end={s.end} />}</li>;
+        const h = cardioHr(hr, s.start, s.end), kcal = spanKcal(s, kg), w = workouts.find((x) => x.id === s.workoutId), km = (w?.phases ?? []).some((p) => p.km);
+        return <li key={s.workoutId + s.start}><b>{s.what}</b> <span>{dayLabel(s.start)} · {minutesOf(s)} min{h ? ` · avg ${h.avg} bpm` : ""}{kcal != null ? ` · ~${kcal} kcal` : ""}{s.own ? "" : " · after lifting"}</span>{h && <ZoneBar hr={hr} start={s.start} end={s.end} />}
+          {/* PLAN 191 phase 2: a distance for one already saved */}
+          {w && <button type="button" className="linkish tp-dist" aria-expanded={editing === s.workoutId} onClick={() => setEditing(editing === s.workoutId ? null : s.workoutId)}>{editing === s.workoutId ? "Done" : km ? "Change the distance" : "Add the distance"}</button>}
+          {w && editing === s.workoutId && <PhaseRows w={w} end={s.end} />}</li>;
       })}</ul>
       <CardioKinds now={now} hr={hr} />
     </section>

@@ -11,7 +11,7 @@
 
 import type { HrMinute } from "./band";
 import type { CardioPhase, Workout } from "./types";
-import { phaseLine, phaseStat, type DistUnit } from "./cardiostats";
+import { phaseLine, phasesKcal, phaseStat, type DistUnit } from "./cardiostats";
 import { clock, dayLabel } from "./time";
 import { weekStart } from "./liftstrength";
 
@@ -44,7 +44,7 @@ export function cardioSpans(workouts: Workout[], now: number): CardioSpan[] {
     if (w.kind === "cardio") out.push({ what: w.cardio?.what ?? w.template, start: w.startedAt, end: w.endedAt ?? now, workoutId: w.id, own: true, running: w.endedAt == null, ...(w.autoEnded ? { auto: true } : {}), ...(w.phases?.length ? { phases: w.phases } : {}) });
     else if (w.cardio?.startedAt != null && w.cardio.done !== false) {
       const end = w.cardio.done ? w.cardio.at ?? w.endedAt : w.endedAt;
-      out.push({ what: w.cardio.what, start: w.cardio.startedAt, end: end ?? now, workoutId: w.id, own: false, running: end == null });
+      out.push({ what: w.cardio.what, start: w.cardio.startedAt, end: end ?? now, workoutId: w.id, own: false, running: end == null, ...(w.phases?.length ? { phases: w.phases } : {}) });
     }
   }
   return out.filter((s) => s.end > s.start).sort((a, b) => a.start - b.start);
@@ -67,6 +67,12 @@ export function cardioKcal(what: string, minutes: number, kg: number | null): { 
 
 export const minutesOf = (s: { start: number; end: number }) => Math.round((s.end - s.start) / 60_000);
 
+/** A stretch's about-kcal: each phase at its own kind's MET when it has phases (PLAN 191 phase 2), else its kind's. */
+export function spanKcal(s: Pick<CardioSpan, "what" | "start" | "end" | "phases" | "workoutId">, kg: number | null): number | null {
+  if (s.phases?.length) return phasesKcal(s.phases.map((p, i, a) => ({ what: p.what, start: p.start, end: i + 1 < a.length ? a[i + 1].start : s.end })), kg)?.kcal ?? null;
+  return cardioKcal(s.what, minutesOf(s), kg)?.kcal ?? null;
+}
+
 /** The last stretch of the same kind before this one. */
 export function lastLike(spans: CardioSpan[], s: CardioSpan): CardioSpan | null {
   const k = kindOf(s.what)?.name ?? s.what.toLowerCase();
@@ -78,12 +84,12 @@ export function lastLike(spans: CardioSpan[], s: CardioSpan): CardioSpan | null 
  * (band, 38 of 40 min); about 480 kcal (MET 9 × 80 kg) — last Stairmaster, Tue 13 Oct: 35 min, avg 138 bpm".
  */
 export function cardioLine(s: CardioSpan, spans: CardioSpan[], hr: HrMinute[], kg: number | null, max?: number | null, unit: DistUnit = "mi"): string {
-  const min = minutesOf(s), h = cardioHr(hr, s.start, s.end), kc = cardioKcal(s.what, min, kg), last = lastLike(spans, s);
+  const min = minutesOf(s), h = cardioHr(hr, s.start, s.end), kc0 = cardioKcal(s.what, min, kg), kcal = spanKcal(s, kg), kc = kcal != null ? { kcal, met: kc0?.met ?? 0 } : null, last = lastLike(spans, s);
   const zones = h && max ? zoneMinutes(hr, s.start, s.end, max) : null;
   const lh = last ? cardioHr(hr, last.start, last.end) : null;
   return `${s.what} ${clock(s.start)}–${clock(s.end)} (${min} min${s.auto ? ", the timer was left running — ended by itself" : ""})${s.own ? "" : ", after lifting"}: `
     + (h ? `heart rate avg ${h.avg}, peak ${h.peak} bpm (band, ${h.n} of ${min} min)${zones && zones.some(Boolean) ? `, zones ${zoneWords(zones)} (max ${max})` : ""}` : "no heart rate from the band for it")
-    + (kc ? `; about ${kc.kcal} kcal (MET ${kc.met} × ${kg} kg)` : "")
+    + (kc ? `; about ${kc.kcal} kcal (${s.phases && s.phases.length > 1 ? "each phase at its own MET" : `MET ${kc.met}`} × ${kg} kg)` : "")
     // PLAN 191: each phase, with the distance he typed, its pace and heart rate
     + (s.phases?.length ? `; phases: ${phaseLine(s.phases.map((p, i, a) => phaseStat({ ...p, end: i + 1 < a.length ? a[i + 1].start : s.end, workoutId: s.workoutId }, hr)), unit)}` : "")
     + (last ? ` — last ${kindOf(last.what)?.name ?? last.what}, ${dayLabel(last.start)}: ${minutesOf(last)} min${lh ? `, avg ${lh.avg} bpm` : ""}` : " — the first of its kind");
@@ -101,7 +107,7 @@ export function cardioWeekLines(spans: CardioSpan[], hr: HrMinute[], kg: number 
   while (starts.length < weeks) starts.push(weekStart(starts[starts.length - 1] - 1));
   const inWeek = (k: number) => done.filter((s) => s.start >= starts[k] && (k === 0 || s.start < starts[k - 1]));
   const mins = (ss: CardioSpan[]) => ss.reduce((a, s) => a + minutesOf(s), 0);
-  const now0 = inWeek(0), kcal = now0.reduce((a, s) => a + (cardioKcal(s.what, minutesOf(s), kg)?.kcal ?? 0), 0);
+  const now0 = inWeek(0), kcal = now0.reduce((a, s) => a + (spanKcal(s, kg) ?? 0), 0);
   return [
     `Cardio this week (from ${dayLabel(starts[0])}): ${now0.length} session${now0.length === 1 ? "" : "s"}, ${mins(now0)} min${kcal ? `, about ${kcal} kcal` : ""}; the ${weeks - 1} weeks before, newest first: ${starts.slice(1).map((_, k) => `${mins(inWeek(k + 1))} min`).join(", ")}`,
     ...(last > 0 ? done.slice(-last).reverse() : []).map((s) => `Cardio: ${cardioLine(s, done, hr, kg, max)}`),
@@ -115,7 +121,7 @@ export function cardioWeeks(spans: CardioSpan[], kg: number | null, now: number,
   while (starts.length < weeks) starts.push(weekStart(starts[starts.length - 1] - 1));
   return starts.reverse().map((w, k, all) => {
     const mine = spans.filter((s) => !s.running && s.start >= w && (k === all.length - 1 || s.start < all[k + 1]) && s.start <= now);
-    return { week: w, min: mine.reduce((a, s) => a + minutesOf(s), 0), sessions: mine.length, kcal: mine.reduce((a, s) => a + (cardioKcal(s.what, minutesOf(s), kg)?.kcal ?? 0), 0) };
+    return { week: w, min: mine.reduce((a, s) => a + minutesOf(s), 0), sessions: mine.length, kcal: mine.reduce((a, s) => a + (spanKcal(s, kg) ?? 0), 0) };
   });
 }
 

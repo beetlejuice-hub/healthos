@@ -13,7 +13,7 @@
 
 import type { HrMinute } from "./band";
 import type { CardioPhase, Workout } from "./types";
-import { cardioHr, kindOf, type CardioHr } from "./cardio";
+import { cardioHr, cardioKcal, kindOf, type CardioHr } from "./cardio";
 
 export const MI_KM = 1.609344;
 export type DistUnit = "mi" | "km";
@@ -22,16 +22,51 @@ export const CARDIO_STATS = { compare: 3 } as const;
 /** A phase with its end, as it's measured. */
 export type PhaseSpan = CardioPhase & { end: number; workoutId: string };
 
-/** A cardio session's phases, each with its end; one phase when it has none (its kind, its whole time). */
-export function phasesOf(w: Workout, now: number): PhaseSpan[] {
-  const end = w.endedAt ?? now, ps = w.phases?.length ? w.phases : [{ what: w.cardio?.what || w.template || "Cardio", start: w.startedAt }];
-  return ps.map((p, i) => ({ ...p, end: i + 1 < ps.length ? ps[i + 1].start : end, workoutId: w.id })).filter((p) => p.end > p.start);
+/**
+ * A workout's cardio: a cardio session's whole time, or the timed cardio after lifting (phase 2: from its ▶ Start to its
+ * Done). Null when it has none that was timed, or it was skipped.
+ */
+export function cardioPart(w: Workout, now: number): { what: string; start: number; end: number } | null {
+  if (w.kind === "cardio") return { what: w.cardio?.what?.trim() || w.template || "Cardio", start: w.startedAt, end: w.endedAt ?? now };
+  const c = w.cardio;
+  if (c?.startedAt == null || c.done === false) return null;
+  return { what: c.what?.trim() || "Cardio", start: c.startedAt, end: c.done ? c.at ?? w.endedAt ?? now : now };
 }
 
-/** "Next: Run": the phase so far ends now and the next begins; a session with none gets its first from its start. */
+/** A workout's cardio phases, each with its end; one phase when it has none (its kind, its whole time). `end`: where it
+ * stops when it hasn't yet (the Save screen's Stop). */
+export function phasesOf(w: Workout, now: number, end?: number): PhaseSpan[] {
+  const part = cardioPart(w, now);
+  if (!part) return [];
+  const stop = end ?? part.end, ps = w.phases?.length ? w.phases : [{ what: part.what, start: part.start }];
+  return ps.map((p, i) => ({ ...p, end: i + 1 < ps.length ? ps[i + 1].start : stop, workoutId: w.id })).filter((p) => p.end > p.start);
+}
+
+/** "Next: Run": the phase so far ends now and the next begins; cardio with none gets its first from its start. */
 export function nextPhase(w: Workout, what: string, now: number): CardioPhase[] {
-  const ps = w.phases?.length ? w.phases : [{ what: w.cardio?.what?.trim() || "Cardio", start: w.startedAt }];
+  const part = cardioPart(w, now), ps = w.phases?.length ? w.phases : [{ what: part?.what || "Cardio", start: part?.start ?? w.startedAt }];
   return [...ps, { what, start: now }];
+}
+
+/** About how many kcal, each phase at its own kind's MET (phase 2): null when none of them is a known kind or no weight. */
+export function phasesKcal(ps: { what: string; start: number; end: number }[], kg: number | null): { kcal: number; parts: { what: string; met: number; min: number }[] } | null {
+  const parts = ps.flatMap((p) => { const min = (p.end - p.start) / 60_000, k = cardioKcal(p.what, min, kg); return k ? [{ what: p.what, met: k.met, min, kcal: (k.met * kg! * min) / 60 }] : []; });
+  return parts.length ? { kcal: Math.round(parts.reduce((a, x) => a + x.kcal, 0)), parts: parts.map(({ what, met, min }) => ({ what, met, min: Math.round(min) })) } : null;
+}
+
+/**
+ * A pace better than every one before it of that kind (phase 2: "personal bests"), from `since`: with 2 or more before it
+ * to beat. `by`: seconds per km faster than the best before.
+ */
+export function newBests(ps: PhaseStat[], since: number): { kind: string; pace: number; by: number; start: number }[] {
+  const out: { kind: string; pace: number; by: number; start: number }[] = [];
+  for (const p of ps) {
+    if (p.start < since || p.pace == null) continue;
+    const before = ps.filter((q) => q.kind === p.kind && q.pace != null && q.start < p.start);
+    const best = before.length >= 2 ? Math.min(...before.map((q) => q.pace!)) : null;
+    if (best != null && p.pace < best) out.push({ kind: p.kind, pace: p.pace, by: best - p.pace, start: p.start });
+  }
+  return out;
 }
 
 /** What a session was, in words: "Incline walk → Run". */
@@ -51,7 +86,9 @@ export function phaseStat(p: PhaseSpan, hr: HrMinute[]): PhaseStat {
 
 /** Every phase of every finished cardio session, oldest first. */
 export function allPhases(workouts: Workout[], hr: HrMinute[], now: number): PhaseStat[] {
-  return workouts.filter((w) => w.kind === "cardio" && w.endedAt != null).flatMap((w) => phasesOf(w, now)).sort((a, b) => a.start - b.start).map((p) => phaseStat(p, hr));
+  // finished: a cardio session that's ended, the cardio after lifting that's Done (phase 2)
+  const done = (w: Workout) => (w.kind === "cardio" ? w.endedAt != null : w.cardio?.done === true && w.cardio.startedAt != null);
+  return workouts.filter(done).flatMap((w) => phasesOf(w, now)).sort((a, b) => a.start - b.start).map((p) => phaseStat(p, hr));
 }
 
 export type KindStats = {

@@ -10,7 +10,7 @@ import { useEffect, useMemo, useState } from "react";
 import { act, useStore } from "../lib/store";
 import { useBand } from "../lib/band-client";
 import { cardioHr, cardioKcal, CARDIO_CHIPS, kindOf } from "../lib/cardio";
-import { fromKm, nextPhase, paceText, phasesOf, phaseStat, phaseWords, speedText, beatsText, toKm, type DistUnit } from "../lib/cardiostats";
+import { allPhases, fromKm, MI_KM, nextPhase, paceText, phasesKcal, phasesOf, phaseStat, phaseWords, speedText, beatsText, toKm, type DistUnit } from "../lib/cardiostats";
 import { currentKg } from "../lib/body";
 import { clock } from "../lib/time";
 import type { Workout } from "../lib/types";
@@ -19,11 +19,12 @@ import { ZoneBar } from "./ZoneBar";
 const hms = (ms: number) => { const s = Math.max(0, Math.floor(ms / 1000)), h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), ss = String(s % 60).padStart(2, "0"); return h ? `${h}:${String(m).padStart(2, "0")}:${ss}` : `${m}:${ss}`; };
 
 /** The numbers of a stretch, as tiles: minutes, the band's average and peak, about how many kcal. */
-export function CardioNumbers({ what, start, end }: { what: string; start: number; end: number }) {
+export function CardioNumbers({ what, start, end, w }: { what: string; start: number; end: number; /** its phases' own kinds for calories (PLAN 191 phase 2) */ w?: Workout }) {
   const band = useBand().data, entries = useStore((s) => s.entries);
   const min = Math.round((end - start) / 60_000);
   const hr = useMemo(() => (band ? cardioHr(band.hr, start, end) : null), [band, start, end]);
-  const kg = currentKg(entries, 0, end) || null, kc = cardioKcal(what, min, kg);
+  const kg = currentKg(entries, 0, end) || null, one = cardioKcal(what, min, kg), ps = w?.phases && w.phases.length > 1 ? phasesKcal(phasesOf(w, end, end), kg) : null;
+  const kc = ps ? { kcal: ps.kcal, met: 0, is: `each phase at its own MET — ${ps.parts.map((p) => `${p.what} ${p.met}`).join(", ")} —` } : one;
   return <>
     <div className="fin-stats">
       <div><b>{min}</b><span>min</span></div>
@@ -33,7 +34,7 @@ export function CardioNumbers({ what, start, end }: { what: string; start: numbe
     {hr && band && <ZoneBar hr={band.hr} start={start} end={end} />}
     <p className="s cardio-how">
       {hr ? `Heart rate from the band: ${hr.n} of ${min} minutes. ` : band ? "No heart rate from the band for it yet — it syncs a few minutes behind and fills in by itself. " : "Connect the band (Settings) for heart rate. "}
-      {kc ? `Calories: ${kc.is}, ${kc.met} MET × ${kg} kg × ${min} min — an estimate, resting included.` : !kg ? "Calories need your weight — log a weigh-in." : "Calories: not estimated for this kind."}
+      {kc ? (ps ? `Calories: ${kc.is} × ${kg} kg × its minutes — an estimate, resting included.` : `Calories: ${kc.is}, ${kc.met} MET × ${kg} kg × ${min} min — an estimate, resting included.`) : !kg ? "Calories need your weight — log a weigh-in." : "Calories: not estimated for this kind."}
     </p>
   </>;
 }
@@ -56,7 +57,7 @@ export function CardioSession({ w }: { w: Workout }) {
       <div className="top"><h1>Save?</h1><div className="meta">{what}</div></div>
       <div className="tile finish">
         <span className="k">{clock(w.startedAt)}–{clock(stopAt)}</span>
-        <CardioNumbers what={what} start={w.startedAt} end={stopAt} />
+        <CardioNumbers what={what} start={w.startedAt} end={stopAt} w={w} />
         <PhaseRows w={w} end={stopAt} />
         <label className="kfield">How did it feel?<textarea rows={2} value={w.note ?? ""} placeholder="Easy pace, legs heavy…" onChange={(e) => act.updateWorkout(w.id, { note: e.target.value })} /></label>
       </div>
@@ -91,8 +92,11 @@ export function CardioSession({ w }: { w: Workout }) {
  * (miles or km, remembered), the incline on an incline walk — with its pace and speed worked out as you type (PLAN 191).
  */
 export function PhaseRows({ w, end }: { w: Workout; end: number }) {
-  const band = useBand().data, unit: DistUnit = useStore((s) => s.settings.distUnit) ?? "mi";
-  const spans = phasesOf({ ...w, endedAt: end }, end);
+  const band = useBand().data, unit: DistUnit = useStore((s) => s.settings.distUnit) ?? "mi", workouts = useStore((s) => s.workouts);
+  const spans = phasesOf(w, end, end);
+  // each kind's best pace before this one, for "your fastest yet" (phase 2) — with 2 or more to beat
+  const before = useMemo(() => allPhases(workouts.filter((x) => x.id !== w.id), band?.hr ?? [], end).filter((p) => p.start < spans[0]?.start), [workouts, w.id, band, end, spans]);
+  const bestOf = (kind: string) => { const ps = before.filter((p) => p.kind === kind && p.pace != null); return ps.length >= 2 ? Math.min(...ps.map((p) => p.pace!)) : null; };
   const [typed, setTyped] = useState<Record<number, string>>(() => Object.fromEntries(spans.map((p, i) => [i, fromKm(p.km, unit)])));
   const put = (i: number, patch: Partial<{ km: number | undefined; incline: number | undefined }>) => {
     const base = w.phases?.length ? w.phases : spans.map((p) => ({ what: p.what, start: p.start }));
@@ -104,15 +108,18 @@ export function PhaseRows({ w, end }: { w: Workout; end: number }) {
       <div className="phase-head"><b>{spans.length > 1 ? `${spans.length} phases` : "Distance"}</b><span className="s">from the treadmill — leave it empty if you don't know</span>
         <div className="seg unit" role="group" aria-label="Miles or km">{(["mi", "km"] as const).map((u) => <button key={u} type="button" aria-pressed={unit === u} onClick={() => setUnit(u)}>{u}</button>)}</div></div>
       {spans.map((p, i) => {
-        const st = phaseStat(p, band?.hr ?? []), uphill = kindOf(p.what)?.name === "Incline walk";
+        // stairs have no distance: their time and heart rate only
+        const st = phaseStat(p, band?.hr ?? []), uphill = kindOf(p.what)?.name === "Incline walk", stairs = kindOf(p.what)?.name === "Stairmaster";
         return (
           <div key={p.start} className="phase-row">
             <span><b>{p.what}</b> · {Math.round(st.min)} min{st.hr ? ` · ♥ ${st.hr.avg}` : ""}</span>
-            <label className="kfield">{unit === "mi" ? "miles" : "km"}<input inputMode="decimal" value={typed[i] ?? ""} aria-label={`${p.what}: distance in ${unit === "mi" ? "miles" : "km"}`}
-              onChange={(e) => { setTyped({ ...typed, [i]: e.target.value }); put(i, { km: toKm(e.target.value, unit) ?? undefined }); }} /></label>
+            {!stairs && <label className="kfield">{unit === "mi" ? "miles" : "km"}<input inputMode="decimal" value={typed[i] ?? ""} aria-label={`${p.what}: distance in ${unit === "mi" ? "miles" : "km"}`}
+              onChange={(e) => { setTyped({ ...typed, [i]: e.target.value }); put(i, { km: toKm(e.target.value, unit) ?? undefined }); }} /></label>}
             {uphill && <label className="kfield incline">incline %<input inputMode="decimal" value={p.incline ?? ""} aria-label={`${p.what}: incline %`}
               onChange={(e) => { const v = Number(e.target.value.replace(",", ".")); put(i, { incline: e.target.value.trim() && v >= 0 && v <= 40 ? v : undefined }); }} /></label>}
-            <small>{st.pace ? `${paceText(st.pace, unit)} /${unit} · ${speedText(st.kmh!, unit)}${st.beats ? ` · ${beatsText(st.beats, unit)} beats a${unit === "mi" ? " mile" : " km"}` : ""}` : "pace and speed from the distance"}</small>
+            <small>{stairs ? "stairs: its time and heart rate" : st.pace ? `${paceText(st.pace, unit)} /${unit} · ${speedText(st.kmh!, unit)}${st.beats ? ` · ${beatsText(st.beats, unit)} beats a${unit === "mi" ? " mile" : " km"}` : ""}` : "pace and speed from the distance"}</small>
+            {st.pace != null && (() => { const b = bestOf(st.kind); if (b == null || st.pace! >= b) return null; const by = Math.round((b - st.pace!) * (unit === "mi" ? MI_KM : 1));
+              return <small className="phase-best">Your fastest {st.kind.toLowerCase()} yet — {by >= 60 ? `${Math.floor(by / 60)}:${String(by % 60).padStart(2, "0")}` : `${by} s`} a {unit === "mi" ? "mile" : "km"} better than your best</small>; })()}
           </div>
         );
       })}

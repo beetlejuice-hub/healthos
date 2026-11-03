@@ -4,9 +4,9 @@
 // 5.5 mph; band minutes planted at 128 and 163 bpm give each phase its own heart rate, and the run 163 × 22 ÷ 2 = 1,793
 // beats a mile. Average pace is all the time over all the distance, not the average of paces.
 import { describe, expect, it } from "vitest";
-import { allPhases, beatsText, distText, fromKm, kindStats, MI_KM, nextPhase, paceText, phaseLine, phasesOf, phaseWords, speedText, toKm } from "./cardiostats";
+import { allPhases, beatsText, distText, fromKm, kindStats, MI_KM, newBests, nextPhase, paceText, phaseLine, phasesKcal, phasesOf, phaseWords, speedText, toKm } from "./cardiostats";
 import type { HrMinute } from "./band";
-import { cardioLine, cardioSpans } from "./cardio";
+import { cardioLine, cardioSpans, spanKcal } from "./cardio";
 import type { Workout } from "./types";
 
 const MIN = 60_000, T0 = new Date("2026-11-02T18:00:00").getTime();
@@ -64,5 +64,36 @@ describe("cardio in phases (PLAN 191)", () => {
     expect(phaseLine(allPhases([w], hr, T0 + 3_600_000), "mi")).toBe("Incline walk 18 min 0.9 mi (20:00 /mi) at 12 % incline, avg 128 bpm; Run 22 min 2.0 mi (11:00 /mi), avg 163 bpm");
     const spans = cardioSpans([w], T0 + 3_600_000);
     expect(cardioLine(spans[0], spans, hr, 80)).toMatch(/^Incline walk → Run 18:00–18:40 \(40 min\): heart rate avg 147.*; phases: Incline walk 18 min 0\.9 mi \(20:00 \/mi\) at 12 % incline, avg 128 bpm; Run 22 min 2\.0 mi \(11:00 \/mi\), avg 163 bpm — the first of its kind$/);
+  });
+});
+
+// PLAN 191 phase 2 (owner, 3 Nov: "1 and 2"): the cardio after lifting in phases too; each phase's calories at its own
+// kind's MET (10 min Stairmaster 9 MET + 20 min Run 8 MET at 80 kg = 120 + 213 = 333, not 30 min of either); a best pace
+// is one faster than every one before it of that kind, with 2 before it to beat.
+describe("cardio phase 2", () => {
+  const lift = (t0: number, cardio: { what: string; start: number; at?: number; done?: boolean }, phases?: { what: string; start: number; km?: number }[]) =>
+    ({ id: "L" + t0, template: "Upper A", startedAt: t0, endedAt: (cardio.at ?? t0) + 5 * MIN, cardio: { what: cardio.what, startedAt: cardio.start, done: cardio.done, at: cardio.at }, ...(phases ? { phases } : {}) }) as Workout;
+  it("the cardio after lifting: from its Start to its Done, in phases; skipped or never started, none", () => {
+    const c0 = T0 + 50 * MIN, w = lift(T0, { what: "Stairmaster", start: c0, at: c0 + 30 * MIN, done: true }, [{ what: "Stairmaster", start: c0 }, { what: "Run", start: c0 + 10 * MIN, km: 2 * MI_KM }]);
+    expect(phasesOf(w, T0 + 3 * 3_600_000).map((p) => [p.what, (p.end - p.start) / MIN])).toEqual([["Stairmaster", 10], ["Run", 20]]);
+    expect(allPhases([w], [], T0 + 3 * 3_600_000).map((p) => [p.kind, p.km && paceText(p.pace!, "mi")])).toEqual([["Stairmaster", null], ["Run", "10:00"]]);
+    expect(phasesOf(lift(T0, { what: "Run", start: c0, done: false }), T0)).toEqual([]);
+    expect(phasesOf({ ...w, cardio: { what: "Run" } }, T0)).toEqual([]);
+    // "Next" during it starts from its own Start, not the lifting's
+    expect(nextPhase({ ...w, phases: undefined, cardio: { what: "Stairmaster", startedAt: c0 } }, "Run", c0 + 10 * MIN)).toEqual([{ what: "Stairmaster", start: c0 }, { what: "Run", start: c0 + 10 * MIN }]);
+  });
+  it("calories: each phase at its own kind's MET", () => {
+    const ps = [{ what: "Stairmaster", start: T0, end: T0 + 10 * MIN }, { what: "Run", start: T0 + 10 * MIN, end: T0 + 30 * MIN }];
+    expect(phasesKcal(ps, 80)).toEqual({ kcal: 333, parts: [{ what: "Stairmaster", met: 9, min: 10 }, { what: "Run", met: 8, min: 20 }] });
+    expect(phasesKcal(ps, null)).toBeNull();
+    const s = session(T0, [{ what: "Stairmaster", min: 10 }, { what: "Run", min: 20 }]);
+    expect(spanKcal(cardioSpans([s], T0 + 3_600_000)[0], 80)).toBe(333);
+  });
+  it("a new best: faster than every one before it of that kind, with 2 to beat", () => {
+    const runs = [24, 23, 22.5, 21].map((m, i) => session(T0 + i * 86_400_000, [{ what: "Run", min: m, mi: 2 }]));
+    const ps = allPhases(runs, [], T0 + 5 * 86_400_000);
+    expect(newBests(ps, 0).map((b) => [new Date(b.start).getDate(), paceText(b.pace, "mi"), Math.round(b.by * MI_KM)])).toEqual([[4, "11:15", 15], [5, "10:30", 45]]);
+    expect(newBests(ps, T0 + 3 * 86_400_000).map((b) => paceText(b.pace, "mi"))).toEqual(["10:30"]);
+    expect(newBests(ps.slice(0, 2), 0)).toEqual([]); // the second run: only 1 before it
   });
 });

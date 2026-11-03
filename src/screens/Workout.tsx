@@ -13,7 +13,8 @@ import { clock, dayLabel } from "../lib/time";
 import type { EntryOf, Template, Workout } from "../lib/types";
 import { variantsOf } from "../lib/variants";
 import { CARDIO_CHIPS, cardioHr, cardioSpans, minutesOf } from "../lib/cardio";
-import { CardioSession } from "../components/CardioSession";
+import { CardioSession, PhaseRows } from "../components/CardioSession";
+import { nextPhase, phaseWords } from "../lib/cardiostats";
 import { DecimalInput } from "../components/DecimalInput";
 import { adaptNext, historyOf, plateau, repsLabel, repsOf, smartNext } from "../lib/progress";
 import { RepsInput } from "../components/RepsInput";
@@ -318,7 +319,7 @@ function Session({ w }: { w: Workout }) {
   const next = open.find((k) => k > i) ?? open[0];
   const allDone = exDone && next == null;
   const cardio = w.cardio;
-  const setCardio = (done?: boolean) => act.updateWorkout(w.id, { cardio: { what: cardio!.what, ...(cardio?.startedAt ? { startedAt: cardio.startedAt } : {}), ...(done == null ? {} : { done, at: Date.now() }) } });
+  const setCardio = (done?: boolean) => act.updateWorkout(w.id, { cardio: { what: done && w.phases?.length ? phaseWords(w.phases) : cardio!.what, ...(cardio?.startedAt ? { startedAt: cardio.startedAt } : {}), ...(done == null ? {} : { done, at: Date.now() }) } });
   // Cardio whenever you like (owner, 14 Oct: "Should be able to start cardio even when not done w all exercises"):
   // started early, its tile shows now and the sets left wait; with none planned, one can be added.
   const startCardio = (what = cardio?.what) => { if (what) act.updateWorkout(w.id, { cardio: { what, startedAt: Date.now() } }); setAddingCardio(false); };
@@ -422,13 +423,17 @@ function Session({ w }: { w: Workout }) {
       {cardio && cardioOn && (
         <div className={`tile cardio${cardioRunning ? " running" : ""}`}>
           <span className="k">{cardio.startedAt ? `Cardio · started ${clock(cardio.startedAt)}` : "Then cardio"}</span>
-          <b>{cardio.what}</b>
+          <b>{w.phases?.length ? phaseWords(w.phases) : cardio.what}</b>
           {!allDone && setsLeft > 0 && <span className="s">{setsLeft} set{setsLeft === 1 ? "" : "s"} still planned — they're there after, or finish without them.</span>}
           {/* PLAN 130: Start runs a timer, so its minutes and the band's heart rate are known; Done straight away still works */}
           {cardio.done == null && cardio.startedAt != null && <output className="cardio-clock" aria-label="Cardio time">{fmt(Math.max(0, Math.floor((now - cardio.startedAt) / 1000)))}</output>}
+          {/* PLAN 191 phase 2: the cardio after lifting in phases too — "incline walk then normal running" */}
+          {cardio.done == null && cardio.startedAt != null && <div className="picks next-phase" role="group" aria-label="Next phase"><span className="s">Next:</span>
+            {CARDIO.filter((c) => c !== (w.phases?.at(-1)?.what ?? cardio.what)).map((c) => <button type="button" key={c} onClick={() => act.updateWorkout(w.id, { phases: nextPhase(w, c, Date.now()) })}>{c}</button>)}</div>}
           {cardio.done == null
             ? <div className={cardio.startedAt == null ? "grid3" : "grid2"}><button type="button" className="kbtn" onClick={() => setCardio(false)}>Skip</button>{cardio.startedAt == null && <button type="button" className="kbtn pri" onClick={() => startCardio()}>▶ Start</button>}<button type="button" className="go" onClick={() => setCardio(true)}>Done</button></div>
             : <p className="s">{cardio.done ? `✓ Done${cardio.startedAt != null && cardio.at ? ` · ${Math.round((cardio.at - cardio.startedAt) / 60_000)} min` : ""}` : "Skipped"} · <button type="button" className="linkb" onClick={() => setCardio()}>undo</button></p>}
+          {cardio.done && cardio.startedAt != null && cardio.at != null && <PhaseRows w={w} end={cardio.at} />}
         </div>
       )}
       {!cardioRunning && <div className={`tile rest ${rest > 0 ? "" : "idle"}`}>

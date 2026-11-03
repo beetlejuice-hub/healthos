@@ -12,6 +12,8 @@ import { notice } from "../lib/findings";
 import { currentKg } from "../lib/body";
 import { useScout } from "./Scout";
 import { useTodayPatterns } from "./TodayPattern";
+import { useBand } from "../lib/band-client";
+import { allPhases, MI_KM, newBests, paceText, type DistUnit } from "../lib/cardiostats";
 
 const HIDDEN = "healthos.noticed.hidden";
 const SLOW = 10 * 60_000;
@@ -25,10 +27,19 @@ export function FromYourData({ now }: { now: number }) {
   const n = useMemo(() => notice(entries, goals, slow, currentKg(entries, settings.bodyKg, slow), { workouts, supplements, settings }), [entries, goals, slow, settings, workouts, supplements]);
   const [hidden, setHidden] = useState(() => { try { return localStorage.getItem(HIDDEN) ?? ""; } catch { return ""; } });
   const lead = scouted.find((x) => !x.memo && !drawn.some((c) => c.id === x.p.id));
+  // a cardio best in the last 2 days (PLAN 191 phase 2: "personal bests on Today")
+  const band = useBand().data, unit: DistUnit = settings.distUnit ?? "mi";
+  const best = useMemo(() => newBests(allPhases(workouts, band?.hr ?? [], slow), slow - 2 * 86_400_000).at(-1) ?? null, [workouts, band, slow]);
   // Today shows the strongest finding that isn't just a description of you
   const top = n.found.find((f) => f.id !== "baseline"), topKey = top ? `${top.id}:${top.value}` : "";
   const next = n.checking[0];
-  const line = lead ? (
+  const by = best ? Math.round(best.by * (unit === "mi" ? MI_KM : 1)) : 0;
+  const line = best ? (
+    <a className="noticed-line" href="#insights/training">
+      <span><small>New best</small>{best.kind} at {paceText(best.pace, unit)} a {unit === "mi" ? "mile" : "km"} — {by >= 60 ? `${Math.floor(by / 60)}:${String(by % 60).padStart(2, "0")}` : `${by} s`} faster than your best before.</span>
+      <span className="r">→</span>
+    </a>
+  ) : lead ? (
     <a className="noticed-line" href="#insights/connections" onClick={() => setTimeout(() => document.getElementById("scout")?.scrollIntoView({ behavior: "smooth" }), 150)}>
       <span><small>New lead</small>{lead.p.text} — {lead.p.held} of {lead.p.of} times.</span>
       <span className="r">→</span>

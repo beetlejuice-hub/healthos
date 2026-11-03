@@ -3381,7 +3381,7 @@ both reads and the questions. Phases in that order; #152 RPE waits (owner).
    - lib/schedule (dueOn, cycleOn, words); used by today (Now), Today's stack and tile, push/plan, catchup, ghost, supplog
      extras. Tests: schedule.test (each place, fails with the schedule ignored), e2e suppschedule.
 
-191. [~] **Cardio in phases, with pace and stats** (owner, 3 Nov: "Can app ask for average pace and different phases of
+191. [x] **Cardio in phases, with pace and stats** (owner, 3 Nov: "Can app ask for average pace and different phases of
    cardio? Like i do incline walk then normal running and just want the app to calculate some stats from my average pace
    average miles average hbpm etc. like i know im shit at running but eanf to see that as stats"). Claimed 3 Nov.
    - Why: a cardio session is one kind and a timer today (PLAN 130) — "Incline walk then run" is one blob, no distance, no
@@ -3399,6 +3399,11 @@ both reads and the questions. Phases in that order; #152 RPE waits (owner).
      2 (claimed 3 Nov, owner: "1 and 2") — adding distance to a past session; the cardio after lifting in phases too;
      personal bests on Today; calories per
      phase (each kind's MET — the session's first kind counts for all of it now).
+   - [x] Phase 2 done 3 Nov: the cardio after lifting has phases too ("Next:" while it runs, from its own ▶ Start; each
+     phase's distance on Done; saved as "Stairmaster → Run"); "Add the distance" on any past session in Insights →
+     Training; calories each phase at its own MET (Stairmaster 9 + Run 8: 10 + 20 min at 80 kg = 333, not 30 min of
+     one); "Your fastest run yet — 45 s a mile better than your best" as you type, with 2 before it to beat; Today's
+     "From your data" says "New best" for 2 days. Stairs ask no distance. Tests: cardiostats.test, e2e cardiophases2.
    - [x] Phase 1 done 3 Nov: "Next:" chips while it runs (role group; the kind field renames the phase going now), Save's
      rows (distance in mi or km, the toggle remembered — miles by default, as he said "miles"; incline % on an incline walk;
      pace, speed and beats a mile as he types), saved as "Incline walk → Run"; Insights → Training → Cardio: a card per
