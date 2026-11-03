@@ -17,7 +17,18 @@ const { chromium, APP, OUT, handle, rate, openCard } = require('./harness.cjs');
   const local = () => pg.evaluate(() => JSON.parse(localStorage.getItem('healthos.v1:u-test') || '{}'));
   const T = (s) => new Date(s).getTime();
   const coffee = (iso, mg = 95) => ({ id: 'c' + iso, kind: 'drink', at: T(iso), name: 'Coffee', ml: 250, caffeineMg: mg, alcoholG: 0, kcal: 2 });
-  const setEntries = (es) => pg.evaluate((es) => { const k = 'healthos.v1:u-test', s = JSON.parse(localStorage.getItem(k)); s.entries = es; localStorage.setItem(k, JSON.stringify(s)); }, es);
+  // as harness seed() does: written once the page's sync has settled, reloaded, and checked it stayed — a save still pending
+  // from that sync (the store saves on a timer) could land over a raw write (3 Nov: "none now", the coffees gone, 1 run in 4)
+  const setEntries = async (es) => {
+    for (let k = 0; k < 3; k++) {
+      await pg.waitForLoadState('networkidle');
+      await pg.evaluate((es) => { const k = 'healthos.v1:u-test', s = JSON.parse(localStorage.getItem(k)); s.entries = es; localStorage.setItem(k, JSON.stringify(s)); }, es);
+      await pg.reload(); await pg.waitForSelector('text=Settings'); await pg.waitForLoadState('networkidle'); await pg.waitForTimeout(200);
+      const ids = ((await local()).entries || []).map((e) => e.id).sort().join();
+      if (ids === es.map((e) => e.id).sort().join()) return;
+      console.log(`entries lost to the app's sync, writing again (${k + 1})`);
+    }
+  };
   const at = async (iso) => { await pg.clock.setFixedTime(new Date(iso)); await pg.goto(APP + '#today'); await pg.reload(); await pg.waitForSelector('text=Settings'); await openCard(pg, 'caffeine'); };
 
   // 08:30 — the morning check-in asks about last night, once per night.
