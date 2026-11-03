@@ -4,6 +4,7 @@
  * vs the days since. Shown right under your week.
  */
 
+import { useEvidence } from "./useEvidence";
 import { useMemo } from "react";
 import { useStore } from "../lib/store";
 import type { GlanceDay } from "../lib/glance";
@@ -16,7 +17,8 @@ const sg = (v: number) => `${v >= 0 ? "+" : "−"}${Math.abs(v).toFixed(1)}`;
 
 export function Top({ days }: { days: GlanceDay[] }) {
   const supplements = useStore((s) => s.supplements), experiments = useStore((s) => s.ai.experiments);
-  const cards = useMemo(() => topCards(comparisons(days, supplements), supplements), [days, supplements]);
+  const ev = useEvidence();
+  const cards = useMemo(() => topCards(comparisons(days, supplements, ev), supplements), [days, supplements, ev]);
   if (!days.some((d) => d.mood != null)) return null;
   const today = days[days.length - 1]?.day ?? "";
   const runningOf = (name: string) => experiments.find((x) => x.name === name && !x.ended);

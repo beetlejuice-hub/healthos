@@ -14,6 +14,7 @@ import type { GlanceDay } from "./glance";
 import { correlation, difference, type Range } from "./stats";
 import { clearTogether } from "./regress";
 import { suppDay } from "./insights";
+import { twinOf, type Evidence, type Word } from "./evidence";
 
 export const MIN_EACH = 5;
 export type Outcome = "mood" | "energy" | "stress" | "sleep";
@@ -27,6 +28,8 @@ export type Comparison = {
   nWith: number; nWithout: number;
   /** Days still needed on the smaller side. */
   need: number;
+  /** PLAN 188 phase 2: in the one set of words — the engine's answer when it asks the same thing, else this row's own. */
+  word?: Word; twin?: string;
 };
 
 type Pred = (d: GlanceDay, prev: GlanceDay | undefined) => boolean | null;
@@ -37,7 +40,7 @@ const nextDay = (k: Outcome): Out => (_, n) => (n ? n[k] : null);
 /** The sleep rating given the next morning = the night after this day. */
 const thatNight: Out = (_, n) => n?.sleep ?? null;
 
-export function comparisons(days: GlanceDay[], supplements: Supplement[] = []): Comparison[] {
+export function comparisons(days: GlanceDay[], supplements: Supplement[] = [], ev?: Evidence): Comparison[] {
   const row = (id: string, group: Comparison["group"], what: string, outcome: string, dir: 1 | -1, pred: Pred, out: Out): Comparison => {
     const a: number[] = [], b: number[] = [];
     days.forEach((d, i) => { const p = pred(d, days[i - 1]); if (p == null) return; const v = out(d, days[i + 1]); if (v == null) return; (p ? a : b).push(v); });
@@ -76,6 +79,13 @@ export function comparisons(days: GlanceDay[], supplements: Supplement[] = []): 
   // 20 rows turned one clear by chance in 23 of 30 worlds with nothing planted (engines audit)
   const held = clearTogether(rows.map((r) => r.diff));
   rows.forEach((r, i) => { r.diff = held[i]; });
+  // one engine (PLAN 188 phase 2): a row Noticed's test also asks takes its answer — adjusted for weekends, the day before
+  // and drift, corrected across every question the app asks — so Connections and Noticed can't disagree; the rest their own
+  for (const r of rows) {
+    const key = twinOf(r.id), e = key ? ev?.get(key) : undefined;
+    if (e) { r.word = e.word; r.twin = key!; if (r.diff) r.diff = { ...r.diff, clear: e.word === "clear" }; }
+    else r.word = r.diff?.clear ? "clear" : "early";
+  }
   // Grouped for the chart (stable: the order above within a group).
   const order = ["Mood", "Energy", "Stress", "Sleep"];
   return rows.map((r, i) => [r, i] as const).sort((a, b) => order.indexOf(a[0].group) - order.indexOf(b[0].group) || a[1] - b[1]).map(([r]) => r);

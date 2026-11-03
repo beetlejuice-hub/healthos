@@ -12,13 +12,19 @@ import { better, comparisons, FACTORS, OUTCOMES, pair, strongestPairs, MIN_EACH,
 import { mean, slope, strength } from "../lib/stats";
 import { atMinute, dayLabel } from "../lib/time";
 import { useWidth } from "./useWidth";
+import { useEvidence } from "./useEvidence";
+import { useKeepClaims } from "./Record";
+import { evidenceClaim, WORD_TEXT } from "../lib/evidence";
 
 const sg = (v: number, d = 1) => `${v >= 0 ? "+" : "−"}${Math.abs(v).toFixed(d)}`;
 const short = (s: string) => s.split(" (")[0].toLowerCase();
 
 export function Connections({ days }: { days: GlanceDay[] }) {
   const supplements = useStore((s) => s.supplements);
-  const rows = useMemo(() => comparisons(days, supplements), [days, supplements]);
+  // one engine (PLAN 188 phase 2): the rows Noticed's test also asks say its answer; each clear one is kept in the record
+  const ev = useEvidence();
+  const rows = useMemo(() => comparisons(days, supplements, ev), [days, supplements, ev]);
+  useKeepClaims(useMemo(() => rows.flatMap((r) => (r.word === "clear" && r.twin && ev.get(r.twin) ? [evidenceClaim(r.twin, ev.get(r.twin)!, `${r.what} → ${r.outcome}`)].filter((c): c is NonNullable<typeof c> => !!c) : [])), [rows, ev]));
   const pairs = useMemo(() => strongestPairs(days), [days]);
   const ready = rows.filter((r) => r.diff);
   if (!ready.length && !pairs.length && !days.some((d) => d.mood != null)) return null;
@@ -51,11 +57,11 @@ function Forest({ rows }: { rows: Comparison[] }) {
         {narrow ? <text x={0} y={y + 14} className="l">{r.what} <tspan className="sub">→ {r.outcome}</tspan></text>
           : <><text x={0} y={cy - 2} className="l">{r.what}</text><text x={0} y={cy + 11} className="sub">→ {r.outcome}</text></>}
         <line x1={X(b.lo)} x2={X(b.hi)} y1={cy} y2={cy} className="ci" />
-        <rect x={X(b.d) - sz} y={cy - sz} width={sz * 2} height={sz * 2} rx="1.5" className={r.diff!.clear ? "sq on" : "sq"} />
+        <rect x={X(b.d) - sz} y={cy - sz} width={sz * 2} height={sz * 2} rx="1.5" className={r.diff!.clear ? "sq on" : r.word === "likely" ? "sq likely" : "sq"} />
         <text x={plotR + (narrow ? 44 : 50)} y={cy + 4} textAnchor="end" className="v">{sg(r.diff!.value)}</text>
         {!narrow && <text x={plotR + 58} y={cy + 4} className="rng">{sg(r.diff!.lo)} to {sg(r.diff!.hi)}</text>}
         <text x={w} y={cy + 4} textAnchor="end">{r.nWith}/{r.nWithout}</text>
-        <rect x={0} y={y} width={w} height={rowH} fill="transparent" data-tip={`${r.what} → ${r.outcome}\n${sg(r.diff!.value)} points (95% range ${sg(r.diff!.lo)} to ${sg(r.diff!.hi)})\n${r.nWith} days with, ${r.nWithout} without\n${r.diff!.clear ? "Clear: the range stays on one side of zero" : "Not clear yet: the range crosses zero"}`} />
+        <rect x={0} y={y} width={w} height={rowH} fill="transparent" data-tip={`${r.what} → ${r.outcome} · ${WORD_TEXT[r.word ?? "early"]}${r.twin ? " (the fair test)" : ""}\n${sg(r.diff!.value)} points (95% range ${sg(r.diff!.lo)} to ${sg(r.diff!.hi)})\n${r.nWith} days with, ${r.nWithout} without\n${r.diff!.clear ? "Clear: the range stays on one side of zero" : "Not clear yet: the range crosses zero"}`} />
       </g>,
     );
     y += rowH;
@@ -76,7 +82,7 @@ function Forest({ rows }: { rows: Comparison[] }) {
       </div>}
       {waiting.length > 0 && <details className="gl-wait"><summary>Still collecting · {waiting.length} comparisons</summary>
         <ul>{waiting.map((r) => <li key={r.id}>{r.what} → {r.outcome} <span className="gl-dim">needs {r.need} more day{r.need === 1 ? "" : "s"} {r.nWith < r.nWithout ? "with" : "without"}</span></li>)}</ul></details>}
-      <footer className="gp-f"><span className="lgd"><i className="sqk on" />clear</span><span className="lgd"><i className="sqk" />not clear yet</span><span>line = 95% range · bigger square = more days · numbers: with − without</span>
+      <footer className="gp-f"><span className="lgd"><i className="sqk on" />clear</span><span className="lgd"><i className="sqk likely" />likely</span><span className="lgd"><i className="sqk" />early · could be chance</span><span>line = 95% range · bigger square = more days · numbers: with − without</span>
         {ready.length >= 10 && <span className="gl-dim">With {ready.length} comparisons, about {Math.max(1, Math.round(ready.length * .05))} could look clear by chance — trust one that stays clear for weeks.</span>}</footer>
     </section>
   );

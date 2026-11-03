@@ -6,6 +6,7 @@
  * Numbers from lib/body, lib/connections, lib/tdee, lib/nutrition; this file only draws.
  */
 
+import { useEvidence } from "./useEvidence";
 import { useMemo, type ReactNode } from "react";
 import { useStore } from "../lib/store";
 import type { GlanceDay } from "../lib/glance";
@@ -74,7 +75,8 @@ export function Body({ days, period, now, bandNights }: { days: GlanceDay[]; per
 function SleepPanel({ all, ns }: { all: GlanceDay[]; ns: ReturnType<typeof nights> }) {
   const [ref, w] = useWidth<HTMLDivElement>();
   const supplements = useStore((s) => s.supplements);
-  const cmp = useMemo(() => comparisons(all, supplements), [all, supplements]);
+  const ev = useEvidence();
+  const cmp = useMemo(() => comparisons(all, supplements, ev), [all, supplements, ev]);
   const rated = ns.filter((n) => n.rating != null), avg = mean(rated.map((n) => n.rating!));
   const L = 30, R = 8, top = 8, ph = 140, cw = (w - L - R) / ns.length, Y = (v: number) => top + ph - (v / 10) * ph, evY = top + ph + 14, H = evY + 40;
   const bw = Math.max(1.5, Math.min(22, cw - 3)), x = (j: number) => L + j * cw + (cw - bw) / 2, labs = mondays(ns, x);

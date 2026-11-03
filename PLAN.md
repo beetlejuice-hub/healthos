@@ -3327,11 +3327,21 @@ both reads and the questions. Phases in that order; #152 RPE waits (owner).
        test's seeds — the honest range costs it some power). engines.audit.test runs every time (fails on the old code
        in 4 of 5 checks). Leads' "early · could be chance" still shows in about half of quiet worlds — by design the
        "worth a look" list; phase 3's re-checking is what fades the chance ones.
-     - [~] Phase 2 (claimed 3 Nov, owner: "1 and 2"): lib/evidence — one catalogue of questions (cause → outcome, lag, what can't cause what), one
+     - [x] Phase 2 (claimed 3 Nov, owner: "1 and 2"): lib/evidence — one catalogue of questions (cause → outcome, lag, what can't cause what), one
        adjusted test (the outcome against the thing with the usual suspects alongside: weekend, yesterday, drift,
        drinks, late caffeine, sleep, training), BH across every question the app asks at once, split-half replication;
        one word set: early → likely → clear, and "no effect" when there's enough data and it's too small. Noticed,
        Leads, Connections, best/worst days and supplement effects read from it, so the pages can't disagree.
+       Done 3 Nov, as far as it goes: Noticed's test is the one engine (lib/evidence: every question answered once,
+       "<group>:<outcome>", in one set of words — clear · likely · early · no effect). Noticed now also asks that night's
+       sleep rating (caffeine, alcohol, training, eating late, evening supplements; Outcome.night). Connections' rows that
+       ask the same thing (drinks, late caffeine, training, each supplement × mood, energy, stress, sleep) take the engine's
+       word — the forest plot still draws their raw with/without range — and the rest keep their own BH; Top and Body read
+       the same. A clear row joins the record under Noticed's own claim id (one claim, however many pages show it).
+       Measured (engines audit, 30 worlds): Connections' chance "clear" 4 → 1 of 30, planted 29 → 30; Noticed planted 29 →
+       30. Not done: best/worst days keep their own test (they describe days, they don't ask cause → outcome); the old
+       supplement-effects function (lib/insights suppEffects) isn't shown anywhere — left for its tests; Leads stay the
+       looser "worth a look" list, in the record.
      - [~] Phase 3: the record — every claim kept with the day it was first said, re-checked on each new day: "said 3
        Oct · held 9 of 11 days since" → confirmed / didn't hold, on every page that shows it and in the AI's context
        (owner: "see if it was right or no"). PLAN 187's new signals (lowest heart rate time, social jetlag, weather,

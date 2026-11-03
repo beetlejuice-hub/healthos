@@ -19,7 +19,8 @@ import type { Area, Checking, Finding, Quiet } from "../findings";
 import { bh, ols, tCrit } from "../regress";
 import { mean, median, perGroupFor } from "../stats";
 
-export type Outcome = { key: string; name: string; get: (d: DayFacts) => number | null; minEffect: number; unit: string };
+/** `night`: that night's — read from the next morning's rating, whatever the question's lag (PLAN 188 phase 2). */
+export type Outcome = { key: string; name: string; get: (d: DayFacts) => number | null; minEffect: number; unit: string; night?: true };
 export type Question = {
   id: string; area: Area; kind: "binary" | "dose"; lag: 0 | 1;
   /** Short name for lists: "Caffeine after 14:00". */
@@ -37,6 +38,11 @@ export type Question = {
 
 const FEEL: Outcome[] = (["energy", "mood", "focus", "stress"] as const).map((k) => ({ key: k, name: k, get: (d: DayFacts) => d[k], minEffect: 0.5, unit: "points" }));
 const KCAL: Outcome = { key: "kcal", name: "calories", get: (d) => d.kcal, minEffect: 150, unit: "kcal" };
+/**
+ * That night's sleep, as rated the next morning (PLAN 188 phase 2: one engine — Connections asked "drinks that evening →
+ * that night's sleep rating" with its own test; now Noticed asks it, and Connections reads the answer).
+ */
+const SLEEP: Outcome = { key: "sleep", name: "sleep rating that night", get: (d) => d.sleep, minEffect: 0.5, unit: "points", night: true };
 
 export const MIN_EACH = 8, MIN_PAIRS = 20;
 
@@ -44,23 +50,23 @@ export const MIN_EACH = 8, MIN_PAIRS = 20;
 export function questions(supplements: Supplement[], usualKcal: number | null): Question[] {
   const ifLogged = (f: (d: DayFacts) => number) => (d: DayFacts) => (d.logged ? f(d) : null);
   const qs: Question[] = [
-    { id: "late-caf", group: "late-caf", area: "caffeine", kind: "binary", lag: 1, thing: "Caffeine after 14:00", phrase: "The day after caffeine past 14:00", x: ifLogged((d) => (d.lateCaffeineMg > 0 ? 1 : 0)), outcomes: FEEL, more: ["days with coffee after 14:00", "days without coffee after 14:00"] },
+    { id: "late-caf", group: "late-caf", area: "caffeine", kind: "binary", lag: 1, thing: "Caffeine after 14:00", phrase: "The day after caffeine past 14:00", x: ifLogged((d) => (d.lateCaffeineMg > 0 ? 1 : 0)), outcomes: [...FEEL, SLEEP], more: ["days with coffee after 14:00", "days without coffee after 14:00"] },
     { id: "late-caf-mg", group: "late-caf", area: "caffeine", kind: "dose", lag: 1, thing: "Caffeine after 14:00 (mg)", phrase: "100 mg of caffeine after 14:00", x: ifLogged((d) => d.lateCaffeineMg / 100), outcomes: FEEL },
-    { id: "caf-bed", group: "late-caf", area: "caffeine", kind: "dose", lag: 1, thing: "Caffeine left at bedtime", phrase: "50 mg of caffeine left at bedtime", x: ifLogged((d) => d.caffeineAtBed / 50), outcomes: FEEL },
+    { id: "caf-bed", group: "late-caf", area: "caffeine", kind: "dose", lag: 1, thing: "Caffeine left at bedtime", phrase: "50 mg of caffeine left at bedtime", x: ifLogged((d) => d.caffeineAtBed / 50), outcomes: [...FEEL, SLEEP] },
     { id: "caf-total", group: "caf-total", area: "caffeine", kind: "dose", lag: 0, thing: "Caffeine that day", phrase: "100 mg of caffeine", x: ifLogged((d) => d.caffeineMg / 100), outcomes: FEEL },
-    { id: "alc-2", group: "alc", area: "caffeine", kind: "binary", lag: 1, thing: "2+ drinks", phrase: "The day after 2+ drinks", x: (d) => (!d.logged ? null : d.alcoholG >= 28 ? 1 : d.alcoholG === 0 ? 0 : null), outcomes: FEEL, more: ["evenings with 2+ drinks", "evenings without a drink"] },
-    { id: "alc-drink", group: "alc", area: "caffeine", kind: "dose", lag: 1, thing: "Drinks (each)", phrase: "drink (14 g of alcohol)", x: ifLogged((d) => d.alcoholG / 14), outcomes: FEEL },
-    { id: "gym", group: "gym", area: "training", kind: "binary", lag: 0, thing: "Gym day", phrase: "On gym days", x: (d) => (d.trained ? 1 : 0), outcomes: [...FEEL, KCAL], more: ["gym days", "rest days"] },
+    { id: "alc-2", group: "alc", area: "caffeine", kind: "binary", lag: 1, thing: "2+ drinks", phrase: "The day after 2+ drinks", x: (d) => (!d.logged ? null : d.alcoholG >= 28 ? 1 : d.alcoholG === 0 ? 0 : null), outcomes: [...FEEL, SLEEP], more: ["evenings with 2+ drinks", "evenings without a drink"] },
+    { id: "alc-drink", group: "alc", area: "caffeine", kind: "dose", lag: 1, thing: "Drinks (each)", phrase: "drink (14 g of alcohol)", x: ifLogged((d) => d.alcoholG / 14), outcomes: [...FEEL, SLEEP] },
+    { id: "gym", group: "gym", area: "training", kind: "binary", lag: 0, thing: "Gym day", phrase: "On gym days", x: (d) => (d.trained ? 1 : 0), outcomes: [...FEEL, KCAL, SLEEP], more: ["gym days", "rest days"] },
     { id: "gym-next", group: "gym-next", area: "training", kind: "binary", lag: 1, thing: "Day after the gym", phrase: "The day after the gym", x: (d) => (d.trained ? 1 : 0), outcomes: FEEL, more: ["gym days", "rest days"] },
     { id: "volume", group: "gym-next", area: "training", kind: "dose", lag: 1, thing: "Training volume", phrase: "tonne lifted", x: (d) => d.volumeKg / 1000, outcomes: FEEL },
-    { id: "late-eat", group: "late-eat", area: "food", kind: "binary", lag: 1, thing: "Eating after 21:00", phrase: "The day after eating past 21:00", x: (d) => (d.kcal == null ? null : d.lateEat ? 1 : 0), outcomes: FEEL, more: ["days eating past 21:00", "days without late eating"] },
+    { id: "late-eat", group: "late-eat", area: "food", kind: "binary", lag: 1, thing: "Eating after 21:00", phrase: "The day after eating past 21:00", x: (d) => (d.kcal == null ? null : d.lateEat ? 1 : 0), outcomes: [...FEEL, SLEEP], more: ["days eating past 21:00", "days without late eating"] },
     { id: "protein", group: "protein", area: "food", kind: "dose", lag: 1, thing: "Protein", phrase: "30 g of protein", x: (d) => (d.proteinG == null ? null : d.proteinG / 30), outcomes: FEEL },
     { id: "weekend", group: "weekend", area: "food", kind: "binary", lag: 0, thing: "Weekend", phrase: "On weekends", x: (d) => (d.weekend ? 1 : 0), outcomes: [KCAL], adjustWeekend: false },
   ];
   if (usualKcal) qs.push({ id: "kcal-dev", group: "kcal-dev", area: "food", kind: "dose", lag: 1, thing: "Calories vs your usual", phrase: "500 kcal above your usual", x: (d) => (d.kcal == null ? null : (d.kcal - usualKcal) / 500), outcomes: FEEL });
   // Every supplement, paused or out included: out-of-stock days are exactly the "off" days that answer the question.
   for (const s of supplements) {
-    qs.push({ id: `supp-${s.id}`, group: `supp-${s.id}`, area: "stack", kind: "binary", lag: 1, thing: s.name, phrase: `The day after taking ${s.name}`, x: (d) => { const had = suppDay(d, s.id); return had == null ? null : had ? 1 : 0; }, outcomes: FEEL, more: [`days taking ${s.name}`, `days skipping ${s.name}`] });
+    qs.push({ id: `supp-${s.id}`, group: `supp-${s.id}`, area: "stack", kind: "binary", lag: 1, thing: s.name, phrase: `The day after taking ${s.name}`, x: (d) => { const had = suppDay(d, s.id); return had == null ? null : had ? 1 : 0; }, outcomes: s.slot === "evening" ? [...FEEL, SLEEP] : FEEL, more: [`days taking ${s.name}`, `days skipping ${s.name}`] });
   }
   return qs;
 }
@@ -82,7 +88,7 @@ export type Result = {
 export function answer(q: Question, o: Outcome, facts: DayFacts[]): Omit<Result, "status"> {
   const rows: { x: number; y: number; prev: number | null; w: number; t: number }[] = [];
   facts.forEach((d, i) => {
-    const j = i + q.lag, dj = facts[j];
+    const j = i + (o.night ? 1 : q.lag), dj = facts[j];
     if (!dj) return;
     const x = q.x(d), y = o.get(dj);
     if (x == null || y == null) return;
@@ -130,6 +136,8 @@ const r10 = (v: number) => Math.round(Math.abs(v) / 10) * 10;
 function title(r: Result): string {
   const b = r.b!, dir = b > 0 ? "higher" : "lower";
   if (r.o.key === "kcal") return `${r.q.phrase}, you eat about ${r10(b)} kcal ${b > 0 ? "more" : "less"}`;
+  // that night's sleep (PLAN 188 phase 2): the question's own words don't fit ("the day after …"), so said plainly
+  if (r.o.night) return r.q.kind === "binary" ? `${r.q.thing} goes with that night's sleep rated ${f1(b)} points ${dir}` : `Each ${r.q.phrase} goes with that night's sleep rated ${f1(b)} points ${dir}`;
   if (r.q.kind === "binary") return `${r.q.phrase}, your ${r.o.name} is ${f1(b)} points ${dir}`;
   return `Each ${r.q.phrase} goes with ${r.q.lag ? "next-day" : "same-day"} ${r.o.name} ${f1(b)} ${r.o.unit} ${dir}`;
 }
@@ -179,7 +187,8 @@ export function effectFindings(facts: DayFacts[], supplements: Supplement[]): Ef
   const checking: Checking[] = [];
   if (rated < 2 * MIN_EACH + 4) checking.push({ id: "fx-ratings", area: "stack", question: "What moves your energy, mood, focus and stress?", progress: rated / (2 * MIN_EACH + 4), missing: `rate your day on ${2 * MIN_EACH + 4 - rated} more evenings — most answers unlock from there` });
   else {
-    const open = results.filter((r) => r.status === "checking" && r.need > 0 && r.q.kind === "binary" && r.o.key !== "kcal" && !best.has(`${r.q.group}:${r.o.key}`));
+    // a question with no days of its outcome at all (that night's sleep, never rated) isn't near an answer (PLAN 188 phase 2)
+    const open = results.filter((r) => r.status === "checking" && r.need > 0 && r.n > 0 && r.q.kind === "binary" && r.o.key !== "kcal" && !best.has(`${r.q.group}:${r.o.key}`));
     const byQ = new Map<string, Result>();
     for (const r of open) if (!byQ.has(r.q.id) || r.need < byQ.get(r.q.id)!.need) byQ.set(r.q.id, r);
     // The shortcut first: a supplement you take every day can only be answered by skipping it a bit.

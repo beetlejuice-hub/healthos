@@ -39,7 +39,7 @@ export const STATE_WORDS: Record<ClaimState, string> = { checking: "checking", h
 export const leadClaim = (p: Pattern, said: string): Claim => ({ id: `lead:${p.id}`, from: "lead", text: p.text, said, x: p.a.id, y: p.b.id, lag: p.lag, sign: p.sign });
 /** A Noticed finding as a claim: its card (by cause and outcome) and the question it leads with (the first it covers). */
 export function noticedClaim(f: Finding, said: string): Claim | null {
-  const card = /^fx-(.+)-(energy|mood|focus|stress|kcal)$/.exec(f.id), q = /^fx-(.+)-(energy|mood|focus|stress|kcal)$/.exec(f.covers?.[0] ?? f.id);
+  const card = /^fx-(.+)-(energy|mood|focus|stress|kcal|sleep)$/.exec(f.id), q = /^fx-(.+)-(energy|mood|focus|stress|kcal|sleep)$/.exec(f.covers?.[0] ?? f.id);
   if (!card || !q) return null;
   return { id: `noticed:${card[1]}:${card[2]}`, from: "noticed", text: f.title, said, x: q[1], y: q[2], lag: 0, sign: f.value.startsWith("−") ? -1 : 1 };
 }

@@ -12,6 +12,7 @@ import { scout } from "./scout";
 import { leadGrade } from "./ai/lead";
 import { effectFindings } from "./detectors/effects";
 import { comparisons } from "./connections";
+import { evidence } from "./evidence";
 import { patterns } from "./patterns";
 import { between } from "./detectors/between";
 import { goesWith, type Evening, type Night } from "./sleep";
@@ -29,7 +30,8 @@ function engines(seed: number, effects: boolean) {
   const facts = dailyFacts(entries, workouts, DEFAULT_SETTINGS, from, to), days = glanceDays(entries, workouts, DEFAULT_SETTINGS, from, to);
   const leads = scout(facts, SUPPS);
   const eff = effectFindings(facts, SUPPS).found;
-  const cmp = comparisons(days, SUPPS).filter((c) => c.diff?.clear);
+  // Connections as the page builds it: with the one engine's answers (PLAN 188 phase 2)
+  const cmp = comparisons(days, SUPPS, evidence(facts, SUPPS)).filter((c) => c.diff?.clear);
   const pat = patterns(days, entries), patClear = "worst" in pat ? [...pat.worst.rows, ...pat.best.rows].filter((r) => r.diff?.clear) : [];
   const sup = suppEffects(facts, SUPPS).filter((s) => s.diff?.clear);
   const btw = between(entries, workouts, names, NOW).filter((r) => r.found);
