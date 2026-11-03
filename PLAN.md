@@ -3337,3 +3337,17 @@ both reads and the questions. Phases in that order; #152 RPE waits (owner).
        (owner: "see if it was right or no"). PLAN 187's new signals (lowest heart rate time, social jetlag, weather,
        moon) join the catalogue here, found by it, not set up.
      - [ ] Phase 4: asking — an early claim asks the one question that would settle it; surprise days (forecast misses).
+
+189. [~] **Experiments ask each morning: did you do it yesterday?** (owner, 3 Nov: "It should follow up every morning on
+   last days experiment- if i did it or not. If not it should skip that day from experiment. Like i cant guarantee I'll
+   do 14 days w no phone at night"). Claimed 3 Nov.
+   - Each morning (from 04:00), For you asks about each running experiment: "Yesterday — did you?" Did it / Didn't, for
+     every day not yet answered in the last 3 (usually just yesterday). Kept on the experiment (`did`: day → yes/no).
+   - A day you didn't is left out of the test (judge) and the experiment runs a day longer, so 14 days means 14 days
+     done; at most twice its days in all, then it ends with what it has. A day not answered counts, as before (you said
+     nothing against it) — so experiments started before this keep their days.
+   - Its end waits for the last day's answer (up to the 3 days it's asked), so a "Didn't" on the last day isn't missed.
+   - Today's strip: "day 5 of 14 · 1 left out — today: …"; Insights → Training: the days as squares (done, left out, to
+     come), a tap on a past one changes it; the AI is told the days left out. Undo on the answer.
+   - Tests: verdict.test (a planted effect on done days only: found with the "didn't" days left out, diluted without;
+     the end moves; the cap), e2e xpdid (the ask, Didn't → day left out and end moved, Undo, the strip, the squares).
