@@ -97,6 +97,21 @@ const NOW = new Date('2026-10-28T15:40:00').getTime(), D = 864e5, KEY = 'healtho
   await pg.getByRole('slider', { name: 'Energy' }).click();
   const tomorrow = (await pg.getByRole('group', { name: "How's your body" }).getByRole('button').allInnerTexts()).map((t) => t.trim());
   check(`tomorrow: knee pain is its own chip, nothing picked (${tomorrow.join(' | ')})`, tomorrow.includes('knee pain') && await pg.locator('.hn-bchips [aria-pressed="true"]').count() === 0);
+  // owner, 3 Nov: "Make sure if i put a custom tag for body saying good or awesome it means in a positive way yk"
+  const body = pg.getByRole('group', { name: "How's your body" });
+  await body.getByRole('button', { name: '+ your own' }).click();
+  await pg.getByLabel('How your body feels, your own words').fill('awesome');
+  await pg.locator('.hn-body').getByRole('button', { name: 'Add' }).click();
+  const aw = body.getByRole('button', { name: /^awesome(,|$)/ });
+  await aw.click();
+  const [good, lvl, knee] = [await aw.getAttribute('data-good'), await aw.getAttribute('data-level'), await body.getByRole('button', { name: /^knee pain(,|$)/ }).getAttribute('data-good')];
+  const shade = await aw.evaluate((e) => getComputedStyle(e).backgroundColor);
+  check(`your own "awesome": a good feeling, a lot, in green; knee pain isn't (${good} · ${lvl} · ${shade} · knee ${knee})`, good === 'true' && lvl === '2' && shade === 'rgb(168, 220, 192)' && knee == null);
+  await pg.locator('#feel').screenshot({ path: OUT + 'bodychips-good.png' });
+  await pg.goto(APP + '#settings'); await pg.waitForSelector('#ai');
+  await pg.getByRole('button', { name: 'What the AI sees about me' }).click();
+  const seen2 = await pg.locator('.ctx').innerText().catch(() => '');
+  check(`the AI is told it's a good feeling (${seen2.match(/awesome[^,}]*/)?.[0]})`, /awesome \(a lot, a good feeling\)/.test(seen2));
   await ctx.close();
 
   ({ ctx, pg } = await open(320));

@@ -935,6 +935,9 @@ a { color: inherit; }
 .hn-body { display: grid; gap: 8px; }
 .hn-bchips button i { font-style: normal; font-size: 9px; letter-spacing: 1px; margin-left: 6px; vertical-align: 1px; }
 .hn-bchips button[data-level="1"] { background: #c9ced8; color: var(--c-bg); }
+/* a good feeling ("awesome", "strong" — owner, 3 Nov) in the app's good green, not the complaints' grey */
+.hn-bchips button[data-good][data-level="2"] { background: var(--ok); color: var(--c-bg); }
+.hn-bchips button[data-good][data-level="1"] { background: color-mix(in srgb, var(--ok) 55%, var(--c-card-2)); color: var(--c-ink); }
 .hn-blegend { margin: 0; font-size: 12px; color: var(--c-ink-2); }
 .hn-own { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; }
 .hn-own input { background: var(--c-card-2); border: 1px solid transparent; border-radius: 12px; padding: 8px 12px; font-size: 16px; color: var(--c-ink); min-width: 0; }

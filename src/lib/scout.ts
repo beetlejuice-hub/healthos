@@ -20,7 +20,7 @@ import type { Supplement } from "./types";
 import { pTwoSided } from "./regress";
 import { mean, median } from "./stats";
 import { loggedInFull } from "./dayscore";
-import { BODY_WORDS, bodyLabel } from "./bodywords";
+import { BODY_WORDS, bodyGood, bodyLabel, goodWord } from "./bodywords";
 
 export type Signal = {
   id: string;
@@ -109,6 +109,8 @@ function bodySignal(key: string, name: string, yes: string, say: string): Signal
 }
 /** One of your own words, from its key — also what a lead's chart rebuilds when the word isn't in its 14 days. */
 export function ownSignal(key: string): Signal {
+  // a good one is a feeling, said as one (owner, 3 Nov: "good or awesome it means in a positive way"): "you felt awesome"
+  if (bodyGood(key)) { const g = goodWord(key); return bodySignal(key, `feeling ${g}`, `a day you felt ${g}`, `you felt ${g}`); }
   const w = bodyLabel(key);
   return bodySignal(key, w, `a day you noted ${w}`, `you noted ${w}`);
 }

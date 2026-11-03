@@ -48,6 +48,23 @@ export const HOW: Record<Level, string> = { 1: "a bit", 2: "a lot" };
 export const bodyLabel = (key: string) => BODY_WORDS.find((w) => w.id === key)?.chip ?? key.replace(/-/g, " ");
 
 /**
+ * Feeling good, said as a body word (owner, 3 Nov: "Make sure if i put a custom tag for body saying good or awesome it
+ * means in a positive way yk"): "good", "awesome", "strong", "feeling fresh" — and a complaint said not felt ("not
+ * tired"). "not good" isn't. Everything else is how your body was, as before (the seven chips, "knee pain").
+ */
+const GOOD = /^(?:feeling-|feel-|felt-)?(good|great|awesome|amazing|fantastic|excellent|perfect|fine|ok|okay|strong|stronger|fresh|refreshed|rested|well-rested|energi[sz]ed|energetic|pumped|sharp|light|loose|relaxed|calm|recovered|motivated|happy|solid|alive|unstoppable|on-fire|epic|super|lit|goated|peak)$/;
+const NOT = /^(?:not|no|never|isn-?t|wasn-?t|don-?t|didn-?t|hardly)-(?:so-|very-|that-|too-|really-|feeling-|feel-|felt-)?/;
+export const bodyGood = (key: string): boolean => {
+  if (BODY_WORDS.some((w) => w.id === key)) return false;
+  const not = key.match(NOT), core = not ? key.slice(not[0].length) : key;
+  if (GOOD.test(core)) return !not;
+  // "not tired", "no headache": a complaint, said not felt
+  return !!not && (BODY_WORDS.some((w) => w.id === core) || bodyWords(core.replace(/-/g, " ")).length > 0);
+};
+/** How a good one is said: "feeling-fresh" → "fresh", "not-tired" → "not tired". */
+export const goodWord = (key: string) => bodyLabel(key).replace(/^(feeling|feel|felt) /, "");
+
+/**
  * Your own words, as keys: each part ("knee pain and nausea" → two) is a body word when it says one ("exhausted" → tired,
  * "nausea" → queasy — so it counts with the same chip), else your word kept.
  */
@@ -65,7 +82,8 @@ export function bodyOrder(entries: Entry[], now: number): string[] {
 
 /** "weak ●●, tired ●" — or in words for the AI and the log: "weak (a lot), tired (a bit)". */
 export function bodyLine(body: Record<string, Level> | undefined, words = false): string {
-  return Object.entries(body ?? {}).map(([k, l]) => `${bodyLabel(k)} ${words ? `(${HOW[l]})` : DOTS[l]}`).join(", ");
+  // for the AI, a good one says so — "awesome (a lot)" next to "sore (a bit)" read as one more complaint (3 Nov)
+  return Object.entries(body ?? {}).map(([k, l]) => `${bodyLabel(k)} ${words ? `(${HOW[l]}${bodyGood(k) ? ", a good feeling" : ""})` : DOTS[l]}`).join(", ");
 }
 
 /**
