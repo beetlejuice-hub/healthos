@@ -3194,3 +3194,32 @@ both reads and the questions. Phases in that order; #152 RPE waits (owner).
      "I knew that" → remembered as "Knows: …". The morning and evening reads treat "Knows:" (and an Inbox "I knew that")
      as never news, and a "Makes no sense to me" finding isn't restated as fact. tellai.test (fails without), e2e tellai
      (control: AI off → no button; 320) and trainingb. Not checked: a real AI's answer to it (fake AI in tests).
+
+186. [~] **3 Nov: his batch — more charts and findings, food long-press, positive body tags, fuller reads, prediction
+   vs real, free AI** (owner: "as i mentioned i like charts and findings so we can have more of that … take inspo from
+   net, other apps, scientific papers, etc - and come up w new findings, new connections, interesting and fun way of
+   using my data"; "I should be able to delete or change my logged food, maybe we can do long press and add options
+   there or swipe"; "Make sure if i put a custom tag for body saying good or awesome it means in a positive way yk";
+   "Morning and night read should include a bit more, based on what happened to me, how i slept, how i felt thoughout
+   the day, some funny or interesting or helpful advice it should give me, w a summary"; "App could do prediction vs
+   real so it predicts based on drinks workout food etc to sleep and readiness and restoration of body etc"; "bro why
+   are we not doing the gemini free api tier and farm other free api-s for bs like food calorie estimate, i should not
+   be paying dollahs for that … i also have 10 dollar in gemini credits"). Claimed 3 Nov. Order — small and sure first:
+   - [ ] 1. Positive body tags: "good", "awesome", "strong", "fresh"… read as a good feeling (not "not good"): said
+     "you felt awesome", shown as good on the chip, given to the AI apart from complaints. lib/bodywords, BodyChips,
+     scout ownSignal, ai/context.
+   - [ ] 2. Food: press and hold (or swipe left) on any logged food → amount (½ … 2×), time, numbers, log again,
+     delete with Undo. FoodDay, Log's "Logged today", a new FoodActions.
+   - [ ] 3. AI on free tiers first: the light jobs (food estimates, the questions) go to Gemini's free tier, then his
+     Gemini credits, then Claude — the next one when a quota runs out. Keys are his to add in Cloudflare
+     (GEMINI_FREE_KEY: a project without billing; GEMINI_API_KEY: the one with his credits). worker/ai, a provider
+     layer. Facts (3 Nov): free tier is Flash-only with small daily caps; EU accounts' free-tier prompts aren't used to
+     train; billing on a project ends its free quota, hence two keys; paid Flash costs more than Haiku per token — the
+     saving is the free quota. The big spend is the reads and chat (Sonnet + web search): moving those is a quality
+     call → a side-by-side for him first.
+   - [ ] 4. Fuller morning and evening reads: a short summary, how you slept (band + your rating), how the day felt
+     (the check-ins' arc), one fun or surprising or useful thing — then the items.
+   - [ ] 5. Prediction vs real: each evening the app predicts tonight's sleep and tomorrow's readiness from what the
+     day had (drinks, training, late caffeine, a late meal, bedtime) using his own history; the morning shows
+     predicted vs real and what pushed it. Plan + canvas first.
+   - [ ] 6. New findings and charts from apps, papers and the web: a canvas of ideas to pick from.
