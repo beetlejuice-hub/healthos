@@ -31,6 +31,7 @@ import { convert, cookKind, cookState, WORD, type CookState } from "../lib/cooke
 import { findBarcode, type Lookup } from "../lib/barcode";
 import { ScanButton, Scanner } from "../components/Scanner";
 import { EntryEdit } from "../components/EntryEdit";
+import { FoodActions, HoldRow } from "../components/FoodActions";
 import { SMOKE_LABEL, type SmokeBand } from "../lib/smoke";
 import { ATE, type Ate } from "../lib/foodgaps";
 import { ScoreChip, ScoreWhy } from "../components/FoodScore";
@@ -1011,23 +1012,28 @@ function TodayLog() {
   const supps = useStore((s) => s.supplements);
   const today = localDay(Date.now());
   const list = entries.filter((e) => localDay(e.at) === today && e.kind !== "set").reverse();
-  const [edit, setEdit] = useState<string | null>(null);
+  const [edit, setEdit] = useState<string | null>(null), [held, setHeld] = useState<string | null>(null);
+  const foods = list.some((e) => e.kind === "food" || e.kind === "drink");
   return (
     <div className="card">
       <h3>Logged today <span>{list.length}</span></h3>
+      {foods && <p className="note fa-hint">Hold or swipe left on a food or drink for its amount, time, again or delete.</p>}
+      {held && <FoodActions id={held} onClose={() => setHeld(null)} />}
       {list.length === 0 && <p className="note">Nothing yet.</p>}
       <div className="list">
-        {list.map((e) => { const [a, b] = describe(e, supps), canEdit = e.kind === "food" || e.kind === "drink" || e.kind === "feel"; return (
-          <div className={`li${edit === e.id ? " editing" : ""}`} key={e.id}>
+        {list.map((e) => { const [a, b] = describe(e, supps), canEdit = e.kind === "food" || e.kind === "drink" || e.kind === "feel", food = e.kind === "food" || e.kind === "drink"; const inner = (<>
             {canEdit ? <button type="button" className="li-open" aria-expanded={edit === e.id} aria-label={`Change ${a}`} onClick={() => setEdit(edit === e.id ? null : e.id)}><span>{a}<small>{clock(e.at)} · {b}</small></span></button>
               : <span>{a}<small>{clock(e.at)} · {b}</small></span>}
-            <button type="button" className="x" aria-label={`Delete ${a}`} onClick={() => act.removeEntry(e.id)}>×</button>
+            {/* deleted at once, as before — now with Undo (3 Nov) */}
+            <button type="button" className="x" aria-label={`Delete ${a}`} onClick={() => { act.removeEntry(e.id); offerUndo([], `Deleted ${a}`, [e]); }}>×</button>
             {edit === e.id && (e.kind === "food" || e.kind === "drink") && <LoggedScore e={e} />}
             {edit === e.id && (e.kind === "food" || e.kind === "drink") && <EntryEdit e={e} onDone={() => setEdit(null)} />}
             {/* a note on any check-in, later too (PLAN 89) */}
             {edit === e.id && e.kind === "feel" && <NoteField id={e.id} initial={e.note ?? ""} onSaved={() => setEdit(null)} autoFocus />}
-          </div>
-        ); })}
+          </>);
+          const cls = `li${edit === e.id ? " editing" : ""}`;
+          return food ? <HoldRow id={e.id} className={cls} key={e.id} onHold={setHeld}>{inner}</HoldRow> : <div className={cls} key={e.id}>{inner}</div>;
+        })}
       </div>
     </div>
   );

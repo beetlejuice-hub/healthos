@@ -3205,11 +3205,15 @@ both reads and the questions. Phases in that order; #152 RPE waits (owner).
    real so it predicts based on drinks workout food etc to sleep and readiness and restoration of body etc"; "bro why
    are we not doing the gemini free api tier and farm other free api-s for bs like food calorie estimate, i should not
    be paying dollahs for that … i also have 10 dollar in gemini credits"). Claimed 3 Nov. Order — small and sure first:
-   - [ ] 1. Positive body tags: "good", "awesome", "strong", "fresh"… read as a good feeling (not "not good"): said
-     "you felt awesome", shown as good on the chip, given to the AI apart from complaints. lib/bodywords, BodyChips,
-     scout ownSignal, ai/context.
-   - [ ] 2. Food: press and hold (or swipe left) on any logged food → amount (½ … 2×), time, numbers, log again,
-     delete with Undo. FoodDay, Log's "Logged today", a new FoodActions.
+   - [x] 1. Positive body tags: "good", "awesome", "strong", "fresh", "not tired"… read as a good feeling ("not good"
+     isn't): the finder says "you felt awesome", the chip turns green, the AI reads "awesome (a lot, a good feeling)".
+     bodygood.test (fails with it off), e2e bodychips.
+   - [x] 2. Food: press and hold (or swipe left, or right-click) on a logged food or drink — What I ate, Log's
+     "Logged today" — opens its sheet: amount (½ ¾ 1¼ 1½ 2×, or grams/ml typed; every number scales), time that day,
+     its numbers, log again now, delete. Each can be undone (Undo now puts a changed or deleted entry back, and sits
+     over sheets; Log's × got it too). A tap is still a tap. lib/foodactions (+test), useHold, FoodActions; e2e
+     foodactions at 320 (hold, swipe, a drag down opens nothing, the server ends up with the same). Found on the way:
+     the lifting finger focused the sheet's time box — the sheet ignores taps for its first 350 ms.
    - [ ] 3. AI on free tiers first: the light jobs (food estimates, the questions) go to Gemini's free tier, then his
      Gemini credits, then Claude — the next one when a quota runs out. Keys are his to add in Cloudflare
      (GEMINI_FREE_KEY: a project without billing; GEMINI_API_KEY: the one with his credits). worker/ai, a provider

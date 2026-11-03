@@ -381,13 +381,19 @@ export const act = {
  * The last thing you logged, offered back for a few seconds as "Undo" (owner: "I log something and
  * can't undo if it was an accident"). Separate from the state so undoing doesn't itself need undo.
  */
-export type Undo = { ids: string[]; label: string; at: number };
+/** `put`: entries to put back as they were — a deleted or changed one (owner, 3 Nov: press and hold a food, delete it). */
+export type Undo = { ids: string[]; label: string; at: number; put?: Entry[] };
 let undo: Undo | null = null;
 const undoListeners = new Set<() => void>();
 const emitUndo = () => undoListeners.forEach((l) => l());
-export const offerUndo = (ids: string[], label: string) => { undo = { ids, label, at: Date.now() }; emitUndo(); };
+export const offerUndo = (ids: string[], label: string, put?: Entry[]) => { undo = { ids, label, at: Date.now(), ...(put?.length ? { put } : {}) }; emitUndo(); };
 export const clearUndo = () => { undo = null; emitUndo(); };
-export const runUndo = () => { if (!undo) return; const ids = new Set(undo.ids); commit({ ...state, entries: state.entries.filter((e) => !ids.has(e.id)) }); clearUndo(); };
+export const runUndo = () => {
+  if (!undo) return;
+  const ids = new Set([...undo.ids, ...(undo.put ?? []).map((e) => e.id)]);
+  commit({ ...state, entries: [...state.entries.filter((e) => !ids.has(e.id)), ...(undo.put ?? [])].sort(byTime) });
+  clearUndo();
+};
 export function useUndo(): Undo | null {
   return useSyncExternalStore((l) => { undoListeners.add(l); return () => { undoListeners.delete(l); }; }, () => undo, () => undo);
 }

@@ -16,6 +16,7 @@ import type { Food } from "../lib/types";
 import { go, LOG_FOR_KEY } from "../lib/nav";
 import { addDays, atMinute, clock, dayLabel, localDay } from "../lib/time";
 import { EntryEdit } from "./EntryEdit";
+import { FoodActions, HoldRow } from "./FoodActions";
 import { askAi, useAiStatus } from "../lib/ai/client";
 import { foodWeek, weekRead } from "../lib/foodweek";
 import { FoodWeek } from "./FoodWeek";
@@ -31,6 +32,8 @@ export function FoodDay({ day: first, onClose }: { day: string; onClose: () => v
   const [why, setWhy] = useState<string | null>(null);
   const [day, setDay] = useState(first);
   const [edit, setEdit] = useState<string | null>(null), [sure, setSure] = useState<string | null>(null);
+  // press and hold, or swipe left: amount, time, again, delete (owner, 3 Nov)
+  const [held, setHeld] = useState<string | null>(null);
   const d = useMemo(() => foodDay(entries, day), [entries, day]);
   // what each item was logged from (lib/foodscore foodFor)
   const { scores, foodOf } = useMemo(() => {
@@ -71,7 +74,7 @@ export function FoodDay({ day: first, onClose }: { day: string; onClose: () => v
   const row = (e: FoodItem) => {
     const m = macrosOf(e)!, s = scores.get(e.id);
     return (
-      <div className={`li fd-li${edit === e.id ? " editing" : ""}`} key={e.id}>
+      <HoldRow id={e.id} className={`li fd-li${edit === e.id ? " editing" : ""}`} key={e.id} onHold={setHeld}>
         <button type="button" className="li-open" aria-expanded={edit === e.id} aria-label={`Change ${e.name}`} onClick={() => { setEdit(edit === e.id ? null : e.id); setSure(null); }}>
           <span>{e.name}<small>{clock(e.at)} · {amountOf(e)}{m.p >= 1 ? ` · P ${fmt(m.p)} g` : ""}</small></span>
         </button>
@@ -89,7 +92,7 @@ export function FoodDay({ day: first, onClose }: { day: string; onClose: () => v
           </li>}
         </ul>}
         {edit === e.id && <EntryEdit e={e} onDone={() => setEdit(null)} />}
-      </div>
+      </HoldRow>
     );
   };
   return (
@@ -121,9 +124,11 @@ export function FoodDay({ day: first, onClose }: { day: string; onClose: () => v
             <div className="list">{m.items.map(row)}</div>
           </div>
         ))}
+        {d.count > 0 && <p className="note fa-hint">Hold or swipe left on a food to change its amount or time, log it again or delete it.</p>}
         {!d.count && <p className="note">Nothing logged {day === today ? "yet today" : `on ${name === "Yesterday" ? "yesterday" : name}`}.</p>}
         <button type="button" className="pill-btn fd-add" onClick={addFood}>+ Add food{day === today ? "" : ` to ${name === "Yesterday" ? "yesterday" : name}`}</button>
       </section>
+      {held && <FoodActions id={held} onClose={() => setHeld(null)} />}
     </>
   );
 }
