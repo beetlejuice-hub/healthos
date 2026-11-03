@@ -3327,7 +3327,7 @@ both reads and the questions. Phases in that order; #152 RPE waits (owner).
        test's seeds — the honest range costs it some power). engines.audit.test runs every time (fails on the old code
        in 4 of 5 checks). Leads' "early · could be chance" still shows in about half of quiet worlds — by design the
        "worth a look" list; phase 3's re-checking is what fades the chance ones.
-     - [ ] Phase 2: lib/evidence — one catalogue of questions (cause → outcome, lag, what can't cause what), one
+     - [~] Phase 2 (claimed 3 Nov, owner: "1 and 2"): lib/evidence — one catalogue of questions (cause → outcome, lag, what can't cause what), one
        adjusted test (the outcome against the thing with the usual suspects alongside: weekend, yesterday, drift,
        drinks, late caffeine, sleep, training), BH across every question the app asks at once, split-half replication;
        one word set: early → likely → clear, and "no effect" when there's enough data and it's too small. Noticed,
@@ -3396,7 +3396,8 @@ both reads and the questions. Phases in that order; #152 RPE waits (owner).
      is 10:00 /mi; planted band minutes), e2e cardiophases.
    - Phases: 1 — phases, distance, pace, the stats (canvas https://claude.ai/artifact/87FzrrBswvKvBwQ2CPJbeS — built with
      stats A, a card per kind, and miles, while he picks);
-     2 — adding distance to a past session; the cardio after lifting in phases too; personal bests on Today; calories per
+     2 (claimed 3 Nov, owner: "1 and 2") — adding distance to a past session; the cardio after lifting in phases too;
+     personal bests on Today; calories per
      phase (each kind's MET — the session's first kind counts for all of it now).
    - [x] Phase 1 done 3 Nov: "Next:" chips while it runs (role group; the kind field renames the phase going now), Save's
      rows (distance in mi or km, the toggle remembered — miles by default, as he said "miles"; incline % on an incline walk;
