@@ -3252,3 +3252,31 @@ both reads and the questions. Phases in that order; #152 RPE waits (owner).
      temperature, pressure vs mood, sleep, headaches — needs his city), 4 year in pixels (a day per square by mood /
      energy / sleep / steps, tap for the day), 5 moon vs your sleep (for fun, tested honestly; others: birthday week,
      paydays, clock changes), 6 surprise days (far from what the forecast expected — "what was different?").
+
+187. [~] **3 Nov evening: his picks — and the app studying him harder** (owner: "ok forget ab the free token farming, lets
+   keep going as is"; "i like the b forecast design, simpler, cleaner"; "for the new changes i like all, but it should not
+   be a set up thing, the app should find these connections autonomusly and then start tracking them, and see if it was
+   right or no. can also look for random studies or forum reports"; "I like the app trying out new things, finding new
+   studies, random ones, random supplement studies related to fat loss, brain fog, trainign etc. or reddit forums that
+   talk ab things that changed their lives, random posts, etc. one or 2 for each day. completely random. like it sent me
+   the kiwi study and i am trying it rn. can be health, brain, body, training etc."; "And go harder on the app studying
+   me, seeing connections, asking ab them, figuring things out, etc...pls"). Claimed 3 Nov.
+   - Gemini: dropped. The routing built in 186-3 stays, off without the keys — nothing changes.
+   - [ ] Phase 1 — Discoveries, 1–2 a day, random: each read (morning and evening) gets one, its topic and kind picked
+     at random by the app (fat loss, brain fog, training, sleep, a supplement, a food, mood, recovery, the body, living
+     longer, weird-but-true × a recent study / a Reddit or forum "this changed my life" post / an older surprising
+     study), never a topic of the last few. Its link checked like the reads' items; a forum post says it's one person's
+     story. "Try it" when there's something to try: it starts a watch (the evening question, its data, what it showed
+     at the end — PLAN 182), so a kiwi before bed gets its verdict. lib/ai/discover, the reads' prompts and checks,
+     a Discovery block in each read.
+   - [ ] Phase 2 — Forecast B (his pick on the canvas): at night "The app bets on a 74 tonight · usual 80 · mostly the
+     2 beers (−6)"; in the morning "72 · the app bet 74 · Called it ±2" or "Missed by 13 — something it didn't see?"
+     (the answer becomes a night tag the finder tests), and the week of hits. lib/forecast (plan in 186-5).
+   - [ ] Phase 3 — The app finds the canvas's findings by itself and tracks them: new signals in the pattern finder —
+     lowest heart rate time (band nights), sleep midpoint and its weekend shift, the weather (Open-Meteo, the city from
+     your time zone, nothing to set), the moon — each tested only against what it could touch (so the bar for the rest
+     doesn't rise). Found → a lead, checked on the new days, and a record of what it said and whether it held ("right"
+     / "didn't hold"). Studies and forum reports it finds become things it checks on your data.
+   - [ ] Phase 4 — Asking harder: surprise days (far from the forecast) asked about; an early lead asks the question
+     that would settle it; the reads ask about the strongest open lead.
+   - [ ] Year in pixels on Insights → Mind (a chart, not a finding).
