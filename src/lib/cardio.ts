@@ -10,7 +10,8 @@
  */
 
 import type { HrMinute } from "./band";
-import type { Workout } from "./types";
+import type { CardioPhase, Workout } from "./types";
+import { phaseLine, phaseStat, type DistUnit } from "./cardiostats";
 import { clock, dayLabel } from "./time";
 import { weekStart } from "./liftstrength";
 
@@ -33,13 +34,14 @@ export const kindOf = (what: string) => CARDIO_KINDS.find((k) => k.match.test(wh
 /** A forgotten cardio session (the timer left running) ends itself after this long, marked as such. */
 export const CARDIO_MAX_MIN = 180;
 
-export type CardioSpan = { what: string; start: number; end: number; workoutId: string; /** a session of its own, not after lifting */ own: boolean; running: boolean; auto?: boolean };
+export type CardioSpan = { what: string; start: number; end: number; workoutId: string; /** a session of its own, not after lifting */ own: boolean; running: boolean; auto?: boolean;
+  /** its phases (PLAN 191), when it had them or a distance */ phases?: CardioPhase[] };
 
 /** Every timed cardio stretch, oldest first: sessions of their own, and cardio after lifting that was started. */
 export function cardioSpans(workouts: Workout[], now: number): CardioSpan[] {
   const out: CardioSpan[] = [];
   for (const w of workouts) {
-    if (w.kind === "cardio") out.push({ what: w.cardio?.what ?? w.template, start: w.startedAt, end: w.endedAt ?? now, workoutId: w.id, own: true, running: w.endedAt == null, ...(w.autoEnded ? { auto: true } : {}) });
+    if (w.kind === "cardio") out.push({ what: w.cardio?.what ?? w.template, start: w.startedAt, end: w.endedAt ?? now, workoutId: w.id, own: true, running: w.endedAt == null, ...(w.autoEnded ? { auto: true } : {}), ...(w.phases?.length ? { phases: w.phases } : {}) });
     else if (w.cardio?.startedAt != null && w.cardio.done !== false) {
       const end = w.cardio.done ? w.cardio.at ?? w.endedAt : w.endedAt;
       out.push({ what: w.cardio.what, start: w.cardio.startedAt, end: end ?? now, workoutId: w.id, own: false, running: end == null });
@@ -75,13 +77,15 @@ export function lastLike(spans: CardioSpan[], s: CardioSpan): CardioSpan | null 
  * One line for the AI (the night read-back, PLAN 130): "Stairmaster 18:00–18:40 (40 min): heart rate avg 142, peak 165 bpm
  * (band, 38 of 40 min); about 480 kcal (MET 9 × 80 kg) — last Stairmaster, Tue 13 Oct: 35 min, avg 138 bpm".
  */
-export function cardioLine(s: CardioSpan, spans: CardioSpan[], hr: HrMinute[], kg: number | null, max?: number | null): string {
+export function cardioLine(s: CardioSpan, spans: CardioSpan[], hr: HrMinute[], kg: number | null, max?: number | null, unit: DistUnit = "mi"): string {
   const min = minutesOf(s), h = cardioHr(hr, s.start, s.end), kc = cardioKcal(s.what, min, kg), last = lastLike(spans, s);
   const zones = h && max ? zoneMinutes(hr, s.start, s.end, max) : null;
   const lh = last ? cardioHr(hr, last.start, last.end) : null;
   return `${s.what} ${clock(s.start)}–${clock(s.end)} (${min} min${s.auto ? ", the timer was left running — ended by itself" : ""})${s.own ? "" : ", after lifting"}: `
     + (h ? `heart rate avg ${h.avg}, peak ${h.peak} bpm (band, ${h.n} of ${min} min)${zones && zones.some(Boolean) ? `, zones ${zoneWords(zones)} (max ${max})` : ""}` : "no heart rate from the band for it")
     + (kc ? `; about ${kc.kcal} kcal (MET ${kc.met} × ${kg} kg)` : "")
+    // PLAN 191: each phase, with the distance he typed, its pace and heart rate
+    + (s.phases?.length ? `; phases: ${phaseLine(s.phases.map((p, i, a) => phaseStat({ ...p, end: i + 1 < a.length ? a[i + 1].start : s.end, workoutId: s.workoutId }, hr)), unit)}` : "")
     + (last ? ` — last ${kindOf(last.what)?.name ?? last.what}, ${dayLabel(last.start)}: ${minutesOf(last)} min${lh ? `, avg ${lh.avg} bpm` : ""}` : " — the first of its kind");
 }
 

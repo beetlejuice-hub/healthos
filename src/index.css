@@ -2252,3 +2252,26 @@ span.fd-score[data-band="none"] { background: none; min-width: 34px; }
 .cycle-edit .chips { display: flex; flex-wrap: wrap; gap: 6px; }
 .cycle-edit .pill-btn[aria-pressed="true"] { background: var(--k-ink, var(--c-ink)); color: var(--k-bg, var(--c-bg)); }
 .stack-aside { margin: 0; }
+
+/* Cardio in phases, with pace (PLAN 191; owner, 3 Nov: "incline walk then normal running … average pace average miles average hbpm") */
+.cardio-phase { margin: 0; }
+.next-phase { align-items: center; margin-top: 4px; }
+.next-phase .s { margin-right: 2px; }
+.phase-rows { display: grid; gap: 10px; margin-top: 10px; }
+.phase-head { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; }
+.phase-head .s { flex: 1 1 140px; font-size: 12.5px; }
+.seg.unit button { padding: 4px 12px; }
+.phase-row { display: grid; grid-template-columns: minmax(0, 1fr) 86px; gap: 4px 10px; align-items: end; }
+.phase-row > span { align-self: center; font-size: 14px; }
+.phase-row .kfield { font-size: 11.5px; }
+.phase-row .incline { grid-column: 2; }
+.phase-row small { grid-column: 1 / -1; font-size: 12.5px; color: var(--k-ink-2, var(--c-dim)); }
+.ck-list { display: grid; gap: 10px; margin-top: 10px; }
+.ck { display: grid; gap: 8px; padding-top: 10px; border-top: 1px solid var(--i-line, var(--c-track)); }
+.ck-h { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.ck-h b { font-size: 15px; }
+.ck-tiles { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
+.ck-tiles div { display: grid; gap: 2px; background: var(--i-panel-2, var(--c-card-2)); border-radius: 8px; padding: 8px 10px; min-width: 0; }
+.ck-tiles b { font-family: var(--f-cond); font-size: 24px; font-weight: 700; line-height: 1; font-variant-numeric: tabular-nums; }
+.ck-tiles span { font-size: 12px; color: var(--i-dim, var(--c-dim)); }
+.ck-moved { margin: 0; font-size: 13px; color: var(--i-ink-2, var(--c-ink-2)); }

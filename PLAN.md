@@ -3380,3 +3380,27 @@ both reads and the questions. Phases in that order; #152 RPE waits (owner).
      when-needed one's days without it, and a cycle's off days, are the "without" days its comparisons need.
    - lib/schedule (dueOn, cycleOn, words); used by today (Now), Today's stack and tile, push/plan, catchup, ghost, supplog
      extras. Tests: schedule.test (each place, fails with the schedule ignored), e2e suppschedule.
+
+191. [~] **Cardio in phases, with pace and stats** (owner, 3 Nov: "Can app ask for average pace and different phases of
+   cardio? Like i do incline walk then normal running and just want the app to calculate some stats from my average pace
+   average miles average hbpm etc. like i know im shit at running but eanf to see that as stats"). Claimed 3 Nov.
+   - Why: a cardio session is one kind and a timer today (PLAN 130) — "Incline walk then run" is one blob, no distance, no
+     pace, so nothing to watch get better.
+   - What: during a session, "Next: Run" ends the phase and starts the next (the timer keeps going); on Save, each phase's
+     distance from the treadmill (mi or km, remembered) — pace and speed from its time, its heart rate from the band's
+     minutes inside it. Insights → Training → Cardio, per kind: average pace, distance, heart rate, best, and how they've
+     moved; beats per mile (heart rate × minutes ÷ distance) — fitter is fewer beats for the same distance, even when the
+     pace doesn't change. The AI is told the phases.
+   - How: Workout.phases (kind, start, end, km, incline); lib/cardiostats (pure: pace, speed, beats per distance, per kind
+     over time); CardioSession (Next, the Save rows); CardioCard (the stats). Tests with known answers (a 30-min 3-mile run
+     is 10:00 /mi; planted band minutes), e2e cardiophases.
+   - Phases: 1 — phases, distance, pace, the stats (canvas https://claude.ai/artifact/87FzrrBswvKvBwQ2CPJbeS — built with
+     stats A, a card per kind, and miles, while he picks);
+     2 — adding distance to a past session; the cardio after lifting in phases too; personal bests on Today; calories per
+     phase (each kind's MET — the session's first kind counts for all of it now).
+   - [x] Phase 1 done 3 Nov: "Next:" chips while it runs (role group; the kind field renames the phase going now), Save's
+     rows (distance in mi or km, the toggle remembered — miles by default, as he said "miles"; incline % on an incline walk;
+     pace, speed and beats a mile as he types), saved as "Incline walk → Run"; Insights → Training → Cardio: a card per
+     kind with a distance (average pace and best, distance, heart rate and peak, beats a mile, pace each session as dots on
+     an axis around them — bars from 0 hid an 11:45 → 11:05 change — and the first 3 against the last 3); the AI's
+     cardio line lists the phases. Tests: cardiostats.test (known answers), e2e cardiophases.

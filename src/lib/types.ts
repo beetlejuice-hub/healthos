@@ -154,7 +154,11 @@ export type Workout = {
   kind?: "cardio";
   /** Its timer was left running and it ended itself (lib/cardio CARDIO_MAX_MIN). */
   autoEnded?: true;
+  /** A cardio session's phases, in order (lib/cardiostats; PLAN 191: "incline walk then normal running"): each ends where
+   * the next starts, the last at the session's end; `km` and `incline` as the treadmill said, typed on Save. */
+  phases?: CardioPhase[];
 };
+export type CardioPhase = { what: string; start: number; km?: number; incline?: number };
 
 /** A saved split day: "Upper A" → bench, row, OHP, pulldown, with the reps you aim for. */
 export type Template = {
