@@ -8,6 +8,7 @@
  * through Supabase with the user's own token, so row-level security applies like everywhere else.
  */
 
+import { callGemini, forGemini, geminiOrder, geminiUsd, GeminiMiss, type GeminiEnv } from "./gemini";
 import Anthropic from "@anthropic-ai/sdk";
 import {
   AI_ERRORS, type AiError, type Usage, DAILY_CAP, MODELS, MONTHLY_USD, RECENT_CALLS, SCHEMAS, logOf, SYSTEM, TIER, checkChat, modelFor, checkDescribe, checkDigest, checkNight, checkQuestions, checkReview, checkSupplement, costUsd, jsonFrom, DESCRIBE_SHAPE, CHAT_TOOLS, CHAT_ROUNDS, READ_ROUNDS, READ_TOOLS, checkReadCalls, checkDive, checkVerdict, type ChatTurn,
@@ -15,7 +16,7 @@ import {
 } from "../src/lib/ai/tasks";
 import { checkFoundLinks, checkReadLinks, checkSupplementLinks } from "./links";
 
-export type AiEnv = { ANTHROPIC_API_KEY?: string; SUPABASE_URL?: string; SUPABASE_KEY?: string; AI_DAILY_CAP?: string; AI_MONTHLY_USD?: string };
+export type AiEnv = GeminiEnv & { ANTHROPIC_API_KEY?: string; SUPABASE_URL?: string; SUPABASE_KEY?: string; AI_DAILY_CAP?: string; AI_MONTHLY_USD?: string };
 type Deps = { fetch: typeof fetch; now: () => number };
 
 const SB_URL = "https://ubfvaewfdbmecowoeuni.supabase.co";
@@ -246,7 +247,7 @@ export async function handleAi(req: Request, env: AiEnv, deps: Deps = { fetch: (
   const today = dayIn(deps.now(), tz);
 
   const budget = Number(env.AI_MONTHLY_USD) || MONTHLY_USD;
-  if (req.method === "GET" && url.pathname === "/api/ai/usage") return json({ usage: await readUsage(user, env, deps, today), cap, budget, on: !!env.ANTHROPIC_API_KEY });
+  if (req.method === "GET" && url.pathname === "/api/ai/usage") return json({ usage: await readUsage(user, env, deps, today), cap, budget, on: !!env.ANTHROPIC_API_KEY, gemini: { free: !!env.GEMINI_FREE_KEY, paid: !!env.GEMINI_API_KEY } });
   if (req.method !== "POST" || url.pathname !== "/api/ai") return json({ error: "not found" }, 404);
   if (!env.ANTHROPIC_API_KEY) return fail("no-key", 503);
 
@@ -262,7 +263,26 @@ export async function handleAi(req: Request, env: AiEnv, deps: Deps = { fetch: (
 
   // yours for the task's tier; past the month's budget, the cheapest until the 1st
   const choice: ModelChoice = modelFor(body.task, body.models, usage.monthUsd, budget);
+
+  // the light jobs on Gemini first — its free tier, then his credits — Claude only when neither answers (owner, 3 Nov)
+  let paidMisses = 0;
+  if (forGemini(body)) {
+    for (const g of geminiOrder(env)) {
+      try {
+        const { answer, usage: u } = await callGemini(body, g, deps.fetch, today);
+        const usd = geminiUsd(g.via, g.model, u) + paidMisses;
+        const tokens = { input_tokens: u.in, output_tokens: u.out, cache_read_input_tokens: 0, cache_creation_input_tokens: 0, server_tool_use: { web_search_requests: 0 } };
+        const next = await addSpend(user, env, deps, today, (x) => ({ ...x, calls: x.calls + 1, dayUsd: x.dayUsd + usd, monthUsd: x.monthUsd + usd,
+          recent: [...(x.recent ?? []), logOf(deps.now(), body.task, choice, tokens, usd, g.via)].slice(-RECENT_CALLS) })).catch(() => usage);
+        return json({ answer, usage: next, costUsd: usd, model: choice, via: g.via });
+      } catch (e) {
+        // a paid call that answered in the wrong shape still cost something: carried onto what does answer
+        if (e instanceof GeminiMiss && g.via === "gemini") paidMisses += geminiUsd(g.via, g.model, e.usage);
+      }
+    }
+  }
   const spent = nothingSpent();
+  spent.usd += paidMisses;
   // Called and paid for in one piece: if the app stops waiting, Cloudflare cancels the request but lets this run on (for
   // 30 s), so a call that was nearly done still adds its cost.
   const run = (async () => {

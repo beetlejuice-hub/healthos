@@ -3214,8 +3214,13 @@ both reads and the questions. Phases in that order; #152 RPE waits (owner).
      over sheets; Log's × got it too). A tap is still a tap. lib/foodactions (+test), useHold, FoodActions; e2e
      foodactions at 320 (hold, swipe, a drag down opens nothing, the server ends up with the same). Found on the way:
      the lifting finger focused the sheet's time box — the sheet ignores taps for its first 350 ms.
-   - [ ] 3. AI on free tiers first: the light jobs (food estimates, the questions) go to Gemini's free tier, then his
-     Gemini credits, then Claude — the next one when a quota runs out. Keys are his to add in Cloudflare
+   - [x] 3. AI on free tiers first: the light jobs (food estimates, the questions) go to Gemini's free tier, then his
+     Gemini credits, then Claude — the next one when a quota runs out. Built (worker/gemini): the same prompt and
+     checks as Claude's; 429 / error / wrong shape → the next; web look-ups, chat, reads stay on Claude; each call
+     logged with who answered ("Gemini (free)" · "free" in Settings' list), the month's estimate leaves them out;
+     Settings → AI says the order or which keys to add. worker ai.test (7, fail without it), e2e gemini. Waiting on
+     him: the two keys in Cloudflare. Measured on the way: at his use the light jobs on Haiku are ≈ $0.06 a month —
+     chat (≈ $6) and the reads (≈ $6) are the spend, so the real saving is moving those (his call, after a side-by-side). Keys are his to add in Cloudflare
      (GEMINI_FREE_KEY: a project without billing; GEMINI_API_KEY: the one with his credits). worker/ai, a provider
      layer. Facts (3 Nov): free tier is Flash-only with small daily caps; EU accounts' free-tier prompts aren't used to
      train; billing on a project ends its free quota, hence two keys; paid Flash costs more than Haiku per token — the

@@ -631,7 +631,8 @@ export type AiError = keyof typeof AI_ERRORS;
 
 /** What the Worker keeps per account (doc "ai_usage", written only by the Worker). */
 /** One call, as billed: what it was, on which model, its tokens (cached reads and cache writes apart) and its cost. */
-export type CallLog = { at: number; task: Task; model: ModelChoice; in: number; cached: number; written: number; out: number; searches: number; usd: number };
+/** `via`: answered by Gemini — its free tier or his credits (3 Nov) — not by `model`, the Claude model it would have gone to. */
+export type CallLog = { at: number; task: Task; model: ModelChoice; in: number; cached: number; written: number; out: number; searches: number; usd: number; via?: "gemini-free" | "gemini" };
 export type UsageDoc = { day: string; calls: number; dayUsd: number; month: string; monthUsd: number; byModel: Partial<Record<ModelChoice, number>>;
   /** The last calls, newest last (owner, 15 Oct: "i feel like u are waay underestimating cost" — so the estimate is made from these). */
   recent?: CallLog[];
@@ -639,8 +640,8 @@ export type UsageDoc = { day: string; calls: number; dayUsd: number; month: stri
   rev?: number };
 /** Calls kept in the log. */
 export const RECENT_CALLS = 120;
-export const logOf = (at: number, task: Task, model: ModelChoice, u: Usage, usd: number): CallLog => ({
-  at, task, model, in: u.input_tokens, cached: u.cache_read_input_tokens ?? 0, written: u.cache_creation_input_tokens ?? 0, out: u.output_tokens, searches: u.server_tool_use?.web_search_requests ?? 0, usd });
+export const logOf = (at: number, task: Task, model: ModelChoice, u: Usage, usd: number, via?: CallLog["via"]): CallLog => ({
+  at, task, model, in: u.input_tokens, cached: u.cache_read_input_tokens ?? 0, written: u.cache_creation_input_tokens ?? 0, out: u.output_tokens, searches: u.server_tool_use?.web_search_requests ?? 0, usd, ...(via ? { via } : {}) });
 export const DAILY_CAP = 50;
 
 /**
@@ -677,7 +678,8 @@ export function estimateMonthUsd(models: Models, recent: CallLog[] = []): Record
   const span = recent.length ? (recent[recent.length - 1].at - recent[0].at) / 86_400_000 : 0;
   const out = { light: 0, everyday: 0, reads: 0, research: 0, total: 0, measured: recent.length };
   for (const t of TASKS) {
-    const perDay = span >= 3 ? recent.filter((c) => c.task === t).length / span : TYPICAL[t].perDay;
+    // what Gemini answered (its free tier, his credit — 3 Nov) isn't a Claude call to price
+    const perDay = span >= 3 ? recent.filter((c) => c.task === t && !c.via).length / span : TYPICAL[t].perDay;
     const usd = 30 * perDay * costUsd(models[TIER[t]], perCall(t, recent));
     out[TIER[t]] += usd; out.total += usd;
   }

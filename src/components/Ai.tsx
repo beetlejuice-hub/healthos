@@ -51,6 +51,8 @@ import { byDay, foldLine } from "../lib/ai/thread";
 const usd = (x: number) => (x < 0.1 ? `$${x.toFixed(3)}` : `$${x.toFixed(2)}`);
 const k = (n: number) => (n >= 1000 ? `${(n / 1000).toFixed(1)}k` : String(Math.round(n)));
 const clockOf = (t: number) => new Date(t).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
+/** Who answered a light job instead of Claude (3 Nov). */
+const VIA = { "gemini-free": "Gemini (free)", gemini: "Gemini (credit)" } as const;
 const TASK_WORDS: Record<string, string> = { describe: "food", questions: "questions", chat: "chat", digest: "morning read", night: "night read", supplement: "supplement", review: "week / month read", dive: "deep dive", verdict: "experiment verdict" };
 
 /* ------------------------------------------------------------------ background: morning read + questions */
@@ -612,7 +614,9 @@ export function Experiments() {
 
 export function AiSettings() {
   const ai = useStore((s) => s.ai);
-  const { on, usage, cap, budget } = useAiStatus();
+  const { on, usage, cap, budget, gemini } = useAiStatus();
+  // the light jobs that Gemini answered today, free and on his credits (3 Nov)
+  const viaToday = (usage?.recent ?? []).filter((c) => c.via && localDay(c.at) === usage?.day);
   const [seeing, setSeeing] = useState(false);
   useEffect(() => { void refreshAiStatus(); }, []);
   const recent = usage?.recent ?? [], failed = (ai.failed ?? []).filter((f) => f.at > Date.now() - 3 * 86_400_000);
@@ -629,6 +633,9 @@ export function AiSettings() {
       <h3>AI <span>{on == null ? "checking…" : on ? "on" : "off — add the key"}</span></h3>
       {on === false && <AiOff />}
       {usage && <p className="usage">Today <b>{usage.calls} of {cap}</b> calls · {usd(usage.dayUsd)} · this month <b>{usd(usage.monthUsd)} of {usd(budget)}</b>{projected != null && now.getDate() > 2 ? ` · on track for ≈ ${usd(projected)}` : ""}</p>}
+      <p className="note ai-gemini">{gemini.free || gemini.paid
+        ? <>Food estimates and the app's questions go to Gemini first — {[gemini.free && "its free tier", gemini.paid && "your Gemini credit"].filter(Boolean).join(", then ")}, then Claude.{viaToday.length ? ` Today: ${viaToday.filter((c) => c.via === "gemini-free").length} free, ${viaToday.filter((c) => c.via === "gemini").length} on credit.` : ""}</>
+        : <>Food estimates and the app's questions can run on Gemini's free tier first: add GEMINI_FREE_KEY (a Google AI Studio key from a project without billing) — and GEMINI_API_KEY for the project with your credit — in Cloudflare's settings for this app.</>}</p>
       {usage && usage.monthUsd >= budget && <p className="note">This month's {usd(budget)} is used: everything runs on {MODELS.haiku.label} until the 1st.</p>}
       {/* owner, 15 Oct: "for harder or more important request can leave a better model but for food or simple everyday things can add a cheaper one" */}
       <label className="field">Food, photos and quick questions<select value={ai.models.light} onChange={(e) => pick("light", e.target.value as ModelChoice)}>{option("light")}</select></label>
@@ -639,7 +646,7 @@ export function AiSettings() {
       {(recent.length > 0 || failed.length > 0) && <details className="ai-calls"><summary>Last calls — what each cost{failed.length ? `, and ${failed.length} that failed` : ""}</summary>
         {/* the ones that failed in among them, with why (22 Oct: the morning read didn't come, and nothing said why) */}
         <ul>{[...recent.map((c) => ({ at: c.at, c, f: null })), ...failed.map((f) => ({ at: f.at, c: null, f }))].sort((x, y) => y.at - x.at).slice(0, 12).map(({ at, c, f }) => c
-          ? <li key={`c${at}`}><span>{clockOf(c.at)} · {TASK_WORDS[c.task]} · {MODELS[c.model].label.replace("Claude ", "")}</span><span>{k(c.in + c.cached + c.written)} in{c.cached ? ` (${k(c.cached)} cached)` : ""} · {k(c.out)} out{c.searches ? ` · ${c.searches} search${c.searches > 1 ? "es" : ""}` : ""}</span><b>{usd(c.usd)}</b></li>
+          ? <li key={`c${at}`}><span>{clockOf(c.at)} · {TASK_WORDS[c.task]} · {c.via ? VIA[c.via] : MODELS[c.model].label.replace("Claude ", "")}</span><span>{k(c.in + c.cached + c.written)} in{c.cached ? ` (${k(c.cached)} cached)` : ""} · {k(c.out)} out{c.searches ? ` · ${c.searches} search${c.searches > 1 ? "es" : ""}` : ""}</span><b>{c.via === "gemini-free" ? "free" : usd(c.usd)}</b></li>
           : <li key={`f${at}`} className="ai-failed"><span>{clockOf(f!.at)} · {TASK_WORDS[f!.task] ?? f!.task} · failed</span><span>{f!.message}</span><b>–</b></li>)}</ul>
         <p className="note">"In" is mostly your data summary, sent with chats, questions and the reads — your words are a few tokens of it. "Out" includes the model's thinking.</p>
       </details>}

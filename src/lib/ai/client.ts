@@ -37,8 +37,9 @@ import { cardioLine, cardioSpans, cardioWeekLines, maxHrOf, zoneLine } from "../
 import type { AiAnswer, AiRequest, ChatTurn, Task, UsageDoc } from "./tasks";
 import { currentKg } from "../body";
 
-export type AiStatus = { on: boolean | null; usage: UsageDoc | null; cap: number; budget: number; busy: number };
-let status: AiStatus = { on: null, usage: null, cap: 50, budget: MONTHLY_USD, busy: 0 };
+/** `gemini`: which Gemini keys the server has (3 Nov: the light jobs on Gemini's free tier first, then his credits). */
+export type AiStatus = { on: boolean | null; usage: UsageDoc | null; cap: number; budget: number; busy: number; gemini: { free: boolean; paid: boolean } };
+let status: AiStatus = { on: null, usage: null, cap: 50, budget: MONTHLY_USD, busy: 0, gemini: { free: false, paid: false } };
 const subs = new Set<() => void>();
 const set = (p: Partial<AiStatus>) => { status = { ...status, ...p }; subs.forEach((f) => f()); };
 export const useAiStatus = () => useSyncExternalStore((f) => { subs.add(f); return () => subs.delete(f); }, () => status);
@@ -53,8 +54,8 @@ export async function refreshAiStatus() {
   try {
     const r = await fetch(`/api/ai/usage?tz=${encodeURIComponent(tz())}`, { headers: await auth() });
     if (!r.ok) return set({ on: false });
-    const b = (await r.json()) as { usage: UsageDoc; cap: number; budget?: number; on: boolean };
-    set({ on: b.on, usage: b.usage, cap: b.cap, budget: b.budget ?? MONTHLY_USD });
+    const b = (await r.json()) as { usage: UsageDoc; cap: number; budget?: number; on: boolean; gemini?: AiStatus["gemini"] };
+    set({ on: b.on, usage: b.usage, cap: b.cap, budget: b.budget ?? MONTHLY_USD, gemini: b.gemini ?? { free: false, paid: false } });
   } catch { set({ on: false }); }
 }
 

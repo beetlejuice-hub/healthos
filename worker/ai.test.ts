@@ -1,10 +1,13 @@
 import { describe, expect, it } from "vitest";
 import Anthropic from "@anthropic-ai/sdk";
 import { handleAi, whyFailed } from "./ai";
+import { SCHEMAS, SYSTEM } from "../src/lib/ai/tasks";
 
 /** A fake Supabase (one user, the docs table) and a fake Anthropic API, behind one fetch. */
-function world(answers: unknown[], opts: { usage?: object; /** Pages the cited links open (PLAN 160); any other site answers 403, as one that blocks robots. */ pages?: Record<string, { status?: number; html?: string } | "no-such-site"> } = {}) {
+function world(answers: unknown[], opts: { usage?: object; /** Pages the cited links open (PLAN 160); any other site answers 403, as one that blocks robots. */ pages?: Record<string, { status?: number; html?: string } | "no-such-site">;
+  /** Gemini's answers in turn (3 Nov): its text, or a status it fails with. */ gemini?: { status?: number; text?: string }[] } = {}) {
   const docs = new Map<string, unknown>();
+  const gemSent: { url: string; body: Record<string, unknown>; headers: Record<string, string> }[] = [];
   if (opts.usage) docs.set("ai_usage", opts.usage);
   const sent: { url: string; body: Record<string, unknown>; headers: Record<string, string> }[] = [];
   const fetcher = (async (input: RequestInfo | URL, init?: RequestInit) => {
@@ -38,6 +41,13 @@ function world(answers: unknown[], opts: { usage?: object; /** Pages the cited l
       return Response.json({ id: "msg_1", type: "message", role: "assistant", model: body.model, content: a.content ?? (a.blocks ?? [a.text]).map((text) => ({ type: "text", text })), stop_reason: a.stop ?? "end_turn", stop_sequence: null,
         usage: a.usage ?? { input_tokens: 1000, output_tokens: 500, cache_read_input_tokens: 0, cache_creation_input_tokens: 0, server_tool_use: { web_search_requests: a.searches ?? 0 } } });
     }
+    if (url.hostname === "generativelanguage.googleapis.com") {
+      gemSent.push({ url: req.url, body: (await req.json()) as Record<string, unknown>, headers: Object.fromEntries(req.headers) });
+      const g = opts.gemini?.shift();
+      if (!g) throw new Error("Gemini asked more times than this test expects");
+      if (g.status && g.status >= 400) return Response.json({ error: { code: g.status, status: g.status === 429 ? "RESOURCE_EXHAUSTED" : "INTERNAL", message: "fake" } }, { status: g.status });
+      return Response.json({ candidates: [{ content: { role: "model", parts: [{ text: g.text ?? "" }] }, finishReason: "STOP" }], usageMetadata: { promptTokenCount: 800, candidatesTokenCount: 200, thoughtsTokenCount: 100 } });
+    }
     if (url.protocol === "https:" && !/supabase|anthropic/.test(url.hostname)) {
       const p = opts.pages?.[req.url];
       if (p === "no-such-site") throw new TypeError("fetch failed: getaddrinfo ENOTFOUND");
@@ -45,7 +55,7 @@ function world(answers: unknown[], opts: { usage?: object; /** Pages the cited l
     }
     throw new Error(`unexpected ${req.url}`);
   }) as typeof fetch;
-  return { docs, sent, deps: { fetch: fetcher, now: () => Date.UTC(2026, 9, 1, 10) } };
+  return { docs, sent, gemSent, deps: { fetch: fetcher, now: () => Date.UTC(2026, 9, 1, 10) } };
 }
 const env = { ANTHROPIC_API_KEY: "sk-test" };
 const post = (body: unknown, token = "good") => new Request("https://app/api/ai", { method: "POST", headers: { authorization: `Bearer ${token}`, "content-type": "application/json" }, body: JSON.stringify(body) });
@@ -474,5 +484,68 @@ describe("strict schemas stay inside the API's limits", () => {
     expect(total.optional, `${task}: optional fields across strict schemas`).toBeLessThanOrEqual(24);
     expect(total.unions, `${task}: union fields`).toBeLessThanOrEqual(16);
     expect(strict.length).toBeLessThanOrEqual(20);
+  });
+});
+
+// Owner, 3 Nov: "bro why are we not doing the gemini free api tier and farm other free api-s for bs like food calorie
+// estimate, i should not be paying dollahs for that … i also have 10 dollar in gemini credits which i could use"
+describe("the light jobs on Gemini first", () => {
+  const gEnv = { ...env, GEMINI_FREE_KEY: "free-key", GEMINI_API_KEY: "paid-key" };
+  type Out = { answer: { items: { name: string }[] }; costUsd: number; via?: string };
+  const last = (w: ReturnType<typeof world>) => (w.docs.get("ai_usage") as { recent: { via?: string; usd: number; task: string }[] }).recent.at(-1);
+  it("a food estimate goes to the free tier: answered, nothing paid, Claude not asked, logged as free", async () => {
+    const w = world([], { gemini: [{ text: JSON.stringify(coffee) }] });
+    const res = await handleAi(post({ task: "describe", text: "my usual long coffee, big cup" }), gEnv, w.deps);
+    const body = (await res.json()) as Out;
+    expect(res.status).toBe(200);
+    expect(body.answer.items[0].name).toBe("Long coffee, large");
+    expect([body.costUsd, body.via, w.sent.length]).toEqual([0, "gemini-free", 0]);
+    expect(last(w)).toMatchObject({ task: "describe", via: "gemini-free", usd: 0 });
+    // the same prompt and shape as Claude's, the free key, the free model
+    const g = w.gemSent[0], gc = g.body.generationConfig as Record<string, unknown>;
+    expect(g.url).toBe("https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite:generateContent");
+    expect(g.headers["x-goog-api-key"]).toBe("free-key");
+    expect((g.body.systemInstruction as { parts: { text: string }[] }).parts[0].text).toBe(SYSTEM.describe);
+    expect([gc.responseMimeType, gc.responseJsonSchema]).toEqual(["application/json", SCHEMAS.describe]);
+    expect((g.body.contents as { parts: { text: string }[] }[])[0].parts).toEqual([{ text: "What I had: my usual long coffee, big cup" }]);
+  });
+  it("a photo goes as the picture itself", async () => {
+    const w = world([], { gemini: [{ text: JSON.stringify(coffee) }] });
+    await handleAi(post({ task: "describe", image: { mediaType: "image/jpeg", data: "AAAA" } }), gEnv, w.deps);
+    expect((w.gemSent[0].body.contents as { parts: unknown[] }[])[0].parts).toEqual([{ inlineData: { mimeType: "image/jpeg", data: "AAAA" } }, { text: "What's in this photo? Log it." }]);
+  });
+  it("free quota used up → his credits, at Flash-Lite's price (thinking counted as out)", async () => {
+    const w = world([], { gemini: [{ status: 429 }, { text: JSON.stringify(coffee) }] });
+    const body = (await (await handleAi(post({ task: "describe", text: "coffee" }), gEnv, w.deps)).json()) as Out;
+    expect(body.via).toBe("gemini");
+    expect(body.costUsd).toBeCloseTo((800 * 0.25 + 300 * 1.5) / 1e6, 9);
+    expect([w.gemSent[1].headers["x-goog-api-key"], w.gemSent[1].url.includes("gemini-3.1-flash-lite"), w.sent.length]).toEqual(["paid-key", true, 0]);
+  });
+  it("an answer in the wrong shape, then the credits down → Claude, as before", async () => {
+    const w = world([{ text: JSON.stringify(coffee) }], { gemini: [{ text: "Sure! Here's your coffee: 3 kcal" }, { status: 500 }] });
+    const res = await handleAi(post({ task: "describe", text: "coffee", models: { light: "haiku" } }), gEnv, w.deps);
+    const body = (await res.json()) as Out;
+    expect([res.status, body.via, w.gemSent.length, w.sent.length]).toEqual([200, undefined, 2, 1]);
+    expect(body.answer.items[0].name).toBe("Long coffee, large");
+    expect(last(w)?.via).toBeUndefined();
+  });
+  it("the questions go too; a key alone works (no free key → the credits first)", async () => {
+    const qs = { questions: [{ kind: "check", q: "Did the late coffee keep you up?", why: "your sleep rating fell", options: ["yes", "no"] }] };
+    const w = world([], { gemini: [{ text: JSON.stringify(qs) }] });
+    const res = await handleAi(post({ task: "questions", context: "## Today\n- coffee 16:00", asked: [] }), { ...env, GEMINI_API_KEY: "paid-key" }, w.deps);
+    expect(res.status).toBe(200);
+    expect([w.gemSent[0].headers["x-goog-api-key"], w.sent.length]).toEqual(["paid-key", 0]);
+  });
+  it("controls: a web look-up, chat and the reads stay on Claude; without keys nothing goes to Gemini", async () => {
+    const w = world([{ text: JSON.stringify(coffee) }, { text: "Hi." }, { text: JSON.stringify(coffee) }], { gemini: [] });
+    await handleAi(post({ task: "describe", text: "Lidl kifli", lookup: true }), gEnv, w.deps);
+    await handleAi(post({ task: "chat", context: "x", messages: [{ role: "user", text: "hi" }] }), gEnv, w.deps);
+    await handleAi(post({ task: "describe", text: "coffee" }), env, w.deps);
+    expect([w.gemSent.length, w.sent.length]).toEqual([0, 3]);
+  });
+  it("Settings can say which keys are set", async () => {
+    const w = world([]);
+    const u = (await (await handleAi(new Request("https://app/api/ai/usage", { headers: { authorization: "Bearer good" } }), { ...env, GEMINI_FREE_KEY: "k" }, w.deps)).json()) as { gemini: object };
+    expect(u.gemini).toEqual({ free: true, paid: false });
   });
 });

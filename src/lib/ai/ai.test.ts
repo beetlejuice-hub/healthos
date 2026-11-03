@@ -247,6 +247,13 @@ describe("the month's estimate (owner, 15 Oct: \"i feel like u are waay underest
     const rec = Array.from({ length: 41 }, (_, i) => call(t0 + i * (D / 10), "chat", "sonnet", { in: 14000, out: 1200 }));
     expect(estimateMonthUsd(models, rec).everyday).toBeCloseTo(30 * (41 / 4) * (14000 * 2 + 1200 * 10) / 1e6, 6); // 41 calls over 4 days: 10.25 a day, ≈ $12.30
   });
+  it("what Gemini answered isn't priced as Claude (3 Nov: food estimates on its free tier) — the ones Claude answered still are", () => {
+    const t0 = Date.parse("2026-10-01T09:00:00");
+    const free = Array.from({ length: 41 }, (_, i) => ({ ...call(t0 + i * (D / 10), "describe", "haiku", { in: 3000, out: 400 }), via: "gemini-free" as const, usd: 0 }));
+    expect(estimateMonthUsd(models, free).light).toBe(0);
+    const some = free.map((c, i) => (i % 4 ? c : { ...c, via: undefined }));
+    expect(estimateMonthUsd(models, some).light).toBeGreaterThan(0);
+  });
 });
 
 describe("models (owner, 27 Oct: \"tune it down just a liitle bit or make cheaper models run more often\" — \"4 ok\")", () => {
