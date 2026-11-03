@@ -3232,7 +3232,23 @@ both reads and the questions. Phases in that order; #152 RPE waits (owner).
      when written; the morning shows its summary folded (two lines), "Last night" / "Yesterday" and "One more thing"
      opened; the evening adds "Last night" / "Today" and its fun line. readday.test, e2e readday (through the app's own
      read path at 320; control: an older read as it was). Not checked: a real AI's wording (fake AI in tests).
+   - **Canvas (3 Nov): https://claude.ai/artifact/6ue24rNfvFqyynudn5828N** — prediction A (evening forecast with what
+     pushes it, morning forecast vs real with "anything else?" and how well it knows you) and B (one line: a bet at
+     night, "Called it ±2" / "Missed by 13" in the morning, a week of hits); new findings 1–6 below. Waiting on his picks.
    - [ ] 5. Prediction vs real: each evening the app predicts tonight's sleep and tomorrow's readiness from what the
      day had (drinks, training, late caffeine, a late meal, bedtime) using his own history; the morning shows
-     predicted vs real and what pushed it. Plan + canvas first.
-   - [ ] 6. New findings and charts from apps, papers and the web: a canvas of ideas to pick from.
+     predicted vs real and what pushed it. Plan: why — he asked, and a forecast that's checked every morning is the
+     honest test of whether the app understands him (and its misses are where it learns: "anything else?" answers
+     become tags the finder tests). How — lib/forecast, pure: for each of sleep score, HRV, resting HR (band nights)
+     and readiness, a ridge regression on his last 90 nights from that day's inputs (alcohol g, caffeine left at bed,
+     training volume / cardio minutes, last meal time and kcal after 20:00, bedtime against usual, steps, smoking); the
+     range is the middle 80 % of its past misses; each input's push = its weight × (tonight − usual); nothing shown
+     under 21 nights, an input only with 5+ nights of it. Tested — planted worlds (beer −6, late bed −3 …) recovered
+     near size; a no-effect control pushes ~0; past forecasts scored on nights they weren't fit on. Phases — 1 the
+     maths + the morning comparison; 2 the evening card; 3 "anything else?" → tags. Open: A or B.
+   - [ ] 6. New findings and charts from apps, papers and the web — on the canvas, his pick: 1 when your heart rests
+     (the night's lowest heart rate timing; Oura's idea — the band's minutes have it), 2 social jetlag (weekday vs
+     weekend sleep midpoint, and what Mondays after a big shift cost), 3 your weather (Open-Meteo, free, no key: sun,
+     temperature, pressure vs mood, sleep, headaches — needs his city), 4 year in pixels (a day per square by mood /
+     energy / sleep / steps, tap for the day), 5 moon vs your sleep (for fun, tested honestly; others: birthday week,
+     paydays, clock changes), 6 surprise days (far from what the forecast expected — "what was different?").
