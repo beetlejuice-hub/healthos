@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { glance, glanceDays, dayTone, weekDays, type GlanceDay } from "./glance";
+import { glance, glanceDays, weekDays, type GlanceDay } from "./glance";
 import { DEFAULT_SETTINGS } from "./store";
 import { addDays } from "./time";
 import type { Entry } from "./types";
@@ -62,12 +62,8 @@ describe("glance: a week against your usual week", () => {
     expect(k.trend[k.trend.length - 1]).toBeNull();
   });
 
-  it("marks single days outside a usual day, the good or the bad way", () => {
+  it("the week's days end today", () => {
     const ds = days((_, r) => 4 + gauss(r) * 0.5);
-    const s = get(ds, "stress");
-    expect(dayTone(s, 9)).toBe("worse");
-    expect(dayTone(s, 1)).toBe("better");
-    expect(dayTone(s, s.day!.p50)).toBeNull();
     expect(weekDays(ds, TODAY).map((d) => d.day)).toEqual(Array.from({ length: 7 }, (_, k) => addDays(TODAY, k - 6)));
   });
 });

@@ -469,7 +469,6 @@ ${ASK_RULES}
 news (owner: "it should only send message when it has a new finding, a new sttudy or whatever"): null on most days. Only when your search turned up something genuinely new and worth a message for THIS user — a study or review from the last 12 months on something in their stack, their training or their conditions, or a safety note on something they take — give {"title":"","text":"2–3 sentences: what it found and what it means for them","source":{"title":"","url":"https://…"}}. It's sent to their chat, not shown with the items, so it must not repeat an item or anything already shown. No news is better than filler.`,
 };
 
-
 /* ------------------------------------------------------------------ checks */
 
 /** Pull the JSON object out of a text answer (for the web-search tasks, which answer in text). */
@@ -622,12 +621,6 @@ export function checkNight(a: NightAnswer): NightAnswer {
       return { ...(items.length ? { items } : {}), ...(questions.length ? { questions } : {}) }; })(),
   };
 }
-
-/**
- * A question asked again every day is shown word for word without a new AI call, so it must read right on any day (owner,
- * 20 Oct: "Stress is at 6 this morning…" came back the next day). Numbers are today's facts: no digits in a daily one.
- */
-export const timeless = (q: { text: string }) => !/\d/.test(q.text);
 
 /** The fallback questions (no read brought any): the reads' rules, no studies (no web here). */
 export function checkQuestions(a: QuestionsAnswer): QuestionsAnswer {

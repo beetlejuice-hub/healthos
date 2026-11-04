@@ -14,8 +14,7 @@ import { alcoholCurve, type AlcoholDose } from "./alcohol";
 import { feltOn } from "./bodywords";
 import { currentKg } from "./body";
 import { atMinute, localDay, minuteOfDay, addDays, startOfDay, DAY, MIN } from "./time";
-import { correlation, difference, mean, median, sd, type Range } from "./stats";
-import { clearTogether } from "./regress";
+import { correlation, mean, median, sd, type Range } from "./stats";
 import { suppByDay } from "./suppdays";
 import { volume } from "./training";
 import { macrosOf } from "./nutrition";
@@ -250,34 +249,11 @@ export function pairs(facts: DayFacts[]): Pair[] {
   ];
 }
 
-export type SuppEffect = { suppId: string; metric: "energy" | "mood" | "focus"; on: number; off: number; diff: Range | null; need: number };
-
 /** Took it (true), not (false: said "didn't", or not logged on a day the app was used), or unknown (null: nothing logged that day, or before it was first logged). */
 export const suppDay = (d: { taken: Set<string> | string[]; skipped?: Set<string> | string[] }, id: string): boolean | null => {
   const has = (x: Set<string> | string[] | undefined) => (x instanceof Set ? x.has(id) : !!x?.includes(id));
   return has(d.taken) ? true : has(d.skipped) ? false : null;
 };
-
-/**
- * On vs off for each supplement: next-day energy/mood/focus on days after you took it vs days
- * after you didn't. Only meaningful with enough "off" days — which is why the page suggests a
- * planned off block rather than reading too much into a 93% adherence streak.
- */
-export function suppEffects(facts: DayFacts[], supplements: Supplement[]): SuppEffect[] {
-  const out: SuppEffect[] = [];
-  for (const s of supplements.filter((x) => x.active)) {
-    for (const metric of ["energy", "mood", "focus"] as const) {
-      const on: number[] = [], off: number[] = [];
-      facts.forEach((d, i) => { const n = facts[i + 1], v = n?.[metric], had = suppDay(d, s.id); if (v == null || had == null) return; (had ? on : off).push(v); });
-      const need = Math.max(0, 5 - Math.min(on.length, off.length));
-      out.push({ suppId: s.id, metric, on: on.length, off: off.length, diff: need ? null : difference(on, off), need });
-    }
-  }
-  // every supplement × feeling tested together (PLAN 188): at 95 % each, a supplement "worked" in 18 of 30 worlds where
-  // none does anything (engines audit); only Benjamini–Hochberg 10 % survivors stay clear
-  const held = clearTogether(out.map((x) => x.diff));
-  return out.map((x, i) => ({ ...x, diff: held[i] }));
-}
 
 /** The day's body words and how much (lib/bodywords feltOn), as DayFacts holds them. */
 function felt(feel: EntryOf<"feel">[]): Pick<DayFacts, "felt" | "feltHow"> {

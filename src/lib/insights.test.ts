@@ -1,10 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { adherence, dailyFacts, lanes, pairs, suppEffects } from "./insights";
+import { adherence, dailyFacts, lanes, pairs } from "./insights";
 import { byDay } from "./nutrition";
 import { makeSample } from "./sample";
 import { DEFAULT_SETTINGS } from "./store";
 import type { Entry, Supplement } from "./types";
-import type { DayFacts } from "./insights";
 import { addDays, localDay } from "./time";
 
 const NOW = new Date(2026, 8, 29, 14, 20).getTime();
@@ -88,21 +87,5 @@ describe("on sample data", () => {
     const a = adherence(entries, stack, days);
     expect(a.find((x) => x.suppId === "creatine")!.taken).toBeGreaterThan(22);
     expect(a.find((x) => x.suppId === "mag")!.usualMin).toBeGreaterThan(22 * 60);
-  });
-
-  it("only compares on vs off once both sides have enough days", () => {
-    const e = suppEffects(facts, stack);
-    expect(e.every((x) => (x.need > 0) === (x.diff === null))).toBe(true);
-  });
-
-  it("off days are only days answered \"didn't take\" — not days it wasn't ticked, or nothing was logged (PLAN 74)", () => {
-    const day = (i: number, o: Partial<DayFacts>): DayFacts => ({ ...facts[0], day: addDays(today, -40 + i), taken: new Set(), skipped: new Set(), mood: 6, ...o });
-    // taken 30 days; 10 days not ticked (mood 3 the next day); never answered "didn't"
-    const forgot = Array.from({ length: 40 }, (_, i) => day(i, i % 4 === 0 ? { mood: 6 } : { taken: new Set(["creatine"]), mood: i % 4 === 3 ? 3 : 6 }));
-    const m = suppEffects(forgot, stack).find((x) => x.suppId === "creatine" && x.metric === "mood")!;
-    expect(m.off).toBe(0); expect(m.diff).toBeNull();
-    // the same with 10 real "didn't take" days: those are compared
-    const skipped = forgot.map((d, i) => (i % 4 === 0 ? { ...d, skipped: new Set(["creatine"]) } : d));
-    expect(suppEffects(skipped, stack).find((x) => x.suppId === "creatine" && x.metric === "mood")!.off).toBe(10);
   });
 });

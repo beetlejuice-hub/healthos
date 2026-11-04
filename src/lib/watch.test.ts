@@ -132,7 +132,7 @@ describe("check-ins around each time", () => {
 });
 
 // Phase 3 (owner: "do 3"): your own fix when a check-in is low, and what a watch showed when it ends.
-import { tryKey, watchDone, watchOffer, watchVerdict } from "./watch";
+import { tryKey, watchOffer, watchVerdict } from "./watch";
 
 describe("a low check-in brings your own fix", () => {
   const WALK: Watch = { ...W, id: "wk", what: "Walks → more energy", note: "i feel better after a walk", question: "Better than before the walk?", options: ["Worse", "Same", "Better"], start: "2026-10-01", at: at("2026-10-01", "08:00"), days: 28,
@@ -176,9 +176,5 @@ describe("what a watch showed", () => {
     expect(watchVerdict(CR, { entries: [...as, ...took], workouts: [] }, at("2026-10-15", "09:00"))).toMatch(/^14 answers in 14 days to “Muscles feel full today\?”: “Very” 11 times\. On creatine days you answered “Very” \([\d.]+ of 2\), without “Very” \([\d.]+\) — not clear\.$/);
     expect(watchVerdict(CR, { entries: [], workouts: [] }, at("2026-10-15", "09:00"))).toBe("No answers in its 14 days — nothing to go on.");
     expect(watchVerdict({ ...CR, stopped: 1 }, { entries: as, workouts: [] }, at("2026-10-15", "09:00"))).toBeNull();
-  });
-  it("on Today for 3 days after it ends, not before, not after, not once stopped", () => {
-    expect([14, 15, 17, 18].map((d) => watchDone(CR, at(`2026-10-${d}`, "10:00")))).toEqual([false, true, true, false]);
-    expect(watchDone({ ...CR, stopped: 1 }, at("2026-10-15", "10:00"))).toBe(false);
   });
 });

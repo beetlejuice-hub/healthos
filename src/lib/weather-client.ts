@@ -32,7 +32,6 @@ export async function refreshWeather(now = Date.now()): Promise<void> {
   } catch { /* offline: no weather today */ }
 }
 
-export const weatherNow = () => weather;
 /** The weather for the pages, fetched the first time it's asked for today. */
 export function useWeather(): Weather | null {
   useEffect(() => { void refreshWeather(); }, []);

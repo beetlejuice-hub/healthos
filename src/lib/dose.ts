@@ -9,8 +9,6 @@ import { answerSlot, type Entry, type Supplement } from "./types";
 import { addDays, localDay } from "./time";
 import { difference, mean, type Range } from "./stats";
 
-export type DoseLog = { at: number; dose: string }[];
-
 /** "400 mg" → 400 mg; "2 x 200mg" → 400 mg; "5 g" → 5 g; "1 tsp" → 1 tsp. Null when there's no number. */
 export function doseAmount(text: string): { n: number; unit: string } | null {
   const t = text.toLowerCase().replace(",", ".").replace(/µg|μg/g, "mcg");

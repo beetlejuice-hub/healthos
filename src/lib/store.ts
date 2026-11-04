@@ -419,13 +419,4 @@ export function useUndo(): Undo | null {
   return useSyncExternalStore((l) => { undoListeners.add(l); return () => { undoListeners.delete(l); }; }, () => undo, () => undo);
 }
 
-/** Log something and offer it back as an undo in one go. */
-export function logWithUndo(e: NewEntry, label: string): Entry {
-  const full = act.addEntry(e);
-  offerUndo([full.id], label);
-  return full;
-}
-
-/** For tests: reset to a known state without touching storage. */
-export const __setState = (s: State) => { state = s; listeners.forEach((l) => l()); };
 export const EMPTY_STATE = EMPTY;

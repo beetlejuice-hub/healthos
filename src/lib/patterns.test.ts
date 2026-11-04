@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { patterns, rolling7, weeklyTrend } from "./patterns";
+import { patterns } from "./patterns";
 import type { GlanceDay } from "./glance";
 import type { Entry } from "./types";
 import { addDays, atMinute } from "./time";
@@ -62,18 +62,5 @@ describe("patterns: before your best and worst days", () => {
   });
   it("waits for 20 rated days", () => {
     expect(patterns(days.slice(0, 12), entries)).toEqual({ need: 8 });
-  });
-});
-
-describe("weeklyTrend", () => {
-  it("finds a planted rise of 0.5 a week and calls a flat line not clear", () => {
-    const r = rng(9), up = Array.from({ length: 28 }, (_, i) => ({ mood: 5 + (i / 7) * 0.5 + gauss(r) * 0.3 })) as GlanceDay[];
-    const t = weeklyTrend(up, "mood")!;
-    expect(t.perWeek).toBeGreaterThan(0.3); expect(t.perWeek).toBeLessThan(0.7); expect(t.clear).toBe(true);
-    const flat = Array.from({ length: 28 }, () => ({ mood: 5 + gauss(r) * 0.3 })) as GlanceDay[];
-    expect(weeklyTrend(flat, "mood")!.clear).toBe(false);
-  });
-  it("rolls a 7-day average once 3 days are in", () => {
-    expect(rolling7([4, null, 6, 8, null])).toEqual([null, null, null, 6, 6]); // day 3 has only 2 values in its window
   });
 });

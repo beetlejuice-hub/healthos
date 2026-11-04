@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { againstGoals, averageOver, byDay, forGrams, split } from "./nutrition";
+import { byDay, forGrams, split } from "./nutrition";
 import type { Entry } from "./types";
 
 const at = (d: number, h: number) => new Date(2026, 8, d, h).getTime();
@@ -28,22 +28,9 @@ describe("byDay and averages — unlogged days are left out", () => {
   it("a day with only a drink is not a logged day", () => {
     expect(days.get("2026-09-28")!.logged).toBe(false);
   });
-
-  it("averages only logged days and says how many there were", () => {
-    const a = averageOver(["2026-09-26", "2026-09-27", "2026-09-28", "2026-09-29"], days);
-    expect(a.loggedDays).toBe(2);
-    expect(a.totalDays).toBe(4);
-    expect(a.avg.kcal).toBe(1700);
-  });
 });
 
-describe("againstGoals and split", () => {
-  it("reports what's left and never a negative remainder", () => {
-    const rows = againstGoals({ kcal: 2800, p: 102, c: 170, f: 36 }, { kcal: 2600, p: 160, c: 300, f: 80 });
-    expect(rows.find((r) => r.key === "kcal")!.left).toBe(0);
-    expect(rows.find((r) => r.key === "p")!.left).toBe(58);
-  });
-
+describe("split", () => {
   it("splits calories by macro", () => {
     const s = split({ kcal: 0, p: 100, c: 200, f: 50 });
     expect(s.p + s.c + s.f).toBeCloseTo(1, 9);

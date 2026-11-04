@@ -9,7 +9,7 @@ import type { Finding } from "../findings";
 import { e1rmHistory } from "../training";
 import { ols, tCrit } from "../regress";
 import { mean } from "../stats";
-import { addDays, DAY, localDay } from "../time";
+import { DAY, localDay } from "../time";
 
 const KEYS = ["energy", "mood", "focus", "stress"] as const;
 
@@ -81,5 +81,3 @@ export function proteinPerKg(facts: DayFacts[], kg: number): Finding | null {
     sure: `${logged.length} days`, weight: 0.5,
   };
 }
-
-export const factsWindow = (today: string, days = 90) => [addDays(today, -(days - 1)), today] as const;

@@ -214,9 +214,6 @@ export const MUSCLES: Record<string, Record<string, number>> = {
   "Cable woodchop": { Core: 1 },
 };
 
-/** Every exercise the app knows (for suggestions while typing); your own names work too. */
-export const EXERCISES = Object.keys(MUSCLES).sort();
-
 /** An exercise's main muscle: the one it works most (the first, on a tie — Dips → Chest). */
 export const mainMuscle = (exercise: string): string | null => {
   const m = MUSCLES[exercise]; if (!m) return null;

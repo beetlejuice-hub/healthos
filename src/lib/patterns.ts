@@ -71,17 +71,3 @@ export function patterns(days: GlanceDay[], entries: Entry[]): Patterns {
   worst.rows.sort(byClear); best.rows.sort(byClear);
   return { worst, best, rated: rated.length };
 }
-
-/** Least-squares trend of a daily measure over the last `n` days, per week, with its 95% range. */
-export function weeklyTrend(days: GlanceDay[], k: "mood" | "energy" | "stress", n = 28): { perWeek: number; lo: number; hi: number; n: number; clear: boolean } | null {
-  const pts = days.slice(-n).map((d, i) => [i, d[k]] as const).filter((p): p is readonly [number, number] => p[1] != null);
-  if (pts.length < 10) return null;
-  const mx = mean(pts.map((p) => p[0])), my = mean(pts.map((p) => p[1]));
-  let sxy = 0, sxx = 0; for (const [x, y] of pts) { sxy += (x - mx) * (y - my); sxx += (x - mx) ** 2; }
-  const b = sxy / sxx, a = my - b * mx, rss = pts.reduce((s, [x, y]) => s + (y - a - b * x) ** 2, 0);
-  const se = Math.sqrt(rss / (pts.length - 2) / sxx), t = 2 + 4 / pts.length; // ~t(0.975) for small n
-  return { perWeek: b * 7, lo: (b - t * se) * 7, hi: (b + t * se) * 7, n: pts.length, clear: b - t * se > 0 || b + t * se < 0 };
-}
-
-/** Each day's 7-day rolling average (needs 3 values in the window). */
-export const rolling7 = (vals: (number | null)[]) => vals.map((_, i) => { const xs = vals.slice(Math.max(0, i - 6), i + 1).filter((v): v is number => v != null); return xs.length >= 3 ? mean(xs) : null; });

@@ -6,7 +6,7 @@
  * always say how many that was.
  */
 
-import type { Entry, Goals, Macros } from "./types";
+import type { Entry, Macros } from "./types";
 import { localDay } from "./time";
 
 export const ZERO: Macros = { kcal: 0, p: 0, c: 0, f: 0 };
@@ -39,32 +39,6 @@ export function byDay(entries: Entry[]): Map<string, DayIntake> {
     out.set(day, { day, totals: add(cur.totals, m), logged: cur.logged || e.kind === "food", items: cur.items + 1 });
   }
   return out;
-}
-
-export type Averages = { avg: Macros; loggedDays: number; totalDays: number };
-
-/** Average over the given days, counting only logged ones. */
-export function averageOver(days: string[], intake: Map<string, DayIntake>): Averages {
-  const logged = days.map((d) => intake.get(d)).filter((d): d is DayIntake => !!d && d.logged);
-  const sum = logged.reduce((a, d) => add(a, d.totals), ZERO);
-  const n = logged.length || 1;
-  return {
-    avg: { kcal: sum.kcal / n, p: sum.p / n, c: sum.c / n, f: sum.f / n },
-    loggedDays: logged.length,
-    totalDays: days.length,
-  };
-}
-
-export type GoalRow = { key: keyof Macros; value: number; goal: number; left: number; pct: number };
-
-export function againstGoals(t: Macros, g: Goals): GoalRow[] {
-  return (["kcal", "p", "c", "f"] as const).map((key) => ({
-    key,
-    value: t[key],
-    goal: g[key],
-    left: Math.max(0, g[key] - t[key]),
-    pct: g[key] > 0 ? t[key] / g[key] : 0,
-  }));
 }
 
 /** Share of calories from protein / carbs / fat, 0–1 each. */

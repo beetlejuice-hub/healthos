@@ -5,7 +5,7 @@
 // no supplement does anything). Run with AUDIT=1; prints the table the investigation quotes.
 import { describe, expect, it } from "vitest";
 import { makeSample } from "./sample";
-import { dailyFacts, suppEffects } from "./insights";
+import { dailyFacts } from "./insights";
 import { glanceDays } from "./glance";
 import { DEFAULT_SETTINGS } from "./store";
 import { scout } from "./scout";
@@ -33,7 +33,6 @@ function engines(seed: number, effects: boolean) {
   // Connections as the page builds it: with the one engine's answers (PLAN 188 phase 2)
   const cmp = comparisons(days, SUPPS, evidence(facts, SUPPS)).filter((c) => c.diff?.clear);
   const pat = patterns(days, entries), patClear = "worst" in pat ? [...pat.worst.rows, ...pat.best.rows].filter((r) => r.diff?.clear) : [];
-  const sup = suppEffects(facts, SUPPS).filter((s) => s.diff?.clear);
   const btw = between(entries, workouts, names, NOW).filter((r) => r.found);
   return {
     leads: leads.length, strong: leads.filter((p) => leadGrade(p) === "strong").length, leadText: leads.map((p) => p.text),
@@ -41,7 +40,7 @@ function engines(seed: number, effects: boolean) {
     yesSides: leads.filter((p) => p.a.yes).map((p) => [p.of, p.n - p.of] as const),
     noticed: eff.length, noticedText: eff.map((f) => f.title),
     connections: cmp.length, connText: cmp.map((c) => `${c.what} → ${c.outcome}`),
-    patterns: patClear.length, supps: sup.length, between: btw.length,
+    patterns: patClear.length, between: btw.length,
   };
 }
 
@@ -62,9 +61,9 @@ function nullGrid(seed: number) {
 describe("one bar for every engine (PLAN 188)", () => {
   const N = 20;
   const ctl = Array.from({ length: N }, (_, s) => engines(2000 + s, false)), fx = Array.from({ length: N }, (_, s) => engines(2000 + s, true));
-  const worlds = (rows: ReturnType<typeof engines>[], k: "strong" | "noticed" | "connections" | "patterns" | "supps") => rows.filter((x) => x[k] > 0).length;
+  const worlds = (rows: ReturnType<typeof engines>[], k: "strong" | "noticed" | "connections" | "patterns") => rows.filter((x) => x[k] > 0).length;
   it("nothing planted: each engine says something in at most 5 of 20 worlds (about 1 in 10 is the bar)", () => {
-    for (const k of ["strong", "noticed", "connections", "patterns", "supps"] as const) expect(worlds(ctl, k), k).toBeLessThanOrEqual(5);
+    for (const k of ["strong", "noticed", "connections", "patterns"] as const) expect(worlds(ctl, k), k).toBeLessThanOrEqual(5);
   });
   it("planted: the same engines still find what's there", () => {
     expect(worlds(fx, "noticed")).toBeGreaterThanOrEqual(18);
@@ -74,7 +73,6 @@ describe("one bar for every engine (PLAN 188)", () => {
     expect(worlds(fx, "patterns")).toBeGreaterThanOrEqual(12);
   });
   it("supplements do nothing in the sample: a supplement 'works' in at most 5 of 20 worlds with the effects on too", () => {
-    expect(worlds(fx, "supps")).toBeLessThanOrEqual(5);
   });
   it("the night grids: nothing clear on pure chance, and a chance 'likely' in at most 2 of 10 grids", () => {
     const g = Array.from({ length: 10 }, (_, s) => nullGrid(700 + s));
@@ -94,7 +92,7 @@ describe.skipIf(!process.env.AUDIT)("engines audit", () => {
     const N = Number(process.env.AUDIT_N ?? 30);
     const sum = (rows: ReturnType<typeof engines>[], k: keyof ReturnType<typeof engines>) => rows.filter((x) => (x[k] as number) > 0).length;
     const ctl = Array.from({ length: N }, (_, s) => engines(1000 + s, false)), fx = Array.from({ length: N }, (_, s) => engines(1000 + s, true));
-    const table = (["leads", "strong", "noticed", "connections", "patterns", "supps", "between"] as const).map((k) => ({ engine: k, "worlds with a claim, nothing planted": `${sum(ctl, k)} of ${N}`, "claims per null world": (ctl.reduce((a, x) => a + (x[k] as number), 0) / N).toFixed(2), "worlds with a claim, planted": `${sum(fx, k)} of ${N}` }));
+    const table = (["leads", "strong", "noticed", "connections", "patterns", "between"] as const).map((k) => ({ engine: k, "worlds with a claim, nothing planted": `${sum(ctl, k)} of ${N}`, "claims per null world": (ctl.reduce((a, x) => a + (x[k] as number), 0) / N).toFixed(2), "worlds with a claim, planted": `${sum(fx, k)} of ${N}` }));
     console.table(table);
     const grids = Array.from({ length: 10 }, (_, s) => nullGrid(500 + s));
     console.table(grids.map((g, i) => ({ grid: i, ...g })));

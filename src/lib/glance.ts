@@ -164,13 +164,5 @@ const minW = (m: Measure) => (m.unit === "/10" ? 1 : undefined);
 export const dayShade = (m: MeasureStat, v: number | null): Shade => (v == null || !m.day ? NO_SHADE : shade(v, m.day.p10, m.day.p90, m.good, minW(m)));
 export const weekShade = (m: MeasureStat): Shade => (m.week == null || !m.usualWeek || (m.state !== "hi" && m.state !== "lo") ? NO_SHADE : shade(m.week, m.usualWeek.p10, m.usualWeek.p90, m.good, minW(m)));
 
-export function dayTone(m: MeasureStat, v: number | null): "better" | "worse" | "neutral" | null {
-  if (v == null || !m.day) return null;
-  const out = v < m.day.p10 ? "lo" : v > m.day.p90 ? "hi" : null;
-  if (!out) return null;
-  if (!m.good) return "neutral";
-  return (m.good === "up") === (out === "hi") ? "better" : "worse";
-}
-
 /** The first and last day a glance over `n` days back needs (8 weeks of history + this week). */
 export const glanceSpan = (today: string, trendDays = 30) => ({ from: addDays(today, -Math.max(70, trendDays + 7)), to: today });

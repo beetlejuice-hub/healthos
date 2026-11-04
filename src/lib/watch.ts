@@ -169,8 +169,6 @@ export function watchVerdict(w: Watch, d: WatchData, now: number): string | null
   const fs = watchFindings(w, d, now).map((f) => ` ${f.text.replace(/^./, (c) => c.toUpperCase())} — ${f.label}.`).join("");
   return `${plural(as.length, "answer")} in ${w.days} days to “${w.question}”: “${most}” ${n === as.length ? "every time" : `${n} times`}.${fs}`;
 }
-/** A finished watch is on Today for 3 days after its last one, until "Two more weeks" or "Done". */
-export const watchDone = (w: Watch, now: number) => !w.stopped && !w.closed && watchDay(w, now) > w.days && watchDay(w, now) <= w.days + 3;
 
 /** "Day 6 of 14 · 5 answers so far". */
 export function watchProgress(w: Watch, entries: Entry[], now: number): string {
