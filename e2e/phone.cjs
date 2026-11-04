@@ -32,7 +32,7 @@ const visibleSecs = (pg) => pg.evaluate(() => [...new Set([...document.querySele
       await pg.evaluate(() => { const k = 'healthos.v1:u-test', s = JSON.parse(localStorage.getItem(k) || '{}'); s.entries = [0, 1, 2].map((d) => ({ id: 'c' + d, kind: 'drink', at: Date.now() - d * 864e5 - 36e5, name: 'Coffee', ml: 250, caffeineMg: 95, alcoholG: 0, kcal: 2 })); localStorage.setItem(k, JSON.stringify(s)); });
       await pg.goto(APP + '#insights'); await pg.reload(); await pg.waitForTimeout(800);
       if (await pg.locator('.secbar button', { hasText: 'Findings' }).count()) { await pg.locator('.secbar button', { hasText: 'Findings' }).click(); await pg.waitForTimeout(300); }
-      check('coffee only: "still checking" is on screen or one tab away', await pg.locator('#noticed').isVisible());
+      check('coffee only: "still checking" is on screen or one tab away', await pg.locator('#findings .checking').isVisible());
     }
     if (name === 'phone') { await pg.goto(APP + '#settings'); await pg.getByRole('button', { name: /Load sample/ }).click(); await pg.waitForTimeout(300); }
     else await pg.waitForTimeout(500);

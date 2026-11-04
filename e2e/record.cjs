@@ -1,9 +1,11 @@
 // The app's track record (PLAN 188 phase 3; owner, 3 Nov: "the app should find these connections autonomusly and then start
 // tracking them, and see if it was right or no"; the canvas's A, on each card). 90 days where two beers one evening go with
 // a low mood the next day (planted, as in leads.cjs). The record holds the lead, said 45 days ago — on the days since, it
-// held — and a contrary claim said then too ("after a drinking day, mood is higher"), which didn't. Leads opens with the
-// score, the lead card says how it did, the one that didn't hold is in a fold; Noticed's finding joins the record today
-// and says it's checking. Then the lead's own record turned the wrong way: it leaves Leads for the fold. 390 px.
+// held — and a contrary claim said then too ("after a drinking day, mood is higher"), which didn't. The list opens with
+// the score; Noticed is sure of the drinks too, so the lead is on Noticed's card (PLAN 195, one list), which says how it
+// did since September — the oldest record of the two — and the score counts it once; the one that didn't hold is in a
+// fold; Noticed's own finding joins the record today. Then the lead's record turned the wrong way: it goes to the fold
+// and the card says Noticed's own, checking since today. 390 px.
 const { chromium, APP, OUT, handle, tables } = require('./harness.cjs');
 
 const NOW = new Date('2026-10-27T10:00:00').getTime(), D = 864e5, KEY = 'healthos.v1:u-test';
@@ -44,14 +46,16 @@ const SAID = ymd(NOW - 45 * D);
   await pg.goto(APP + '#insights/connections'); await pg.reload(); await pg.waitForSelector('#scout', { timeout: 8000 }).catch(() => {});
   await pg.waitForTimeout(800);
 
-  const score = (await pg.locator('#scout .rec-score').innerText().catch(() => '')).replace(/\s+/g, ' ');
-  check(`Leads opens with the score of the app's calls (${score})`, /^The app's calls since September: 1 held · \d+ checking · 1 didn't hold$/.test(score));
-  const card = (await pg.locator('#scout .scard').filter({ hasText: 'Alcohol and next-day mood' }).first().innerText().catch(() => '')).replace(/\s+/g, ' ');
+  const score = (await pg.locator('#findings .rec-score').innerText().catch(() => '')).replace(/\s+/g, ' ');
+  check(`the list opens with the score of the app's calls, the drinks counted once (${score})`, /^The app's calls since September: 1 held( · \d+ checking)? · 1 didn't hold$/.test(score));
+  const merged = pg.locator('#noticed .ncard').filter({ has: pg.locator('.n-lead') }).first();
+  const card = (await merged.innerText().catch(() => '')).replace(/\s+/g, ' ');
   const line = (card.match(/held Said .*? vs \d\.\d/) || [''])[0];
   check(`the lead's card: said 45 days ago, held on the days since — the drinking days' mood against the rest (${line || card.slice(0, 260)})`, /^held Said Sat 12 Sep · since: \d+ days with more alcohol than usual, \d+ with less — mood \d\.\d vs \d\.\d$/.test(line) && (() => { const m = line.match(/mood (\d\.\d) vs (\d\.\d)/); return m && +m[1] < +m[2] - 1; })());
-  await pg.locator('#scout .scard').first().screenshot({ path: OUT + 'record-lead.png' });
+  check(`…on Noticed's card, the lead with it, not a card of its own (${await pg.locator('#scout .scard').filter({ hasText: 'Alcohol and next-day mood' }).count()})`, /also a lead · Alcohol and next-day mood/i.test(card) && await pg.locator('#scout .scard').filter({ hasText: 'Alcohol and next-day mood' }).count() === 0);
+  await merged.screenshot({ path: OUT + 'record-lead.png' });
   // the one that didn't hold: in the fold, not on the list
-  const fold = pg.locator('#scout .rec-gone');
+  const fold = pg.locator('#findings .rec-gone');
   check(`"Didn't hold · 1", folded (${await fold.locator('summary').innerText().catch(() => '')})`, (await fold.locator('summary').innerText().catch(() => '')) === "Didn't hold · 1" && !(await fold.evaluate((d) => d.open).catch(() => true)));
   await fold.locator('summary').click();
   const gone = (await fold.innerText()).replace(/\s+/g, ' ');
@@ -62,8 +66,6 @@ const SAID = ymd(NOW - 45 * D);
   // Noticed's finding joins the record today, and says it's checking
   const kept = await record(), noticed = kept.filter((c) => c.from === 'noticed');
   check(`Noticed's finding is kept from today (${JSON.stringify(noticed.map((c) => [c.id, c.said]))})`, noticed.length >= 1 && noticed.every((c) => c.said === '2026-10-27') && kept.find((c) => c.id === lead.id).said === SAID);
-  const nline = (await pg.locator('#noticed .ncard .rec-line').first().innerText().catch(() => '')).replace(/\s+/g, ' ');
-  check(`…its card: checking on the days since (${nline})`, /^checking Said Tue 27 Oct · checking it on the days since \(0 with, 0 without — 8 of each before it can say\)$/.test(nline));
   check(`390: fits (${await pg.evaluate(() => document.documentElement.scrollWidth)} px)`, await pg.evaluate(() => document.documentElement.scrollWidth) <= 390);
 
   // best and worst days (Insights → Mind): a clear row joins the record today, and says it's checking (PLAN 188)
@@ -77,8 +79,10 @@ const SAID = ymd(NOW - 45 * D);
   // the lead's own record the wrong way: it leaves Leads for the fold
   await pg.evaluate(([k, id]) => { const s = JSON.parse(localStorage.getItem(k)); s.ai.record = s.ai.record.map((c) => (c.id === id ? { ...c, sign: 1 } : c)); localStorage.setItem(k, JSON.stringify(s)); }, [KEY, lead.id]);
   await pg.reload(); await pg.waitForSelector('#scout', { timeout: 8000 }).catch(() => {}); await pg.waitForTimeout(800);
-  check(`a lead that didn't hold leaves the list (${await pg.locator('#scout .scard').filter({ hasText: 'Alcohol and next-day mood' }).count()} cards) for the fold (${await pg.locator('#scout .rec-gone summary').innerText().catch(() => '')})`,
-    await pg.locator('#scout .scard').filter({ hasText: 'Alcohol and next-day mood' }).count() === 0 && (await pg.locator('#scout .rec-gone summary').innerText().catch(() => '')) === "Didn't hold · 2");
+  check(`a lead that didn't hold leaves the list (${await pg.locator('.n-lead').count()} on cards) for the fold (${await pg.locator('#findings .rec-gone summary').innerText().catch(() => '')})`,
+    await pg.locator('.n-lead').count() === 0 && await pg.locator('#scout .scard').filter({ hasText: 'Alcohol and next-day mood' }).count() === 0 && (await pg.locator('#findings .rec-gone summary').innerText().catch(() => '')) === "Didn't hold · 2");
+  const nline = (await pg.locator('#noticed .ncard .rec-line').first().innerText().catch(() => '')).replace(/\s+/g, ' ');
+  check(`…and Noticed's card says its own: checking on the days since (${nline})`, /^checking Said Tue 27 Oct · checking it on the days since \(0 with, 0 without — 8 of each before it can say\)$/.test(nline));
   console.log('errors: ' + JSON.stringify(errs));
   check('no page errors', errs.length === 0);
   await b.close();

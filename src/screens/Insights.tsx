@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { TellAi } from "../components/TellAi";
 import { readRoute } from "../lib/nav";
 import { swipeTo } from "../lib/swipe";
@@ -30,10 +30,11 @@ import { addDays, atMinute, dayLabel, localDay } from "../lib/time";
 import { useNow } from "./Today";
 import { notice, WINDOW_DAYS, type Report } from "../lib/findings";
 import { noticedClaim } from "../lib/record";
-import { RecordLine, useKeepClaims, useRecord } from "../components/Record";
+import { DidntHold, RecordLine, RecordScore, useKeepClaims, useRecord } from "../components/Record";
 import { useEnrich } from "../components/useEvidence";
 import { StackCheckPanel } from "../components/StackCheck";
-import { useScout, WorthALook } from "../components/Scout";
+import { LeadExtras, useScout, WorthALook, type Scouted } from "../components/Scout";
+import { sameAsNoticed } from "../lib/findlist";
 import { Experiments } from "../components/Ai";
 import type { GraphFocus } from "../components/MasterGraph";
 import { DOSE_MIN_DAYS, doseCompare } from "../lib/dose";
@@ -195,7 +196,7 @@ export function Insights() {
       {!nothing && <MindPage data={data} band={band} now={now} entries={s.entries} halfLifeMin={s.settings.halfLifeMin} days={gdays} period={period} />}
       {!nothing && <Mind days={gdays} now={now} period={period} />}
       {!nothing && <Connections days={gdays} />}
-      {!nothing && <div data-sec="connections" className="sec-wrap"><Noticed report={report} /><WorthALook items={scouted} onShow={showOnGraph} /></div>}
+      {!nothing && <div data-sec="connections" className="sec-wrap"><OneList report={report} items={scouted} onShow={showOnGraph} /></div>}
       {!nothing && <BodyLab band={band} entries={s.entries} now={now} active={shown === "lab" || !shown} />}
       {!nothing && <SleepNights data={data} band={band} now={now} entries={s.entries} halfLifeMin={s.settings.halfLifeMin} />}
       {!nothing && <Body days={gdays} period={period} now={now} bandNights={bandNights} />}
@@ -225,28 +226,81 @@ export function Insights() {
   );
 }
 
+/* ------------------------------------------------------------------ One list */
+
+/**
+ * Insights → Findings, one list (PLAN 195; owner, 4 Nov: "1" — "this goes with that" was in six places): the app's
+ * score, then what it's sure of (Noticed), then what's worth a look (Leads) — a lead Noticed already answers isn't listed
+ * again — and at the end what's still being checked, what was checked and does nothing, and what didn't hold. The
+ * Connections chart above is the overview of every comparison.
+ */
+function OneList({ report, items, onShow }: { report: Report; items: Scouted[]; onShow: (f: GraphFocus) => void }) {
+  const all = useRecord();
+  const { same, lineOf, twinOf, rec } = useMemo(() => {
+    // each Noticed card's twins among the leads; the card shows the oldest record of them (a lead said in September keeps
+    // its history), and the score and the folds count each finding once
+    const same = new Set<string>(), lineOf = new Map<string, string>(), drop = new Set<string>();
+    for (const f of report.found) {
+      const own = noticedClaim(f, "")?.id, twins = items.filter((x) => sameAsNoticed(x.p, [f]));
+      twins.forEach((x) => same.add(x.p.id));
+      const ids = [own, ...twins.map((x) => `lead:${x.p.id}`)].filter((id): id is string => !!id && all.has(id))
+        .sort((a, b) => all.get(a)!.c.said.localeCompare(all.get(b)!.c.said));
+      if (ids.length) { lineOf.set(f.id, ids[0]); ids.slice(1).forEach((id) => drop.add(id)); }
+    }
+    // the twin lead itself: its drawing and its actions go on the card (the strongest, when more than one says it)
+    const twinOf = new Map(report.found.flatMap((f) => { const t = items.filter((x) => sameAsNoticed(x.p, [f])).sort((a, b) => a.p.p - b.p.p)[0]; return t ? [[f.id, t] as const] : []; }));
+    return { same, lineOf, twinOf, rec: drop.size ? new Map([...all].filter(([id]) => !drop.has(id))) : all };
+  }, [report.found, items, all]);
+  if (!report.found.length && items.length === same.size && !report.checking.length && !report.none.length && !rec.size) return null;
+  return (
+    <section className="findings" id="findings" aria-label="What goes with what">
+      <h2>What goes with what <span>from your own days · compared fairly · each one once, most sure first</span></h2>
+      <RecordScore rec={rec} />
+      <Noticed report={report} lineOf={lineOf} twinOf={twinOf} rec={all} onShow={onShow} />
+      <WorthALook items={items} hide={same} rec={all} onShow={onShow} />
+      <div className="fl-folds">
+        {report.checking.length > 0 && <div className="checking">
+          <h3>Still checking</h3>
+          {report.checking.map((c) => (
+            <div className="chk" key={c.id}>
+              <span>{c.question}<small>needs {c.missing}</small></span>
+              <span className="bar" aria-label={`${Math.round(c.progress * 100)}% of the data needed`}><i style={{ width: `${Math.round(c.progress * 100)}%` }} /></span>
+            </div>
+          ))}
+        </div>}
+        {report.none.length > 0 && <details className="checking none">
+          <summary>Checked — no effect <span>{report.none.length}</span></summary>
+          <ul className="notes">{report.none.map((q) => <li key={q.id}>{q.text}</li>)}</ul>
+        </details>}
+        <DidntHold rec={rec} />
+      </div>
+    </section>
+  );
+}
+
 /* ------------------------------------------------------------------ Noticed */
 
 /** What the findings engine has to say: cards with their evidence, then what it's still checking. */
-function Noticed({ report: all }: { report: Report }) {
+function Noticed({ report: all, lineOf, twinOf, rec, onShow }: { report: Report; lineOf: Map<string, string>; twinOf: Map<string, Scouted>; rec: ReturnType<typeof useRecord>; onShow: (f: GraphFocus) => void }) {
   // PLAN 137: a finding he hid after the month's overall check stays out, listed under the rest
   const checks = useStore((s) => s.ai.checks);
   const hidden = new Set((checks ?? []).filter((c) => c.hidden).map((c) => c.id));
   const report = { ...all, found: all.found.filter((f) => !hidden.has(`n:${f.id}`)) };
   // each finding shown is kept in the app's record and re-checked on the days since (PLAN 188 phase 3)
-  const rec = useRecord();
   useKeepClaims(useMemo(() => report.found.flatMap((f) => noticedClaim(f, "") ?? []), [report.found.map((f) => f.id).join("|")])); // eslint-disable-line react-hooks/exhaustive-deps
-  if (!all.found.length && !report.checking.length && !report.none.length) return null;
+  if (!report.found.length && ![...hidden].some((id) => id.startsWith("n:"))) return null;
   return (
     <section className="noticed" id="noticed" aria-label="Noticed">
-      <h2>Noticed <span>computed from your own days · compared fairly · silent until sure</span></h2>
-      {report.found.length > 0 && <div className="ncards">
-        {report.found.map((f) => (
+      {/* what it's sure goes with what, then your usuals (PLAN 195: one list, grouped) */}
+      {([["sure", report.found.filter((f) => noticedClaim(f, ""))], ["you", report.found.filter((f) => !noticedClaim(f, ""))]] as const).map(([g, fs]) => fs.length > 0 && <Fragment key={g}>
+      <h3 className="fl-group">{g === "sure" ? <>Clear <span>· {fs.length} · the app is sure</span></> : <>About you <span>· your usuals, worked out from your days</span></>}</h3>
+      <div className="ncards">
+        {fs.map((f) => (
           <article className="ncard" key={f.id} id={`n-${f.id}`}>
             <div className="k">{f.area} · {f.sure}</div>
             <h3>{f.title}</h3>
             <div className="v">{f.value}<small>{f.unit}</small></div>
-            {noticedClaim(f, "") && <RecordLine id={noticedClaim(f, "")!.id} rec={rec} />}
+            {(lineOf.get(f.id) ?? noticedClaim(f, "")?.id) && <RecordLine id={(lineOf.get(f.id) ?? noticedClaim(f, "")?.id)!} rec={rec} />}
             <p>{f.detail}</p>
             {f.chart?.kind === "trend" && (() => {
               const c = f.chart, days = c.days ?? WINDOW_DAYS;
@@ -258,25 +312,14 @@ function Noticed({ report: all }: { report: Report }) {
             })()}
             {f.chart?.kind === "compare" && <CompareBars c={f.chart} />}
             <p className="ev">{f.evidence}</p>
+            {/* the lead that says the same (PLAN 195): its 4 weeks drawn and its actions, here instead of a second card */}
+            {twinOf.get(f.id) && <div className="n-lead"><div className="k">also a lead · {twinOf.get(f.id)!.p.text}</div><LeadExtras x={twinOf.get(f.id)!} onShow={onShow} /></div>}
             <AiCheckLabel id={`n:${f.id}`} />
             <TellAi where="Insights → Noticed" label={f.title} finding={`${f.title} — ${f.value}${f.unit ? ` ${f.unit}` : ""} (${f.area}, ${f.sure}). ${f.detail} Evidence: ${f.evidence}`} />
           </article>
         ))}
-      </div>}
+      </div></Fragment>)}
       <HiddenByYou prefix="n:" />
-      {report.checking.length > 0 && <div className="checking">
-        <h3>Still checking</h3>
-        {report.checking.map((c) => (
-          <div className="chk" key={c.id}>
-            <span>{c.question}<small>needs {c.missing}</small></span>
-            <span className="bar" aria-label={`${Math.round(c.progress * 100)}% of the data needed`}><i style={{ width: `${Math.round(c.progress * 100)}%` }} /></span>
-          </div>
-        ))}
-      </div>}
-      {report.none.length > 0 && <details className="checking none">
-        <summary>Checked — no effect <span>{report.none.length}</span></summary>
-        <ul className="notes">{report.none.map((q) => <li key={q.id}>{q.text}</li>)}</ul>
-      </details>}
     </section>
   );
 }

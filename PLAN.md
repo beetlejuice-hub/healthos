@@ -3513,7 +3513,7 @@ both reads and the questions. Phases in that order; #152 RPE waits (owner).
      worn, cited), lanes.test, brief.test, research.test, e2e notagain; said.cjs now tests the worn-out rest. Not
      verified: the real AI's studies tomorrow (design, links, fields) — the e2e fakes the AI.
 
-195. [~] **10, 6, 4 and 1 of the ten** (owner, 4 Nov, to "list 10 things u would change/remove/add": "lets do 10 but be
+195. [x] **10, 6, 4 and 1 of the ten** (owner, 4 Nov, to "list 10 things u would change/remove/add": "lets do 10 but be
    safe and 6 and 4 and 1"). Claimed 4 Nov.
    - 10 — dead weight out, safely: code nothing reaches (exports and files no import in src/, worker/ or e2e/ uses; the
      old supplement-effects function), removed only when the typecheck, every unit test and the full e2e still pass; a
@@ -3528,3 +3528,20 @@ both reads and the questions. Phases in that order; #152 RPE waits (owner).
      Insights → Findings, best and worst days on Mind, "Nearly sure?" in For you, the record's lines on each. Canvas
      first (one list on the Findings page, each finding once with its strength, numbers and record; the folds for
      checking, no effect and didn't hold), built as the default while he picks.
+   - Done 4 Nov. 6: the Worker's usage doc counts each call's cost by task (`byTask`, Gemini's too); Settings → AI "This
+     month by job: reads … · chat … · research … · food & drink …" (lib/ai/spend; a month from before fills in from the
+     recent calls and says how many). 4: Today's file 1,515 → 773 kB (476 → 348 kB zipped with Supabase's); Insights 275
+     kB, Log, Workout, Settings, Dev in their own, the one in the address bar asked for at once and the rest in the
+     background after the first screen; a screen whose file is here draws directly (React holds a loading screen 300 ms);
+     a missing file reloads the page once, a second miss shows "This page didn't load" and Try again (e2e lazyload). 10:
+     255 lines — the old supplement on-vs-off engine, the ribbon and life-chart helpers, dayTone, the nutrition averages
+     and goal rows, weeklyTrend/rolling7, watchDone, and seven unused bits; kept the helpers tests use to check live code.
+     1: canvas https://claude.ai/artifact/EWQuBc1Zk2FN5JgB4uWs95 (A one list by how sure, B by what it moves, C chart then
+     cards); built: the Connections chart stays as the overview, then one "What goes with what" list — the record's score,
+     Clear (Noticed's claims), About you (your usuals), Early — worth a look (Leads), then Still checking, Checked — no
+     effect, Didn't hold. A lead that asks what a Noticed card answers (lib/findlist: its cause, lag and outcome in
+     Noticed's words) isn't a second card: its 4-week drawing, Ask why, Test it and Not interesting go on Noticed's card,
+     the card shows the older of the two records (a lead said in September keeps its history), the score counts it once,
+     and it's marked seen so Today and the tab dot don't keep calling it new. Tests: findlist.test, e2e leads and record
+     rewritten for the merged card; record, phone, noticed pointed at the list. Not done: B's grouping by outcome, A's
+     folded rows — his pick.

@@ -1,6 +1,7 @@
 // Insights → Leads (PLAN 176 phase 2; owner, 27 Oct: "more likely for graphs and connections between things" — "1 do").
-// 90 days where two beers one evening go with a low mood the next day (planted). Findings → Leads: the link is first,
-// "strong · tested", drawn over 4 weeks with the drinking days lit; "Ask why" talks to the AI about that one link (it's
+// 90 days where two beers one evening go with a low mood the next day (planted). Findings: Noticed is sure of it, and the
+// lead that says the same is on that card, not a second one (PLAN 195, one list) — drawn over 4 weeks with the drinking
+// days lit; "Ask why" talks to the AI about that one link (it's
 // handed the link and its numbers); "Test it" starts "No alcohol — does mood lift?" for 14 days, measured on mood, and the
 // button then says it's running. On a phone.
 const { chromium, APP, OUT, handle, tables } = require('./harness.cjs');
@@ -41,10 +42,11 @@ const NOW = new Date('2026-10-27T10:00:00').getTime(), D = 864e5, KEY = 'healtho
     s.ai = { ...(s.ai || {}), digest: { day: '2026-10-27', at: now, greeting: 'Morning.', items: [] }, night: null, chat: [], experiments: [] };
     localStorage.setItem(k, JSON.stringify(s));
   }, [KEY, NOW, D]);
-  await pg.goto(APP + '#insights/connections'); await pg.reload(); await pg.waitForSelector('#scout', { timeout: 8000 }).catch(() => {});
-  const card = pg.locator('#scout .scard').first();
+  await pg.goto(APP + '#insights/connections'); await pg.reload(); await pg.waitForSelector('#findings .n-lead', { timeout: 8000 }).catch(() => {});
+  const card = pg.locator('#noticed .ncard').filter({ has: pg.locator('.n-lead') }).first();
   const t = (await card.innerText().catch(() => '')).replace(/\s+/g, ' ');
-  check(`Leads: the planted link first, strong · tested (${t.slice(0, 120)})`, /^strong · tested Alcohol and next-day mood move opposite ways/i.test(t) && /Held on \d+ of \d+/.test(t));
+  check(`one list: Noticed's card for the drinks, the lead that says the same on it (${t.slice(0, 160)})`, /The day after 2\+ drinks, your mood is [\d.]+ points lower/.test(t) && /also a lead · Alcohol and next-day mood move opposite ways/i.test(t));
+  check(`…and not a second card under "worth a look" (${await pg.locator('#scout .scard').filter({ hasText: 'Alcohol and next-day mood' }).count()})`, await pg.locator('#scout .scard').filter({ hasText: 'Alcohol and next-day mood' }).count() === 0);
   const head = (await card.locator('.lc .dc-head').innerText().catch(() => '')).replace(/\s+/g, ' ');
   const cols = await card.locator('.lc-a .dc-day').count(), lit = await card.locator('.lc-a .dc-day[data-lit]').count();
   check(`drawn over 4 weeks, the drinking days lit (${head}; ${cols} days, ${lit} lit)`, /^alcohol on top · mood, the next day under it · last 28 days$/.test(head) && cols === 28 && lit >= 4);
