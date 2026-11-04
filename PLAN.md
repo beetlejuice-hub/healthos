@@ -3482,3 +3482,25 @@ both reads and the questions. Phases in that order; #152 RPE waits (owner).
      didn't open, or the page was about something else" (or how many items, when it wasn't the study); the evening read
      the same. Tests: said.test (the swap, its control, the note), links.test (`unlinked`), e2e readstudy. Not verified:
      tomorrow's real read (the AI may still write no study and no spare — then the read says nothing is missing).
+
+194. [~] **Different every time: no worn-out advice, good studies, never the same one, random ones** (owner, 4 Nov: "ok
+   dude but make sure studies are good, not the same thing, also im bored of the advice of adding skyr to my breakfast for
+   protein, we talked ab this, make research, protocols, studies fun and different, sometimes random ones..got it?").
+   Claimed 4 Nov.
+   - Why skyr kept coming back: the repeat log (28 Oct, lib/ai/said) rests a topic only 5 days, however often it's said;
+     "skyr-breakfast" and "protein-breakfast" aren't the same topic to it; the prompt's own examples are
+     "protein-breakfast" and "Have the protein coffee before 10"; two of the six "New to try" kinds are a food swap and a
+     "high protein" recipe. Studies: nothing remembers which papers were cited, so one can come back; nothing asks for
+     the design or size; the morning's study has no topic of its own, so it drifts to his protein and sleep.
+   - Not again: a "Not again" on every read item (morning and evening) and on each topic in Settings → AI → What the
+     reads told me. It's never suggested again in any words: the app drops it, the reads are told ("## Never again").
+     Protein at breakfast (skyr, quark, Greek yoghurt) is on it from his words today. Lifted from Settings.
+   - Worn out: a topic said 3 times in 30 days rests 30 days, not 5.
+   - Never the same study: every cited link kept 180 days (PubMed id, DOI or address); an item citing one again is dropped
+     and the reads are told the titles. Good: humans, a trial or a review of trials first, the paper's own page (PubMed,
+     the journal, a DOI, a trial registry) — not a news story or a shop; mice and cells only as "weird" and said so; the
+     design, size and year on every study ("RCT · 96 adults · 2024"), shown on the item.
+   - Random: the morning's study takes a field the app picks — ~25 (heat, cold, light, music, nature, breathing, gut,
+     naps, chewing, posture, spices, hormones, ageing muscle, weird-but-true…) shuffled, none twice until all have been;
+     "New to try" gets more kinds (a protocol from a field he's never tried, something odd but tested) and its food
+     kinds aren't breakfast protein; research (PLAN 192) gets a wildcard topic from the same fields now and then.
