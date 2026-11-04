@@ -1,12 +1,8 @@
 import { NowScreen } from "./components/NowScreen";
-import { useEffect, useState } from "react";
+import { Component, lazy, Suspense, useEffect, useState, type ComponentType, type ReactNode } from "react";
+import type React from "react";
 import { Today } from "./screens/Today";
-import { Log } from "./screens/Log";
-import { WorkoutScreen } from "./screens/Workout";
-import { Insights } from "./screens/Insights";
-import { Settings } from "./screens/Settings";
 import { readRoute, type Route } from "./lib/nav";
-import { Dev } from "./screens/Dev";
 import { Auth, NewPassword } from "./components/Auth";
 import { useAuth } from "./lib/session";
 import { UndoToast } from "./components/UndoToast";
@@ -17,6 +13,61 @@ import { useInbox } from "./components/useInbox";
 import { useEnergyGoal } from "./components/useEnergy";
 import { startBand } from "./lib/band-client";
 import { startHealth } from "./lib/health-client";
+
+// each screen's file asked for once — the one in the address bar from the start, beside signing in — and kept when it comes
+type Loads = { log: typeof import("./screens/Log"); workout: typeof import("./screens/Workout"); insights: typeof import("./screens/Insights"); settings: typeof import("./screens/Settings"); dev: typeof import("./screens/Dev") };
+const IMPORTS: { [K in keyof Loads]: () => Promise<Loads[K]> } = {
+  log: () => import("./screens/Log"), workout: () => import("./screens/Workout"), insights: () => import("./screens/Insights"),
+  settings: () => import("./screens/Settings"), dev: () => import("./screens/Dev"),
+};
+const got: Partial<Loads> = {}, asked: Partial<Record<keyof Loads, Promise<unknown>>> = {};
+function load<K extends keyof Loads>(k: K): Promise<Loads[K]> {
+  return (asked[k] ??= IMPORTS[k]().then((m) => (got[k] = m)).catch((e: unknown) => { delete asked[k]; throw e; })) as Promise<Loads[K]>;
+}
+load.quiet = (k: keyof Loads) => { load(k).catch(() => { /* offline: tried again when it's opened */ }); };
+if ((readRoute()[0] as string) in IMPORTS) load.quiet(readRoute()[0] as keyof Loads);
+
+/**
+ * A screen loaded when it's first opened (PLAN 195; owner, 4 Nov: "4" — the app was one 1.5 MB file, every page and chart
+ * before Today showed). Once its file is here it draws at once (React holds a loading screen at least 300 ms). A deploy
+ * since this page loaded leaves the old file gone: the page reloads once to the new app rather than stay blank; a second
+ * miss within 30 s is a real error.
+ */
+function screen<K extends keyof Loads, P extends object>(k: K, pick: (m: Loads[K]) => ComponentType<P>) {
+  const Lazy = lazy(() => load(k).then((m) => ({ default: pick(m) })).catch((e: unknown) => {
+    let last = 0;
+    try { last = Number(sessionStorage.getItem("healthos.reloadedFor") || 0); } catch { /* private mode: no memory, reload anyway */ }
+    if (Date.now() - last > 30_000) {
+      try { sessionStorage.setItem("healthos.reloadedFor", String(Date.now())); } catch { /* as above */ }
+      location.reload();
+      return new Promise<never>(() => {});
+    }
+    throw e;
+  }));
+  return function Screen(props: P) {
+    // decided once per opening: switching from the lazy one to the direct one later would start the screen over
+    const [direct] = useState(() => !!got[k]), m = got[k], C = direct && m ? pick(m as Loads[K]) : null;
+    return C ? <C {...props} /> : <Lazy {...(props as P & React.JSX.IntrinsicAttributes)} />;
+  };
+}
+const Log = screen("log", (m) => m.Log);
+const WorkoutScreen = screen("workout", (m) => m.WorkoutScreen);
+const Insights = screen("insights", (m) => m.Insights);
+const Settings = screen("settings", (m) => m.Settings);
+const Dev = screen("dev", (m) => m.Dev);
+/** A screen that still won't load (offline, or the new app's file missing too): a line and Try again, never a blank page. */
+class ScreenFailed extends Component<{ children: ReactNode; route: string }, { failed: boolean }> {
+  state = { failed: false };
+  static getDerivedStateFromError() { return { failed: true }; }
+  componentDidUpdate(before: { route: string }) { if (before.route !== this.props.route && this.state.failed) this.setState({ failed: false }); }
+  render() {
+    return this.state.failed
+      ? <div className="card screen-failed" role="alert"><p>This page didn't load — the connection may be down.</p><button type="button" className="pill-btn pri" onClick={() => location.reload()}>Try again</button></div>
+      : this.props.children;
+  }
+}
+/** Once the first screen has drawn, the others come down in the background, so a tab opens at once. */
+const fetchTheRest = () => { for (const k of Object.keys(IMPORTS) as (keyof Loads)[]) load.quiet(k); };
 
 /**
  * Four screens, one job each (owner, 29 Sept): Today = what needs you now; Log = add things;
@@ -31,6 +82,7 @@ export function App() {
   useInbox();
   useEnergyGoal();
   const [route, setRoute] = useState<Route>(() => readRoute()[0]);
+  useEffect(fetchTheRest, []);
   useEffect(() => {
     const on = () => { setRoute(readRoute()[0]); window.scrollTo(0, 0); };
     window.addEventListener("hashchange", on);
@@ -59,6 +111,7 @@ export function App() {
   return (
     <div className={`app r-${route === "dev" ? "settings" : route}`}>
       <main className="screen">
+        <ScreenFailed route={route}><Suspense fallback={<p className="note screen-wait" aria-busy="true">Opening…</p>}>
         {route === "today" && <Today />}
         {route === "log" && <Log />}
         {route === "workout" && <WorkoutScreen />}
@@ -66,6 +119,7 @@ export function App() {
         {route === "ai" && <AiScreen />}
         {route === "settings" && <Settings tester={auth.tester} email={auth.session.user.email ?? ""} />}
         {route === "dev" && (auth.tester ? <Dev /> : <Settings tester={false} email={auth.session.user.email ?? ""} />)}
+        </Suspense></ScreenFailed>
       </main>
       <UndoToast />
       <nav className="tabs" aria-label="Screens">
