@@ -41,8 +41,9 @@ export const TRY = [
  */
 export const COMMUNITY = "what people are trying, from Reddit (r/Biohackers, r/Nootropics, r/Supplements, r/sleep, r/Fitness…), forums, blogs or podcasts (X/Twitter too when search reaches it) — an interesting, less proven idea that fits something they do or want: what people say it did, what studies say if anything, \"sure\": \"anecdote\" unless trials back it; nothing unsafe";
 
-/** The morning's third item, in turn (owner, 22 Oct: connections "on its own"): a connection every other morning. */
-export const THIRD = ["a \"connection\" — a chain from something they did lately to something they care about (a condition in About me, tiredness, focus, mood, sleep), its link in their data checked with a look-up", "a study or fun fact with its source, or a protocol to try as an experiment"] as const;
+/** The morning's third item, in turn (owner, 22 Oct: connections "on its own"): a connection every other morning, a study the
+ * others (owner, 4 Nov: "tooday morning read had absolutely no study" — it used to be "a study or fun fact or protocol"). */
+export const THIRD = ["a \"connection\" — a chain from something they did lately to something they care about (a condition in About me, tiredness, focus, mood, sleep), its link in their data checked with a look-up", "a study with its real source — a recent trial, review or meta-analysis on something they do, take, eat or feel: what it found, and what it means for them"] as const;
 
 const dayNo = (day: string) => Math.round(Date.UTC(+day.slice(0, 4), +day.slice(5, 7) - 1, +day.slice(8, 10)) / 86_400_000);
 

@@ -37,7 +37,7 @@ export type AiState = {
   chat: { role: "user" | "assistant"; text: string; at: number; unprompted?: boolean; charts?: ChartSpec[]; looked?: string[]; /** Changes it proposed, applied only on your tap (PLAN 98). */ proposals?: Proposal[]; /** A news message's source (#109). */ source?: { title: string; url: string } }[];
   /** The morning read, for the day it's for. */
   digest: { day: string; /** When it was written (lib/ai/morning). */ at?: number; greeting: string; items: DigestItem[]; /** The day around the items (3 Nov). */ summary?: string; slept?: string; felt?: string; fun?: string; read?: boolean; /** When you first opened it (16 Oct: highlighted until then). */ seen?: number;
-    /** The app's look-ups it was checked with (PLAN 160). */ looked?: string[] } | null;
+    /** The app's look-ups it was checked with (PLAN 160). */ looked?: string[]; /** The kinds the Worker left out over their links (PLAN 193). */ unlinked?: string[] } | null;
   /** The nightly read-back of a day (optional: older synced docs don't have it). */
   night?: (NightAnswer & { day: string; at: number; /** When you first opened it — a re-read is new again. */ seen?: number; /** The app's look-ups (PLAN 160). */ looked?: string[];
     /** The day's food and drink totals it was written from (lib/ai/nightread nightStale); `redone`: rewritten on its own for that. */ tot?: { kcal: number; p: number }; redone?: number }) | null;

@@ -45,7 +45,7 @@ import { ReadItems } from "./ReadItems";
 import { digestDue, freshRead, morningShown, nightIn, nightShown } from "../lib/ai/morning";
 import { attempt, onRetryDue, tryNow } from "../lib/ai/attempts";
 import { dayTotals, dayWindow, eveningOf, nightDue, nightStale, STALE } from "../lib/ai/nightread";
-import { addThreads, adviceOf, closeThreads, dropSaid, keepSaid, readItems, saidTopics } from "../lib/ai/said";
+import { addThreads, adviceOf, closeThreads, dropSaid, keepSaid, readItems, saidTopics, unlinkedNote } from "../lib/ai/said";
 import { discoveryLines, keepDiscovery } from "../lib/ai/discover";
 import { DiscoveryCard, DiscoveryList } from "./Discovery";
 import { ResearchList } from "./Research";
@@ -99,7 +99,7 @@ async function writeDigest(day: string) {
   const items = withLead(fresh, lead), led = lead && items.some((i) => i.lead);
   const qs = keepNew(r.answer.questions ?? [], `${day}:m`);
   act.setAi((a) => ({
-    digest: { day, at, greeting: r.answer.greeting, ...checkDay(r.answer, true), items, ...(r.answer.looked ? { looked: r.answer.looked } : {}) },
+    digest: { day, at, greeting: r.answer.greeting, ...checkDay(r.answer, true), items, ...(r.answer.looked ? { looked: r.answer.looked } : {}), ...(r.answer.unlinked?.length ? { unlinked: r.answer.unlinked } : {}) },
     discoveries: keepDiscovery(a.discoveries, r.answer.discovery, day, "morning", at),
     ...(led ? { leads: [...(a.leads ?? []), { id: lead.id, day }].slice(-60) } : {}),
     ...(qs.length ? { questions: { day, list: qs, from: "morning" as const, at }, asked: [...a.asked, ...qs.map((q) => q.text)].slice(-60), daily: tracked(a.daily, qs) } : {}),
@@ -373,6 +373,8 @@ export function MorningRead() {
       {d.summary && <p className={`rd-sum${open ? "" : " clamp2"}`} onClick={() => !open && setOpen(true)}>{d.summary}</p>}
       {open && <DayLines slept={d.slept} felt={d.felt} feltLabel="Yesterday" />}
       <ReadItems key={String(open)} items={d.items} open={open} onOpen={() => setOpen(true)} tip="Today" from="morning" day={d.day} />
+      {/* one left out over its link is said, not lost (PLAN 193) */}
+      {open && unlinkedNote(d.items, d.unlinked) && <p className="note rd-unlinked">{unlinkedNote(d.items, d.unlinked)}</p>}
       <DiscoveryCard day={d.day} slot="morning" open={open} onOpen={() => setOpen(true)} />
       {open && d.fun && <p className="rd-fun"><small>One more thing</small>{d.fun}</p>}
       {open && <Looked names={d.looked} />}
@@ -435,6 +437,7 @@ export function NightRead() {
       </>}
       {/* the evening's study, thing to try and noticed (PLAN 157; owner, 21 Oct: "the same studt, try, and notiiced session at Eod") */}
       {(n.items?.length ?? 0) > 0 && <ReadItems key={String(open)} items={n.items!} open={open} onOpen={() => setOpen(true)} tip="Tomorrow" from="evening" day={n.day} />}
+      {open && unlinkedNote(n.items ?? [], n.unlinked) && <p className="note rd-unlinked">{unlinkedNote(n.items ?? [], n.unlinked)}</p>}
       <DiscoveryCard day={n.day} slot="evening" open={open} onOpen={() => setOpen(true)} />
       {open && n.fun && <p className="rd-fun"><small>One more thing</small>{n.fun}</p>}
       {open && <Looked names={n.looked} />}

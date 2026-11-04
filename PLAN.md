@@ -3464,3 +3464,21 @@ both reads and the questions. Phases in that order; #152 RPE waits (owner).
      runs on its own, not after the deep dive (a dive that keeps failing would have held it up). A month with no AI
      calls yet counts as $0 once the AI is known to be on; before that, it waits. Not verified: the real AI's answers
      (the fake one in e2e), the cost per call on his account (estimated $0.07: Sonnet, ~6k tokens in, 3 searches).
+
+193. [x] **A study every morning, and no silent drops** (owner, 4 Nov: "tooday morning read had absolutely no study. maybe its
+   running out. i should be able to sset up my gemini key"). Claimed 4 Nov.
+   - Why there was none: not money (out of credit, the whole read fails and says "(no-credit)"; the month's $20 resets on
+     the 1st). By design a study wasn't every morning: "New to try" is a study 1 morning in 6, and the third item
+     alternates a connection with "a study OR a fun fact OR a protocol". And a study whose link fails the check is
+     dropped without a word (worker/links checkReadLinks) — the read can lose its only one silently.
+   - Fix: the digest's rule — at least one item every morning is a study with its real https source; the third item
+     alternates a connection and a study (the read has its own "fun" line since 3 Nov). The link check counts what it
+     drops; the read says "1 study left out — its link didn't open".
+   - Gemini: the Worker already takes GEMINI_FREE_KEY / GEMINI_API_KEY (Cloudflare secrets, PLAN 186); they move only food
+     estimates and the app's questions — not the reads — so they wouldn't have brought a study. Asked which he wants.
+   - Done 4 Nov: the digest prompt asks for a study every morning (its 4th spare is one when the three hold none); the
+     app's readItems puts a spare study in the third's place when the three have none; the Worker says back the kinds it
+     left out over links (`unlinked`), kept with the read, and the opened read says "The study was left out — its link
+     didn't open, or the page was about something else" (or how many items, when it wasn't the study); the evening read
+     the same. Tests: said.test (the swap, its control, the note), links.test (`unlinked`), e2e readstudy. Not verified:
+     tomorrow's real read (the AI may still write no study and no spare — then the read says nothing is missing).

@@ -4,7 +4,7 @@
 // stays. Five days after the last one it may come back. Controls: no history drops nothing; a different protein topic
 // ("protein-dinner-timing") isn't the breakfast one; two of one topic in a read keeps the first.
 import { describe, expect, it } from "vitest";
-import { addThreads, adviceOf, closeThreads, dropSaid, keepSaid, readItems, sameTopic, saidLines, SAID, threadLines, topicKey, type Said } from "./said";
+import { addThreads, adviceOf, closeThreads, dropSaid, keepSaid, readItems, sameTopic, saidLines, SAID, threadLines, topicKey, unlinkedNote, type Said } from "./said";
 
 const DAY = 86_400_000, NOW = new Date("2026-10-28T08:00:00").getTime();
 const week: Said[] = Array.from({ length: 7 }, (_, k) => ({ topic: "protein-breakfast", text: `Breakfast protein, take ${k + 1} — Add 30 g at breakfast`, at: NOW - (7 - k) * DAY, from: k % 2 ? "evening" : "morning" }));
@@ -47,6 +47,23 @@ describe("a read the day after a broad \"sleep\" item (owner, 31 Oct: one item o
     expect(readItems([{ title: "Sleep more", topic: "sleep" }, ...read.slice(1), spare], said, NOW, title).map((i) => i.topic)).toEqual(["deep-sleep-alcohol", "creatine-timing", "walk-after-lunch"]);
     expect(readItems([...read, spare], said, NOW, title)).toHaveLength(3);
     expect(readItems([...read, spare], said, NOW, title).map((i) => i.topic)).not.toContain("walk-after-lunch");
+  });
+  // PLAN 193 (owner, 4 Nov: "tooday morning read had absolutely no study"): a study every morning
+  it("no study in the three: a spare study takes the third's place; control: one already there, the spare stays out", () => {
+    const three = [{ title: "Late coffee", topic: "late-coffee", type: "pattern" }, { title: "Walk after lunch", topic: "walk-after-lunch", type: "try" }, { title: "Mood and steps", topic: "mood-steps", type: "connection" }];
+    const study = { title: "Creatine and sleep", topic: "creatine-sleep", type: "study" };
+    expect(readItems([...three, study], [], NOW, title).map((i) => i.type)).toEqual(["pattern", "try", "study"]);
+    const withOne = [three[0], { ...study, title: "Magnesium and sleep", topic: "magnesium-sleep" }, three[1]];
+    expect(readItems([...withOne, study], [], NOW, title).map((i) => i.title)).toEqual(["Late coffee", "Magnesium and sleep", "Walk after lunch"]);
+    // no spare study: the three as they were
+    expect(readItems(three, [], NOW, title)).toEqual(three.map((x) => ({ ...x })));
+  });
+  it("one left out over its link is said, not lost; the study by name when none is left", () => {
+    expect(unlinkedNote([{ type: "pattern" }], undefined)).toBeNull();
+    expect(unlinkedNote([{ type: "pattern" }], [])).toBeNull();
+    expect(unlinkedNote([{ type: "pattern" }, { type: "try" }], ["study"])).toBe("The study was left out — its link didn't open, or the page was about something else.");
+    expect(unlinkedNote([{ type: "study" }], ["study"])).toBe("1 item left out — its link didn't open, or the page was about something else.");
+    expect(unlinkedNote([{ type: "study" }], ["try", "fact"])).toMatch(/^2 items left out — their links didn't open/);
   });
 });
 

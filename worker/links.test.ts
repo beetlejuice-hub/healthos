@@ -91,6 +91,8 @@ describe("a read's links", () => {
     // each link opened once, each citation of it judged on its own: the item's title matches, the question's doesn't
     expect(opened.filter((u) => u === ok)).toHaveLength(1);
     expect(a.greeting).toBe("Morning");
+    // what went is said back by kind (PLAN 193), so the read isn't silent about it
+    expect(a.unlinked).toEqual(["try"]);
   });
   it("the day's discovery (PLAN 187): a dead link and it goes; a matching one is marked", async () => {
     const disc = { topic: "sleep", kind: "study", title: "Kiwi before bed", text: "Faster asleep.", why: "", sure: "some", source: { title: "Kiwifruit and sleep", url: "https://gone.example.com/kiwi" } } as const;
@@ -102,6 +104,7 @@ describe("a read's links", () => {
   it("nothing to check: as it was", async () => {
     const { f, opened } = web({});
     const plain: DigestAnswer = { greeting: "Hi", items: [{ type: "pattern", title: "x", text: "y" }] };
+    // nothing left out: no `unlinked` at all
     expect(await checkReadLinks(plain, f)).toEqual(plain);
     expect(opened).toEqual([]);
   });

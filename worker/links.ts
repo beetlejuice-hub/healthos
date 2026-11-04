@@ -79,12 +79,18 @@ async function verdicts(srcs: Src[], f: typeof fetch): Promise<Map<string, LinkV
 const keep = (v: Map<string, LinkVerdict>, s?: Src) => !s || (v.get(keyOf(s)) !== "dead" && v.get(keyOf(s)) !== "mismatch");
 const mark = <T extends Src | undefined>(v: Map<string, LinkVerdict>, s: T): T => (s && v.get(keyOf(s)) === "ok" ? { ...s, checked: true } : s);
 
-/** A read's answer (morning or evening) with every cited link checked: dead or mismatched ones' items dropped, good ones marked. */
+/**
+ * A read's answer (morning or evening) with every cited link checked: dead or mismatched ones' items dropped, good ones
+ * marked — and the kinds of the items dropped said back (`unlinked`), so the read can say one was left out rather than
+ * lose it silently (PLAN 193; owner, 4 Nov: "tooday morning read had absolutely no study").
+ */
 export async function checkReadLinks<A extends DigestAnswer | NightAnswer>(a: A, f: typeof fetch): Promise<A> {
   const items = a.items ?? [], qs = a.questions ?? [], news = "news" in a ? a.news : null, disc = a.discovery ?? null;
   const v = await verdicts([...items.map((i) => i.source), ...qs.map((q) => q.source), news?.source, disc?.source].filter((s): s is Src => !!s), f);
+  const unlinked = items.filter((i) => !keep(v, i.source)).map((i) => i.type);
   return {
     ...a,
+    ...(unlinked.length ? { unlinked } : {}),
     // the day's discovery (PLAN 187): a dead link, or a page about something else, and it goes
     ...(disc ? { discovery: keep(v, disc.source) ? { ...disc, source: mark(v, disc.source) } : null } : {}),
     ...(a.items ? { items: items.filter((i) => keep(v, i.source)).map((i) => (i.source ? { ...i, source: mark(v, i.source) } : i)) } : {}),

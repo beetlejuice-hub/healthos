@@ -200,7 +200,9 @@ export type DigestNews = { title: string; text: string; source: { title: string;
  * summary"): a short summary, last night in one line, how the day felt in one line, one fun or useful thing.
  */
 export type ReadDay = { summary?: string; slept?: string; felt?: string; fun?: string };
-export type DigestAnswer = Threads & ReadDay & { /** PLAN 187: one random study or forum post a read */ discovery?: Discovery | null; greeting: string; items: DigestItem[]; news?: DigestNews | null; /** 1–2, the kinds the app picked (PLAN 156). */ questions?: Question[] };
+/** The kinds of the items the Worker left out because their link didn't open or was about something else (PLAN 193). */
+export type Unlinked = { unlinked?: DigestItem["type"][] };
+export type DigestAnswer = Threads & ReadDay & Unlinked & { /** PLAN 187: one random study or forum post a read */ discovery?: Discovery | null; greeting: string; items: DigestItem[]; news?: DigestNews | null; /** 1–2, the kinds the app picked (PLAN 156). */ questions?: Question[] };
 /**
  * The weekly deep dive (PLAN 160): the question it picked and why (from their data), what their own numbers say (from the
  * app's look-ups), 2–3 studies with their links, the verdict and how sure, and one experiment to try.
@@ -268,7 +270,7 @@ export function checkReadCalls(calls: unknown[], turn: unknown): ReadLooks {
  */
 export type Threads = { look_into?: string[]; looked_into?: string[] };
 /** The nightly read-back of your day (owner, 2 Oct: "summarizing what happened, what i should change"). */
-export type NightAnswer = Threads & Omit<ReadDay, "summary"> & { discovery?: Discovery | null; summary: string; happened: string[]; notes: string; change: { what: string; why: string; /** lib/ai/said */ topic?: string }[]; /** Lasting patterns worth remembering (kept in AI memory). */ remember: string[];
+export type NightAnswer = Threads & Unlinked & Omit<ReadDay, "summary"> & { discovery?: Discovery | null; summary: string; happened: string[]; notes: string; change: { what: string; why: string; /** lib/ai/said */ topic?: string }[]; /** Lasting patterns worth remembering (kept in AI memory). */ remember: string[];
   /** On a day with a workout (PLAN 129): how it went against last time, what went up, one thing for next time. */
   workout?: { summary: string; better: string[]; next: string };
   /** The evening's three (PLAN 157; owner, 21 Oct: "the same studt, try, and notiiced session at Eod"), and its questions (PLAN 156). */
@@ -438,7 +440,8 @@ Task: write the user's morning read — it's written this morning, after last ni
 Items, exactly 3 (owner, 21 Oct: "it was just too long, too much info w no visual and just boring. I like that its adding tips and advices"):
 - one "pattern" from their own data through this morning's angle ("## This morning" at the end of the context names it; from the context, never invented);
 - one "try" (owner: "recommend me new stuff … studies, workout splits, and supps, foods, everything … or perhaps look at forums too"): search the web for the kind of thing "## This morning" names; something new to them — not in their stack, not already shown — with why it fits their goals and their data, and its source. A forum find is anecdotes: say so;
-- the third: the kind "## This morning" names — a "connection" (see below), or a study or fun fact with its source, or one protocol to try as an experiment (concrete: what to do, for how many days, what the app will measure);
+- the third: the kind "## This morning" names — a "connection" (see below), or a study with its source;
+- EVERY MORNING at least one item is a "study" — type "study", what it found in one sentence, and its real https link (the paper, a review, a trial registry or a reputable summary of it; owner, 4 Nov: "tooday morning read had absolutely no study"). On a morning whose three hold no study, the 4th spare is one;
 - on a training day ("Today's plan"), one may be for that session.
 - and a 4th, a spare of any kind, on a topic that isn't resting: the app shows it only when one of the first three was already said lately (owner, 31 Oct: "the morning read has only one study/graph linked instead of the 3").
 THE DAY AROUND THEM (owner, 3 Nov: "Morning and night read should include a bit more, based on what happened to me, how i slept, how i felt thoughout the day, some funny or interesting or helpful advice it should give me, w a summary"), before the items:

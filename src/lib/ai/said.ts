@@ -72,7 +72,26 @@ export function dropSaid<T extends { topic?: string }>(xs: T[], said: Said[], no
 }
 
 /** The morning read's items to show: its 3, the spare standing in for one said lately; never more than 3. */
-export const readItems = <T extends { topic?: string }>(xs: T[], said: Said[], now: number, title: (x: T) => string): T[] => dropSaid(xs, said, now, title).kept.slice(0, 3);
+export const readItems = <T extends { topic?: string }>(xs: T[], said: Said[], now: number, title: (x: T) => string): T[] => {
+  const kept = dropSaid(xs, said, now, title).kept, top = kept.slice(0, 3);
+  // a study every read (owner, 4 Nov: "tooday morning read had absolutely no study"): when the three hold none and a later
+  // one is, it takes the third's place
+  const study = (x: T) => (x as { type?: string }).type === "study";
+  const spare = top.some(study) ? undefined : kept.slice(3).find(study);
+  if (spare) top[top.length - 1] = spare;
+  return top;
+};
+
+/**
+ * What the read says about items the Worker left out over their links (PLAN 193): nothing when none were; when it was
+ * the study and no study is left, that; otherwise how many. Never silent about it.
+ */
+export function unlinkedNote(shown: { type?: string }[], unlinked: string[] | undefined): string | null {
+  if (!unlinked?.length) return null;
+  if (unlinked.includes("study") && !shown.some((x) => x.type === "study")) return "The study was left out — its link didn't open, or the page was about something else.";
+  const n = unlinked.length;
+  return `${n} item${n > 1 ? "s" : ""} left out — ${n > 1 ? "their links" : "its link"} didn't open, or the page was about something else.`;
+}
 
 /** What's been said, by topic, newest first: how often, the first and last time, and until when it rests. */
 export function saidTopics(said: Said[], now: number): { topic: string; n: number; first: number; last: Said; restUntil: number | null }[] {
