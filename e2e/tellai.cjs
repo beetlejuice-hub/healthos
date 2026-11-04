@@ -4,7 +4,7 @@
 // goes to the chat as his words, with the finding under its own heading; the reply shows under the card. (2) "I knew that"
 // on another card: the AI remembers it as "Knows: …", and it's in the memory every read gets. Controls: the card is as it
 // was until tapped (no line, no request); a server with the AI off shows no button at all. 320 px fits.
-const { chromium, APP, OUT, handle } = require('./harness.cjs');
+const { chromium, APP, OUT, handle, openFindings } = require('./harness.cjs');
 
 const KEY = 'healthos.v1:u-test';
 
@@ -43,12 +43,13 @@ const KEY = 'healthos.v1:u-test';
   const chats = [];
   let { ctx, pg } = await open(320, true, chats);
   const cards = pg.locator('.ncard');
+  await openFindings(pg); // each finding a row that opens (PLAN 197)
   const n = await cards.count();
   check(`every Noticed card has "Tell the AI" (${await pg.locator('.ncard .tell-ai > button').count()} of ${n})`, n >= 2 && await pg.locator('.ncard .tell-ai > button').count() === n);
   check('control: nothing open and nothing asked before a tap', await pg.locator('.ncard .ask-about').count() === 0 && chats.length === 0);
 
   // 1. "Makes no sense to me"
-  const c1 = cards.nth(0), t1 = (await c1.locator('h3').innerText()).trim();
+  const c1 = cards.nth(0), t1 = (await c1.locator('.fl-title').innerText()).trim();
   await c1.getByRole('button', { name: 'Tell the AI' }).click();
   const chips = await c1.locator('.ask-about .chips button').allInnerTexts();
   check(`tapped: the one-tap replies (${chips.join(' | ')})`, chips[0] === 'Makes no sense to me' && chips[1] === 'I knew that');
@@ -66,7 +67,7 @@ const KEY = 'healthos.v1:u-test';
   await c1.screenshot({ path: OUT + 'tellai-320.png' });
 
   // 2. "I knew that" → remembered as "Knows: …", in the memory every read gets
-  const c2 = cards.nth(1), t2 = (await c2.locator('h3').innerText()).trim();
+  const c2 = cards.nth(1), t2 = (await c2.locator('.fl-title').innerText()).trim();
   await c2.getByRole('button', { name: 'Tell the AI' }).click();
   await c2.getByRole('button', { name: 'I knew that' }).click();
   await c2.locator('.ask-reply:not(.typing)').waitFor({ timeout: 5000 }).catch(() => {});

@@ -18,7 +18,8 @@ import { dailyFacts } from "./insights";
 import { betweenFindings } from "./detectors/between";
 import type { Settings } from "./store";
 
-export type Area = "body" | "food" | "caffeine" | "stack" | "training" | "feel";
+/** "alcohol" its own since 4 Nov (PLAN 197: drinks findings were labelled "caffeine"). */
+export type Area = "body" | "food" | "caffeine" | "alcohol" | "stack" | "training" | "feel";
 
 export type Finding = {
   id: string;

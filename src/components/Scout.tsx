@@ -12,13 +12,14 @@ import { useBand } from "../lib/band-client";
 import { scout, since, verdict, type Pattern, type ScoutMemo } from "../lib/scout";
 import { addDays, localDay } from "../lib/time";
 import type { GraphFocus } from "./MasterGraph";
-import { AiCheckLabel, HiddenByYou } from "./AiCheck";
+import { AiCheckLabel, AiCheckTag, HiddenByYou } from "./AiCheck";
 import { LeadChart } from "./LeadChart";
 import { AskAbout } from "./AskAbout";
 import { aboutLead, leadGrade, leadRef, leadTest } from "../lib/ai/lead";
 import { startExperiment } from "../lib/ai/experiment";
 import { leadClaim } from "../lib/record";
 import { RecordLine, useKeepClaims, useRecord } from "./Record";
+import { FindingRow } from "./FindingRow";
 
 export type Scouted = { p: Pattern; memo?: ScoutMemo; since: { held: number; of: number } | null; verdict: ReturnType<typeof verdict> };
 
@@ -51,7 +52,7 @@ const lanesOf = (p: Pattern) => [...new Set([p.a.lane, p.b.lane].filter((x): x i
  * the days it was on lit, "Ask why" (the AI on that one link: mechanism, studies, is it real) and "Test it" (14 days of
  * the change the link points to, measured by the app). No AI call until you ask.
  */
-export function WorthALook({ items: all, hide, rec, onShow }: { items: Scouted[]; hide?: Set<string>; rec: ReturnType<typeof useRecord>; onShow: (f: GraphFocus) => void }) {
+export function WorthALook({ items: all, hide, rec, onShow, isOpen = () => true, toggle = () => {} }: { items: Scouted[]; hide?: Set<string>; rec: ReturnType<typeof useRecord>; onShow: (f: GraphFocus) => void; isOpen?: (id: string) => boolean; toggle?: (id: string) => void }) {
   // `hide`: leads a Noticed card already says (PLAN 195, one list) — not shown again, but seen like the rest
   const items = useMemo(() => (hide?.size ? all.filter((x) => !hide.has(x.p.id)) : all), [all, hide]);
   const memo = useStore((s) => s.scout);
@@ -75,15 +76,14 @@ export function WorthALook({ items: all, hide, rec, onShow }: { items: Scouted[]
         {sorted.map(({ p, memo: m }) => {
           const strong = leadGrade(p) === "strong", st = rec.get(`lead:${p.id}`)?.r.state;
           return (
-          <article className="scard" key={p.id} data-grade={strong ? "strong" : "early"}>
-            <div className="k">{strong ? "strong · tested" : st === "held" ? "held up on new days" : st && st !== "checking" ? "being checked · could be chance" : "early · could be chance"}</div>
-            <h3>{p.text}</h3>
+          <FindingRow className="scard" key={p.id} id={`s-${p.id}`} k={strong ? "strong · tested" : st === "held" ? "held up on new days" : st && st !== "checking" ? "being checked · could be chance" : "early · could be chance"}
+            title={p.text} state={st ?? null} flag={<AiCheckTag id={`s:${p.id}`} />} open={isOpen(`s:${p.id}`)} onToggle={() => toggle(`s:${p.id}`)}>
             <p className="held">Held on <b>{p.held} of {p.of}</b> {p.a.yes ? `${p.a.yes.replace(/^a /, "")}${p.a.yes.startsWith("a ") ? "s" : " days"}` : `of your highest-${p.a.name} days`}{p.lag ? ", looking at the next day" : ""}</p>
             <RecordLine id={`lead:${p.id}`} rec={rec} />
             <LeadExtras x={{ p, memo: m }} onShow={onShow} />
             {/* PLAN 137: hiding it after the check is "Not interesting" too */}
             <AiCheckLabel id={`s:${p.id}`} onHide={() => act.setScout({ ...memo, [p.id]: { first: m?.first ?? today, sign: p.sign, seen: true, dismissed: true } })} />
-          </article>
+          </FindingRow>
           );
         })}
       </div>

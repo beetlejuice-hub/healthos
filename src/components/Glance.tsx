@@ -54,7 +54,7 @@ function WeekCard({ stats, week, today, report }: { stats: MeasureStat[]; week: 
   if (M.sleep?.week != null) bul.push({ ic: "☾", tone: "sleep", text: <>You rated your sleep <b>{fmt(M.sleep, M.sleep.week)}</b>/10 on average{M.sleep.usualWeek ? <> (a usual week {fmt(M.sleep, M.sleep.usualWeek.p10)}–{fmt(M.sleep, M.sleep.usualWeek.p90)})</> : null}.</> });
   const biggest = [...judged].filter((m) => m.state !== "ok").sort((a, b) => Math.abs(b.delta! / (b.usualWeek!.p90 - b.usualWeek!.p10 || 1)) - Math.abs(a.delta! / (a.usualWeek!.p90 - a.usualWeek!.p10 || 1)))[0];
   if (biggest) bul.push({ ic: "!", tone: biggest.better == null ? "neutral" : biggest.better ? "good" : "warn", text: <>Biggest change: <b>{biggest.name.toLowerCase()}</b> {biggest.state === "hi" ? "up" : "down"} to {fmt(biggest, biggest.week!)}{unitOf(biggest)} (a usual week {fmt(biggest, biggest.usualWeek!.p10)}–{fmt(biggest, biggest.usualWeek!.p90)}).</> });
-  const link = report.found.find((f) => f.area === "feel" || f.area === "caffeine" || f.area === "stack") ?? report.found[0];
+  const link = report.found.find((f) => f.area === "feel" || f.area === "caffeine" || f.area === "alcohol" || f.area === "stack") ?? report.found[0];
   if (link) bul.push({ ic: "↗", tone: "link", text: <>Clearest finding: <b>{link.title}</b> <span className="gl-dim">({link.sure})</span></> });
   if (building.length) bul.push({ ic: "…", tone: "neutral", text: <>Still learning your usual for {building.map((m) => m.name.toLowerCase()).join(", ")} — it takes 3 weeks of logging.</> });
   const from = week[0]?.day, to = week[week.length - 1]?.day;

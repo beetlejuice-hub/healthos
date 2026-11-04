@@ -14,6 +14,12 @@ const keepCheck = (id: string) => set(id, { kept: true, hidden: undefined });
 const bringBack = (id: string) => set(id, { hidden: undefined, kept: true });
 
 /** The label on a finding the check named, while he hasn't answered it. */
+/** On a closed row's heading (PLAN 197): the AI's check in a word, so it's seen without opening the card. */
+export function AiCheckTag({ id }: { id: string }) {
+  const c = useStore((s) => (s.ai.checks ?? []).find((x) => x.id === id && !x.kept && !x.hidden));
+  return c ? <span className="fl-flag">the AI: {verdictWords(c.verdict)}</span> : null;
+}
+
 export function AiCheckLabel({ id, onHide }: { id: string; onHide?: () => void }) {
   const c = useStore((s) => (s.ai.checks ?? []).find((x) => x.id === id && !x.kept && !x.hidden));
   if (!c) return null;

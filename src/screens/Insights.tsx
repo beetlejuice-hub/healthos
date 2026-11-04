@@ -22,7 +22,7 @@ import { Top } from "../components/Top";
 import { Coverage, Methods, SuppMatrix, TrainingLoad } from "../components/Stack";
 import { TrainingPage } from "../components/TrainingPage";
 import { BodyLab } from "../components/BodyLab";
-import { AiCheckLabel, HiddenByYou } from "../components/AiCheck";
+import { AiCheckLabel, AiCheckTag, HiddenByYou } from "../components/AiCheck";
 import { glanceDays } from "../lib/glance";
 import { LineChart } from "../components/Charts";
 import type { Range } from "../lib/stats";
@@ -30,6 +30,7 @@ import { addDays, atMinute, dayLabel, localDay } from "../lib/time";
 import { useNow } from "./Today";
 import { notice, WINDOW_DAYS, type Report } from "../lib/findings";
 import { noticedClaim } from "../lib/record";
+import { FindingRow } from "../components/FindingRow";
 import { DidntHold, RecordLine, RecordScore, useKeepClaims, useRecord } from "../components/Record";
 import { useEnrich } from "../components/useEvidence";
 import { StackCheckPanel } from "../components/StackCheck";
@@ -251,13 +252,27 @@ function OneList({ report, items, onShow }: { report: Report; items: Scouted[]; 
     const twinOf = new Map(report.found.flatMap((f) => { const t = items.filter((x) => sameAsNoticed(x.p, [f])).sort((a, b) => a.p.p - b.p.p)[0]; return t ? [[f.id, t] as const] : []; }));
     return { same, lineOf, twinOf, rec: drop.size ? new Map([...all].filter(([id]) => !drop.has(id))) : all };
   }, [report.found, items, all]);
+  // which rows are open: the first — the most sure — to start, then as you tap (PLAN 197, A)
+  const first = useMemo(() => {
+    const sure = report.found.find((f) => noticedClaim(f, "")), lead = items.find((x) => !same.has(x.p.id));
+    return sure ? `n:${sure.id}` : lead ? `s:${lead.p.id}` : report.found[0] ? `n:${report.found[0].id}` : null;
+  }, [report.found, items, same]);
+  const [opened, setOpened] = useState<Set<string> | null>(null);
+  const isOpen = (id: string) => (opened ?? new Set(first ? [first] : [])).has(id);
+  const toggle = (id: string) => setOpened((o) => { const s = new Set(o ?? (first ? [first] : [])); if (s.has(id)) s.delete(id); else s.add(id); return s; });
+  // Today's line for a finding opens its row here (FindingRow openFinding)
+  useEffect(() => {
+    const on = (e: Event) => { const id = (e as CustomEvent<string>).detail; setOpened((o) => new Set([...(o ?? (first ? [first] : [])), id])); };
+    window.addEventListener("finding:open", on);
+    return () => window.removeEventListener("finding:open", on);
+  }, [first]);
   if (!report.found.length && items.length === same.size && !report.checking.length && !report.none.length && !rec.size) return null;
   return (
     <section className="findings" id="findings" aria-label="What goes with what">
       <h2>What goes with what <span>from your own days · compared fairly · each one once, most sure first</span></h2>
       <RecordScore rec={rec} />
-      <Noticed report={report} lineOf={lineOf} twinOf={twinOf} rec={all} onShow={onShow} />
-      <WorthALook items={items} hide={same} rec={all} onShow={onShow} />
+      <Noticed report={report} lineOf={lineOf} twinOf={twinOf} rec={all} onShow={onShow} isOpen={isOpen} toggle={toggle} />
+      <WorthALook items={items} hide={same} rec={all} onShow={onShow} isOpen={isOpen} toggle={toggle} />
       <div className="fl-folds">
         {report.checking.length > 0 && <div className="checking">
           <h3>Still checking</h3>
@@ -281,7 +296,7 @@ function OneList({ report, items, onShow }: { report: Report; items: Scouted[]; 
 /* ------------------------------------------------------------------ Noticed */
 
 /** What the findings engine has to say: cards with their evidence, then what it's still checking. */
-function Noticed({ report: all, lineOf, twinOf, rec, onShow }: { report: Report; lineOf: Map<string, string>; twinOf: Map<string, Scouted>; rec: ReturnType<typeof useRecord>; onShow: (f: GraphFocus) => void }) {
+function Noticed({ report: all, lineOf, twinOf, rec, onShow, isOpen, toggle }: { report: Report; lineOf: Map<string, string>; twinOf: Map<string, Scouted>; rec: ReturnType<typeof useRecord>; onShow: (f: GraphFocus) => void; isOpen: (id: string) => boolean; toggle: (id: string) => void }) {
   // PLAN 137: a finding he hid after the month's overall check stays out, listed under the rest
   const checks = useStore((s) => s.ai.checks);
   const hidden = new Set((checks ?? []).filter((c) => c.hidden).map((c) => c.id));
@@ -295,12 +310,10 @@ function Noticed({ report: all, lineOf, twinOf, rec, onShow }: { report: Report;
       {([["sure", report.found.filter((f) => noticedClaim(f, ""))], ["you", report.found.filter((f) => !noticedClaim(f, ""))]] as const).map(([g, fs]) => fs.length > 0 && <Fragment key={g}>
       <h3 className="fl-group">{g === "sure" ? <>Clear <span>· {fs.length} · the app is sure</span></> : <>About you <span>· your usuals, worked out from your days</span></>}</h3>
       <div className="ncards">
-        {fs.map((f) => (
-          <article className="ncard" key={f.id} id={`n-${f.id}`}>
-            <div className="k">{f.area} · {f.sure}</div>
-            <h3>{f.title}</h3>
-            <div className="v">{f.value}<small>{f.unit}</small></div>
-            {(lineOf.get(f.id) ?? noticedClaim(f, "")?.id) && <RecordLine id={(lineOf.get(f.id) ?? noticedClaim(f, "")?.id)!} rec={rec} />}
+        {fs.map((f) => { const line = lineOf.get(f.id) ?? noticedClaim(f, "")?.id; return (
+          <FindingRow className="ncard" key={f.id} id={`n-${f.id}`} k={`${f.area} · ${f.sure}`} title={f.title} value={<>{f.value}<small>{f.unit}</small></>}
+            state={line ? rec.get(line)?.r.state : null} flag={<AiCheckTag id={`n:${f.id}`} />} open={isOpen(`n:${f.id}`)} onToggle={() => toggle(`n:${f.id}`)}>
+            {line && <RecordLine id={line} rec={rec} />}
             <p>{f.detail}</p>
             {f.chart?.kind === "trend" && (() => {
               const c = f.chart, days = c.days ?? WINDOW_DAYS;
@@ -316,8 +329,8 @@ function Noticed({ report: all, lineOf, twinOf, rec, onShow }: { report: Report;
             {twinOf.get(f.id) && <div className="n-lead"><div className="k">also a lead · {twinOf.get(f.id)!.p.text}</div><LeadExtras x={twinOf.get(f.id)!} onShow={onShow} /></div>}
             <AiCheckLabel id={`n:${f.id}`} />
             <TellAi where="Insights → Noticed" label={f.title} finding={`${f.title} — ${f.value}${f.unit ? ` ${f.unit}` : ""} (${f.area}, ${f.sure}). ${f.detail} Evidence: ${f.evidence}`} />
-          </article>
-        ))}
+          </FindingRow>
+        ); })}
       </div></Fragment>)}
       <HiddenByYou prefix="n:" />
     </section>

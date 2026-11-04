@@ -43,7 +43,17 @@ const NOW = new Date('2026-10-27T10:00:00').getTime(), D = 864e5, KEY = 'healtho
     localStorage.setItem(k, JSON.stringify(s));
   }, [KEY, NOW, D]);
   await pg.goto(APP + '#insights/connections'); await pg.reload(); await pg.waitForSelector('#findings .n-lead', { timeout: 8000 }).catch(() => {});
+  // A (PLAN 197): each finding a row — the most sure one open, the rest closed; a tap opens one
+  const rows = pg.locator('#findings .fl-row'), shut = pg.locator('#findings .fl-h button[aria-expanded="false"]');
+  const nRows = await rows.count(), nShut = await shut.count();
+  check(`each finding a row: the first open, the others closed (${nRows} rows, ${nShut} closed)`, nRows >= 2 && await rows.first().getAttribute('data-open') !== null && nShut === nRows - 1 && await rows.nth(1).locator('.fl-body').count() === 0);
+  const rowHead = (await rows.nth(1).locator('.fl-h').innerText()).replace(/\s+/g, ' ');
+  check(`…a closed row says what it is, how sure, the sentence and the number (${rowHead})`, /99% sure/i.test(rowHead) && /points/.test(rowHead));
+  await rows.nth(1).locator('.fl-h button').click(); await pg.waitForTimeout(100);
+  check('…a tap opens it', await rows.nth(1).getAttribute('data-open') !== null && await rows.nth(1).locator('.fl-body .ev').count() === 1);
+  await pg.locator('#findings').screenshot({ path: OUT + 'findings-rows.png' }).catch(() => {});
   const card = pg.locator('#noticed .ncard').filter({ has: pg.locator('.n-lead') }).first();
+  if (!(await card.getAttribute('data-open'))) await card.locator('.fl-h button').click();
   const t = (await card.innerText().catch(() => '')).replace(/\s+/g, ' ');
   check(`one list: Noticed's card for the drinks, the lead that says the same on it (${t.slice(0, 160)})`, /The day after 2\+ drinks, your mood is [\d.]+ points lower/.test(t) && /also a lead · Alcohol and next-day mood move opposite ways/i.test(t));
   check(`…and not a second card under "worth a look" (${await pg.locator('#scout .scard').filter({ hasText: 'Alcohol and next-day mood' }).count()})`, await pg.locator('#scout .scard').filter({ hasText: 'Alcohol and next-day mood' }).count() === 0);

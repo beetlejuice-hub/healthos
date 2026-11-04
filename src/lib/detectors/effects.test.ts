@@ -49,6 +49,14 @@ describe("effect engine — test bench", () => {
     expect(r.none[0].text).toMatch(/: no effect bigger than \d\.\d (points|kcal) \(\d+ days\)$/);
   });
 
+  // PLAN 197 (owner, 4 Nov: "yea fix drink labels" — a drinks finding said "CAFFEINE · 99% sure")
+  it("a drinks finding is labelled alcohol; a caffeine one stays caffeine", () => {
+    const f = [1, 2, 3, 4, 5].flatMap((seed) => effectFindings(feelWorld({ seed, days: 90, alcoholMood: -2, lateCafEnergy: -1.5 }), STACK).found);
+    const alc = f.filter((x) => x.id.startsWith("fx-alc")), caf = f.filter((x) => x.id.startsWith("fx-late-caf"));
+    expect(alc.length).toBeGreaterThan(0); expect(caf.length).toBeGreaterThan(0);
+    expect(new Set(alc.map((x) => x.area))).toEqual(new Set(["alcohol"]));
+    expect(new Set(caf.map((x) => x.area))).toEqual(new Set(["caffeine"]));
+  });
   it("a finding reads like a sentence with its evidence", () => {
     const f = effectFindings(feelWorld({ seed: 5, lateCafEnergy: -1.5 }), STACK).found.find((x) => x.id.startsWith("fx-late-caf"))!;
     expect(f.title).toMatch(/(The day after caffeine past 14:00, your energy is \d\.\d points lower|Each (100 mg of caffeine after 14:00|50 mg of caffeine left at bedtime) goes with next-day energy \d\.\d points lower)/);

@@ -1,6 +1,6 @@
 // Between check-ins: a month where the gym really lifts mood (bench fixture, +2.5, a month with no other finding) shows as a
 // Noticed card on Insights, with its evidence; an empty account says what's missing instead.
-const { chromium, APP, OUT, handle, rate } = require('./harness.cjs');
+const { chromium, APP, OUT, handle, rate, openFindings } = require('./harness.cjs');
 const month = require('./fixtures/between-month.json');
 
 (async () => {
@@ -25,6 +25,7 @@ const month = require('./fixtures/between-month.json');
   await pg.evaluate((m) => { const k = 'healthos.v1:u-test'; const s = JSON.parse(localStorage.getItem(k) || '{}'); localStorage.setItem(k, JSON.stringify({ ...s, entries: m.entries, workouts: m.workouts })); }, month);
   await pg.reload(); await pg.waitForSelector('text=Settings', { timeout: 10000 }).catch(() => {});
   await pg.goto(APP + '#insights/connections'); await pg.waitForTimeout(600);
+  await openFindings(pg); // each finding a row that opens (PLAN 197)
   const body = await pg.locator('body').innerText();
   check('Insights: the gym lifts mood, in words', /After the gym, your mood rises about \d\.\d points more than it otherwise does/.test(body));
   check('with its evidence: how often it held and the range', /gaps with the gym, \d+ without at the same time of day · \d+ of \d+ beat what was expected · 95% range/.test(body));

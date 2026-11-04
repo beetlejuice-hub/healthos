@@ -3568,9 +3568,13 @@ both reads and the questions. Phases in that order; #152 RPE waits (owner).
      Tips: two for the same feeling are one when one's words are all in the other's (focus music / music); the latest
      words win. Tests: reply.test, tips.test, e2e chatwhole (new), chatfold (the one fold, the order).
 
-197. [~] **Findings as A, and drinks labelled alcohol** (owner, 4 Nov: "yea fix drink labels" · "i like A findings page"
+197. [x] **Findings as A, and drinks labelled alcohol** (owner, 4 Nov: "yea fix drink labels" · "i like A findings page"
    — the canvas https://claude.ai/artifact/EWQuBc1Zk2FN5JgB4uWs95). Claimed 4 Nov.
    - Drinks: Noticed's alcohol questions were filed under "caffeine", so a drinks finding said "CAFFEINE · 99% sure".
      Alcohol gets its own area.
    - A: each finding a row — kind and how sure, the sentence, the number, how it has held — and a tap opens the rest;
      the most sure one open to start; Today's "Noticed" line opens the row it points to.
+   - Done 4 Nov: area "alcohol" (findings, the two alcohol questions, Glance's pick); components/FindingRow (the heading
+     is a button with aria-expanded; the record chip in it, not twice when open), Noticed's and Leads' cards as rows,
+     the open set held by the list, openFinding from Today. Tests: effects.test (alcohol vs caffeine), e2e leads (rows:
+     the first open, the rest closed, a tap opens), harness openFindings for the suites that read inside the cards.

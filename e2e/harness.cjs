@@ -97,4 +97,12 @@ async function forYou(pg, key) {
   }
   return false;
 }
-module.exports = { rate, chromium, APP, OUT, handle, users, tables, seed, openCard, forYou };
+/** Insights → Findings shows each finding as a row that opens (PLAN 197): open them all, to read or use what's inside. */
+async function openFindings(pg) {
+  for (let i = 0; i < 40; i++) {
+    const shut = pg.locator('#findings .fl-h button[aria-expanded="false"]');
+    if (!(await shut.count())) return;
+    await shut.first().click(); await pg.waitForTimeout(30);
+  }
+}
+module.exports = { rate, chromium, APP, OUT, handle, users, tables, seed, openCard, forYou, openFindings };

@@ -6,6 +6,7 @@
  * say → no card.
  */
 
+import { openFinding } from "./FindingRow";
 import { useMemo, useState } from "react";
 import { useStore } from "../lib/store";
 import { notice } from "../lib/findings";
@@ -42,12 +43,12 @@ export function FromYourData({ now }: { now: number }) {
       <span className="r">→</span>
     </a>
   ) : lead ? (
-    <a className="noticed-line" href="#insights/connections" onClick={() => setTimeout(() => document.getElementById("scout")?.scrollIntoView({ behavior: "smooth" }), 150)}>
+    <a className="noticed-line" href="#insights/connections" onClick={() => setTimeout(() => { openFinding(`s:${lead.p.id}`); (document.getElementById(`s-${lead.p.id}`) ?? document.getElementById("scout"))?.scrollIntoView({ behavior: "smooth" }); }, 150)}>
       <span><small>New lead</small>{lead.p.text} — {lead.p.held} of {lead.p.of} times.</span>
       <span className="r">→</span>
     </a>
   ) : top && hidden !== topKey ? (
-    <a className="noticed-line" href="#insights/connections" onClick={() => setTimeout(() => document.getElementById(`n-${top.id}`)?.scrollIntoView({ behavior: "smooth" }), 150)}>
+    <a className="noticed-line" href="#insights/connections" onClick={() => setTimeout(() => { openFinding(`n:${top.id}`); document.getElementById(`n-${top.id}`)?.scrollIntoView({ behavior: "smooth" }); }, 150)}>
       <span><small>Noticed</small>{top.title}.</span>
       <button type="button" aria-label="Hide this" onClick={(e) => { e.preventDefault(); setHidden(topKey); try { localStorage.setItem(HIDDEN, topKey); } catch { /* private mode */ } }}>✕</button>
     </a>

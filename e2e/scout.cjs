@@ -1,4 +1,4 @@
-const { chromium, APP, OUT, handle } = require('./harness.cjs');
+const { chromium, APP, OUT, handle, openFindings } = require('./harness.cjs');
 // The scout: patterns flagged on sample data, a dot on Insights, a Today line, Show on graph, Not interesting.
 (async () => {
   const b = await chromium.launch(); const errs = [];
@@ -18,6 +18,7 @@ const { chromium, APP, OUT, handle } = require('./harness.cjs');
   check('Today shows a pattern you haven\'t seen', /\d+ of \d+ times/.test(line));
   check('Insights tab has a dot', await pg.locator('.tabdot').count() === 1);
   await pg.goto(APP + '#insights/connections'); await pg.waitForTimeout(800);
+  await openFindings(pg); // each finding a row that opens (PLAN 197)
   const cards = pg.locator('.scard');
   const n = await cards.count();
   check('Insights lists patterns (sample data has some)', n >= 1);
@@ -30,11 +31,11 @@ const { chromium, APP, OUT, handle } = require('./harness.cjs');
   await pg.locator('.master').screenshot({ path: OUT + 'scout-graph.png' });
   await pg.goto(APP + '#today'); await pg.waitForTimeout(300);
   check('seen on Insights → gone from Today and the dot', await pg.locator('.noticed-line').filter({ hasText: /New lead/i }).count() === 0 && await pg.locator('.tabdot').count() === 0);
-  await pg.goto(APP + '#insights/connections'); await pg.waitForTimeout(500);
+  await pg.goto(APP + '#insights/connections'); await pg.waitForTimeout(500); await openFindings(pg);
   // the card itself goes (Leads show 5 at most: the next one may move up, so the count can stay the same)
-  const gone = (await pg.locator('.scard').first().locator('h3').innerText().catch(() => '')).trim();
+  const gone = (await pg.locator('.scard').first().locator('.fl-title').innerText().catch(() => '')).trim();
   await pg.locator('.scard').first().getByRole('button', { name: 'Not interesting' }).click(); await pg.waitForTimeout(300);
-  const titles = (await pg.locator('.scard h3').allInnerTexts()).map((x) => x.trim());
+  const titles = (await pg.locator('.scard .fl-title').allInnerTexts()).map((x) => x.trim());
   check(`Not interesting removes it (${gone})`, !!gone && !titles.includes(gone));
   console.log('errors:', JSON.stringify(errs));
   await b.close();

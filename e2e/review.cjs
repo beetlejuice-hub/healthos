@@ -2,7 +2,7 @@
 // graphs or like interesting notices"; 15 Oct: "do the digests"). Monday 19 Oct 09:00, 10 weeks behind: mood about 6, the
 // last week 7.5; ~2,400 kcal, protein 150 against a 160 goal. A fake AI writes the read; the card's table and charts must
 // come from the app's numbers. Asked once; an empty account asks nothing.
-const { chromium, APP, OUT, handle, tables } = require('./harness.cjs');
+const { chromium, APP, OUT, handle, tables, openFindings } = require('./harness.cjs');
 
 const NOW = new Date('2026-10-19T09:00:00').getTime();
 const calls = [];
@@ -108,7 +108,11 @@ const ANSWERS = {
   const ai = (await pg.evaluate(() => JSON.parse(localStorage.getItem('healthos.v1:u-test') || '{}'))).ai;
   const named = (list[0].match(/^- \[([^\]]+)\]/) || [])[1];
   check(`what it named is kept — only ids it was sent (${JSON.stringify((ai.checks || []).map((c) => c.id))})`, (ai.checks || []).length === 1 && ai.checks[0].id === named && ai.checks[0].verdict === 'noise');
-  await pg.goto(APP + '#insights/connections'); await pg.waitForSelector('.aicheck', { timeout: 8000 }).catch(() => {});
+  await pg.goto(APP + '#insights/connections'); await pg.waitForSelector('#findings', { timeout: 8000 }).catch(() => {});
+  // a closed row says it in its heading; open, the card says why (PLAN 197)
+  const tag = await pg.locator('#findings .fl-row:not([data-open]) .fl-flag').allInnerTexts(), openLab = await pg.locator('#findings .fl-row[data-open] .aicheck').count();
+  check(`the AI's check shows without opening the card (${tag.join(' | ') || `${openLab} open`})`, tag.some((t) => /the AI: looks like noise/.test(t)) || openLab > 0);
+  await openFindings(pg);
   const lab = pg.locator('.aicheck').first();
   check(`labelled where it's shown (${(await lab.innerText().catch(() => '')).replace(/\s+/g, ' ')})`, /The AI's check: looks like noise — only 9 days, mostly from one week/.test(await lab.innerText().catch(() => '')));
   await lab.evaluate((el) => el.scrollIntoView({ block: 'center' })).catch(() => {}); await pg.waitForTimeout(150);

@@ -2329,3 +2329,19 @@ span.fd-score[data-band="none"] { background: none; min-width: 34px; }
 .screen-wait { padding: 24px 16px; }
 .screen-failed { margin: 16px; display: grid; gap: 10px; justify-items: start; }
 .screen-failed p { margin: 0; }
+
+/* Findings as rows that open (PLAN 197, A): the heading is the row — kind, sentence, number, how it has held */
+.ncard.fl-row, .scard.fl-row { gap: 0; padding: 0; }
+.fl-row .fl-h { margin: 0; font-size: inherit; }
+.fl-row .fl-h button { all: unset; box-sizing: border-box; width: 100%; cursor: pointer; display: grid; grid-template-columns: minmax(0, 1fr) auto auto; grid-template-areas: "k v chev" "title title chev" "chip chip chip"; gap: 4px 10px; padding: 12px 14px; min-height: 44px; }
+.fl-row .fl-h button:focus-visible { outline: 2px solid var(--i-ink-2); outline-offset: -2px; border-radius: 8px; }
+.fl-row .fl-h .k { grid-area: k; }
+.fl-row .fl-h .fl-title { grid-area: title; font-size: 14.5px; font-weight: 600; line-height: 1.35; color: var(--i-ink); }
+.fl-row .fl-h .fl-v { grid-area: v; align-self: center; justify-self: end; font-family: var(--f-mono); font-size: 15px; font-weight: 500; color: var(--i-ink); white-space: nowrap; }
+.fl-row .fl-h .fl-v small { font-size: 11px; color: var(--i-ink-2); margin-left: 3px; font-weight: 400; }
+.fl-row .fl-h .fl-tags { grid-area: chip; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.fl-row .fl-h .fl-flag { font-size: 11.5px; color: var(--warn); }
+.fl-row .fl-h .chev { grid-area: chev; align-self: center; color: var(--i-ink-2); font-size: 12px; }
+.fl-row .fl-body { display: grid; gap: 8px; padding: 0 14px 14px; min-width: 0; }
+.fl-row[data-open] .fl-h button { padding-bottom: 6px; }
+.fl-row[data-open] .fl-h .rec-chip { display: none; } /* the open card says it in full */
