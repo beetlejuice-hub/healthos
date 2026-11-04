@@ -11,6 +11,7 @@ import { bandNow } from "../band-client";
 import { askAi, chatContext } from "./client";
 import { runChatTool, type ChartSpec } from "./chattools";
 import { CHAT_ROUNDS, type ChatTurn } from "./tasks";
+import { turnText, wholeReply } from "./reply";
 import type { Proposal } from "./propose";
 
 export type ChatReply = { ok: true; at: number; reply: string; proposals: Proposal[]; charts: ChartSpec[]; looked: string[]; learned: string[] } | { ok: false; message: string };
@@ -25,19 +26,22 @@ export async function askChat(msg: string, about?: string): Promise<ChatReply> {
   const context = `${chatContext()}${first > 0 ? `\n\n## Your earlier messages to me\n${hist.slice(0, first).map((m) => m.text).join("\n")}` : ""}${about ? `\n\n${about}` : ""}`;
   // The AI may ask the app for exact data (PLAN 67): run its calls here, send the results back, until it answers.
   let turn: ChatTurn[] = [];
-  const charts: ChartSpec[] = [], looked: string[] = [], learned: string[] = [], proposals: Proposal[] = [];
+  const charts: ChartSpec[] = [], looked: string[] = [], learned: string[] = [], proposals: Proposal[] = [], onTheWay: string[] = [];
   for (let round = 0; ; round++) {
     const r = await askAi({ task: "chat", messages, context, ...(turn.length ? { turn } : {}), ...(round >= CHAT_ROUNDS ? { final: true } : {}) });
     if (!r.ok) return { ok: false, message: r.message };
     if (!r.answer.calls?.length || round >= CHAT_ROUNDS) {
       // an answer with no words (shouldn't happen — the server checks it) is said plainly, not a crash
-      const at = Date.now(), reply = typeof r.answer.reply === "string" && r.answer.reply.trim() ? r.answer.reply : "Got it.";
+      // the words of every round, not just the last (PLAN 196: an answer written before a chart was lost — lib/ai/reply)
+      const last = typeof r.answer.reply === "string" ? r.answer.reply : "", whole = wholeReply(onTheWay, last);
+      const at = Date.now(), reply = whole.trim() ? whole : "Got it.";
       act.setAi((a) => ({
         chat: [...a.chat, { role: "assistant" as const, text: reply, at, ...(charts.length ? { charts: charts.slice(0, 2) } : {}), ...(looked.length ? { looked } : {}), ...(proposals.length ? { proposals } : {}) }].slice(-80),
         memory: [...a.memory, ...learned.filter((x) => !a.memory.some((m) => m.text.toLowerCase() === x.toLowerCase())).map((x) => ({ id: newId(), text: x, at }))].slice(-40),
       }));
       return { ok: true, at, reply, proposals, charts, looked, learned };
     }
+    onTheWay.push(...turnText(r.answer.turn));
     const data = { state: getState(), band: bandNow(), now: Date.now() };
     const results = r.answer.calls.map((c) => {
       const out = runChatTool(c, data);

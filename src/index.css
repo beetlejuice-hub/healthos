@@ -1784,6 +1784,13 @@ a { color: inherit; }
 .msg .looked { display: block; margin-top: 6px; font: 400 10.5px var(--f-mono); color: var(--c-dim); }
 .msg .msg-src { display: inline-block; margin-top: 8px; font-size: 12.5px; color: var(--c-ink-2); text-decoration: underline; text-underline-offset: 2px; }
 /* old days in the AI tab, folded to a line (owner, 16 Oct) */
+/* the days before, in one fold (PLAN 196) */
+.chat-earlier .ai-earlier { display: grid; gap: 8px; }
+.chat-earlier .ai-earlier > summary { list-style: none; cursor: pointer; padding: 11px 14px; border-radius: 12px; background: var(--c-card); color: var(--c-ink-2); font-size: 14px; }
+.chat-earlier .ai-earlier > summary::-webkit-details-marker { display: none; }
+.chat-earlier .ai-earlier > summary::before { content: "▸"; display: inline-block; width: 14px; color: var(--c-dim); }
+.chat-earlier .ai-earlier[open] > summary::before { content: "▾"; }
+.chat-earlier .ai-earlier > summary b { color: var(--c-ink); font-weight: 600; }
 .chat .day-fold { display: grid; gap: 10px; }
 .chat .day-fold > summary { list-style: none; cursor: pointer; padding: 9px 12px; border-radius: 12px; background: var(--c-card); color: var(--c-ink-2); font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .chat .day-fold > summary::-webkit-details-marker { display: none; }

@@ -1,7 +1,9 @@
 // Old chats fold (owner, 16 Oct: "also i feel like chats should be deleted? or like collapsed or whatever"). Messages on
 // the 13th and 14th and this morning: the 13th folds to one line with what was asked; the 14th has something not seen yet,
 // so it stays open; today is open. Tapping the line opens the day. Settings → AI → Clear the chat empties it, after asking,
-// keeping what the AI remembers and the app's findings.
+// keeping what the AI remembers and the app's findings. Since 4 Nov (PLAN 196: "collapsed the prev days chats. In one
+// collapse" and the studies "in a visible place"): the folded days sit in one "Earlier" fold, and what was researched for
+// you comes after it, just above today's messages.
 const { chromium, APP, OUT, handle } = require('./harness.cjs');
 
 const KEY = 'healthos.v1:u-test', NOW = new Date('2026-10-16T09:00:00').getTime();
@@ -27,9 +29,15 @@ const t = (d, hm) => new Date(`2026-10-${d}T${hm}:00`).getTime();
       { role: 'user', text: 'what should I eat before the gym?', at: m.a }, { role: 'assistant', text: 'Something with **carbs** an hour before.', at: m.a + 60e3 },
       { role: 'assistant', text: '📰 **Creatine and sleep loss**\n\nA 2026 trial.', at: m.b, unprompted: true },
       { role: 'user', text: 'how did I sleep?', at: m.c }, { role: 'assistant', text: 'About 7 h.', at: m.c + 60e3 },
-    ] };
+    ], researched: [{ key: 'supp:cre:5g', area: 'supp', name: 'Creatine', at: m.c - 36e5, day: '2026-10-16', usd: 0.07, title: 'Creatine at 5 g: does the timing matter?', known: 'Daily intake matters more than timing.', forYou: 'You take 5 g daily.', tip: 'Keep it daily', sure: 'strong', found: [] }] };
     localStorage.setItem(k, JSON.stringify(s)); }, [KEY, { seen: t('14', '08:00'), a: t('13', '18:00'), b: t('14', '09:30'), c: t('16', '08:30') }]);
   await pg.goto(APP + '#ai'); await pg.reload(); await pg.waitForSelector('.chat');
+  const earlier = pg.locator('.ai-earlier');
+  const eline = (await earlier.locator('> summary').innerText().catch(() => '')).replace(/\s+/g, ' ').trim();
+  check(`the days before are in one fold, closed (${eline})`, /^▸?\s*Earlier · 1 day · 2 messages · since 13 Oct$/.test(eline) && !(await earlier.evaluate((e) => e.open).catch(() => true)));
+  const order = await pg.evaluate(() => { const at = (s) => { const e = document.querySelector(s); return e ? [...document.querySelectorAll('.ai-earlier, [aria-label="Researched for you"], .chat:not(.chat-earlier) .msg')].indexOf(e) : -1; }; return [at('.ai-earlier'), at('[aria-label="Researched for you"]'), at('.chat:not(.chat-earlier) .msg')]; });
+  check(`…then what was researched for you, then today's messages (${order.join(' < ')})`, order[0] === 0 && order[1] === 1 && order[2] === 2);
+  await earlier.locator('> summary').click(); await pg.waitForTimeout(150);
   const folds = pg.locator('.chat .day-fold');
   const line = (await folds.first().locator('summary').innerText().catch(() => '')).replace(/\s+/g, ' ');
   check(`the 13th folds to one line, with what was asked (${line})`, await folds.count() === 1 && /^▸?\s*Tue 13 Oct · 2 messages · what should I eat before the gym\?$/.test(line.trim()) && !(await folds.first().evaluate((e) => e.open)));

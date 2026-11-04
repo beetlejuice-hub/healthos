@@ -561,26 +561,37 @@ export function AiScreen() {
   const index = new Map(thread.map((x, i) => [x.key, i]));
   const days = byDay(thread, now, (x) => x.at > since && byApp(x));
   const said = (x: (typeof thread)[number]) => ("m" in x && x.m ? { mine: x.m.role === "user", text: x.m.text } : { mine: false, text: "n" in x && x.n ? x.n.title : "r" in x && x.r ? x.r.title : "" });
+  // the days before in one fold, then what was found and researched for you, then today — where the tab opens (owner,
+  // 4 Nov: "when i open ai i should see todays chats and studies and collapsed the prev days chats. In one collapse")
+  const earlier = days.filter((g) => !g.open), current = days.filter((g) => g.open);
+  const dayFold = (g: (typeof days)[number]) => (
+    <details key={g.day} className="day-fold">
+      <summary><b>{dayLabel(atMinute(g.day, 720))}</b> · {g.items.length} message{g.items.length > 1 ? "s" : ""}{foldLine(g.items.map(said)) && <span> · {foldLine(g.items.map(said))}</span>}</summary>
+      {g.items.map((x) => render(x, index.get(x.key)!))}
+    </details>
+  );
+  const nEarlier = earlier.reduce((a, g) => a + g.items.length, 0);
   return (
     <div className="calm ai-screen">
       <div className="head"><span>Your AI</span><a href="#settings">Settings</a></div>
+      {earlier.length > 0 && <div className="chat chat-earlier">
+        <details className="ai-earlier">
+          <summary><b>Earlier</b> · {earlier.length} day{earlier.length > 1 ? "s" : ""} · {nEarlier} message{nEarlier > 1 ? "s" : ""}<span> · since {dayLabel(atMinute(earlier[0].day, 720)).replace(/^\w+ /, "")}</span></summary>
+          {earlier.map(dayFold)}
+        </details>
+      </div>}
       <DeepDive onRepick={makeDive} />
       <WatchList now={now} />
+      <SavedCard />
       <DiscoveryList />
       <ResearchList />
-      <SavedCard />
       <div className="chat" aria-live="polite">
         {/* reform A2 (owner, 29 Oct: Yes to "One line: “Ask about anything you log.” The rest behind a small ?") */}
         {thread.length === 0 && <div className="note ai-intro">
           <p>Ask about anything you log. <button type="button" className="ai-q" aria-expanded={about} aria-label="What the AI sees and when it writes" onClick={() => setAbout((v) => !v)}>?</button></p>
           {about && <p>I see your numbers, patterns, stack and About me. The morning read and your day read back are on Today — ask me about them here. I only write here myself with something new: a heart-rate stretch the app can't explain, a new finding to comment on, your week and month.</p>}
         </div>}
-        {days.map((g) => (g.open ? <Fragment key={g.day}>{g.items.map((x) => render(x, index.get(x.key)!))}</Fragment> : (
-          <details key={g.day} className="day-fold">
-            <summary><b>{dayLabel(atMinute(g.day, 720))}</b> · {g.items.length} message{g.items.length > 1 ? "s" : ""}{foldLine(g.items.map(said)) && <span> · {foldLine(g.items.map(said))}</span>}</summary>
-            {g.items.map((x) => render(x, index.get(x.key)!))}
-          </details>
-        )))}
+        {current.map((g) => <Fragment key={g.day}>{g.items.map((x) => render(x, index.get(x.key)!))}</Fragment>)}
         {busy > 0 && <div className="msg assistant typing">…</div>}
         {err && <p className="err">{err}</p>}
         <div ref={end} />

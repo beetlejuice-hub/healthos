@@ -3546,7 +3546,7 @@ both reads and the questions. Phases in that order; #152 RPE waits (owner).
      rewritten for the merged card; record, phone, noticed pointed at the list. Not done: B's grouping by outcome, A's
      folded rows — his pick.
 
-196. [~] **Urgent: the chat answers, the AI tab shows today, a tip once** (owner, 4 Nov, with screenshots: "Urgent fixes
+196. [x] **Urgent: the chat answers, the AI tab shows today, a tip once** (owner, 4 Nov, with screenshots: "Urgent fixes
    needed. I asked about hrv, it just spit a chart on me. Also i see it gave me some studies … but it put at the top and
    i would never notice ir cause its far up, above all the daily messages. Pls collapss these daily message summaries
    and put the studies in a visible place. Like when i open ai i should see todays chats and studies and collapsed fhe
@@ -3558,3 +3558,12 @@ both reads and the questions. Phases in that order; #152 RPE waits (owner).
    - The AI tab: today's messages and what was researched for him first, where the tab opens; the days before in one
      fold ("Earlier · 20 days"), each day still its own line inside.
    - Tips: the same thing said twice in other words is one tip.
+   - Done 4 Nov. Why the chart-only reply: when the AI wrote its answer and then asked the app for data (a look-up, a
+     chart), the app kept only the words after the last look-up — the answer went, "The chart is attached…" stayed.
+     Now every round's words are kept (lib/ai/reply: a "let me look" note on the way left out, nothing twice), and the
+     chat is told a chart goes with an answer, the whole answer in its last message, and how to answer a question about
+     one of his numbers (where it sits for people like him and against his usual, what moves it in his data and in
+     studies, the 2–3 things that would move it). The AI tab: "Earlier · N days" one fold holding each day's line, then
+     the deep dive, watching, saved, found for you and researched for you, then today's messages where the tab opens.
+     Tips: two for the same feeling are one when one's words are all in the other's (focus music / music); the latest
+     words win. Tests: reply.test, tips.test, e2e chatwhole (new), chatfold (the one fold, the order).

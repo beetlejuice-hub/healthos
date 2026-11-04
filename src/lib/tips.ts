@@ -56,17 +56,35 @@ export function readTips(text: string): { what: string; for: Feeling; said: stri
   return out;
 }
 
-/** Your tips, from every note in order: the latest saying wins; one said the other way later is dropped. */
+/**
+ * What a tip is, in its words that matter: "listening to focus music" → focus, music. Two tips for the same feeling are
+ * the same tip when one's words are all in the other's (PLAN 196; owner, 4 Nov, of "Focus music helps me focus when
+ * working" and "Music helps me focus": "Same thing").
+ */
+const TIP_STOP = new Set(["and", "with", "when", "the", "for", "some", "while", "bit", "lot"]);
+function tipWords(what: string): Set<string> {
+  const w = what.toLowerCase().replace(/^(?:listening to|listen to|playing|putting on|put on|having|doing|going for|a|an|the|my|some)\s+/g, "");
+  return new Set(w.split(/[^a-z0-9]+/).filter((x) => x.length >= 3 && !TIP_STOP.has(x)).map((x) => (x.length > 4 && x.endsWith("s") ? x.slice(0, -1) : x)));
+}
+const sameTip = (a: { what: string; for: Feeling }, b: { what: string; for: Feeling }) => {
+  if (a.for !== b.for) return false;
+  const x = tipWords(a.what), y = tipWords(b.what);
+  if (!x.size || !y.size) return tipKey(a.what) === tipKey(b.what);
+  const [small, big] = x.size <= y.size ? [x, y] : [y, x];
+  return [...small].every((w) => big.has(w));
+};
+
+/** Your tips, from every note in order: the latest saying wins (in its words); one said the other way later is dropped. */
 export function tipsFrom(entries: Entry[]): Tip[] {
-  const by = new Map<string, Tip>();
+  let tips: Tip[] = [];
   for (const e of [...entries].sort((a, b) => a.at - b.at)) {
     if (e.kind !== "notice") continue;
     for (const t of readTips(e.text)) {
-      const k = `${tipKey(t.what)}|${t.for}`;
-      if (t.off) by.delete(k); else by.set(k, { key: tipKey(t.what), what: t.what, for: t.for, said: t.said, at: e.at });
+      tips = tips.filter((u) => !sameTip(u, t));
+      if (!t.off) tips.push({ key: tipKey(t.what), what: t.what, for: t.for, said: t.said, at: e.at });
     }
   }
-  return [...by.values()];
+  return tips;
 }
 
 const lowOf = (f: Feeling, v: number) => (f === "stress" ? v - TIPS.stress : TIPS.low - v);

@@ -79,3 +79,19 @@ describe("suggested when that feeling is low", () => {
     expect(tipLines([...tips, did])).toEqual(['focus: "music helps me focus" — did it 1 time when suggested', 'focus: "exercise clears my head"', 'stress: "a walk calms me down"']);
   });
 });
+
+// PLAN 196 (owner, 4 Nov, For you showing "Focus music helps me focus when working" and "Music helps me focus": "Same thing")
+describe("the same tip in other words is one tip", () => {
+  it("focus music and music, both for focus: one tip, in the later words", () => {
+    const es = [note("Focus music helps me focus when working", NOW - 72 * H), note("Music helps me focus", NOW - 24 * H)];
+    expect(tipsFrom(es).map((t) => [t.for, t.said])).toEqual([["focus", "Music helps me focus"]]);
+    expect(tipAsk([...es, feel({ focus: 4 })], NOW)!.tips.map((t) => t.said)).toEqual(["Music helps me focus"]);
+    // said the other way later, in either words: gone
+    expect(tipsFrom([...es, note("focus music doesn't help me focus anymore", NOW - H)])).toEqual([]);
+  });
+  it("controls: another thing, or the same thing for another feeling — kept apart", () => {
+    expect(tipsFrom([note("Music helps me focus"), note("A walk helps me focus")]).map((t) => t.what)).toEqual(["Music", "A walk"]);
+    expect(tipsFrom([note("Music helps me focus"), note("Music calms me")]).map((t) => t.for)).toEqual(["focus", "stress"]);
+    expect(tipsFrom([note("Coffee wakes me up"), note("Cold showers wake me up")]).map((t) => t.what)).toEqual(["Coffee", "Cold showers"]);
+  });
+});
