@@ -3545,3 +3545,16 @@ both reads and the questions. Phases in that order; #152 RPE waits (owner).
      and it's marked seen so Today and the tab dot don't keep calling it new. Tests: findlist.test, e2e leads and record
      rewritten for the merged card; record, phone, noticed pointed at the list. Not done: B's grouping by outcome, A's
      folded rows — his pick.
+
+196. [~] **Urgent: the chat answers, the AI tab shows today, a tip once** (owner, 4 Nov, with screenshots: "Urgent fixes
+   needed. I asked about hrv, it just spit a chart on me. Also i see it gave me some studies … but it put at the top and
+   i would never notice ir cause its far up, above all the daily messages. Pls collapss these daily message summaries
+   and put the studies in a visible place. Like when i open ai i should see todays chats and studies and collapsed fhe
+   prev days chats. In on collapse"; then For you's "Focus 4 — what you said helps" listing "Focus music helps me focus
+   when working" and "Music helps me focus": "Same thing"). Claimed 4 Nov.
+   - The chat: "Isn't my average hrv like pretty low? How could i improve? What can cause this?" got "The chart is
+     attached under this message…" and a chart — no answer. A chart only goes with an answer in words: is it low (for
+     him, against people like him), what moves it, what he can do; the app never shows a chart-only reply.
+   - The AI tab: today's messages and what was researched for him first, where the tab opens; the days before in one
+     fold ("Earlier · 20 days"), each day still its own line inside.
+   - Tips: the same thing said twice in other words is one tip.
