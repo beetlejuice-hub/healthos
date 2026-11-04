@@ -46,7 +46,9 @@ async function readDoc(user: { token: string }, env: AiEnv, deps: Deps): Promise
 }
 // A new day resets the count; a new month resets the month's total.
 const asOf = (u: UsageDoc | null, day: string): UsageDoc => !u ? EMPTY(day)
-  : { ...u, ...(u.day !== day ? { day, calls: 0, dayUsd: 0 } : {}), ...(u.month !== day.slice(0, 7) ? { month: day.slice(0, 7), monthUsd: 0, byModel: {} } : {}) };
+  : { ...u, ...(u.day !== day ? { day, calls: 0, dayUsd: 0 } : {}), ...(u.month !== day.slice(0, 7) ? { month: day.slice(0, 7), monthUsd: 0, byModel: {}, byTask: {} } : {}) };
+/** A call's cost added to its job's total for the month (PLAN 195). */
+const byTask = (u: UsageDoc, task: Task, usd: number) => ({ ...(u.byTask ?? {}), [task]: (u.byTask?.[task] ?? 0) + usd });
 const readUsage = async (user: { token: string }, env: AiEnv, deps: Deps, day: string) => asOf(await readDoc(user, env, deps), day);
 
 async function writeUsage(user: { id: string; token: string }, env: AiEnv, deps: Deps, value: UsageDoc, onlyNew = false) {
@@ -274,7 +276,7 @@ export async function handleAi(req: Request, env: AiEnv, deps: Deps = { fetch: (
         const { answer, usage: u } = await callGemini(body, g, deps.fetch, today);
         const usd = geminiUsd(g.via, g.model, u) + paidMisses;
         const tokens = { input_tokens: u.in, output_tokens: u.out, cache_read_input_tokens: 0, cache_creation_input_tokens: 0, server_tool_use: { web_search_requests: 0 } };
-        const next = await addSpend(user, env, deps, today, (x) => ({ ...x, calls: x.calls + 1, dayUsd: x.dayUsd + usd, monthUsd: x.monthUsd + usd,
+        const next = await addSpend(user, env, deps, today, (x) => ({ ...x, calls: x.calls + 1, dayUsd: x.dayUsd + usd, monthUsd: x.monthUsd + usd, byTask: byTask(x, body.task, usd),
           recent: [...(x.recent ?? []), logOf(deps.now(), body.task, choice, tokens, usd, g.via)].slice(-RECENT_CALLS) })).catch(() => usage);
         return json({ answer, usage: next, costUsd: usd, model: choice, via: g.via });
       } catch (e) {
@@ -292,7 +294,7 @@ export async function handleAi(req: Request, env: AiEnv, deps: Deps = { fetch: (
       // whatever was spent is added, even when the call then failed (an answer in the wrong shape is still paid for)
       // (if Supabase can't be reached the answer still goes back; only the total misses it)
       if (spent.usd > 0) spent.next = await addSpend(user, env, deps, today, (u) => ({ ...u, calls: u.calls + (more ? 0 : 1), dayUsd: u.dayUsd + spent.usd, monthUsd: u.monthUsd + spent.usd,
-        byModel: { ...u.byModel, [choice]: (u.byModel[choice] ?? 0) + spent.usd }, recent: [...(u.recent ?? []), logOf(deps.now(), body.task, choice, spent.usage, spent.usd)].slice(-RECENT_CALLS) })).catch(() => undefined);
+        byModel: { ...u.byModel, [choice]: (u.byModel[choice] ?? 0) + spent.usd }, byTask: byTask(u, body.task, spent.usd), recent: [...(u.recent ?? []), logOf(deps.now(), body.task, choice, spent.usage, spent.usd)].slice(-RECENT_CALLS) })).catch(() => undefined);
     }
   })();
   ctx?.waitUntil(run);

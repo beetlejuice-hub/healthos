@@ -391,6 +391,9 @@ describe("/api/ai", () => {
     expect(u.byModel.sonnet).toBeCloseTo(chatUsd, 6);
     expect(u.recent.map((r) => r.task)).toEqual(["chat", "dive"]);
     expect(u.rev).toBe(2);
+    // and by job (PLAN 195): each call under its own task
+    const t = (u as unknown as { byTask: Record<string, number> }).byTask;
+    expect([t.dive, t.chat].map((x) => +x.toFixed(6))).toEqual([+diveUsd.toFixed(6), +chatUsd.toFixed(6)]);
   });
 
   it("a fallback is paid at its own model's rates, the attempt before it too (usage.iterations)", async () => {
@@ -536,6 +539,7 @@ describe("the light jobs on Gemini first", () => {
     const body = (await (await handleAi(post({ task: "describe", text: "coffee" }), gEnv, w.deps)).json()) as Out;
     expect(body.via).toBe("gemini");
     expect(body.costUsd).toBeCloseTo((800 * 0.25 + 300 * 1.5) / 1e6, 9);
+    expect((w.docs.get("ai_usage") as { byTask: Record<string, number> }).byTask.describe).toBeCloseTo(body.costUsd, 9);
     expect([w.gemSent[1].headers["x-goog-api-key"], w.gemSent[1].url.includes("gemini-3.1-flash-lite"), w.sent.length]).toEqual(["paid-key", true, 0]);
   });
   it("an answer in the wrong shape, then the credits down → Claude, as before", async () => {

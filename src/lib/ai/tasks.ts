@@ -700,6 +700,7 @@ export type AiError = keyof typeof AI_ERRORS;
 /** `via`: answered by Gemini — its free tier or his credits (3 Nov) — not by `model`, the Claude model it would have gone to. */
 export type CallLog = { at: number; task: Task; model: ModelChoice; in: number; cached: number; written: number; out: number; searches: number; usd: number; via?: "gemini-free" | "gemini" };
 export type UsageDoc = { day: string; calls: number; dayUsd: number; month: string; monthUsd: number; byModel: Partial<Record<ModelChoice, number>>;
+  /** This month's cost by job (PLAN 195: "where the AI money goes"). */ byTask?: Partial<Record<Task, number>>;
   /** The last calls, newest last (owner, 15 Oct: "i feel like u are waay underestimating cost" — so the estimate is made from these). */
   recent?: CallLog[];
   /** Bumped on every write: a call adds its cost only if no other call wrote since it read (27 Oct, the $11 vs $18). */

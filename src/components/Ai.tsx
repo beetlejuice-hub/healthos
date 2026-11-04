@@ -49,6 +49,7 @@ import { addNever, addThreads, adviceOf, citedLines, closeThreads, dropCited, dr
 import { discoveryLines, keepDiscovery } from "../lib/ai/discover";
 import { DiscoveryCard, DiscoveryList } from "./Discovery";
 import { ResearchList } from "./Research";
+import { spendByJob } from "../lib/ai/spend";
 import { keepResearch, nextResearch, RESEARCH, researchContext, researchTopics, researchUsd, type Topic } from "../lib/ai/research";
 import { onSyncSettled, syncSettled } from "../lib/session";
 import { WatchList } from "./Watching";
@@ -701,6 +702,8 @@ export function AiSettings() {
       <h3>AI <span>{on == null ? "checking…" : on ? "on" : "off — add the key"}</span></h3>
       {on === false && <AiOff />}
       {usage && <p className="usage">Today <b>{usage.calls} of {cap}</b> calls · {usd(usage.dayUsd)} · this month <b>{usd(usage.monthUsd)} of {usd(budget)}</b>{projected != null && now.getDate() > 2 ? ` · on track for ≈ ${usd(projected)}` : ""}</p>}
+      {/* PLAN 195 (owner, 4 Nov: "6"): where it goes, by job */}
+      {usage && ((j) => j.rows.length > 0 && <p className="usage usage-jobs">This month by job: {j.rows.map((r, i) => <span key={r.name}>{i ? " · " : ""}{r.name} <b>{usd(r.usd)}</b></span>)}{j.calls != null && <small> — from the last {j.calls} call{j.calls === 1 ? "" : "s"}; counted in full from now</small>}</p>)(spendByJob(usage))}
       <p className="note ai-gemini">{gemini.free || gemini.paid
         ? <>Food estimates and the app's questions go to Gemini first — {[gemini.free && "its free tier", gemini.paid && "your Gemini credit"].filter(Boolean).join(", then ")}, then Claude.{viaToday.length ? ` Today: ${viaToday.filter((c) => c.via === "gemini-free").length} free, ${viaToday.filter((c) => c.via === "gemini").length} on credit.` : ""}</>
         : <>Food estimates and the app's questions can run on Gemini's free tier first: add GEMINI_FREE_KEY (a Google AI Studio key from a project without billing) — and GEMINI_API_KEY for the project with your credit — in Cloudflare's settings for this app.</>}</p>
