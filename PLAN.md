@@ -3512,3 +3512,19 @@ both reads and the questions. Phases in that order; #152 RPE waits (owner).
      study, Settings → AI → "Never again" (✕ lifts) and "Not again" on each topic of the log. Tests: said.test (never,
      worn, cited), lanes.test, brief.test, research.test, e2e notagain; said.cjs now tests the worn-out rest. Not
      verified: the real AI's studies tomorrow (design, links, fields) — the e2e fakes the AI.
+
+195. [~] **10, 6, 4 and 1 of the ten** (owner, 4 Nov, to "list 10 things u would change/remove/add": "lets do 10 but be
+   safe and 6 and 4 and 1"). Claimed 4 Nov.
+   - 10 — dead weight out, safely: code nothing reaches (exports and files no import in src/, worker/ or e2e/ uses; the
+     old supplement-effects function), removed only when the typecheck, every unit test and the full e2e still pass; a
+     thing only a test uses goes with its test. Nothing he can see changes.
+   - 6 — where the AI money goes: the Worker counts each call's cost by job (the morning and evening reads, chat, deep
+     dive, research, food and drink, questions, the rest) beside by model; Settings → AI: "this month: reads $6.10 · chat
+     $4.20 · …". From the 1st of the month it's counted; before, the recent calls' log fills in what it can.
+   - 4 — a faster first load: the main file is 1.5 MB (475 kB zipped; React 210 kB and Supabase 200 kB of it), every
+     page and chart before Today shows. Insights, Log, Workout and Settings load when opened; a chunk missing after a
+     deploy reloads the page once instead of a blank screen. Measured before and after.
+   - 1 — one list of findings: "this goes with that" is in six places — Connections, Noticed and Worth a look on
+     Insights → Findings, best and worst days on Mind, "Nearly sure?" in For you, the record's lines on each. Canvas
+     first (one list on the Findings page, each finding once with its strength, numbers and record; the folds for
+     checking, no effect and didn't hold), built as the default while he picks.
