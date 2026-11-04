@@ -135,3 +135,40 @@ describe("the AI's voice", () => {
     }
   });
 });
+
+// PLAN 194 (owner, 4 Nov: "make sure studies are good, not the same thing, also im bored of the advice of adding skyr to
+// my breakfast for protein … make research, protocols, studies fun and different, sometimes random ones")
+describe("good, different studies", () => {
+  it("each morning's study comes from a field the app picks — a different one the next morning", () => {
+    const field = (d: string) => morningBrief(d, [], [], 0).find((l) => l.startsWith("- Today's study"))!;
+    const f = Array.from({ length: 30 }, (_, k) => field(addDays("2026-11-01", k)));
+    expect(f[0]).toMatch(/^- Today's study \(the third on a study morning, or the spare\) is from this field, the app's pick at random: .+ — tie it to them/);
+    for (let k = 1; k < f.length; k++) expect(f[k]).not.toBe(f[k - 1]);
+    expect(new Set(f).size).toBeGreaterThanOrEqual(15); // 30 days span two rounds: one of them holds 15+ different fields
+  });
+  it("the tries steer off protein at breakfast, and have odd and new-field kinds", () => {
+    expect(TRY.join(" ")).not.toMatch(/high protein/);
+    expect(TRY.some((t) => /not a protein-at-breakfast idea/.test(t))).toBe(true);
+    expect(TRY.some((t) => /a protocol from a field they haven't tried/.test(t)) && TRY.some((t) => /something odd but tested/.test(t))).toBe(true);
+  });
+  it("the reads are told the bar for a study and the never-again list; the examples no longer prime protein at breakfast", () => {
+    for (const p of [SYSTEM.digest, SYSTEM.night]) {
+      expect(p).toMatch(/GOOD STUDIES .*research in people — a randomised trial, or a review or meta-analysis of trials, first/s);
+      expect(p).toMatch(/"design": its kind, size and year/);
+      expect(p).toMatch(/NEVER AGAIN .*"## Never again" and memory lines starting "Bored of:"/s);
+      expect(p).not.toMatch(/"protein-breakfast"|protein coffee/);
+    }
+    expect(SYSTEM.chat).toMatch(/remember it as "Bored of: …"/);
+  });
+  it("a study keeps its design, short; a \"study\" on a social site or a shop isn't one", () => {
+    const d = checkDigest({ greeting: "Hi", items: [
+      { type: "study", title: "Heat and sleep", text: "A warm bath 90 min before bed: asleep 10 min faster.", design: "meta-analysis · 17 studies · 2019 ".repeat(3), source: { title: "Before-bedtime passive body heating", url: "https://pubmed.ncbi.nlm.nih.gov/31102877/" } },
+      { type: "study", title: "A Reddit 'study'", text: "Someone says it works.", design: "n=1", source: { title: "r/sleep", url: "https://www.reddit.com/r/sleep/comments/x" } },
+      { type: "pattern", title: "Your nights", text: "7 h 10 usual.", design: "ignored" },
+    ] } as never);
+    expect(d.items.map((i) => i.title)).toEqual(["Heat and sleep", "Your nights"]);
+    expect(d.items[0].design).toMatch(/^meta-analysis · 17 studies · 2019/);
+    expect(d.items[0].design!.length).toBeLessThanOrEqual(61);
+    expect(d.items[1].design).toBeUndefined();
+  });
+});

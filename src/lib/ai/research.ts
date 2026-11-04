@@ -18,11 +18,13 @@ import { addDays, localDay } from "../time";
 import { scheduleWords } from "../schedule";
 import { allPhases, beatsText, distText, kindStats, paceText, type DistUnit } from "../cardiostats";
 import { stepsByDay } from "../steps";
+import { laneOn } from "./lanes";
 
 export const RESEARCH = { perWeek: 4, againDays: 45, monthUsd: 2.5, pauseShare: 0.5, keep: 60, fromHour: 10, topFoods: 3, minFoodDays: 6, minSuppDays: 3, minSessions: 6, said: 20 } as const;
 
-export type Area = "supp" | "food" | "training" | "cardio" | "steps" | "heart";
-export const AREAS: Area[] = ["supp", "food", "training", "cardio", "steps", "heart"];
+/** `wild`: a field the app picks at random, not from your data (PLAN 194: "sometimes random ones") — its turn comes like the others'. */
+export type Area = "supp" | "food" | "training" | "cardio" | "steps" | "heart" | "wild";
+export const AREAS: Area[] = ["supp", "food", "training", "cardio", "steps", "heart", "wild"];
 export type Topic = { key: string; area: Area; name: string; lines: string[] };
 /** What came back, kept: the answer, its topic, when, what it cost. `seen`: opened in the AI tab. */
 export type Researched = ResearchAnswer & { key: string; area: Area; name: string; at: number; day: string; usd: number; seen?: number };
@@ -104,6 +106,12 @@ export function researchTopics(d: Data, band: Pick<BandData, "rhr" | "hrv" | "st
       "- Look into: what these numbers mean for someone like me, what moves them (training, sleep, alcohol, weight loss), and how fast.",
     ] });
   }
+  // something random (PLAN 194; owner, 4 Nov: "make research, protocols, studies fun and different, sometimes random ones")
+  const lane = laneOn(today, "research");
+  out.push({ key: `wild:${lane.id}`, area: "wild", name: lane.words.split(" — ")[0], lines: [
+    `- What: something random to learn about — the app's pick at random, not from my data: ${lane.words}.`,
+    "- Look into: the most surprising well-tested finding in this field that someone like me (About me) could use or would enjoy knowing — in people, with its design, size and year — and one small, safe thing to try.",
+  ] });
   return out;
 }
 
@@ -126,9 +134,12 @@ export function nextResearch(list: Topic[] | (() => Topic[]), done: Researched[]
   if (spend.monthUsd >= spend.budget * RESEARCH.pauseShare) return { wait: `the month's AI spend is past half the $${spend.budget} budget` };
   // the topics only now, past every cheap check: they read weeks of the band's minutes
   const topics = typeof list === "function" ? list() : list;
-  const fresh = topics.filter((t) => !done.some((r) => r.key === t.key && r.day > addDays(today, -RESEARCH.againDays)));
+  // the random field only once something of yours has been looked into: research is about you, random sometimes
+  const fresh = topics.filter((t) => !done.some((r) => r.key === t.key && r.day > addDays(today, -RESEARCH.againDays)) && (t.area !== "wild" || done.some((r) => r.area !== "wild")));
   if (!fresh.length) return { wait: "nothing new to look into" };
-  const lastIn = (a: Area) => Math.max(0, ...done.filter((r) => r.area === a).map((r) => r.at));
+  // the random field never jumps the queue: never done, it waits as if just done, so it comes after a round of the others
+  const latest = Math.max(0, ...done.map((r) => r.at));
+  const lastIn = (a: Area) => { const at = done.filter((r) => r.area === a).map((r) => r.at); return at.length ? Math.max(...at) : a === "wild" ? latest : 0; };
   const order = [...AREAS].sort((a, b) => lastIn(a) - lastIn(b) || AREAS.indexOf(a) - AREAS.indexOf(b));
   for (const a of order) { const t = fresh.find((x) => x.area === a); if (t) return { topic: t }; }
   return { wait: "nothing new to look into" };

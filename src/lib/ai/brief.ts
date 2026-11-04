@@ -8,6 +8,7 @@
 
 import { nextTemplate } from "../training";
 import { DAY } from "../time";
+import { laneOn, pickFor } from "./lanes";
 
 /** The lens of the morning's own-data item, in turn. */
 export const ANGLES = [
@@ -24,14 +25,20 @@ export const ANGLES = [
   "Mental health — one practice with evidence (breathing, time outside, gratitude, reframing a worry, social time) tied to their mood or stress data, and how to do it today",
 ];
 
-/** What the "New to try" item brings, in turn — never something already in their stack or already shown. */
+/**
+ * What the "New to try" item brings — never something already in their stack or already shown — in a shuffled order,
+ * every kind once a round (lib/ai/lanes; PLAN 194, owner, 4 Nov: "make research, protocols, studies fun and different,
+ * sometimes random ones"). The food kinds steer off protein at breakfast ("im bored of the advice of adding skyr").
+ */
 export const TRY = [
   "a study from the last 12 months on something they do or take",
   "a training method or split detail that fits their goals and the days they train (e.g. a rep scheme, a split, a technique)",
   "a supplement with good evidence for their goals that is NOT in their stack — what it does, the dose studied, how sure the evidence is",
-  "a food or a swap that fits their goals and the foods they already eat",
-  "a recipe that fits their goals: high protein, simple, with its numbers",
+  "a food they haven't logged, with an effect someone measured, that fits their goals — not a protein-at-breakfast idea",
+  "a recipe from a cuisine they don't eat yet that fits their goals, simple, with its numbers — lunch or dinner",
   "a mental- or brain-health practice with evidence that fits their days (focus, stress, mood, sleep) — how to do it and how sure the evidence is",
+  "a protocol from a field they haven't tried — breathing, heat, cold, light, a walking or running drill, a focus technique: what to do, for how many days, what the app will measure",
+  "something odd but tested — a small, safe experiment with a trial behind it that most people haven't heard of",
 ];
 
 /**
@@ -70,8 +77,10 @@ export function morningBrief(day: string, templates: { name: string }[], workout
   return [
     "## This morning (the app's picks, so mornings differ)",
     `- Angle for the "pattern" item: ${lead && !band.night ? LEAD_ITEM : angle}`,
-    `- "try" item today: ${TRY[n % TRY.length]}`,
+    `- "try" item today: ${pickFor(TRY, day, "try")}`,
     `- Third item today: ${lead && band.night ? LEAD_ITEM : THIRD[n % THIRD.length]}`,
+    // the morning's study goes somewhere new (PLAN 194): a field the app picks, every one once a round
+    `- Today's study (the third on a study morning, or the spare) is from this field, the app's pick at random: ${laneOn(day, "study").words} — tie it to them when something in their data fits; a surprising one is fine when nothing does`,
     ...(due ? [`- Today's plan: ${due.name} is the workout that's due next`] : []),
   ];
 }

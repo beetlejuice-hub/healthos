@@ -9,7 +9,7 @@
 import { PROGRAMS, asSplit } from "./programs";
 import { useSyncExternalStore } from "react";
 import type { Saved } from "./ai/saved";
-import type { Said, Thread } from "./ai/said";
+import type { Cited, Never, Said, Thread } from "./ai/said";
 import type { Watch } from "./watch";
 import type { KeptDiscovery } from "./ai/discover";
 import type { Drink, Entry, Food, Goals, Supplement, Template, Workout } from "./types";
@@ -47,6 +47,10 @@ export type AiState = {
   shown: string[];
   /** What the reads told you, by topic, and what they mean to look into (lib/ai/said; owner, 28 Oct: "should keep a log of what it said … so it doesnt forget things it already said a million trimes"). */
   said?: Said[]; threads?: Thread[];
+  /** What you're tired of — "Not again" (PLAN 194) — and the built-in ones you lifted (lib/ai/said BORED). */
+  never?: Never[]; neverLifted?: string[];
+  /** Every paper a read cited, so it's never cited again (PLAN 194). */
+  cited?: Cited[];
   /** What you asked it to look out for, from your notes, each with its evening question (lib/watch; owner, 28 Oct). */
   watches?: Watch[];
   /** What the app said — leads and Noticed findings — each with the day it was first said, re-checked on the days since (lib/record; PLAN 188 phase 3). */

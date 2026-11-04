@@ -4,7 +4,7 @@
 // stays. Five days after the last one it may come back. Controls: no history drops nothing; a different protein topic
 // ("protein-dinner-timing") isn't the breakfast one; two of one topic in a read keeps the first.
 import { describe, expect, it } from "vitest";
-import { addThreads, adviceOf, closeThreads, dropSaid, keepSaid, readItems, sameTopic, saidLines, SAID, threadLines, topicKey, unlinkedNote, type Said } from "./said";
+import { addNever, addThreads, adviceOf, BORED, closeThreads, dropCited, dropSaid, isNever, keepCited, keepSaid, liftNever, neverList, readItems, sameTopic, saidLines, saidNever, SAID, sourceKey, threadLines, topicKey, unlinkedNote, type Said } from "./said";
 
 const DAY = 86_400_000, NOW = new Date("2026-10-28T08:00:00").getTime();
 const week: Said[] = Array.from({ length: 7 }, (_, k) => ({ topic: "protein-breakfast", text: `Breakfast protein, take ${k + 1} — Add 30 g at breakfast`, at: NOW - (7 - k) * DAY, from: k % 2 ? "evening" : "morning" }));
@@ -78,9 +78,16 @@ describe("a read after a week of protein at breakfast", () => {
     expect(dropped.map((i) => i.topic)).toEqual(["high-protein-breakfast"]);
     expect(kept.map((i) => i.topic)).toEqual(["afternoon-dip-lunch", "protein-dinner-timing"]);
   });
-  it("five days after the last one, it may come back", () => {
-    expect(dropSaid(items, week, NOW + 4 * DAY, title).kept).toHaveLength(3);
-    expect(dropSaid(items, week, NOW + 3 * DAY, title).dropped).toHaveLength(1);
+  // PLAN 194 (owner, 4 Nov: "im bored of the advice of adding skyr to my breakfast for protein, we talked ab this")
+  it("said in 3 reads within 30 days it's worn out: it rests 30 days, not 5", () => {
+    expect(dropSaid(items, week, NOW + 4 * DAY, title).dropped.map((i) => i.topic)).toEqual(["high-protein-breakfast"]);
+    expect(dropSaid(items, week, NOW + 28 * DAY, title).dropped).toHaveLength(1);
+    expect(dropSaid(items, week, NOW + 30 * DAY, title).kept).toHaveLength(3);
+  });
+  it("control: said in 2 reads, five days after the last one it may come back", () => {
+    const twice = week.slice(-2);
+    expect(dropSaid(items, twice, NOW + 3 * DAY, title).dropped).toHaveLength(1);
+    expect(dropSaid(items, twice, NOW + 4 * DAY, title).kept).toHaveLength(3);
   });
   it("controls: nothing said → nothing dropped; one topic twice in a read keeps the first", () => {
     expect(dropSaid(items, [], NOW, title).dropped).toEqual([]);
@@ -97,7 +104,8 @@ describe("the log", () => {
     expect(keepSaid([old, ...week], add, NOW).map((s) => s.topic)).not.toContain("x-old");
   });
   it("for the reads: by topic, how often, when last, resting until", () => {
-    expect(saidLines(week, NOW)).toEqual(['protein-breakfast — 7× since Wed 21 Oct, last Tue 27 Oct (morning): "Breakfast protein, take 7 — Add 30 g at breakfast" — resting until Sun 1 Nov']);
+    expect(saidLines(week, NOW)).toEqual(['protein-breakfast — 7× since Wed 21 Oct, last Tue 27 Oct (morning): "Breakfast protein, take 7 — Add 30 g at breakfast" — worn out, resting until Thu 26 Nov']);
+    expect(saidLines(week.slice(-1), NOW)).toEqual(['protein-breakfast — 1× since Tue 27 Oct, last Tue 27 Oct (morning): "Breakfast protein, take 7 — Add 30 g at breakfast" — resting until Sun 1 Nov']);
   });
 });
 
@@ -110,5 +118,61 @@ describe("to look into", () => {
     expect(threadLines(t, NOW + DAY)).toEqual(["[t:a1] Does creatine timing change how full the muscles feel? (since Wed 28 Oct)", "[t:a2] Why is Thursday energy lowest? (since Thu 29 Oct)"]);
     expect(closeThreads(t, ["[t:a1]"]).map((x) => x.id)).toEqual(["a2"]);
     expect(addThreads(t, [], NOW + 30.5 * DAY, id).map((x) => x.id)).toEqual(["a2"]);
+  });
+});
+
+// PLAN 194 (owner, 4 Nov: "im bored of the advice of adding skyr to my breakfast for protein, we talked ab this"):
+// never again, in any words. Planted: skyr, quark and Greek yoghurt mornings under new names; a tapped "Not again".
+describe("never again", () => {
+  const read = [
+    { title: "Skyr bowl: 30 g before 9", topic: "skyr-bowl", tip: "Have 250 g skyr with berries" },
+    { title: "A Greek yogurt start", topic: "morning-yogurt", tip: "Greek yogurt and oats by 08:30" },
+    { title: "Quark pancakes for the win", topic: "pancake-swap", tip: "" },
+    { title: "Casein before bed", topic: "protein-dinner-timing", tip: "Have cottage cheese at 21:00" },
+    { title: "Walk after lunch", topic: "walk-after-lunch", tip: "10 minutes outside" },
+  ];
+  it("protein at breakfast is on the list from his words: skyr, quark, Greek yoghurt go under any name; the rest stays", () => {
+    const nv = neverList(undefined, undefined);
+    expect(nv.map((n) => n.topic)).toEqual(["protein-breakfast"]);
+    expect(dropSaid(read, [], NOW, title, nv).kept.map((i) => i.topic)).toEqual(["protein-dinner-timing", "walk-after-lunch"]);
+    expect(dropSaid([{ title: "High-protein breakfast, again", topic: "high-protein-breakfast" }], [], NOW, title, nv).kept).toEqual([]);
+    // the morning read and the evening's changes alike
+    expect(readItems(read, [], NOW, title, nv).map((i) => i.title)).toEqual(["Casein before bed", "Walk after lunch"]);
+    expect(dropSaid([{ what: "Add skyr to breakfast", topic: "breakfast-boost" }], [], NOW, (c) => c.what, nv).kept).toEqual([]);
+  });
+  it("control: lifted in Settings, they can come back; nothing on the list, nothing dropped", () => {
+    expect(dropSaid(read, [], NOW, title, neverList([], ["protein-breakfast"])).kept).toHaveLength(5);
+    expect(dropSaid(read, [], NOW, title, []).kept).toHaveLength(5);
+  });
+  it("a tap on \"Not again\": that topic in other words goes; another topic doesn't; tapped again, it's lifted", () => {
+    const nv = addNever([], read[4], NOW);
+    expect(nv).toEqual([{ topic: "walk-after-lunch", text: "Walk after lunch — 10 minutes outside", at: NOW }]);
+    expect(addNever(nv, { title: "A walk after lunch", topic: "after-lunch-walk" }, NOW)).toBe(nv);
+    expect(isNever(nv, "after-lunch-walk", "")).toBe(true);
+    expect(isNever(nv, "caffeine-cutoff", "Coffee before 14:00")).toBe(false);
+    expect(saidNever(nv, read[4])).toBe(true);
+    expect(liftNever(nv, [], "walk-after-lunch")).toEqual({ never: [], neverLifted: [] });
+    expect(liftNever([], [], BORED[0].topic)).toEqual({ never: [], neverLifted: ["protein-breakfast"] });
+  });
+});
+
+// PLAN 194 (owner, 4 Nov: "make sure studies are good, not the same thing"): a paper cited once isn't cited again.
+describe("never the same paper", () => {
+  it("one paper under its forms of address is one paper", () => {
+    expect(sourceKey("https://pubmed.ncbi.nlm.nih.gov/24235903/")).toBe("pmid:24235903");
+    expect(sourceKey("https://pubmed.ncbi.nlm.nih.gov/24235903/?utm_source=x")).toBe("pmid:24235903");
+    expect(sourceKey("https://doi.org/10.5664/jcsm.3170")).toBe(sourceKey("https://jcsm.aasm.org/doi/10.5664/jcsm.3170"));
+    expect(sourceKey("https://www.ncbi.nlm.nih.gov/pmc/articles/PMC3805807/")).toBe("pmc3805807");
+    expect(sourceKey("https://www.example.org/a/b/?x=1#y")).toBe("example.org/a/b");
+  });
+  it("cited before: dropped from a later read, whatever its title; a rewrite of the same read keeps its own; 180 days on it may come back", () => {
+    const cited = keepCited([], [{ title: "Caffeine 6 hours before bed", url: "https://pubmed.ncbi.nlm.nih.gov/24235903/" }, undefined], NOW);
+    const items = [{ title: "Coffee at 4 pm", source: { url: "https://pubmed.ncbi.nlm.nih.gov/24235903" } }, { title: "Kiwi", source: { url: "https://doi.org/10.1/kiwi" } }, { title: "No link" }];
+    expect(dropCited(items, cited).map((i) => i.title)).toEqual(["Kiwi", "No link"]);
+    expect(dropCited(items, cited, NOW)).toHaveLength(3);
+    expect(keepCited(cited, [{ title: "again", url: "https://pubmed.ncbi.nlm.nih.gov/24235903/" }], NOW + DAY)).toHaveLength(1);
+    expect(keepCited(cited, [], NOW + (SAID.citedDays + 1) * DAY)).toEqual([]);
+    // control: nothing cited, nothing dropped
+    expect(dropCited(items, [])).toHaveLength(3);
   });
 });

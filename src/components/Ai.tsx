@@ -45,7 +45,7 @@ import { ReadItems } from "./ReadItems";
 import { digestDue, freshRead, morningShown, nightIn, nightShown } from "../lib/ai/morning";
 import { attempt, onRetryDue, tryNow } from "../lib/ai/attempts";
 import { dayTotals, dayWindow, eveningOf, nightDue, nightStale, STALE } from "../lib/ai/nightread";
-import { addThreads, adviceOf, closeThreads, dropSaid, keepSaid, readItems, saidTopics, unlinkedNote } from "../lib/ai/said";
+import { addNever, addThreads, adviceOf, citedLines, closeThreads, dropCited, dropSaid, keepCited, keepSaid, liftNever, neverList, readItems, saidTopics, sameTopic, unlinkedNote, type Cited } from "../lib/ai/said";
 import { discoveryLines, keepDiscovery } from "../lib/ai/discover";
 import { DiscoveryCard, DiscoveryList } from "./Discovery";
 import { ResearchList } from "./Research";
@@ -77,6 +77,9 @@ const keepFail = (task: string) => (r: { error: string; message: string }) =>
 export const makeDigest = (day: string, now = false) =>
   now ? tryNow(`digest:${day}`, () => writeDigest(day), keepFail("digest")) : attempt(`digest:${day}`, () => writeDigest(day), { lane: "read", onFail: keepFail("digest") });
 
+/** For the reads: what's been cited, so no paper comes back (PLAN 194; owner, 4 Nov: "make sure studies are good, not the same thing"). */
+const citedBlock = (cited: Cited[] | undefined): string[] => ((l) => (l.length ? ["## Papers and pages already cited (never cite one of these again — find another)", ...l.map((x) => `- ${x}`)] : []))(citedLines(cited));
+
 async function writeDigest(day: string) {
   const ai = getState().ai;
   // written already (another tick, or another device's synced read)
@@ -91,16 +94,20 @@ async function writeDigest(day: string) {
     ...(ai.night && ai.night.day >= addDays(day, -1) ? ai.night.change.map((c) => `${ai.night!.day} read-back: ${c.what}`) : []),
   ];
   // it may check its claims with the app's own numbers first (PLAN 160)
-  const r = await askRead({ task: "digest", context: `${contextNow()}\n${brief.join("\n")}\n${lead ? `${leadLines(lead).join("\n")}\n` : ""}${askFor(day, "morning", follow).join("\n")}\n${discoveryLines(day, "morning", ai.discoveries).join("\n")}`, shown: ai.shown.slice(-40) });
+  const r = await askRead({ task: "digest", context: `${contextNow()}\n${brief.join("\n")}\n${lead ? `${leadLines(lead).join("\n")}\n` : ""}${askFor(day, "morning", follow).join("\n")}\n${discoveryLines(day, "morning", ai.discoveries).join("\n")}\n${citedBlock(ai.cited).join("\n")}`, shown: ai.shown.slice(-40) });
   if (!r.ok) return r;
   // advice on a topic said in the last 5 days goes, whatever it's called now (lib/ai/said; owner, 28 Oct: "in the last
   // liike 7 days it only recommended me to take in more protein w breakfast… it can repeat sometimes but not every day")
-  const n = r.answer.news, at = Date.now(), fresh = readItems(r.answer.items, getState().ai.said ?? [], at, (i) => i.title);
+  // nothing he's tired of, no paper cited before (PLAN 194) — a rewrite of the same morning keeps its own
+  const now0 = getState().ai, before = ai.digest?.day === day ? ai.digest.at ?? null : null, nv = neverList(now0.never, now0.neverLifted);
+  const n = r.answer.news, at = Date.now(), fresh = readItems(dropCited(r.answer.items, now0.cited, before), now0.said ?? [], at, (i) => i.title, nv);
+  const disc = r.answer.discovery && dropCited([r.answer.discovery], now0.cited, before).length ? r.answer.discovery : null;
   const items = withLead(fresh, lead), led = lead && items.some((i) => i.lead);
   const qs = keepNew(r.answer.questions ?? [], `${day}:m`);
   act.setAi((a) => ({
     digest: { day, at, greeting: r.answer.greeting, ...checkDay(r.answer, true), items, ...(r.answer.looked ? { looked: r.answer.looked } : {}), ...(r.answer.unlinked?.length ? { unlinked: r.answer.unlinked } : {}) },
-    discoveries: keepDiscovery(a.discoveries, r.answer.discovery, day, "morning", at),
+    discoveries: keepDiscovery(a.discoveries, disc, day, "morning", at),
+    cited: keepCited(a.cited, [...items.map((i) => i.source), n?.source, disc?.source], at),
     ...(led ? { leads: [...(a.leads ?? []), { id: lead.id, day }].slice(-60) } : {}),
     ...(qs.length ? { questions: { day, list: qs, from: "morning" as const, at }, asked: [...a.asked, ...qs.map((q) => q.text)].slice(-60), daily: tracked(a.daily, qs) } : {}),
     shown: [...a.shown, ...items.map((i) => i.title), ...(n ? [n.title] : [])].slice(-80),
@@ -158,9 +165,11 @@ const makeVerdict = (x: Experiment, v: Parameters<typeof verdictLines>[1]) => at
 const makeResearch = (t: Topic) => attempt(`research:${t.key}:${localDay(Date.now())}`, async () => {
   const s = getState();
   if ((s.ai.researched ?? []).some((r) => r.day === localDay(Date.now()))) return null;
-  const r = await askAi({ task: "research", context: researchContext(t, s.profile, s.ai.researched ?? []) });
+  // never a paper cited before (PLAN 194), here or in the reads
+  const r = await askAi({ task: "research", context: [researchContext(t, s.profile, s.ai.researched ?? []), ...citedBlock(s.ai.cited)].join("\n") });
   if (!r.ok) return r;
-  act.setAi((a) => ({ researched: keepResearch(a.researched ?? [], t, r.answer, r.costUsd, Date.now()) }));
+  const answer = { ...r.answer, found: dropCited(r.answer.found, getState().ai.cited) }, at = Date.now();
+  act.setAi((a) => ({ researched: keepResearch(a.researched ?? [], t, answer, r.costUsd, at), cited: keepCited(a.cited, answer.found.map((f) => f.source), at) }));
   return r;
 }, { onFail: keepFail("research") });
 
@@ -188,17 +197,19 @@ async function writeNight(day: string, force: boolean, auto = false) {
   // the day's totals it's written from: when what's logged moves past them, the card says so (owner, 28 Oct: "i ate around
   // 1900 kcal (160 left), yet ai digest says i ate 650 something")
   const tot = dayTotals(getState().entries, day), redone = (ai.night?.day === day ? ai.night.redone ?? 0 : 0) + (auto ? 1 : 0);
-  const r = await askRead({ task: "night", day, context: [nightContext(day), ...eveningBrief(ai.shown), ...askFor(day, "evening", follow), ...discoveryLines(day, "evening", ai.discoveries)].join("\n") });
+  const r = await askRead({ task: "night", day, context: [nightContext(day), ...eveningBrief(ai.shown), ...askFor(day, "evening", follow), ...discoveryLines(day, "evening", ai.discoveries), ...citedBlock(ai.cited)].join("\n") });
   if (!r.ok) return r;
   const at = Date.now(), qs = keepNew(r.answer.questions ?? [], `${day}:e`);
   // no advice on a topic said in the last 5 days (lib/ai/said) — a rewrite of the same evening replaces its own, so that's
   // left out of what counts; a change on an item's topic in the same read goes too
-  const before = ai.night?.day === day ? ai.night.at : null, said = (getState().ai.said ?? []).filter((x) => x.at !== before);
-  const items = dropSaid(r.answer.items ?? [], said, at, (i) => i.title).kept;
-  const change = dropSaid(r.answer.change, [...said, ...adviceOf({ items }, "evening", at)], at, (c) => c.what).kept;
+  const before = ai.night?.day === day ? ai.night.at : null, now0 = getState().ai, said = (now0.said ?? []).filter((x) => x.at !== before), nv = neverList(now0.never, now0.neverLifted);
+  const items = dropSaid(dropCited(r.answer.items ?? [], now0.cited, before), said, at, (i) => i.title, nv).kept;
+  const change = dropSaid(r.answer.change, [...said, ...adviceOf({ items }, "evening", at)], at, (c) => c.what, nv).kept;
+  const disc = r.answer.discovery && dropCited([r.answer.discovery], now0.cited, before).length ? r.answer.discovery : null;
   act.setAi((a) => ({
-    night: { ...r.answer, items, change, day, at, tot, redone },
-    discoveries: keepDiscovery(a.discoveries, r.answer.discovery, day, "evening", at),
+    night: { ...r.answer, items, change, day, at, tot, redone, discovery: disc },
+    discoveries: keepDiscovery(a.discoveries, disc, day, "evening", at),
+    cited: keepCited(a.cited, [...items.map((i) => i.source), disc?.source], at),
     shown: [...a.shown, ...items.map((i) => i.title)].slice(-80),
     said: keepSaid((a.said ?? []).filter((x) => x.at !== before), adviceOf({ items, change }, "evening", at), at),
     threads: addThreads(closeThreads(a.threads ?? [], r.answer.looked_into), r.answer.look_into, at, () => newId().slice(0, 6)),
@@ -733,13 +744,21 @@ const NONE: never[] = [];
 function ReadLog() {
   // the same empty list every time: a fresh [] from the store's selector re-renders forever (React #185)
   const said = useStore((s) => s.ai.said ?? NONE), threads = useStore((s) => s.ai.threads ?? NONE), now = Date.now();
-  const topics = saidTopics(said, now);
+  const never = useStore((s) => s.ai.never), lifted = useStore((s) => s.ai.neverLifted), nv = neverList(never, lifted);
+  const topics = saidTopics(said, now), off = (topic: string) => nv.some((n) => sameTopic(n.topic, topic));
   return <>
-    <h3>What the reads told me <span>last 30 days · a topic rests 5 days</span></h3>
+    <h3>What the reads told me <span>a topic rests 5 days · 30 once it's in 3 reads</span></h3>
     {topics.length === 0 ? <p className="note">Nothing yet — it starts with the next read.</p>
       : <ul className="readlog">{topics.map((t) => (
-        <li key={t.topic}><div><b>{t.topic.replace(/-/g, " ")}</b> <span>{t.n}× · last {dayLabel(t.last.at)}{t.restUntil ? ` · resting till ${dayLabel(t.restUntil).replace(/^\w+ /, "")}` : ""}</span><small>“{t.last.text}”</small></div>
-          <button type="button" aria-label={`Forget ${t.topic.replace(/-/g, " ")}`} onClick={() => act.setAi((a) => ({ said: (a.said ?? []).filter((x) => x.topic !== t.topic) }))}>✕</button></li>))}</ul>}
+        <li key={t.topic}><div><b>{t.topic.replace(/-/g, " ")}</b> <span>{t.n}× · last {dayLabel(t.last.at)}{t.restUntil ? ` · ${t.worn ? "worn out, " : ""}resting till ${dayLabel(t.restUntil).replace(/^\w+ /, "")}` : ""}</span><small>“{t.last.text}”</small></div>
+          <span className="rl-acts">{!off(t.topic) && <button type="button" className="rl-never" onClick={() => act.setAi((a) => ({ never: addNever(a.never, { topic: t.topic, title: t.last.text }, Date.now()) }))}>Not again</button>}
+            <button type="button" aria-label={`Forget ${t.topic.replace(/-/g, " ")}`} onClick={() => act.setAi((a) => ({ said: (a.said ?? []).filter((x) => x.topic !== t.topic) }))}>✕</button></span></li>))}</ul>}
+    {/* PLAN 194 (owner, 4 Nov: "im bored of the advice of adding skyr to my breakfast for protein"): never suggested again, in any words */}
+    <h3>Never again <span>the reads and the chat won't suggest these</span></h3>
+    {nv.length === 0 ? <p className="note">Nothing — tap “Not again” on a read's item, or on a topic above.</p>
+      : <ul className="readlog never">{nv.map((n) => (
+        <li key={n.topic}><div><b>{n.topic.replace(/-/g, " ")}</b> <span>{n.match ? "you said, 4 Nov" : `since ${dayLabel(n.at)}`}</span><small>{n.text}</small></div>
+          <button type="button" aria-label={`Let ${n.topic.replace(/-/g, " ")} come back`} onClick={() => act.setAi((a) => liftNever(a.never, a.neverLifted, n.topic))}>✕</button></li>))}</ul>}
     <h3>On its list to look into <span>the deep dive takes these first</span></h3>
     {threads.length === 0 ? <p className="note">Nothing yet — a read adds one when your data raises a question it had no room for.</p>
       : <div className="chips mem">{threads.map((t) => <span className="chip" key={t.id}>{t.text}<button type="button" aria-label={`Drop ${t.text}`} onClick={() => act.setAi((a) => ({ threads: (a.threads ?? []).filter((x) => x.id !== t.id) }))}>✕</button></span>)}</div>}

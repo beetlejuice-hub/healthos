@@ -13,6 +13,7 @@ import { measureDays } from "../lib/ai/digestchart";
 import { useBand } from "../lib/band-client";
 import { startExperiment } from "../lib/ai/experiment";
 import { isSaved, toggleSaved } from "../lib/ai/saved";
+import { addNever, liftNever, neverList, saidNever, topicKey } from "../lib/ai/said";
 import type { DigestItem, DigestMeasure, Sure } from "../lib/ai/tasks";
 import { addDays, localDay } from "../lib/time";
 import { DigestChart, MiniChart } from "./DigestChart";
@@ -26,6 +27,7 @@ export const SURE_WORDS: Record<Sure, string> = { yours: "your data", strong: "s
 
 export function ReadItems({ items, open, onOpen, tip, from, day }: { items: DigestItem[]; open: boolean; onOpen: () => void; tip: "Today" | "Tomorrow"; from: "morning" | "evening"; day: string }) {
   const experiments = useStore((s) => s.ai.experiments), saved = useStore((s) => s.ai.saved);
+  const never = useStore((s) => s.ai.never), lifted = useStore((s) => s.ai.neverLifted), nv = useMemo(() => neverList(never, lifted), [never, lifted]);
   const entries = useStore((s) => s.entries), workouts = useStore((s) => s.workouts), settings = useStore((s) => s.settings), goals = useStore((s) => s.goals);
   const running = experiments.filter((x) => !x.ended).map((x) => x.name);
   const today = localDay(Date.now());
@@ -49,7 +51,7 @@ export function ReadItems({ items, open, onOpen, tip, from, day }: { items: Dige
           {on && <div className="mr-body">
             {/* a connection's links, each with how sure it is; then what it means */}
             {i.chain && <ol className="mr-chain">{i.chain.map((c, n) => <li key={n}><span>{c.step}</span><i className={`sure sure-${c.sure}`}>{SURE_WORDS[c.sure]}</i></li>)}</ol>}
-            <p>{i.sure && !i.chain && <i className={`sure sure-${i.sure}`}>{SURE_WORDS[i.sure]}</i>}{i.text}</p>
+            <p>{i.sure && !i.chain && <i className={`sure sure-${i.sure}`}>{SURE_WORDS[i.sure]}</i>}{i.design && <i className="mr-design">{i.design}</i>}{i.text}</p>
             {i.tip && <p className="mr-tip"><small>{tip}</small>{i.tip}</p>}
             {i.lead ? <LeadChart lead={i.lead} /> : i.measure && vals && <DigestChart k={i.measure} vals={vals} today={today} goal={goalOf(i.measure)} />}
             {i.source && <SourceLink s={i.source} />}
@@ -63,6 +65,10 @@ export function ReadItems({ items, open, onOpen, tip, from, day }: { items: Dige
               {/* PLAN 159: keep it past the next read — in the AI tab, and asked about in a couple of days if not tried */}
               <button type="button" className="pill-btn mr-save" aria-pressed={isSaved(saved, i)} onClick={() => act.setAi((a) => ({ saved: toggleSaved(a.saved, i, from, day, Date.now()) }))}>
                 {isSaved(saved, i) ? "★ Saved" : "☆ Save for later"}</button>
+              {/* PLAN 194 (owner, 4 Nov: "im bored of the advice of adding skyr to my breakfast"): never again, in any words; tap again to lift */}
+              <button type="button" className="pill-btn mr-never" aria-pressed={saidNever(nv, i)}
+                onClick={() => act.setAi((a) => (saidNever(neverList(a.never, a.neverLifted), i) ? liftNever(a.never, a.neverLifted, topicKey(i.topic, i.title)) : { never: addNever(a.never, i, Date.now()) }))}>
+                {saidNever(nv, i) ? "✓ Won't come back" : "Not again"}</button>
             </div>
           </div>}
         </li>

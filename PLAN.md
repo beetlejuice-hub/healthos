@@ -3483,7 +3483,7 @@ both reads and the questions. Phases in that order; #152 RPE waits (owner).
      the same. Tests: said.test (the swap, its control, the note), links.test (`unlinked`), e2e readstudy. Not verified:
      tomorrow's real read (the AI may still write no study and no spare — then the read says nothing is missing).
 
-194. [~] **Different every time: no worn-out advice, good studies, never the same one, random ones** (owner, 4 Nov: "ok
+194. [x] **Different every time: no worn-out advice, good studies, never the same one, random ones** (owner, 4 Nov: "ok
    dude but make sure studies are good, not the same thing, also im bored of the advice of adding skyr to my breakfast for
    protein, we talked ab this, make research, protocols, studies fun and different, sometimes random ones..got it?").
    Claimed 4 Nov.
@@ -3504,3 +3504,11 @@ both reads and the questions. Phases in that order; #152 RPE waits (owner).
      naps, chewing, posture, spices, hormones, ageing muscle, weird-but-true…) shuffled, none twice until all have been;
      "New to try" gets more kinds (a protocol from a field he's never tried, something odd but tested) and its food
      kinds aren't breakfast protein; research (PLAN 192) gets a wildcard topic from the same fields now and then.
+   - Done 4 Nov: lib/ai/said (worn out, `never` with BORED built in, `cited` by sourceKey), lib/ai/lanes (25 fields,
+     shuffled rounds), brief (the study's field, 8 "New to try" kinds in shuffled rounds), tasks (GOOD STUDIES, NEVER
+     AGAIN, `design`, a "study" on Reddit, YouTube, a shop… dropped; the examples no longer say protein-breakfast; the
+     chat remembers "Bored of: …"), research (a wildcard after a round of his own topics, never on an empty account; its
+     papers join the cited log). On screen: "Not again" / "✓ Won't come back" on every read item, the design chip on a
+     study, Settings → AI → "Never again" (✕ lifts) and "Not again" on each topic of the log. Tests: said.test (never,
+     worn, cited), lanes.test, brief.test, research.test, e2e notagain; said.cjs now tests the worn-out rest. Not
+     verified: the real AI's studies tomorrow (design, links, fields) — the e2e fakes the AI.

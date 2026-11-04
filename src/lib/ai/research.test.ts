@@ -6,6 +6,7 @@ import { describe, expect, it } from "vitest";
 import { keepResearch, nextResearch, RESEARCH, researchContext, researchLines, researchTopics, researchUsd, type Researched, type Topic } from "./research";
 import type { Entry, Supplement, Workout } from "../types";
 import { EMPTY_PROFILE } from "../store";
+import { LANES, laneOn } from "./lanes";
 
 const NOW = new Date("2026-11-03T12:00:00").getTime(), D = 86_400_000;
 const at = (k: number, h = 9) => new Date(new Date(NOW - k * D).setHours(h, 0, 0, 0)).getTime();
@@ -32,7 +33,7 @@ const SPEND = { monthUsd: 3, budget: 20 };
 describe("the app's own research (PLAN 192)", () => {
   const topics = researchTopics({ ...world(), supplements: [cre, lth, mag], settings: {}, goals: { kcal: 2300, p: 160 } }, band, NOW);
   it("topics from the data: what you take (enough days), what you eat often, how you train, your heart; not what there's too little of", () => {
-    expect(topics.map((t) => t.key)).toEqual(["supp:cre:5g", "supp:lth:200mg", "food:túró rudi", "training", "heart"]);
+    expect(topics.map((t) => t.key)).toEqual(["supp:cre:5g", "supp:lth:200mg", "food:túró rudi", "training", "heart", `wild:${laneOn("2026-11-03", "research").id}`]);
     expect(topics[0].lines[0]).toBe("- What: a supplement I take — Creatine, 5 g, every day, in the morning; taken on 14 of the last 14 days.");
     expect(topics[2].lines[0]).toBe("- What: a food I eat often — Túró Rudi, on 15 of the last 30 days; a usual serving 30 g, 125 kcal, 4 g protein.");
     expect(topics[3].lines[0]).toMatch(/^- What: how I train — 7 lifting sessions in the last 4 weeks/);
@@ -52,6 +53,21 @@ describe("the app's own research (PLAN 192)", () => {
     const done = topics.map((t) => R(t.key, t.area, 20));
     expect(nextResearch(topics, done, NOW, SPEND)).toEqual({ wait: "nothing new to look into" });
     expect("topic" in nextResearch(topics, topics.map((t) => R(t.key, t.area, RESEARCH.againDays + 1)), NOW, SPEND)).toBe(true);
+  });
+  // PLAN 194 (owner, 4 Nov: "make research, protocols, studies fun and different, sometimes random ones")
+  it("now and then something random: a field the app picks, in its turn after a round of the others, a new one each day", () => {
+    const wild = topics.find((t) => t.area === "wild")!;
+    expect(wild.lines[0]).toMatch(/^- What: something random to learn about — the app's pick at random, not from my data: /);
+    // nothing of yours looked into yet (an empty account): never the random one
+    expect(nextResearch([wild], [], NOW, SPEND)).toEqual({ wait: "nothing new to look into" });
+    // never done: it waits a round — the others first
+    expect((nextResearch(topics, [R("supp:cre:5g", "supp", 6)], NOW, SPEND) as { topic: Topic }).topic.area).not.toBe("wild");
+    // every other area done since the last random one: its turn
+    const round = [R("wild:x", "wild", 12), R("supp:cre:5g", "supp", 10), R("food:túró rudi", "food", 9), R("training", "training", 8), R("heart", "heart", 7), R("supp:lth:200mg", "supp", 6)];
+    expect((nextResearch(topics, round, NOW, SPEND) as { topic: Topic }).topic.key).toBe(wild.key);
+    // a new field each day; within two rounds' days, every field
+    const fields = Array.from({ length: 2 * LANES.length }, (_, k) => laneOn(new Date(NOW + k * D).toISOString().slice(0, 10), "research").id);
+    expect(new Set(fields).size).toBe(LANES.length);
   });
   it("a new dose is a new topic", () => {
     const t2 = researchTopics({ ...world(), supplements: [{ ...cre, dose: "10 g" }], settings: {} }, null, NOW);

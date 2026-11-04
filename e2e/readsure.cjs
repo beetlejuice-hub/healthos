@@ -49,7 +49,7 @@ const NIGHT = { summary: 'A calm day.', happened: [], notes: '', change: [], rem
     await pg.waitForSelector('section.morning:not(.mr-pending) .mr-row', { timeout: 8000 }).catch(() => {});
     if (width === 390) {
       const dg = calls.find((c) => c.task === 'digest'), nt = calls.find((c) => c.task === 'night');
-      check('the morning read is told this morning\'s third item (a connection or a study, in turn) and how sure to be', !!dg && /- Third item today: (a "connection"|a study or fun fact)/.test(dg.context));
+      check('the morning read is told this morning\'s third item (a connection or a study, in turn) and how sure to be', !!dg && /- Third item today: (a "connection"|a study)/.test(dg.context));
       check('the evening read\'s try is a community idea, labelled anecdote', !!nt && /- "try" item tonight: what people are trying, from Reddit .*"sure": "anecdote"/.test(nt.context));
     }
     await forYou(pg, 'morning');

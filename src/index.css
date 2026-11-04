@@ -715,6 +715,7 @@ a { color: inherit; }
 .mr-connection .mr-kind { color: var(--hr); background: color-mix(in srgb, var(--hr) 14%, transparent); }
 /* how sure (22 Oct): a small label before the words; a connection's links, one under the other with an arrow between */
 .sure { display: inline-block; font-style: normal; font: 600 10px var(--f-sans); letter-spacing: .04em; text-transform: uppercase; padding: 2px 6px; border-radius: 6px; margin-right: 6px; vertical-align: 1px; white-space: nowrap; }
+.mr-design { display: inline-block; font: 500 11px var(--f-sans); color: var(--c-ink-2); border: 1px solid var(--c-track); padding: 1px 6px; border-radius: 6px; margin-right: 6px; vertical-align: 1px; font-style: normal; max-width: 100%; overflow-wrap: anywhere; }
 .sure-yours { color: var(--mood); background: color-mix(in srgb, var(--mood) 15%, transparent); }
 .sure-strong { color: var(--ok); background: color-mix(in srgb, var(--ok) 15%, transparent); }
 .sure-some { color: var(--caf); background: color-mix(in srgb, var(--caf) 15%, transparent); }
@@ -734,6 +735,7 @@ a { color: inherit; }
 /* PLAN 159: save a read item for later; the list at the top of the AI tab */
 .mr-acts { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 2px; } .mr-body .mr-acts .pill-btn { margin: 0; }
 .mr-save[aria-pressed="true"] { color: var(--gym); }
+.mr-never[aria-pressed="true"] { color: var(--c-ink-2); }
 .saved { gap: 0; padding: 12px 16px; } .saved > summary { list-style: none; cursor: pointer; display: flex; justify-content: space-between; align-items: center; font-weight: 600; }
 .saved > summary::-webkit-details-marker { display: none; } .saved .sv-n { font-weight: 500; font-size: 12.5px; color: var(--c-dim); }
 .saved ul { list-style: none; margin: 10px 0 0; padding: 0; display: grid; }
@@ -2102,6 +2104,8 @@ span.fd-score[data-band="none"] { background: none; min-width: 34px; }
 .readlog span { font-size: 12.5px; color: var(--c-dim); }
 .readlog small { display: block; font-size: 12.5px; line-height: 1.4; color: var(--c-ink-2); margin-top: 2px; overflow-wrap: anywhere; }
 .readlog button { background: none; border: 0; color: var(--c-dim); font-size: 14px; padding: 4px 6px; }
+.readlog .rl-acts { display: flex; align-items: center; gap: 2px; }
+.readlog .rl-never { font-size: 12.5px; color: var(--c-ink-2); white-space: nowrap; }
 
 /* Watching (lib/watch; owner, 28 Oct): the evening question, the list in the AI tab, what was found on a card */
 .pr-found { list-style: none; margin: 0; padding: 0; display: grid; gap: 5px; font-size: 12.5px; line-height: 1.45; color: var(--c-ink-2); }

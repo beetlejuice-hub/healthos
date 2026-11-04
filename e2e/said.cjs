@@ -6,7 +6,8 @@
 // the two new ones; the log keeps them, not the dropped one. Its "look into" lands on the list. At 21:30 the night read's
 // "Tomorrow, maybe" has a walk after lunch again (said that morning, other words) and lights out by 23:00: only the
 // second stays; it covers the creatine question, which leaves the list. Settings → AI shows all of it; ✕ forgets a
-// topic. Control: no history — all three morning items stay.
+// topic. Control: no history — all three morning items stay. Since PLAN 194, 7 times in a week is worn out: 30 days'
+// rest; the built-in "never again" on protein at breakfast is lifted here, so what's tested is the log.
 const { chromium, APP, OUT, handle, forYou } = require('./harness.cjs');
 
 const KEY = 'healthos.v1:u-test', DAY = 864e5, MORNING = new Date('2026-10-28T07:40:00').getTime();
@@ -43,7 +44,8 @@ const NIGHT = { summary: 'A steady day.', happened: [], notes: '', remember: [],
     await pg.getByRole('button', { name: 'Sign in' }).click(); await pg.waitForSelector('text=Settings');
     await pg.evaluate(([k, said, at]) => { const s = JSON.parse(localStorage.getItem(k) || '{}');
       s.entries = [{ id: 'sl', kind: 'sleep', at: at - 5 * 60e3, rating: 7 }, { id: 'f1', kind: 'food', at: at - 30 * 60e3, name: 'Oats', grams: 80, macros: { kcal: 300, p: 10, c: 50, f: 6 } }];
-      s.ai = { ...(s.ai || {}), digest: null, night: null, chat: [], said, threads: [] }; localStorage.setItem(k, JSON.stringify(s)); }, [KEY, said, MORNING]);
+      // the built-in "never again" for protein at breakfast (PLAN 194) lifted, so this is the log's own doing
+      s.ai = { ...(s.ai || {}), digest: null, night: null, chat: [], said, threads: [], never: [], neverLifted: ['protein-breakfast'] }; localStorage.setItem(k, JSON.stringify(s)); }, [KEY, said, MORNING]);
     await pg.goto(APP + '#today'); await pg.reload(); await pg.waitForSelector('.t2-status');
     for (let i = 0; i < 50 && !calls.some((c) => c.task === 'digest'); i++) await pg.waitForTimeout(100);
     await pg.waitForFunction((k) => !!JSON.parse(localStorage.getItem(k)).ai.digest, KEY, { timeout: 5000 }).catch(() => {});
@@ -53,7 +55,8 @@ const NIGHT = { summary: 'A steady day.', happened: [], notes: '', remember: [],
   let { ctx, pg, calls, st } = await open(SAID);
   const sent = calls.find((c) => c.task === 'digest');
   const told = (sent?.context.match(/## What the reads already told me[^\n]*\n(- [^\n]*\n?)+/) || [''])[0];
-  check(`the morning read is told what's been said, and that it's resting (${told.split('\n')[1]?.slice(0, 120)})`, /- protein-breakfast — 7× since Wed 21 Oct, last Tue 27 Oct \(morning\): "Protein at breakfast, take 7[^"]*" — resting until Sun 1 Nov/.test(told));
+  // said in 3+ reads within 30 days: worn out, 30 days' rest (PLAN 194)
+  check(`the morning read is told what's been said, and that it's worn out and resting (${told.split('\n')[1]?.slice(0, 140)})`, /- protein-breakfast — 7× since Wed 21 Oct, last Tue 27 Oct \(morning\): "Protein at breakfast, take 7[^"]*" — worn out, resting until Thu 26 Nov/.test(told));
   let ai = await st();
   check(`the repeat under a new name is dropped; the two new ones stay (${ai.digest.items.map((i) => i.title).join(' | ')})`,
     ai.digest.items.map((i) => i.topic).join() === 'walk-after-lunch,caffeine-cutoff');
@@ -77,10 +80,10 @@ const NIGHT = { summary: 'A steady day.', happened: [], notes: '', remember: [],
   // Settings → AI shows the log
   await pg.goto(APP + '#settings'); await pg.waitForTimeout(300);
   const ai2 = pg.getByRole('button', { name: /^AI/ }); if (await ai2.count()) { await ai2.first().click().catch(() => {}); }
-  const log = pg.locator('.readlog');
+  const log = pg.locator('.readlog:not(.never)');
   await log.waitFor({ timeout: 5000 }).catch(() => {});
   const txt = (await log.innerText().catch(() => '')).replace(/\s+/g, ' ');
-  check(`Settings → AI: what the reads told me (${txt.slice(0, 160)})`, /bedtime 2300 1× · last Wed 28 Oct · resting till 2 Nov/.test(txt) && /protein breakfast 7× · last Tue 27 Oct · resting till 1 Nov/.test(txt));
+  check(`Settings → AI: what the reads told me (${txt.slice(0, 160)})`, /bedtime 2300 1× · last Wed 28 Oct · resting till 2 Nov/.test(txt) && /protein breakfast 7× · last Tue 27 Oct · worn out, resting till 26 Nov/.test(txt));
   await log.getByRole('button', { name: 'Forget protein breakfast' }).click(); await pg.waitForTimeout(200);
   check('✕ forgets a topic: it may come back', !(await st()).said.some((s) => s.topic === 'protein-breakfast'));
   await log.screenshot({ path: OUT + 'said-settings.png' }).catch(() => {});
