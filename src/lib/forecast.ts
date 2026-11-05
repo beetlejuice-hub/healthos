@@ -5,14 +5,18 @@
  * close to bed, evening stress, bedtime against your usual — against that night's sleep score (lib/sleepscore). A ridge
  * regression (a straight-line fit held back from over-reading few nights), fit only on nights BEFORE the one it bets on,
  * so last night's bet is the bet it would have made then. Its range is the middle 80 % of its own past misses (each night
- * left out of the fit that judges it); each thing's push is how far tonight moves the bet from your usual. Bed is taken as
- * your usual for the bet — it can't know when you'll go. Pure.
+ * left out of the fit that judges it); each thing's push is how far tonight moves the bet from your usual.
+ *
+ * Bedtime (PLAN 198; owner, 5 Nov: "app bet for night score is kinda stupid cause it cant predict when im gonna go to
+ * sleep"): the one thing it can't know and you can. So the evening shows what today has already set (everything but
+ * bedtime) and a score for each bedtime ahead; when your nights say bedtime barely moves yours, one number. A morning
+ * check reads the bet off the bedtime you actually had. Pure.
  */
 
 import type { Evening, Night } from "./sleep";
 import { clockH } from "./sleep";
 
-export const FORECAST = { minNights: 21, back: 90, lambda: 3, hit: 5, week: 7, minOn: 4 } as const;
+export const FORECAST = { minNights: 21, back: 90, lambda: 3, hit: 5, week: 7, minOn: 4, rungs: 4, flatPerHour: 1, alikeSd: 0.25 } as const;
 
 type Feature = { id: string; of: (n: Night, e: Evening, bedH: number) => number; say: (v: number) => string; binary?: boolean };
 export const FEATURES: Feature[] = [
@@ -25,8 +29,11 @@ export const FEATURES: Feature[] = [
   { id: "bedLate", of: (n, _, b) => Math.max(-3, Math.min(4, clockH(n.bed, n.eve) - b)), say: (v) => (v > 0.25 ? "a late bedtime" : v < -0.25 ? "an early night" : "your usual bedtime") },
 ];
 
+const BED = FEATURES.findIndex((f) => f.id === "bedLate");
+
 export type Row = { x: number[]; y: number };
-export type Model = { usual: number; mu: number[]; sd: number[]; w: number[]; use: boolean[]; band: [number, number]; n: number; bedH: number };
+/** `bedMax`: the latest bed, in hours past your usual, among the nights it learned from (it says nothing past that). */
+export type Model = { usual: number; mu: number[]; sd: number[]; w: number[]; use: boolean[]; band: [number, number]; n: number; bedH: number; bedMax: number };
 export type Push = { id: string; say: string; pts: number };
 export type Bet = { bet: number; low: number; high: number; usual: number; pushes: Push[] };
 
@@ -61,7 +68,7 @@ function fit(rows: Row[], bedH: number): Model {
   const wi = idx.length ? solve(A, rhs) : [];
   const w = Array(p).fill(0) as number[];
   idx.forEach((j, k) => { w[j] = wi[k]; });
-  return { usual, mu, sd, w, use, band: [0, 0], n, bedH };
+  return { usual, mu, sd, w, use, band: [0, 0], n, bedH, bedMax: Math.max(...rows.map((r) => r.x[BED])) };
 }
 
 const pushesOf = (m: Model, x: number[]): Push[] => FEATURES.flatMap((f, j) => (m.use[j] ? [{ id: f.id, say: f.say(x[j]), pts: (m.w[j] * (x[j] - m.mu[j])) / m.sd[j] }] : []));
@@ -84,7 +91,7 @@ export function betOn(m: Model, x: number[]): Bet {
   return { bet: clamp(bet), low: clamp(bet + m.band[0]), high: clamp(bet + m.band[1]), usual: Math.round(m.usual), pushes };
 }
 
-/** One night's features; `bedAsUsual` for a bet made before bed (it can't know when you'll go). */
+/** One night's features; `bedAsUsual`: as if in bed at your usual time (what that night would have been then). */
 export const featuresOf = (n: Night, e: Evening, bedH: number, bedAsUsual = false) => FEATURES.map((f) => (bedAsUsual && f.id === "bedLate" ? 0 : f.of(n, e, bedH)));
 
 /** Your usual bedtime, as hours from the evening's midnight (23.5 = 23:30, 24.5 = 00:30). */
@@ -94,18 +101,49 @@ export type Scored = { n: Night; e: Evening; score: number };
 
 /**
  * The bet for night `i` of `all` (by bed time), from the FORECAST.back days of nights before it — what the app would have
- * said that evening — or null with too few.
+ * said that evening for the bedtime you actually had (`asUsual`: for your usual one instead) — or null with too few.
  */
-export function betBefore(all: Scored[], i: number): (Bet & { model: Model }) | null {
+export function betBefore(all: Scored[], i: number, asUsual = false): (Bet & { model: Model }) | null {
   const t = all[i].n, before = all.filter((s) => s.n.bed < t.bed && s.n.bed >= t.bed - FORECAST.back * 86_400_000);
   const bedH = usualBedH(before.map((s) => s.n));
   const m = forecastModel(before.map((s) => ({ x: featuresOf(s.n, s.e, bedH), y: s.score })), bedH);
-  return m ? { ...betOn(m, featuresOf(t, all[i].e, bedH, true)), model: m } : null;
+  return m ? { ...betOn(m, featuresOf(t, all[i].e, bedH, asUsual)), model: m } : null;
 }
+
+/** Points a bed an hour later has gone with on your nights (negative: costs); 0 when bedtime isn't in the fit. */
+export const perHour = (m: Model) => (m.use[BED] ? m.w[BED] / m.sd[BED] : 0);
+
+export type Rung = { h: number; bet: number; low: number; high: number };
+export type Tonight = {
+  usual: number; bedH: number; perHour: number;
+  /** Bedtime hasn't moved the score a point an hour — one number, "whenever you go". `alike`: too few different bedtimes to tell. */
+  flat: boolean; alike: boolean;
+  /** The bet at your usual bed, and what today has already set: every push but bedtime's. */
+  bet: Bet; set: Push[];
+  /** A score for each whole hour ahead (none past the latest bed it has seen). */
+  rungs: Rung[];
+};
+
+/**
+ * Tonight from the model: `xAt(h)` is tonight's features with you in bed at h (hours from the evening's midnight — the
+ * caffeine still in you and the time since the last meal change with it); `nowH` is now, the same way. Rungs start at the
+ * whole hour before your usual, or the first one at least 15 minutes off.
+ */
+export function tonight(m: Model, xAt: (h: number) => number[], nowH: number): Tonight {
+  const bet = betOn(m, xAt(m.bedH)), ph = perHour(m), alike = m.sd[BED] < FORECAST.alikeSd;
+  const flat = alike || Math.abs(ph) < FORECAST.flatPerHour;
+  const first = Math.max(Math.floor(m.bedH) - 1, Math.ceil(nowH + 0.25));
+  const rungs = flat ? [] : Array.from({ length: FORECAST.rungs }, (_, k) => first + k).filter((h) => h - m.bedH <= m.bedMax + 0.5)
+    .map((h) => { const b = betOn(m, xAt(h)); return { h, bet: b.bet, low: b.low, high: b.high }; });
+  return { usual: bet.usual, bedH: m.bedH, perHour: ph, flat, alike, bet, set: bet.pushes.filter((q) => q.id !== "bedLate"), rungs };
+}
+
+/** "23:20" for 23.33, "00:40" for 24.67 — the minute it's in, as a clock reads (00:04:40 is 00:04). */
+export const hhmm = (h: number) => { const t = Math.floor(h * 60 + 1e-3), m = ((t % 1440) + 1440) % 1440; return `${String(Math.floor(m / 60)).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}`; };
 
 export type Called = { day: string; bet: number; real: number; off: number; hit: boolean };
 
-/** The last FORECAST.week nights it could bet on: what it bet, what came, whether it was within FORECAST.hit. */
+/** The last FORECAST.week nights it could bet on: what it bet for the bedtime you had, what came, whether within FORECAST.hit. */
 export function lastBets(all: Scored[]): Called[] {
   const sorted = [...all].sort((a, b) => a.n.bed - b.n.bed), out: Called[] = [];
   for (let i = sorted.length - 1; i >= 0 && out.length < FORECAST.week; i--) {

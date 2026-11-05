@@ -1,9 +1,11 @@
 // Tonight's bet (PLAN 187 phase 2; owner, 3 Nov: "App could do prediction vs real so it predicts based on drinks workout
-// food etc to sleep"; picked B on the canvas: "simpler, cleaner"). 63 fake band nights; planted: each drink that evening
-// heart rate asleep +2.5, HRV −5, 25 min less sleep. Morning (08:00): the last night was a bad one with no drinks — the
-// card says the real score, what the app bet, "Missed by …", the week of bets, and asks; "Stressed" tags last night.
-// Evening (21:30) after 2 beers: the bet is under the usual and says it's mostly the drinks; why lists them. Control: an
-// evening with no drinks — near the usual, no "mostly 2 drinks". 320 px fits.
+// food etc to sleep"; picked B on the canvas: "simpler, cleaner"). By bedtime since PLAN 198 (owner, 5 Nov: "it cant
+// predict when im gonna go to sleep"). 63 fake band nights, bed 23:15 ± 50 min and the alarm at 07:24, so a later bed is
+// a shorter night; planted: each drink that evening heart rate asleep +2.5, HRV −5, 25 min less sleep. Morning (08:00):
+// the last night was a bad one with no drinks — the card says the real score, the bedtime, what the app said for that
+// bedtime, "Missed by …", the week of bets, and asks; "Stressed" tags last night. Evening (21:30) after 2 beers: a score
+// per bedtime from 22:00, each later one lower; what each hour costs; "already set by today" has the drinks. Control: an
+// evening with no drinks — every bedtime's score higher, no drinks in what's set. 320 px fits.
 const { chromium, APP, OUT, handle } = require('./harness.cjs');
 
 const MIN = 60_000, HOUR = 3_600_000, D = 86_400_000, KEY = 'healthos.v1:u-test';
@@ -21,7 +23,7 @@ function world() {
     const bad = k === 1; // last night: a rough one the drinks don't explain
     const drinks = bad ? 0 : r() < 0.35 ? 1 + Math.floor(r() * 3) : 0;
     for (let j = 0; j < drinks; j++) entries.push({ id: `b${k}-${j}`, kind: 'drink', at: T(20 + j * 0.5), name: 'Beer', ml: 500, caffeineMg: 0, alcoholG: 20, kcal: 215 });
-    const bed = T(23.25 + g() * 0.3), onset = bed + 12 * MIN, wake = T(31.4) - drinks * 25 * MIN - (bad ? 110 * MIN : 0), up = wake + 5 * MIN;
+    const bed = T(23.25 + g() * 0.8), onset = bed + 12 * MIN, wake = T(31.4) - drinks * 25 * MIN - (bad ? 110 * MIN : 0), up = wake + 5 * MIN;
     const deep = Math.round(82 + g() * 6 - (bad ? 40 : 0)), sHr = 54 + 2.5 * drinks + (bad ? 7 : 0) + g() * 0.8;
     const stages = [{ type: 'awake', start: bed, end: onset }, { type: 'deep', start: onset, end: onset + deep * MIN }, { type: 'light', start: onset + deep * MIN, end: wake - 90 * MIN }, { type: 'rem', start: wake - 90 * MIN, end: wake }, { type: 'awake', start: wake, end: up }];
     sleep.push({ id: 's' + k, start: bed, end: up, asleepMin: Math.round((wake - onset) / MIN), awakeMin: 0, toFallAsleepMin: 12, nap: false, stageMin: {}, stages });
@@ -59,8 +61,9 @@ function world() {
   // the band's months of nights come in pieces: wait for the week strip to fill
   await pg.waitForFunction(() => document.querySelectorAll('.fc-week i').length >= 7, null, { timeout: 15000 }).catch(() => {});
   const m = (await card("Last night's bet").innerText().catch(() => '')).replace(/\s+/g, ' ');
-  const nums = m.match(/^(\d+) sleep score · the app bet (\d+) Missed by (\d+)/);
-  check(`morning: the real score, the bet, "Missed by" a rough night the drinks don't explain (${m.slice(0, 90)})`, !!nums && +nums[1] < +nums[2] - 5 && +nums[3] === +nums[2] - +nums[1]);
+  const nums = m.match(/^(\d+) sleep score · in bed (\d\d:\d\d), for that it said (\d+) Missed by (\d+)/);
+  const lastBed = new Date(w.sleep.find((x) => x.id === 's1').start), hm = `${String(lastBed.getHours()).padStart(2, '0')}:${String(lastBed.getMinutes()).padStart(2, '0')}`;
+  check(`morning: the real score, the bedtime you had (${hm}), what it said for it, "Missed by" a rough night the drinks don't explain (${m.slice(0, 100)})`, !!nums && nums[2] === hm && +nums[1] < +nums[3] - 5 && +nums[4] === +nums[3] - +nums[1]);
   check(`…the week of bets (${await pg.locator('.fc-week i').count()} squares, ${(m.match(/\d+ of \d+/) || [''])[0]})`, await pg.locator('.fc-week i').count() === 7 && /\d of 7/.test(m));
   check(`…and it asks what it didn't see (${(m.match(/Worse than it bet[^?]*\?/) || [''])[0]})`, /Worse than it bet — something it didn't see\?/.test(m));
   check(`320: fits (${await pg.evaluate(() => document.documentElement.scrollWidth)} px)`, await pg.evaluate(() => document.documentElement.scrollWidth) <= 320);
@@ -74,12 +77,17 @@ function world() {
   await pg.clock.setFixedTime(EVENING); await pg.reload(); await pg.waitForSelector('text=Settings');
   await card("Tonight's bet").waitFor({ timeout: 20000 }).catch(() => {});
   await pg.waitForTimeout(1500);
-  const e = (await card("Tonight's bet").innerText().catch(() => '')).replace(/\s+/g, ' ');
-  const en = e.match(/The app bets on a (\d+) tonight usual (\d+) · mostly 2 drinks \(−(\d+)\)/);
-  check(`evening, 2 beers: under the usual, mostly the drinks (${e.slice(0, 90)})`, !!en && +en[1] < +en[2] - 3 && +en[3] >= 4);
-  await card("Tonight's bet").getByRole('button', { name: /Why, and what would move it/ }).click();
+  const ladder = async () => card("Tonight's bet").locator('.fc-ladder li').evaluateAll((ls) => ls.map((l) => [l.querySelector('span').textContent, +l.querySelector('b').textContent]));
+  const e = (await card("Tonight's bet").innerText().catch(() => '')).replace(/\s+/g, ' '), rungs = await ladder();
+  check(`evening, 2 beers: a score per bedtime from 22:00, each later one lower (${JSON.stringify(rungs)})`, rungs.length >= 3 && rungs[0][0] === 'by 22:00' && rungs.every((r, i) => i === 0 || r[1] < rungs[i - 1][1]));
+  const cost = e.match(/Each hour later costs you about (\d+) — from your own (\d+) nights/);
+  check(`…what each hour costs, from his nights (${cost && cost[0]})`, !!cost && +cost[1] >= 1);
+  const set = (await card("Tonight's bet").locator('.fc-set li').allInnerTexts()).map((t) => t.replace(/\s+/g, ' '));
+  check(`…already set by today: the drinks, and not the bedtime (${JSON.stringify(set)})`, set.some((t) => /^2 drinks −\d+$/.test(t)) && !set.some((t) => /bedtime|early night/.test(t)));
+  await card("Tonight's bet").getByRole('button', { name: /How sure/ }).click();
   const why = (await card("Tonight's bet").innerText()).replace(/\s+/g, ' ');
-  check(`why: its range, in bed at your usual time, the drinks listed (${why.slice(why.indexOf('Likely'), why.indexOf('Likely') + 120)})`, /Likely \d+–\d+, with you in bed at your usual time/.test(why) && /2 drinks −\d+/.test(why));
+  check(`how sure: its misses, from his nights (${(why.match(/8 in 10[^.]*\./) || [''])[0]})`, /8 in 10 of the nights it hadn't seen came within [−+]\d+ \/ [−+]\d+ of what it said/.test(why));
+  check(`320: fits (${await pg.evaluate(() => document.documentElement.scrollWidth)} px)`, await pg.evaluate(() => document.documentElement.scrollWidth) <= 320);
   await card("Tonight's bet").screenshot({ path: OUT + 'forecast-evening.png' });
 
   // control: the same evening without the beers
@@ -87,9 +95,9 @@ function world() {
   await pg.reload(); await pg.waitForSelector('text=Settings');
   await card("Tonight's bet").waitFor({ timeout: 20000 }).catch(() => {});
   await pg.waitForTimeout(1500);
-  const c = (await card("Tonight's bet").innerText().catch(() => '')).replace(/\s+/g, ' ');
-  const cn = c.match(/The app bets on a (\d+) tonight usual (\d+)/);
-  check(`control: no drinks — at or above the usual, no "mostly 2 drinks" (${c.slice(0, 80)})`, !!cn && +cn[1] >= +cn[2] - 2 && !/drinks \(−/.test(c));
+  const none = await ladder(), cset = (await card("Tonight's bet").locator('.fc-set').innerText().catch(() => '')).replace(/\s+/g, ' ');
+  check(`control: no drinks — every bedtime's score higher, no drinks in what's set (${JSON.stringify(none)} · ${cset.slice(0, 80)})`,
+    none.length === rungs.length && none.every((r, i) => r[0] === rungs[i][0] && r[1] > rungs[i][1]) && !/\d drinks? −/.test(cset));
   console.log('errors: ' + JSON.stringify(errs));
   check('no page errors', errs.length === 0);
   await b.close();

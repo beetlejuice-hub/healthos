@@ -1,17 +1,20 @@
 /**
  * Tonight's bet, and how it did (PLAN 187 phase 2; owner, 3 Nov, on the canvas: "i like the b forecast design, simpler,
- * cleaner"). From 20:00: "The app bets on a 74 tonight · usual 80 · mostly 2 drinks (−6)", and why when tapped. In the
- * morning, next to the sleep score: "72 · the app bet 74 · Called it ±2", or "Missed by 13 — something it didn't see?" —
- * the answer is a last-night tag, so the finder and the Sleep grid test it, and the bet learns it. The week of bets under
- * it. Maths in lib/forecast; the nights and their evenings as the Sleep page reads them.
+ * cleaner"). By bedtime since PLAN 198 (owner, 5 Nov: "it cant predict when im gonna go to sleep"; canvas
+ * https://claude.ai/artifact/1MxwG6ynPZq6parXeTgUxA, A built while he picks): from 20:00, a score for each bedtime ahead
+ * ("by 23:00 74 · by 00:00 70"), what each hour later costs him, and what today has already set; when his nights say
+ * bedtime barely matters, one number "whenever you go". In the morning, next to the sleep score: "67 · in bed 00:40, for
+ * that it said 68 · Called it ±1", or "Missed by 13 — something it didn't see?" — the answer is a last-night tag, so the
+ * finder and the Sleep grid test it, and the bet learns it. The week of bets under it. Maths in lib/forecast; the nights
+ * and their evenings as the Sleep page reads them.
  */
 
 import { useMemo, useState } from "react";
 import { useBand } from "../lib/band-client";
-import { evenings, nights, type Night } from "../lib/sleep";
+import { clockH, evenings, nights, type Night } from "../lib/sleep";
 import { eveningInputs } from "../lib/eveninputs";
 import { sleepScore } from "../lib/sleepscore";
-import { betBefore, betOn, featuresOf, FORECAST, forecastModel, lastBets, mostly, usualBedH, type Scored } from "../lib/forecast";
+import { betBefore, featuresOf, FORECAST, forecastModel, hhmm, lastBets, mostly, perHour, tonight as tonightOf, usualBedH, type Scored } from "../lib/forecast";
 import { useStore } from "../lib/store";
 import { addDays, atMinute, DAY, localDay } from "../lib/time";
 import { tagMorning } from "./Inbox";
@@ -38,10 +41,13 @@ export function ForecastCard({ now }: { now: number }) {
     const bedH = usualBedH(past.map((s) => s.n));
     const m = forecastModel(past.map((s) => ({ x: featuresOf(s.n, s.e, bedH), y: s.score })), bedH);
     if (!m) return null;
-    // tonight as a night that hasn't happened: in bed at your usual time
-    const bed = atMinute(eve, Math.round(bedH * 60)), night = { id: "tonight", day: addDays(eve, 1), eve, bed, up: bed + 8 * 3_600_000 } as unknown as Night;
-    const e = evenings([night], eveningInputs(entries, workouts, halfLife))[0];
-    return betOn(m, featuresOf(night, e, bedH, true));
+    // tonight as a night that hasn't happened, in bed at h: the caffeine still in you and the time since eating go with it
+    const inputs = eveningInputs(entries, workouts, halfLife), mid = atMinute(eve, 0);
+    const xAt = (bh: number) => {
+      const bed = atMinute(eve, Math.round(bh * 60)), night = { id: "tonight", day: addDays(eve, 1), eve, bed, up: bed + 8 * 3_600_000 } as unknown as Night;
+      return featuresOf(night, evenings([night], inputs)[0], bedH);
+    };
+    return { ...tonightOf(m, xAt, (now - mid) / 3_600_000), n: m.n, band: m.band };
   }, [mode, scored, h, today, now, entries, workouts, halfLife]);
 
   const morning = useMemo(() => {
@@ -49,26 +55,43 @@ export function ForecastCard({ now }: { now: number }) {
     const i = scored.length - 1, last = scored[i];
     if (last.n.day !== today) return null;
     const b = betBefore(scored, i);
-    return b ? { bet: b.bet, real: last.score, off: last.score - b.bet, week: lastBets(scored) } : null;
+    if (!b) return null;
+    // what bedtime did: the bet for your usual one, when you went half an hour or more either side and bedtime counts for you
+    const late = clockH(last.n.bed, last.n.eve) - b.model.bedH, usual = Math.abs(late) >= 0.5 && Math.abs(perHour(b.model)) >= FORECAST.flatPerHour ? betBefore(scored, i, true) : null;
+    return { bet: b.bet, real: last.score, off: last.score - b.bet, bed: hhmm(clockH(last.n.bed, last.n.eve)), usualBed: hhmm(b.model.bedH), atUsual: usual?.bet ?? null, week: lastBets(scored) };
   }, [mode, scored, today]);
 
   if (tonight) {
-    const m = mostly(tonight);
+    const t = tonight, m = mostly({ ...t.bet, pushes: t.set }), ph = Math.round(Math.abs(t.perHour));
+    const sign = (v: number) => `${v > 0 ? "+" : "−"}${Math.abs(v)}`;
     return (
       <section className="card fc" aria-label="Tonight's bet">
-        <div className="fc-row">
-          <span className="fc-ring" aria-hidden="true">{tonight.bet}</span>
-          <div className="fc-words">
-            <b>The app bets on a {tonight.bet} tonight</b>
-            <small>usual {tonight.usual}{m ? ` · ${m}` : ""}</small>
+        {t.flat ? <>
+          <div className="fc-row">
+            <span className="fc-ring" aria-hidden="true">{t.bet.bet}</span>
+            <div className="fc-words">
+              <b>About {t.bet.bet} tonight, whenever you go</b>
+              <small>usual {t.usual}{m ? ` · ${m}` : ""}</small>
+            </div>
           </div>
+          <p className="note">{t.alike ? "Your bedtimes have been too alike to tell what a later one costs — so it's what the day held." : "On your nights, bedtime has moved the score less than a point an hour — it's what the day held that counts."}</p>
+        </> : <>
+          <div className="fc-words">
+            <b>Tonight's sleep score, by when you're in bed</b>
+            <small>your usual: {t.usual}, in bed {hhmm(t.bedH)}</small>
+          </div>
+          {t.rungs.length
+            ? <ul className="fc-ladder">{t.rungs.map((r) => <li key={r.h}><span>by {hhmm(r.h)}</span><span className="fc-bar" aria-hidden="true"><i style={{ width: `${r.bet}%` }} /></span><b>{r.bet}</b></li>)}</ul>
+            : <p className="note">Later than any night it has learned from — no score for that.</p>}
+          <p className="note">Each hour later {t.perHour < 0 ? "costs" : "adds"} you about {ph} — from your own {t.n} nights.</p>
+        </>}
+        <div className="fc-set">
+          <small>Already set by today</small>
+          {t.set.length ? <ul>{t.set.map((q) => <li key={q.id}><span>{q.say}</span><b className={q.pts < 0 ? "neg" : "pos"}>{sign(q.pts)}</b></li>)}</ul>
+            : <p className="note">Nothing today has moved it much from your usual.</p>}
         </div>
-        <button type="button" className="linkish" aria-expanded={why} onClick={() => setWhy(!why)}>{why ? "Less" : "Why, and what would move it ›"}</button>
-        {why && <div className="fc-why">
-          <p className="note">Likely {tonight.low}–{tonight.high}, with you in bed at your usual time. From your own nights — what each has gone with, not a rule:</p>
-          {tonight.pushes.length ? <ul>{tonight.pushes.map((q) => <li key={q.id}><span>{q.say}</span><b>{q.pts > 0 ? "+" : "−"}{Math.abs(q.pts)}</b></li>)}</ul>
-            : <p className="note">Nothing tonight moves it much from your usual.</p>}
-        </div>}
+        <button type="button" className="linkish" aria-expanded={why} onClick={() => setWhy(!why)}>{why ? "Less" : "How sure, and how it's done ›"}</button>
+        {why && <p className="note fc-why">8 in 10 of the nights it hadn't seen came within {sign(Math.round(t.band[0]))} / {sign(Math.round(t.band[1]))} of what it said. From your own {t.n} nights — what each has gone with, not a rule. The caffeine still in you and the time since your last meal are counted at each bedtime.</p>}
       </section>
     );
   }
@@ -78,9 +101,10 @@ export function ForecastCard({ now }: { now: number }) {
       <section className="card fc" aria-label="Last night's bet">
         <div className="fc-row fc-morning">
           <span className="fc-big">{morning.real}</span>
-          <small>sleep score · the app bet {morning.bet}</small>
+          <small>sleep score · in bed {morning.bed}, for that it said {morning.bet}</small>
           <span className={`fc-chip ${hit ? "hit" : "miss"}`}>{hit ? `Called it ±${Math.abs(morning.off)}` : `Missed by ${Math.abs(morning.off)}`}</span>
         </div>
+        {morning.atUsual != null && morning.atUsual !== morning.bet && <p className="note">In bed at your usual {morning.usualBed} it would have said {morning.atUsual}.</p>}
         {morning.week.length > 1 && <div className="fc-week" role="img" aria-label={`Last ${morning.week.length} bets: ${n} within ${FORECAST.hit} points`}>
           <small>Lately</small>
           {morning.week.map((c) => <i key={c.day} className={c.hit ? "hit" : "miss"} title={`${c.day}: bet ${c.bet}, came ${c.real}`} />)}
