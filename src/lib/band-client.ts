@@ -24,7 +24,7 @@ const set = (p: Partial<State>) => { state = { ...state, ...p }; subs.forEach((f
 
 async function api<T>(op: string, post = false): Promise<T> {
   const { data } = await supabase.auth.getSession();
-  const r = await fetch(`/api/band/${op}`, { method: post ? "POST" : "GET", headers: { "content-type": "application/json", ...(data.session ? { authorization: `Bearer ${data.session.access_token}` } : {}) }, body: post ? "{}" : undefined });
+  const r = await fetch(`/api/band/${op}`, { method: post ? "POST" : "GET", headers: { "content-type": "application/json", "x-tz": String(new Date().getTimezoneOffset()), ...(data.session ? { authorization: `Bearer ${data.session.access_token}` } : {}) }, body: post ? "{}" : undefined });
   const j = (await r.json().catch(() => ({}))) as T & { error?: string };
   if (r.status === 503) { set({ status: "off" }); throw new Error(j.error ?? "the band isn't set up on the server"); }
   if (!r.ok) throw new Error(j.error ?? `server answered ${r.status}`);

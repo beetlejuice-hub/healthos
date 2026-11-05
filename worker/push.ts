@@ -9,7 +9,8 @@
 
 import { newVapid, sendPush, type Subscription, type Vapid } from "./webpush";
 
-export type Reminder = { at: number; title: string; body: string; url: string; tag: string };
+/** `sticky`: stays on screen until dealt with (the band's reconnect alarm). */
+export type Reminder = { at: number; title: string; body: string; url: string; tag: string; sticky?: boolean };
 export type Device = Subscription & { device: string; addedAt: number; last?: { at: number; status: number } };
 
 /** The storage a Durable Object gives us (the subset used; tests pass a Map-backed fake). */
@@ -94,6 +95,12 @@ export class PushHub {
     if (path === "test") {
       const devs = await this.broadcast({ title: "HealthOS · test", body: "Notifications work on this device.", url: "/#settings", tag: "test" });
       return json({ devices: devs.map(({ device, last }) => ({ device, last })) });
+    }
+    // From this account's BandHub only (PLAN 198: the reconnect alarm) — /api/push doesn't pass "alert" through.
+    if (path === "alert") {
+      const url = String(body.url ?? "/");
+      const devs = await this.broadcast({ title: String(body.title ?? "HealthOS").slice(0, 80), body: String(body.body ?? "").slice(0, 240), url: url.startsWith("/") ? url : "/", tag: String(body.tag ?? "alert").slice(0, 40), sticky: body.sticky === true });
+      return json({ devices: devs.length });
     }
     if (path === "status") {
       const devs = await this.devices(), rem = await this.reminders();

@@ -108,5 +108,16 @@ describe("/api/push on the Worker", () => {
     expect(await ok.text()).toBe("/key");
     expect(ids).toEqual(["user-1"]);
     expect((await handlePush(new Request("https://app/api/push/nope", { headers: { authorization: "Bearer good" } }), env, auth)).status).toBe(404);
+    // the band's reconnect alarm goes hub to hub; the app can't send one
+    expect((await handlePush(new Request("https://app/api/push/alert", { method: "POST", headers: { authorization: "Bearer good" }, body: "{}" }), env, auth)).status).toBe(404);
+  });
+
+  it("alert (PLAN 198, from the BandHub): to every device at once, sticky, its words kept short", async () => {
+    const { h, sent } = hub();
+    await h.fetch(post("subscribe", { subscription: sub(1), device: "iPhone" }));
+    await h.fetch(post("subscribe", { subscription: sub(2), device: "Mac" }));
+    const r = (await (await h.fetch(post("alert", { title: "Band disconnected — reconnect now", body: "x".repeat(500), url: "https://evil.example", tag: "band-reconnect", sticky: true }))).json()) as { devices: number };
+    expect(r.devices).toBe(2);
+    expect(sent.map((s) => s.message)).toEqual([1, 2].map(() => ({ title: "Band disconnected — reconnect now", body: "x".repeat(240), url: "/", tag: "band-reconnect", sticky: true })));
   });
 });

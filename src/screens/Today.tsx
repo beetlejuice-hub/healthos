@@ -26,6 +26,7 @@ import { go, OPEN_CARD, openCard } from "../lib/nav";
 import { morningAway, morningShown, nightShown } from "../lib/ai/morning";
 import { ForYou, type Ask } from "../components/ForYou";
 import { NightCheckAsk } from "../components/NightCheckAsk";
+import { BandAlarm } from "../components/BandAlarm";
 import { TipAsk } from "../components/TipAsk";
 import { WeekAsk } from "../components/WeekReport";
 import { WatchAsk, WatchDoneAsk, WatchOfferAsk } from "../components/Watching";
@@ -195,6 +196,7 @@ export function Today() {
         <div><span>{dayLabel(now)} · {clock(now)}</span><h1>Today</h1></div>
         <a href="#settings">Settings</a>
       </div>
+      <BandAlarm now={now} />
 
       <Status kcal={totals.kcal} goalKcal={s.goals.kcal} protein={totals.p} goalP={s.goals.p} cafNow={cafNow} rising={cafComing >= 10} cafBed={cafBed} bed={bed} stack={stack} opened={opened} onTile={tile} />
       {opened === "stack" && <Stack now={now} onClose={close} />}

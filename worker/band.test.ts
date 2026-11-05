@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { BandHub, PULL_EVERY_MS } from "./band";
+import { BandHub, nagWords, nextNag, PULL_EVERY_MS } from "./band";
 import { handleBand, handleHealth } from "./index";
 import type { Storage } from "./push";
 import { readState } from "../src/lib/band";
@@ -225,16 +225,72 @@ describe("BandHub", () => {
     expect(g.health()[0].auth).toBe("Bearer at2");
   });
 
-  it("a revoked sign-in says 'reconnect' and stops the alarm", async () => {
+  it("a revoked sign-in says 'reconnect' and stops pulling; the alarm stays only for the reconnect push", async () => {
     const g = google({ refreshFails: "invalid_grant" });
     const { h, st, at } = setup(g);
     await connect(h);
     at(T0 + 2 * 3600_000); // access token expired
-    st.m.set("auth", { ...(st.m.get("auth") as object) });
-    await st.setAlarm(0);
     await h.alarm();
     expect(await status(h)).toMatchObject({ connected: false, needsReconnect: true });
-    expect(st.alarm()).toBe(0); // not re-armed
+    const calls = g.health().length;
+    at(T0 + 9 * 3600_000);
+    await h.alarm();
+    expect(g.health().length).toBe(calls); // no more pulls
+    expect(st.alarm()).toBeGreaterThan(T0 + 9 * 3600_000);
+  });
+
+  it("the reconnect alarm (PLAN 198): a push at once, again every 6 h, not at night, through your own PushHub", async () => {
+    const g = google({ refreshFails: "invalid_grant" }), st = fakeStorage(), pushed: { user: string; path: string; body: Record<string, unknown> }[] = [];
+    let now = Date.UTC(2026, 10, 5, 12, 0); // 13:00 in Budapest (UTC+1)
+    const PUSH = { idFromName: (n: string) => n, get: (id: unknown) => ({ fetch: async (r: Request) => { pushed.push({ user: String(id), path: new URL(r.url).pathname, body: await r.json() }); return Response.json({ devices: 1 }); } }) };
+    const h = new BandHub({ storage: st }, { ...env, PUSH }, { fetch: g.f, now: () => now });
+    await h.fetch(new Request("https://band/connect", { method: "POST", headers: { "x-band-user": "u1", "x-band-tz": "-60" }, body: JSON.stringify({ code: "good-code", redirect: "r" }) }));
+    now += 2 * 3600_000; // 15:00: the token's run out, and Google says invalid_grant
+    await h.alarm();
+    expect(pushed.map((p) => [p.user, p.path, p.body.tag, p.body.sticky, p.body.url])).toEqual([["u1", "/alert", "band-reconnect", true, "/#today"]]);
+    expect(pushed[0].body.title).toBe("Band disconnected — reconnect now");
+    expect(st.alarm()).toBe(now + 6 * 3600_000); // 21:00
+    // woken early (the app opened): nothing more
+    now += 3600_000; await h.fetch(new Request("https://band/sync", { method: "POST", body: "{}" })); await h.alarm();
+    expect(pushed.length).toBe(1);
+    // 21:00: the second; the third would be 03:00 — night — so 08:00
+    now = st.alarm()!; await h.alarm();
+    expect(pushed.length).toBe(2);
+    expect(st.alarm()).toBe(Date.UTC(2026, 10, 6, 7, 0)); // 08:00 Budapest
+    // a reconnect stops it
+    await h.fetch(post("connect", { code: "good-code", redirect: "r" }));
+    expect(st.m.has("nag")).toBe(false);
+    expect((await status(h)).needsReconnect).toBe(false);
+  });
+
+  it("when the next reconnect push may go: 6 h apart, 23:00–08:00 waits for 08:00, once a day after a week", () => {
+    const H = 3600_000, at = (d: number, h: number) => Date.UTC(2026, 10, d, h, 0), b = at(5, 14);
+    expect(nextNag(b, undefined, b, 0)).toBe(b);
+    expect(nextNag(b, at(5, 14), at(5, 15), 0)).toBe(at(5, 20));
+    expect(nextNag(b, at(5, 20), at(5, 21), 0)).toBe(at(6, 8)); // 02:00 is night
+    expect(nextNag(b, undefined, at(5, 23) + 30 * 60_000, 0)).toBe(at(6, 8)); // broke at 23:30: first one at 08:00
+    expect(nextNag(b, undefined, at(6, 3), 0)).toBe(at(6, 8)); // broke at 03:00: same morning
+    expect(nextNag(b, undefined, at(5, 22), -60)).toBe(at(6, 7)); // 23:00 in Budapest is 22:00 UTC: waits for 08:00 there
+    expect(nextNag(b, at(12, 14) + H, at(12, 16), 0)).toBe(at(13, 15)); // a week on: daily
+    expect(nagWords(b, b + 5 * H).body).toMatch(/5 hours ago\. Tap, then Reconnect\. Within 7 days and the gap fills back in/);
+    expect(nagWords(b, b + 5 * 24 * H).body).toMatch(/5 days ago\. Tap, then Reconnect\. 2 days left/);
+    expect(nagWords(b, b + 9 * 24 * H).body).toMatch(/can't be pulled back any more/);
+  });
+
+  it("a reconnect after days broken reaches back over the gap — heart rate up to 7 days, nights, resting HR — not just 2 days", async () => {
+    const t = T0 - 3600_000, opts = { hr: [hrPoint(t, 60)] as unknown[] };
+    const g = google(opts);
+    const { h, at } = setup(g);
+    await connect(h);
+    await h.alarm();
+    const day = 86_400_000;
+    at(T0 + 5 * day); // five days later, reconnected
+    await connect(h);
+    await h.alarm();
+    const since = (type: string) => g.health().filter((c) => c.url.pathname.includes(`/${type}/`)).at(-1)!.url.searchParams.get("filter")!;
+    expect(since("heart-rate")).toBe(`heart_rate.sample_time.physical_time >= "${new Date(t - 3600_000).toISOString().replace(".000", "")}"`);
+    expect(since("sleep")).toMatch(/2026-10-0[56]/);
+    expect(since("daily-resting-heart-rate")).toMatch(/"?2026-10-0[56]/);
   });
 
   it("one kind failing doesn't lose the others, and the error is shown", async () => {
@@ -440,6 +496,15 @@ describe("/api/band routes", () => {
     expect(await (await wake(k)).json()).toEqual({ wokeAt: "2026-10-07T05:10:00.000Z", asleepMin: 412 });
     // BAND_OWNER points elsewhere: that account's band, which has nothing.
     expect(await (await wake({ ...k, BAND_OWNER: "someone-else" })).json()).toEqual({ wokeAt: null });
+  });
+
+  it("your hub learns whose it is and your clock (for the reconnect alarm)", async () => {
+    const { e, f, hubs } = world();
+    await handleBand(new Request("https://healthos.example/api/band/status", { headers: { authorization: "Bearer good", "x-tz": "-60" } }), e, f);
+    const m = (hubs.get("u1")!.storage as ReturnType<typeof fakeStorage>).m;
+    expect([m.get("user"), m.get("tz")]).toEqual(["u1", -60]);
+    await handleBand(new Request("https://healthos.example/api/band/status", { headers: { authorization: "Bearer good", "x-tz": "junk" } }), e, f);
+    expect(m.get("tz")).toBe(-60);
   });
 
   it("status/data/sync/disconnect go to your own hub; unknown paths 404; no secrets → 503", async () => {

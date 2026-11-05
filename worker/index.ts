@@ -101,7 +101,7 @@ export async function handleBand(req: Request, env: Env, f: typeof fetch = fetch
     if (!user) return back(false, "the link expired — try again");
     const code = url.searchParams.get("code");
     if (!code) return back(false, url.searchParams.get("error") === "access_denied" ? "you said no on Google's page" : "Google didn't say yes");
-    const r = await hub(user).fetch(new Request("https://band/connect", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ code, redirect }) }));
+    const r = await hub(user).fetch(new Request("https://band/connect", { method: "POST", headers: { "content-type": "application/json", "x-band-user": user }, body: JSON.stringify({ code, redirect }) }));
     return r.ok ? back(true) : back(false, ((await r.json().catch(() => ({}))) as { error?: string }).error ?? "Google refused");
   }
   const op = url.pathname.replace(/^\/api\/band\/?/, "");
@@ -118,15 +118,17 @@ export async function handleBand(req: Request, env: Env, f: typeof fetch = fetch
   }
   const user = await whoIs(req, env, { fetch: (u, i) => f(u, i), now: Date.now });
   if (!user) return json({ error: "sign in first" }, 401);
+  // the hub learns whose it is and the phone's clock, for the reconnect alarm (PLAN 198)
+  const who: Record<string, string> = { "content-type": "application/json", "x-band-user": user.id, ...(/^-?\d{1,3}$/.test(req.headers.get("x-tz") ?? "") ? { "x-band-tz": req.headers.get("x-tz")! } : {}) };
   if (op === "start") return json({ url: authUrl(env.GOOGLE_CLIENT_ID, await signState(user.id, env.GOOGLE_CLIENT_SECRET), redirect) });
   if (op === "sync") {
-    const r = await hub(user.id).fetch(new Request("https://band/sync", { method: "POST", headers: { "content-type": "application/json" }, body: "{}" }));
+    const r = await hub(user.id).fetch(new Request("https://band/sync", { method: "POST", headers: who, body: "{}" }));
     // A connected band names its owner for Tempo (first one wins; BAND_OWNER overrides).
     const s = (await r.clone().json().catch(() => ({}))) as { connected?: boolean };
     if (s.connected) await hub("_owner").fetch(new Request("https://band/owner", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ id: user.id }) }));
     return r;
   }
-  return hub(user.id).fetch(new Request(`https://band/${op}${url.search}`, { method: req.method === "POST" ? "POST" : "GET", headers: { "content-type": "application/json" }, body: req.method === "POST" ? "{}" : undefined }));
+  return hub(user.id).fetch(new Request(`https://band/${op}${url.search}`, { method: req.method === "POST" ? "POST" : "GET", headers: who, body: req.method === "POST" ? "{}" : undefined }));
 }
 
 /**

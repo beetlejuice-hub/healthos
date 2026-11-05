@@ -21,8 +21,43 @@ export type BandEnv = {
   GOOGLE_CLIENT_ID?: string; GOOGLE_CLIENT_SECRET?: string;
   /** PLAN 56: the key Tempo holds (its HEALTHOS_KEY), and optionally whose band it reads. */
   TEMPO_KEY?: string; BAND_OWNER?: string;
+  /** PLAN 198: the account's PushHubs, for the reconnect alarm. */
+  PUSH?: { idFromName(name: string): unknown; get(id: unknown): { fetch(req: Request): Promise<Response> } };
 };
-type Auth = { refresh: string; access?: string; accessExp?: number; connectedAt: number; broken?: boolean };
+type Auth = { refresh: string; access?: string; accessExp?: number; connectedAt: number; broken?: boolean; brokenAt?: number };
+/** The reconnect alarm's pushes: when the last went, how many. */
+type Nag = { last?: number; sent: number };
+
+/**
+ * The reconnect alarm (PLAN 198; owner, 5 Nov: "App should notify pretty harshly when i have to reconnect the band to
+ * app"). When Google drops the sign-in: a push at once, then every 6 hours while it's broken — never 23:00–08:00 where
+ * you are (it waits for 08:00) — and once a day after the first week. A reconnect stops it.
+ */
+export const NAG = { everyMs: 6 * 3600_000, dailyAfterMs: 7 * 86_400_000, quietFrom: 23, quietTo: 8 } as const;
+
+/** When the next reconnect push may go. `tzOffsetMin` as the phone's Date.getTimezoneOffset() says it (−60 in Budapest in winter). */
+export function nextNag(brokenAt: number, last: number | undefined, now: number, tzOffsetMin: number): number {
+  const every = last != null && last - brokenAt >= NAG.dailyAfterMs ? 86_400_000 : NAG.everyMs;
+  const at = last == null ? now : Math.max(now, last + every);
+  const local = new Date(at - tzOffsetMin * 60_000), h = local.getUTCHours() + local.getUTCMinutes() / 60; // local clock in UTC fields
+  if (h < NAG.quietFrom && h >= NAG.quietTo) return at;
+  const morning = new Date(local);
+  morning.setUTCHours(NAG.quietTo, 0, 0, 0);
+  if (h >= NAG.quietFrom) morning.setUTCDate(morning.getUTCDate() + 1);
+  return morning.getTime() + tzOffsetMin * 60_000;
+}
+
+/** What the push says: how long it's been, and that past 7 days the gap's oldest minutes can't be pulled back. */
+export function nagWords(brokenAt: number, now: number): { title: string; body: string } {
+  const h = Math.floor((now - brokenAt) / 3600_000), d = Math.floor(h / 24), left = 7 - d;
+  const since = h < 1 ? "just now" : h < 48 ? `${h} hours ago` : `${d} days ago`;
+  return {
+    title: "Band disconnected — reconnect now",
+    body: `Google stopped sending your Fitbit's data ${since}. ` + (left > 0
+      ? `Tap, then Reconnect. ${left === 7 ? "Within 7 days" : `${left} day${left === 1 ? "" : "s"} left`} and the gap fills back in; after that its oldest heart rate is gone.`
+      : "Its first days can't be pulled back any more — tap, then Reconnect, so the gap stops growing."),
+  };
+}
 /** `gapSec`: the typical time between two heart-rate readings Google sent, from the last pull with enough of them
  * (owner, 8 Oct: "my fitbit app shows heartbeat log every 15 minute, how do u get a number for every minute??" —
  * this answers it with his own data). */
@@ -101,7 +136,7 @@ export class BandHub {
     const t = await this.token({ grant_type: "refresh_token", refresh_token: a.refresh });
     if (!t.ok) {
       // invalid_grant: revoked, or expired (a project in testing can expire it weekly) — needs a reconnect.
-      if (t.body.error === "invalid_grant") await this.storage.put("auth", { ...a, broken: true });
+      if (t.body.error === "invalid_grant") await this.storage.put("auth", { ...a, broken: true, brokenAt: this.now() });
       throw new Error(`token ${t.status} ${String(t.body.error ?? "")}`.trim());
     }
     const next: Auth = { ...a, access: String(t.body.access_token), accessExp: this.now() + Number(t.body.expires_in ?? 3600) * 1000 };
@@ -171,7 +206,11 @@ export class BandHub {
   async pull(): Promise<Sync> {
     const now = this.now(), prev = await this.sync();
     const errors: string[] = [];
-    const first = prev.lastOk == null;
+    // first: nothing pulled yet (a reconnect keeps `latest`, so it isn't). After a gap — the phone off, a sign-in broken for
+    // days — each kind reaches back over it, up to what its first pull takes.
+    const first = prev.lastOk == null && prev.latest == null;
+    const gap = prev.latest != null ? Math.ceil((now - prev.latest) / DAY) + 1 : 0;
+    const back = (usual: number, most: number) => (first ? most : Math.min(most, Math.max(usual, gap)));
     let latest = prev.latest, gapSec = prev.gapSec, stepsLatest = prev.stepsLatest;
     try {
       const hr = readHeartRate(await this.list("heart-rate", sampleFilter("heart_rate", hrFrom(now, first, prev.latest)), 10000, errors));
@@ -184,7 +223,7 @@ export class BandHub {
       for (let d = KEEP_DAYS; d <= KEEP_DAYS + 60; d++) await this.storage.delete(`hr:${utcDay(now - d * DAY)}`);
     } catch (e) { errors.push(String((e as Error).message)); }
     try {
-      const fresh = readSleep(await this.list("sleep", sleepFilter(utcDay(now - (first ? 14 : 3) * DAY)), 25, errors));
+      const fresh = readSleep(await this.list("sleep", sleepFilter(utcDay(now - back(3, 14) * DAY)), 25, errors));
       const kept = (await this.storage.get<SleepSession[]>("sleep")) ?? [];
       const byId = new Map(kept.map((s) => [s.id, s]));
       for (const s of fresh) byId.set(s.id, s);
@@ -207,12 +246,12 @@ export class BandHub {
     try {
       // Calories burned per local day (PLAN 83). Google allows 14 days a request: the first time 12 back to tomorrow (any
       // time zone's today is inside), then the last 3 days again (today's grows; late syncs fill yesterday in).
-      const got = readDailyKcal(await this.dailyRollUp("total-calories", utcDay(now - (first ? 12 : 3) * DAY), utcDay(now + 2 * DAY), errors));
+      const got = readDailyKcal(await this.dailyRollUp("total-calories", utcDay(now - back(3, 12) * DAY), utcDay(now + 2 * DAY), errors));
       await this.storage.put("kcal", { ...((await this.storage.get<Record<string, number>>("kcal")) ?? {}), ...got });
     } catch (e) { errors.push(String((e as Error).message)); }
     for (const [type, name, key, field] of [["daily-resting-heart-rate", "daily_resting_heart_rate", "rhr", "beatsPerMinute"], ["daily-heart-rate-variability", "daily_heart_rate_variability", "hrv", undefined]] as const) {
       try {
-        const got = readDaily(await this.list(type, dailyFilter(name, utcDay(now - (first ? 30 : 7) * DAY)), 1000, errors), field);
+        const got = readDaily(await this.list(type, dailyFilter(name, utcDay(now - back(7, 30) * DAY)), 1000, errors), field);
         await this.storage.put(key, { ...((await this.storage.get<Record<string, number>>(key)) ?? {}), ...got });
       } catch (e) { errors.push(String((e as Error).message)); }
     }
@@ -223,14 +262,14 @@ export class BandHub {
     for (const [type, name, key, field] of NIGHT_TYPES) {
       try {
         const kept = await this.storage.get<Record<string, number>>(key);
-        const got = readDaily(await this.list(type, dailyFilter(name, utcDay(now - (kept ? 7 : 40) * DAY)), 1000, nightErrors), field);
+        const got = readDaily(await this.list(type, dailyFilter(name, utcDay(now - (kept ? back(7, 40) : 40) * DAY)), 1000, nightErrors), field);
         await this.storage.put(key, { ...(kept ?? {}), ...got });
       } catch (e) { nightErrors.push(String((e as Error).message)); }
     }
     // Cardio fitness (PLAN 52): one VO2 max a day, slow — 90 days back the first time, so there's a trend from day one.
     try {
       const kept = await this.storage.get<Record<string, Vo2Day>>("vo2");
-      const got = readVo2(await this.list("daily-vo2-max", dailyFilter("daily_vo2_max", utcDay(now - (kept ? 7 : 90) * DAY)), 1000, nightErrors));
+      const got = readVo2(await this.list("daily-vo2-max", dailyFilter("daily_vo2_max", utcDay(now - (kept ? back(7, 90) : 90) * DAY)), 1000, nightErrors));
       await this.storage.put("vo2", { ...(kept ?? {}), ...got });
     } catch (e) { nightErrors.push(String((e as Error).message)); }
     const said = [...errors, ...nightErrors];
@@ -248,11 +287,18 @@ export class BandHub {
     const url = new URL(req.url);
     const path = url.pathname.replace(/^\/+/, "");
     const body = req.method === "POST" ? ((await req.json().catch(() => ({}))) as Record<string, unknown>) : {};
+    // whose hub this is and their clock (the Worker says, from the signed-in request): the reconnect alarm needs both
+    const user = req.headers.get("x-band-user"), tz = Number(req.headers.get("x-band-tz"));
+    if (user && user !== (await this.storage.get<string>("user"))) await this.storage.put("user", user);
+    if (req.headers.has("x-band-tz") && Number.isInteger(tz) && Math.abs(tz) <= 840 && tz !== (await this.storage.get<number>("tz"))) await this.storage.put("tz", tz);
     if (path === "connect") {
       const t = await this.token({ grant_type: "authorization_code", code: String(body.code ?? ""), redirect_uri: String(body.redirect ?? "") });
       if (!t.ok || typeof t.body.refresh_token !== "string") return json({ error: `google said ${t.status} ${String(t.body.error ?? "no refresh token")}` }, 400);
+      const had = await this.auth(), was = await this.sync();
       await this.storage.put("auth", { refresh: t.body.refresh_token, access: String(t.body.access_token ?? ""), accessExp: this.now() + Number(t.body.expires_in ?? 3600) * 1000, connectedAt: this.now() } satisfies Auth);
-      await this.storage.put("sync", {});
+      // a reconnect keeps where the data got to, so the next pull reaches back over the gap (it used to start over: 2 days)
+      await this.storage.put("sync", had && was.latest != null ? { latest: was.latest, ...(was.stepsLatest != null ? { stepsLatest: was.stepsLatest } : {}) } : {});
+      await this.storage.delete("nag");
       await this.storage.setAlarm(this.now() + 2000); // first pull right away, in the background
       return json({ ok: true });
     }
@@ -277,9 +323,12 @@ export class BandHub {
       // Opening the app or "Pull now" pulls, but not more than once every 20 s (a double tap, two devices).
       const st = await this.status();
       if (st.connected && !(s.lastRun && this.now() - s.lastRun < PULL_GAP_MS)) await this.pull();
-      // and the 15-minute pulls carry on from here, even if their chain had broken (PLAN 69: a reading 9 h old)
-      if (st.connected) await this.storage.setAlarm(this.now() + PULL_EVERY_MS);
-      return json(await this.status());
+      // and the 15-minute pulls carry on from here, even if their chain had broken (PLAN 69: a reading 9 h old); a sign-in
+      // that broke just now, or before this alarm existed, gets the reconnect alarm going
+      const after = await this.status();
+      if (after.connected) await this.storage.setAlarm(this.now() + PULL_EVERY_MS);
+      else if (after.needsReconnect) await this.storage.setAlarm(this.now() + 1000);
+      return json(after);
     }
     if (path === "data") {
       const from = Number(url.searchParams.get("from")) || this.now() - DAY, to = Number(url.searchParams.get("to")) || this.now();
@@ -307,7 +356,7 @@ export class BandHub {
     if (path === "disconnect") {
       const a = await this.auth();
       if (a) await this.f(`https://oauth2.googleapis.com/revoke?token=${encodeURIComponent(a.refresh)}`, { method: "POST" }).catch(() => null);
-      for (const k of ["auth", "sync", "sleep", "rhr", "hrv", "kcal", ...NIGHT_KEYS]) await this.storage.delete(k);
+      for (const k of ["auth", "sync", "sleep", "rhr", "hrv", "kcal", "nag", ...NIGHT_KEYS]) await this.storage.delete(k);
       for (let d = 0; d <= KEEP_DAYS; d++) { await this.storage.delete(`hr:${utcDay(this.now() - d * DAY)}`); await this.storage.delete(`steps:${utcDay(this.now() - d * DAY)}`); }
       await this.storage.deleteAlarm();
       return json({ ok: true });
@@ -315,11 +364,30 @@ export class BandHub {
     return json({ error: "not found" }, 404);
   }
 
-  /** Every 15 minutes while connected. A revoked sign-in stops the alarm until the next connect. */
+  /** Every 15 minutes while connected. A revoked sign-in stops the pulls; the alarm then only wakes for the reconnect push. */
   async alarm(): Promise<void> {
     const a = await this.auth();
-    if (!a || a.broken) return;
-    await this.pull();
-    if (!(await this.auth())?.broken) await this.storage.setAlarm(this.now() + PULL_EVERY_MS);
+    if (!a) return;
+    if (!a.broken) await this.pull();
+    const b = await this.auth();
+    if (b?.broken) return this.nag(b);
+    await this.storage.setAlarm(this.now() + PULL_EVERY_MS);
+  }
+
+  /** The reconnect push, if one is due (nextNag), through the account's PushHub; then the alarm at the next one. */
+  private async nag(a: Auth): Promise<void> {
+    const now = this.now(), n = (await this.storage.get<Nag>("nag")) ?? { sent: 0 }, tz = (await this.storage.get<number>("tz")) ?? 0;
+    const since = a.brokenAt ?? now;
+    if (a.brokenAt == null) await this.storage.put("auth", { ...a, brokenAt: since }); // broken before the alarm existed
+    if (nextNag(since, n.last, now, tz) <= now + 30_000) {
+      const user = await this.storage.get<string>("user");
+      if (user && this.env.PUSH) {
+        const push = this.env.PUSH.get(this.env.PUSH.idFromName(user));
+        await push.fetch(new Request("https://push/alert", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ ...nagWords(since, now), url: "/#today", tag: "band-reconnect", sticky: true }) })).catch(() => null);
+      }
+      n.last = now; n.sent++;
+      await this.storage.put("nag", n);
+    }
+    await this.storage.setAlarm(nextNag(since, n.last, now, tz));
   }
 }

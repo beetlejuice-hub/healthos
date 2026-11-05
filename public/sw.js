@@ -9,6 +9,7 @@ self.addEventListener("push", (e) => {
     body: m.body || "",
     tag: m.tag || "healthos",
     renotify: true,
+    requireInteraction: !!m.sticky,
     icon: "/icon.svg",
     badge: "/icon.svg",
     data: { url: m.url || "/#today" },
