@@ -58,6 +58,8 @@ export function nagWords(brokenAt: number, now: number): { title: string; body: 
       : "Its first days can't be pulled back any more — tap, then Reconnect, so the gap stops growing."),
   };
 }
+/** The last VO2 max pull: when, how many days back, how many points came; a sample when none could be read; its error. */
+export type Vo2Pull = { at: number; days: number; points: number; sample?: string; error?: string };
 /** `gapSec`: the typical time between two heart-rate readings Google sent, from the last pull with enough of them
  * (owner, 8 Oct: "my fitbit app shows heartbeat log every 15 minute, how do u get a number for every minute??" —
  * this answers it with his own data). */
@@ -267,11 +269,18 @@ export class BandHub {
       } catch (e) { nightErrors.push(String((e as Error).message)); }
     }
     // Cardio fitness (PLAN 52): one VO2 max a day, slow — 90 days back the first time, so there's a trend from day one.
+    // What came is kept too (PLAN 198; owner, 5 Nov, of "Needs 3 days of VO2 max": "is this going to stay like this
+    // forever?"): how many points, and when none could be read, what the first looked like — so the card can say why.
     try {
-      const kept = await this.storage.get<Record<string, Vo2Day>>("vo2");
-      const got = readVo2(await this.list("daily-vo2-max", dailyFilter("daily_vo2_max", utcDay(now - (kept ? back(7, 90) : 90) * DAY)), 1000, nightErrors));
+      const kept = await this.storage.get<Record<string, Vo2Day>>("vo2"), days = kept ? back(7, 90) : 90;
+      const page = await this.list("daily-vo2-max", dailyFilter("daily_vo2_max", utcDay(now - days * DAY)), 1000, nightErrors);
+      const got = readVo2(page), pts = page.dataPoints ?? [];
       await this.storage.put("vo2", { ...(kept ?? {}), ...got });
-    } catch (e) { nightErrors.push(String((e as Error).message)); }
+      await this.storage.put("vo2:pull", { at: now, days, points: pts.length, ...(pts.length && !Object.keys(got).length ? { sample: JSON.stringify(pts[0]).slice(0, 200) } : {}) } satisfies Vo2Pull);
+    } catch (e) {
+      nightErrors.push(String((e as Error).message));
+      await this.storage.put("vo2:pull", { at: now, days: 0, points: 0, error: String((e as Error).message).slice(0, 120) } satisfies Vo2Pull);
+    }
     const said = [...errors, ...nightErrors];
     const next: Sync = { lastRun: now, lastOk: errors.filter((e) => !/pages/.test(e)).length < 6 ? now : prev.lastOk, latest, ...(gapSec != null ? { gapSec } : {}), ...(stepsLatest != null ? { stepsLatest } : {}), ...(said.length ? { error: said.join("; ").slice(0, 300) } : {}) };
     await this.storage.put("sync", next);
@@ -280,7 +289,8 @@ export class BandHub {
 
   private async status() {
     const a = await this.auth(), s = await this.sync();
-    return { connected: !!a && !a.broken, needsReconnect: !!a?.broken, connectedAt: a?.connectedAt ?? null, lastSync: s.lastOk ?? null, latest: s.latest ?? null, error: s.error ?? null, gapSec: s.gapSec ?? null };
+    return { connected: !!a && !a.broken, needsReconnect: !!a?.broken, connectedAt: a?.connectedAt ?? null, lastSync: s.lastOk ?? null, latest: s.latest ?? null, error: s.error ?? null, gapSec: s.gapSec ?? null,
+      vo2Pull: (await this.storage.get<Vo2Pull>("vo2:pull")) ?? null };
   }
 
   async fetch(req: Request): Promise<Response> {
@@ -356,7 +366,7 @@ export class BandHub {
     if (path === "disconnect") {
       const a = await this.auth();
       if (a) await this.f(`https://oauth2.googleapis.com/revoke?token=${encodeURIComponent(a.refresh)}`, { method: "POST" }).catch(() => null);
-      for (const k of ["auth", "sync", "sleep", "rhr", "hrv", "kcal", "nag", ...NIGHT_KEYS]) await this.storage.delete(k);
+      for (const k of ["auth", "sync", "sleep", "rhr", "hrv", "kcal", "nag", "vo2:pull", ...NIGHT_KEYS]) await this.storage.delete(k);
       for (let d = 0; d <= KEEP_DAYS; d++) { await this.storage.delete(`hr:${utcDay(this.now() - d * DAY)}`); await this.storage.delete(`steps:${utcDay(this.now() - d * DAY)}`); }
       await this.storage.deleteAlarm();
       return json({ ok: true });

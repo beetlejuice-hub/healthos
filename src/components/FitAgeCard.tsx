@@ -8,7 +8,8 @@
 import { useMemo, useState } from "react";
 import type { BandData } from "../lib/band";
 import { cardioSpans } from "../lib/cardio";
-import { cardioByDay, fitAge, fitWords, type FitAge, type Sex } from "../lib/fitage";
+import { useBand } from "../lib/band-client";
+import { cardioByDay, fitAge, fitWords, vo2Missing, type FitAge, type Sex } from "../lib/fitage";
 import { act, useStore } from "../lib/store";
 import { atMinute, localDay } from "../lib/time";
 import { kgByDay } from "../lib/vo2";
@@ -23,7 +24,7 @@ const yrs = (v: number) => (v === 0 ? "±0 y" : `${v > 0 ? "−" : "+"}${Math.ab
 export function FitAgeCard({ band, now, w }: { band: BandData | null; now: number; w: number }) {
   const entries = useStore((s) => s.entries), workouts = useStore((s) => s.workouts);
   const sex = useStore((s) => s.settings.sex), age = useStore((s) => s.settings.age);
-  const today = localDay(now);
+  const today = localDay(now), st = useBand().status, pull = st && st !== "off" ? st.vo2Pull : null;
   const kg = useMemo(() => kgByDay(entries), [entries]);
   const cardio = useMemo(() => cardioByDay(cardioSpans(workouts, now)), [workouts, now]);
   const f = useMemo(() => (band ? fitAge(band.vo2, today, sex ?? "male", { age, kg, rhr: band.rhr, cardio }) : null), [band, today, sex, age, kg, cardio]);
@@ -31,13 +32,13 @@ export function FitAgeCard({ band, now, w }: { band: BandData | null; now: numbe
   if (!f) return (
     <section className="sl-p bl-card" aria-label="Your heart's fitness age" data-card="fitage">
       <span className="cmp-k">Your heart's fitness age</span>
-      <p className="bl-need">Needs 3 days of VO2 max from the band in the last week. Fitbit works it out from your heart rate as you wear it.</p>
+      <p className="bl-need">{vo2Missing(pull, band.vo2, today)}</p>
     </section>
   );
   if (!sex) return (
     <section className="sl-p bl-card" aria-label="Your heart's fitness age" data-card="fitage" data-ask="sex">
       <span className="cmp-k">Your heart's fitness age</span>
-      <h3>The age at which the average healthy person has your VO2 max ({f1(f.vo2)} this week). Set it against:</h3>
+      <h3>The age at which the average healthy person has your VO2 max ({f1(f.vo2)} {f.from ? `on ${short(f.from)}` : "this week"}). Set it against:</h3>
       <div className="fa-ask">
         <button type="button" className="ibtn" onClick={() => act.setSettings({ sex: "male" })}>Men</button>
         <button type="button" className="ibtn" onClick={() => act.setSettings({ sex: "female" })}>Women</button>
@@ -58,7 +59,7 @@ function Card({ f, w }: { f: FitAge; w: number }) {
         <b className="fa-n">{fitWords(f.fit)}</b>
         <div>
           <span className="fa-y">years{f.you != null ? ` — you're ${f.you}` : ""}</span>
-          <span className="fa-sub">VO2 max {f1(f.vo2)} this week{f.est ? " · Google marks the latest an estimate" : ""}</span>
+          <span className="fa-sub">VO2 max {f1(f.vo2)} {f.from ? `on ${short(f.from)} — the latest; Fitbit sends it only now and then` : "this week"}{f.est ? " · Google marks the latest an estimate" : ""}</span>
         </div>
       </div>
       {f.weeks.length >= 2 && <Chart f={f} w={w} hov={hov} setHov={setHov} />}

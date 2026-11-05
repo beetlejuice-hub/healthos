@@ -1,7 +1,7 @@
 // PLAN 177, body lab 4 — fitness age on HUNT 3's norms (Loe et al. 2013, Table 2). Known answers from the table; planted
 // changes in fake band data (fitness, the kilos, both) found and split; a steady control finds nothing.
 import { describe, expect, it } from "vitest";
-import { ageAt, FITAGE, fitAge, fitLine, fitnessAge, fitWords, HUNT, NORM, perPoint, vo2At } from "./fitage";
+import { ageAt, FITAGE, fitAge, fitLine, fitnessAge, fitWords, HUNT, NORM, perPoint, vo2At, vo2Missing } from "./fitage";
 import { addDays } from "./time";
 import type { Vo2Day } from "./vo2";
 
@@ -88,12 +88,24 @@ describe("your fitness age over the weeks, and what moved it", () => {
     const flat: Record<string, number> = {}; for (let k = 0; k < 90; k++) flat[addDays(TODAY, -k)] = 54;
     expect(fitAge(vo2, TODAY, "male", { rhr: flat, cardio: { [TODAY]: 30, [addDays(TODAY, -56)]: 30 } })!.rhr).toBeNull();
   });
-  it("women's norms set the same VO2 max younger; under 3 days of VO2 max this week, nothing", () => {
+  it("women's norms set the same VO2 max younger; under 3 days this week: the latest of 4 weeks, said as that day's, no trend", () => {
     const { vo2 } = band(() => 3.2, () => 80);
     expect(fitAge(vo2, TODAY, "female")!.fit.age).toBeLessThan(fitAge(vo2, TODAY, "male")!.fit.age);
-    const thin: Record<string, Vo2Day> = { [TODAY]: { v: 45 }, [addDays(TODAY, -3)]: { v: 45 } };
-    expect(fitAge(thin, TODAY, "male")).toBeNull();
+    expect(fitAge(vo2, TODAY, "male")!.from).toBeUndefined();
+    const thin: Record<string, Vo2Day> = { [addDays(TODAY, -3)]: { v: 45 }, [addDays(TODAY, -12)]: { v: 43 } };
+    const f = fitAge(thin, TODAY, "male")!;
+    expect([f.vo2, f.from, f.change, f.weeks.length]).toEqual([45, addDays(TODAY, -3), null, 0]);
+    expect(f.fit.age).toBe(fitAge({ ...thin, [addDays(TODAY, -1)]: { v: 45 }, [addDays(TODAY, -2)]: { v: 45 } }, TODAY, "male")!.fit.age);
+    expect(fitAge({ [addDays(TODAY, -30)]: { v: 45 } }, TODAY, "male")).toBeNull(); // over 4 weeks old
     expect(fitAge(undefined, TODAY, "male")).toBeNull();
+  });
+  it("why there's none, from what Google sent: refused, unreadable, nothing in 90 days, too old, not pulled yet", () => {
+    const at = 0;
+    expect(vo2Missing({ at, days: 90, points: 0 }, {}, TODAY)).toMatch(/^Google has sent no VO2 max for your last 90 days\. Fitbit makes a single VO2 max after an outdoor run of 10\+ minutes with GPS on/);
+    expect(vo2Missing({ at, days: 7, points: 2, sample: '{"x":1}' }, {}, TODAY)).toMatch(/^Google sent 2 VO2 max days, but none with a number the app can read — what came: \{"x":1\}/);
+    expect(vo2Missing({ at, days: 0, points: 0, error: "daily-vo2-max 403" }, {}, TODAY)).toMatch(/^Google refused the VO2 max request \(daily-vo2-max 403\)/);
+    expect(vo2Missing({ at, days: 7, points: 0 }, { [addDays(TODAY, -40)]: { v: 44 } }, TODAY)).toMatch(/^The newest VO2 max from the band is from \d+ \w+ — over 4 weeks ago/);
+    expect(vo2Missing(null, {}, TODAY)).toMatch(/^Needs a VO2 max from the band/);
   });
   it("past the study's ages there are no years — the VO2 max change still shows", () => {
     const { vo2 } = band((k) => 4.6 - (0.2 * k) / 89, () => 70, 5);

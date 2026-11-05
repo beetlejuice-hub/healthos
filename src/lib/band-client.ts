@@ -10,7 +10,9 @@ import { mergeBand, refreshFrom, type BandData } from "./band";
 
 export type { BandData };
 /** `gapSec`: typical seconds between two heart-rate readings Google sends (null before there are enough). */
-export type BandStatus = { connected: boolean; needsReconnect: boolean; connectedAt: number | null; lastSync: number | null; latest: number | null; error: string | null; gapSec?: number | null };
+/** `vo2Pull`: the last VO2 max pull — how many points Google sent (the fitness age card says why it has none). */
+export type BandStatus = { connected: boolean; needsReconnect: boolean; connectedAt: number | null; lastSync: number | null; latest: number | null; error: string | null; gapSec?: number | null;
+  vo2Pull?: { at: number; days: number; points: number; sample?: string; error?: string } | null };
 /** "off": the server has no Google keys (503). null: not asked yet. `from`: the data held starts here. */
 type State = { status: BandStatus | "off" | null; data: BandData | null; from: number; loading: boolean; older: boolean };
 
@@ -31,7 +33,7 @@ async function api<T>(op: string, post = false): Promise<T> {
   return j;
 }
 
-const pick = (j: BandStatus): BandStatus => ({ connected: j.connected, needsReconnect: j.needsReconnect, connectedAt: j.connectedAt, lastSync: j.lastSync, latest: j.latest, error: j.error, gapSec: j.gapSec ?? null });
+const pick = (j: BandStatus): BandStatus => ({ connected: j.connected, needsReconnect: j.needsReconnect, connectedAt: j.connectedAt, lastSync: j.lastSync, latest: j.latest, error: j.error, gapSec: j.gapSec ?? null, vo2Pull: j.vo2Pull ?? null });
 
 const asData = (d: Partial<BandData>): BandData => ({ hr: d.hr ?? [], sleep: d.sleep ?? [], rhr: d.rhr ?? {}, hrv: d.hrv ?? {}, steps: d.steps ?? [], kcal: d.kcal ?? {}, skin: d.skin ?? {}, breath: d.breath ?? {}, spo2: d.spo2 ?? {}, vo2: d.vo2 ?? {} });
 

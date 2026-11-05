@@ -3579,7 +3579,7 @@ both reads and the questions. Phases in that order; #152 RPE waits (owner).
      the open set held by the list, openFinding from Today. Tests: effects.test (alcohol vs caffeine), e2e leads (rows:
      the first open, the rest closed, a tap opens), harness openFindings for the suites that read inside the cards.
 
-198. [ ] **The night bet by bedtime, a loud band alarm, and one of mine** (owner, 5 Nov: "app bet for night score is kinda
+198. [x] **The night bet by bedtime, a loud band alarm, and one of mine** (owner, 5 Nov: "app bet for night score is kinda
    stupid cause it cant predict when im gonna go to sleep, and basically what wuld move the sleep score it cant predict" ·
    "App should notify pretty harshly when i have to reconnect the band to app" · "and if u have anythong to fix or add go
    ahead"). Claimed 5 Nov.
@@ -3590,3 +3590,45 @@ both reads and the questions. Phases in that order; #152 RPE waits (owner).
    - The band: when Google drops the link, a push at once and again every 6 hours while it's broken (not at night), and a
      red line on Today with Reconnect that doesn't go away until it's fixed. No new band data for 12+ hours: a quieter line.
    - Mine: picked after the two above, said here when built.
+   - Then (5 Nov, his screenshot of Body lab: "YOUR HEART'S FITNESS AGE · Needs 3 days of VO2 max from the band in the
+     last week … is this going to stay like this forever?") — that became mine.
+   - Done 5 Nov. The bet: canvas https://claude.ai/artifact/1MxwG6ynPZq6parXeTgUxA (A a row per bedtime, B pick a
+     bedtime, C words only); A built while he picks. lib/forecast `tonight`: a score for each whole hour from the one
+     before his usual (none within 15 min of now, none past the latest bed it learned from), each with the caffeine
+     still in him and the time since eating at that bedtime; what each hour later has cost on his nights; "already set by
+     today" (every push but bedtime's); one number "whenever you go" when bedtime moves it under a point an hour, or his
+     bedtimes are too alike to tell. The morning and the week's dots judge the bet for the bedtime he had ("in bed 00:04,
+     for that it said 95"), and say what his usual one would have given. Tests: forecast.test (planted 4 an hour found,
+     the rungs step by it; no bed effect → one number; bedtimes ±5 min → too alike; the morning 2 h late ≈ 8 under),
+     e2e forecast rewritten.
+   - The band: worker/band `nextNag`/`nagWords` — a push through his PushHub (a new "alert" path the app can't call) at
+     once, every 6 h while broken, never 23:00–08:00 on his phone's clock (the app sends it with each band call), daily
+     after a week; sticky on screen. Today: a red line under the heading with Reconnect (components/BandAlarm), and "No new
+     band data since …" after 12 h without any. **Found on the way:** a reconnect wiped where the data had got to, so the
+     next pull went 2 days back and a longer gap never filled; now it keeps it and each kind reaches back over the gap
+     (heart rate 7 days, nights 14, daily values 30). Tests: band.test (the pushes, quiet hours, a reconnect stops it, the
+     gap pulled), push.test (alert, and /api/push/alert refused), e2e bandalarm (new).
+   - Fitness age: the Worker keeps what the VO2 max pull got (how many points; the first when none had a number; Google's
+     error) and the card says it: "Google has sent no VO2 max for your last 90 days. Fitbit makes a single VO2 max after
+     an outdoor run of 10+ minutes with GPS on …", or what came that it couldn't read. Under 3 days this week it uses
+     the latest of the last 4 weeks, said as that day's. **Not checked: your real band** — open Body lab after the next
+     sync and it says which it is. Tests: fitage.test, band.test, e2e fitage.
+
+199. [ ] **Test more things on me, gather every kind of data** (owner, 5 Nov, with a screenshot of Findings showing only
+   "About you": "at findings i only ever had these ones, feels like app didnt find no pattern … i rather have it find
+   nothing, but still, boring. also it should test more and more things ab me, like go on net, or from knoweledge, and
+   look for things, recommend me protocols, suupplements, exercises, EVERYTHING, and test things on me, i want to try and
+   see what how changes me, food, moving, supplements, health or hobby changes, I WANT TO TEST MORE THINGS AND GATHER
+   DATA, every type of data..pls brainstorm this and come up w bunch of ideas"). Why Findings is quiet: 26 days, and most
+   of what he does is the same every day — nothing to compare. The answer is making the differences on purpose.
+   Brainstormed in chat, 5 Nov (23 ideas): the engine — coin-flip days, on/off blocks, dose tests, a queue with a verdict
+   card, blind tests, bet first; where tests come from — the AI's protocol of the week from studies, his leads become
+   tests, a weekly wildcard, an evidence-graded library; new data — a 30-second reaction-time test, ratings 2–3 times a
+   day, training as an outcome, daylight/air/pollen/bedroom temperature/screen time/calendar, gut, social, a blood panel
+   every 3–6 months, a 2-week glucose sensor, waist and grip, an evening voice note; fun — monthly themes, his top 5
+   levers and a didn't-work wall, a Sunday results push. My pick: the coin-flip engine + the queue the AI fills + the
+   reaction-time test. Waiting for his pick; plan and canvas first.
+
+200. [ ] **Reform the whole app, part by part — the look and the engine** (owner, 5 Nov: "after u done w all we willl have
+   to reform whole app look at each part and change, visuallty and engine wise"). After 199. One part at a time, a canvas
+   for each, his call on each.

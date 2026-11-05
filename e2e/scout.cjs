@@ -6,6 +6,9 @@ const { chromium, APP, OUT, handle, openFindings } = require('./harness.cjs');
   const ctx = await b.newContext({ viewport: { width: 1440, height: 1000 } });
   await ctx.route('https://ubfvaewfdbmecowoeuni.supabase.co/**', handle);
   const pg = await ctx.newPage();
+  // a fixed day: the sample data is made from today, and on some days (5 Nov) its only lead is the one the pattern card
+  // above already draws, so Today rightly doesn't say it twice
+  await pg.clock.install({ time: new Date('2026-11-04T12:00:00').getTime() });
   pg.on('pageerror', e => errs.push('pageerror: ' + e.message));
   pg.on('console', m => { if (m.type() === 'error' && !/ERR_CERT|fonts|Failed to load resource/.test(m.text())) errs.push('console: ' + m.text()); });
   await pg.goto(APP);

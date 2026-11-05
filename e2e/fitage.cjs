@@ -4,6 +4,9 @@
 // 12 weekly dots with your age dashed, the change split into fitness and the kilos, the resting heart rate alongside
 // (without years), a tap on a dot naming its week; Settings shows the choice, the AI sees the same numbers; it fits a
 // 390 and a 320 phone. Control: a band with no VO2 max — the card says what it needs, nothing made up.
+// PLAN 198 (owner, 5 Nov, of "Needs 3 days of VO2 max…": "is this going to stay like this forever?"): it says what Google
+// actually sent — none in 90 days (and the GPS run that makes one), or days with no number it could read (what came); and
+// one VO2 max 10 days ago is enough for an age, said as that day's.
 const { chromium, APP, OUT, handle } = require('./harness.cjs');
 
 const MIN = 60_000, HOUR = 3_600_000, D = 86_400_000, NOW = new Date('2026-10-27T10:00:00').getTime();
@@ -31,7 +34,7 @@ function world(withVo2) {
     await ctx.route(/\/api\/(band|push)\//, (rt) => {
       const u = new URL(rt.request().url()), op = u.pathname.split('/').pop(), from = +u.searchParams.get('from'), to = +u.searchParams.get('to');
       if (u.pathname.includes('/push/')) return rt.fulfill({ status: 200, contentType: 'application/json', body: '{"ok":true,"devices":[],"next":null}' });
-      const st = { connected: true, needsReconnect: false, connectedAt: NOW - 90 * D, lastSync: NOW - 3 * MIN, latest: w.hr.at(-1)[0], error: null, gapSec: 300 };
+      const st = { connected: true, needsReconnect: false, connectedAt: NOW - 90 * D, lastSync: NOW - 3 * MIN, latest: w.hr.at(-1)[0], error: null, gapSec: 300, vo2Pull: w.pull ?? null };
       rt.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(op === 'data' ? { hr: w.hr.filter((m) => m[0] >= from && m[0] <= to), steps: [], sleep: [], rhr: w.rhr, hrv: w.hrv, vo2: w.vo2, ...st } : st) });
     });
     const pg = await ctx.newPage();
@@ -89,9 +92,22 @@ function world(withVo2) {
   await pg.locator('[data-card="fitage"]').screenshot({ path: OUT + 'fitage-320.png' });
   await ctx.close();
 
-  ({ ctx, pg } = await open(world(false), 390));
-  const none = (await pg.locator('[data-card="fitage"]').innerText().catch(() => '')).replace(/\s+/g, ' ');
-  check(`control: no VO2 max — says what it needs, no number (${none})`, /Needs 3 days of VO2 max from the band in the last week/.test(none) && !/years/.test(none));
+  const cardText = async (pg) => { await pg.waitForSelector('[data-card="fitage"]', { timeout: 10000 }).catch(() => {}); await pg.waitForTimeout(400); return (await pg.locator('[data-card="fitage"]').innerText().catch(() => '')).replace(/\s+/g, ' '); };
+  ({ ctx, pg } = await open({ ...world(false), pull: { at: NOW - 3 * MIN, days: 90, points: 0 } }, 390));
+  const none = await cardText(pg);
+  check(`control: Google sent no VO2 max — says so, and the GPS run that makes one; no number (${none})`, /Google has sent no VO2 max for your last 90 days\. Fitbit makes a single VO2 max after an outdoor run of 10\+ minutes with GPS on/.test(none) && /Today → Cardio fitness/.test(none) && !/years/.test(none));
+  await ctx.close();
+
+  ({ ctx, pg } = await open({ ...world(false), pull: { at: NOW - 3 * MIN, days: 7, points: 3, sample: '{"dailyVo2Max":{"date":{"year":2026,"month":10,"day":26},"vo2MaxRange":"42-46"}}' } }, 390));
+  const odd = await cardText(pg);
+  check(`days with no number it could read: says what came (${odd.slice(0, 160)})`, /Google sent 3 VO2 max days, but none with a number the app can read — what came: \{"dailyVo2Max".*vo2MaxRange/.test(odd));
+  await ctx.close();
+
+  const sparse = world(false); sparse.vo2[ymd(NOW - 10 * D)] = { v: 44.2 };
+  ({ ctx, pg } = await open(sparse, 390));
+  await pg.locator('[data-card="fitage"]').getByRole('button', { name: 'Men', exact: true }).click().catch(() => {});
+  const one = await cardText(pg);
+  check(`one VO2 max 10 days ago: an age from it, said as that day's (${one.slice(0, 140)})`, /years/.test(one) && /VO2 max 44\.2 on 17 Oct — the latest; Fitbit sends it only now and then/.test(one));
   await ctx.close();
 
   console.log('errors:', JSON.stringify(errs));

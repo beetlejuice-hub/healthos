@@ -404,6 +404,22 @@ describe("BandHub", () => {
     expect(d).toMatchObject({ skin: { "2026-10-07": 34.1 }, breath: { "2026-10-07": 14.6 }, spo2: { "2026-10-07": 96.2 }, vo2: { "2026-10-07": { v: 44.2 } } });
   });
 
+  it("the VO2 max pull is kept for the card (PLAN 198): how many came; a sample when none had a number; Google's error", async () => {
+    const { h, st } = setup();
+    await connect(h); await h.alarm();
+    expect(st.m.get("vo2:pull")).toEqual({ at: T0, days: 90, points: 2, sample: undefined });
+    expect((await status(h)).vo2Pull).toMatchObject({ points: 2, days: 90 });
+    // a shape the reader doesn't know: the first point is kept to show
+    const g2 = google();
+    const f2 = (async (u: RequestInfo | URL, i?: RequestInit) => (String(u).includes("/daily-vo2-max/") ? Response.json({ dataPoints: [{ dailyVo2Max: { date: { year: 2026, month: 10, day: 7 }, vo2MaxRange: "42-46" } }] }) : g2.f(u, i))) as typeof fetch;
+    const s2 = fakeStorage(), h2 = new BandHub({ storage: s2 }, env, { fetch: f2, now: () => T0 });
+    await connect(h2); await h2.alarm();
+    expect(s2.m.get("vo2:pull")).toMatchObject({ points: 1, sample: '{"dailyVo2Max":{"date":{"year":2026,"month":10,"day":7},"vo2MaxRange":"42-46"}}' });
+    const s3 = setup(google({ failType: "daily-vo2-max" }));
+    await connect(s3.h); await s3.h.alarm();
+    expect(s3.st.m.get("vo2:pull")).toMatchObject({ points: 0, error: "daily-vo2-max 500" });
+  });
+
   it("one of the night check's kinds failing is said, but the pull still counts and the others are kept", async () => {
     const { h, st } = setup(google({ failType: "daily-respiratory-rate" }));
     await connect(h);

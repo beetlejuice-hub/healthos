@@ -25,7 +25,8 @@ export const HUNT: Record<Sex, [age: number, vo2: number][]> = {
 };
 
 /** Ages the study covers (20–90); `weeks` drawn; `cardio` weeks averaged for "alongside". */
-export const FITAGE = { min: 20, max: 90, weeks: 12, cardio: 4, rhrMin: 3 } as const;
+/** `lastDays`: with under 3 days of VO2 max this week, the latest from this many days back (Fitbit sends it only now and then). */
+export const FITAGE = { min: 20, max: 90, weeks: 12, cardio: 4, rhrMin: 3, lastDays: 28 } as const;
 
 /** The least-squares line through a sex's decade means: VO2 max = at + perYear × (age − mid). */
 function line(rows: [number, number][]): { mid: number; at: number; perYear: number } {
@@ -69,6 +70,8 @@ export type FitAge = {
   /** Over the same weeks, without years: resting heart rate (that week's median) and cardio minutes a week (4-week average). */
   rhr: [then: number, now: number] | null;
   cardio: [then: number, now: number] | null;
+  /** Set when it's the latest single VO2 max (that day), not this week's median — fewer than 3 days this week. */
+  from?: string;
 };
 
 const median = (v: number[]) => { const s = [...v].sort((a, b) => a - b); return s.length % 2 ? s[(s.length - 1) / 2] : (s[s.length / 2 - 1] + s[s.length / 2]) / 2; };
@@ -107,8 +110,13 @@ export function fitLine(f: FitAge): string {
  */
 export function fitAge(rec: Record<string, Vo2Day> | undefined, today: string, sex: Sex,
   o: { age?: number | null; kg?: Record<string, number>; rhr?: Record<string, number>; cardio?: Record<string, number> } = {}): FitAge | null {
-  const t = vo2Trend(rec, today, o.kg ?? {});
-  if (!t) return null;
+  const t = vo2Trend(rec, today, o.kg ?? {}), you = o.age && o.age >= 12 && o.age <= 100 ? o.age : null;
+  if (!t) {
+    // too few this week (PLAN 198): the latest of the last 4 weeks, said as that day's — no trend from one value
+    const day = Object.keys(rec ?? {}).filter((d) => d <= today && d > addDays(today, -FITAGE.lastDays) && rec![d].v > 10 && rec![d].v < 100).sort().at(-1);
+    if (!day) return null;
+    return { sex, vo2: rec![day].v, fit: fitnessAge(rec![day].v, sex), you, est: !!rec![day].est, per: perPoint(sex), weeks: [], change: null, rhr: null, cardio: null, from: day };
+  }
   const fit = fitnessAge(t.now, sex), per = perPoint(sex);
   const weeks: FitWeek[] = [];
   for (let k = FITAGE.weeks - 1; k >= 0; k--) {
@@ -130,6 +138,22 @@ export function fitAge(rec: Record<string, Vo2Day> | undefined, today: string, s
     if (r0 != null && r1 != null && Math.round(r0) !== Math.round(r1)) rhr = [r0, r1];
     if (o.cardio) { const m0 = cardioWeek(o.cardio, end), m1 = cardioWeek(o.cardio, today); if (Math.round(m0) !== Math.round(m1)) cardio = [m0, m1]; }
   }
-  const you = o.age && o.age >= 12 && o.age <= 100 ? o.age : null;
   return { sex, vo2: t.now, fit, you, est: t.est, per, weeks, change, rhr, cardio };
+}
+
+export type Vo2Pull = { at: number; days: number; points: number; sample?: string; error?: string };
+
+/**
+ * Why there's no fitness age yet, from what Google actually sent (PLAN 198; owner, 5 Nov: "is this going to stay like
+ * this forever?"): nothing pulled yet; Google refused; points that had no number the app could read (what one looked
+ * like); none in 90 days (and what makes Fitbit compute one); or the newest is over 4 weeks old.
+ */
+export function vo2Missing(pull: Vo2Pull | null | undefined, rec: Record<string, Vo2Day> | undefined, today: string): string {
+  const run = "Fitbit makes a single VO2 max after an outdoor run of 10+ minutes with GPS on; without runs the Fitbit app shows only a range (like 42–46), and that may not reach Google. Check the Fitbit app: Today → Cardio fitness.";
+  const newest = Object.keys(rec ?? {}).filter((d) => d <= today && rec![d].v > 10 && rec![d].v < 100).sort().at(-1);
+  if (newest) return `The newest VO2 max from the band is from ${new Date(`${newest}T12:00:00`).toLocaleDateString("en-GB", { day: "numeric", month: "short" })} — over ${FITAGE.lastDays / 7} weeks ago. ${run}`;
+  if (!pull) return "Needs a VO2 max from the band. Fitbit works it out from your heart rate as you wear it; it shows here as it comes.";
+  if (pull.error) return `Google refused the VO2 max request (${pull.error}); the rest of the band's data still comes. It's asked again every 15 minutes.`;
+  if (pull.points > 0) return `Google sent ${pull.points} VO2 max day${pull.points === 1 ? "" : "s"}, but none with a number the app can read — what came: ${pull.sample ?? "?"}. A screenshot of this is enough to fix it.`;
+  return `Google has sent no VO2 max for your last 90 days. ${run}`;
 }
