@@ -3578,3 +3578,15 @@ both reads and the questions. Phases in that order; #152 RPE waits (owner).
      is a button with aria-expanded; the record chip in it, not twice when open), Noticed's and Leads' cards as rows,
      the open set held by the list, openFinding from Today. Tests: effects.test (alcohol vs caffeine), e2e leads (rows:
      the first open, the rest closed, a tap opens), harness openFindings for the suites that read inside the cards.
+
+198. [ ] **The night bet by bedtime, a loud band alarm, and one of mine** (owner, 5 Nov: "app bet for night score is kinda
+   stupid cause it cant predict when im gonna go to sleep, and basically what wuld move the sleep score it cant predict" ·
+   "App should notify pretty harshly when i have to reconnect the band to app" · "and if u have anythong to fix or add go
+   ahead"). Claimed 5 Nov.
+   - The bet: it guessed the night at his usual bedtime, then was scored against nights he went to bed at another time.
+     Now: tonight's score at each bedtime ("asleep by 23:00 → 79 · by 00:00 → 75"), what's already set by today (drinks,
+     caffeine left, a late meal, training), and if bedtime barely moves it, it says so. The morning check uses the
+     bedtime he actually had.
+   - The band: when Google drops the link, a push at once and again every 6 hours while it's broken (not at night), and a
+     red line on Today with Reconnect that doesn't go away until it's fixed. No new band data for 12+ hours: a quieter line.
+   - Mine: picked after the two above, said here when built.
