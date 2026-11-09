@@ -3632,3 +3632,15 @@ both reads and the questions. Phases in that order; #152 RPE waits (owner).
 200. [ ] **Reform the whole app, part by part — the look and the engine** (owner, 5 Nov: "after u done w all we willl have
    to reform whole app look at each part and change, visuallty and engine wise"). After 199. One part at a time, a canvas
    for each, his call on each.
+
+201. [ ] **Questions at the wrong time, the study left out, the weekend drafts gone** (owner, 9 Nov, with screenshots — a
+   Follow-up at 08:09: "Pizza-only start yesterday. Did you get protein in before 13:00 today?"; "Not logged · Your weekend,
+   drafted": "why ts getting aasked at 08:09? same w cigarettes, it should ask abput yesterday, always" · "the study was
+   left out — its link didn't open, or the page was about something e … pls stop doing this" · "image2 : delete this
+   feature"). Claimed 9 Nov.
+   - A question never asks about later today: the morning's are about yesterday and last night; one that names a time
+     later today waits until then.
+   - Cigarettes: always yesterday's, asked in the morning — not "today?" at 20:00.
+   - The study: a link the AI got wrong is looked up by the paper's title (PubMed, then Crossref) and replaced, instead of
+     the study being dropped.
+   - The weekend drafts (ghost logging, PLAN 177 body lab 9): removed.
