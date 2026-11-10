@@ -69,6 +69,8 @@ export type AiState = {
   /** Questions you said to stop asking (their keys), and those skipped today (owner, 16 Oct: "Stop asking this is not working also i should be able to skip question"). */
   stopped?: string[];
   skipped?: { day: string; keys: string[] };
+  /** Notes from "Noticed something?" the AI couldn't be reached for (PLAN 202): read as soon as it can be. */
+  pendingNotes?: { text: string; at: number; tries: number }[];
   /** Supplement look-ups, by supplement id. */
   research: Record<string, SupplementAnswer & { at: number; /** The name you typed when it was looked up. */ asked: string }>;
   /** Protocols you chose to try: the app compares before and during. */

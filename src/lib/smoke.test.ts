@@ -16,18 +16,18 @@ const at = (day: string, hm: string) => atMinute(day, Number(hm.slice(0, 2)) * 6
 const said = (day: string, band: Parameters<typeof smokeEntry>[1], id = `s${day}`): Entry => ({ id, ...smokeEntry(day, band) });
 
 describe("cigarettes, one question a day", () => {
-  it("asked from 20:00 about today; past midnight still about the evening ending; the morning about yesterday; not in the afternoon", () => {
-    expect(smokeAsk([], at(D, "19:59"))).toBeNull();
-    expect(smokeAsk([], at(D, "20:00"))).toEqual({ day: D, when: "tonight" });
-    expect(smokeAsk([], at(D, "01:30"))).toEqual({ day: addDays(D, -1), when: "tonight" });
+  // PLAN 201 (owner, 9 Nov: "it should ask abput yesterday, always"): never "today?" in the evening
+  it("always about yesterday: from 04:00, all day while it isn't answered; never about today; not in the night", () => {
+    expect(smokeAsk([], at(D, "03:59"))).toBeNull();
+    expect(smokeAsk([], at(D, "04:00"))).toEqual({ day: addDays(D, -1), when: "yesterday" });
     expect(smokeAsk([], at(D, "09:00"))).toEqual({ day: addDays(D, -1), when: "yesterday" });
-    expect(smokeAsk([], at(D, "15:00"))).toBeNull();
+    expect(smokeAsk([], at(D, "15:00"))).toEqual({ day: addDays(D, -1), when: "yesterday" });
+    expect(smokeAsk([], at(D, "21:30"))).toEqual({ day: addDays(D, -1), when: "yesterday" });
   });
-  it("never twice: answered tonight, it's gone tonight and tomorrow morning", () => {
-    const es = [said(D, "3-5")];
+  it("never twice: answered in the morning, it's gone for the day; the next morning asks about today's", () => {
+    const es = [said(addDays(D, -1), "3-5")];
     expect(smokeAsk(es, at(D, "22:00"))).toBeNull();
-    expect(smokeAsk(es, at(addDays(D, 1), "08:00"))).toBeNull();
-    expect(smokeAsk(es, at(addDays(D, 1), "21:00"))).toEqual({ day: addDays(D, 1), when: "tonight" });
+    expect(smokeAsk(es, at(addDays(D, 1), "08:00"))).toEqual({ day: D, when: "yesterday" });
   });
   it("answered after midnight, it's kept on the evening's day; the latest answer wins", () => {
     expect(smokeEntry(addDays(D, -1), "1-2").at).toBe(at(addDays(D, -1), "21:00"));

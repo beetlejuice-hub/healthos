@@ -7,25 +7,50 @@
  * Apply), remembers what lasts, looks into it — and says so under the box. Undo for a slip.
  */
 
-import { useState } from "react";
-import { act, offerUndo } from "../lib/store";
+import { useEffect, useState } from "react";
+import { act, getState, offerUndo, useStore } from "../lib/store";
 import { ABOUT_NOTICE, askChat, type ChatReply } from "../lib/ai/chat";
 import { useAiStatus } from "../lib/ai/client";
 import { Md } from "./Md";
 import { Proposals } from "./Proposal";
 
+/** The AI couldn't be reached at all (not a refusal, a limit or a bug): the note waits and is read later (PLAN 202). */
+const UNREACHED = new Set(["no-server", "offline", "timeout"]);
+const NOTES = { everyMs: 60_000, tries: 6 } as const;
+
 export function NoticeBox() {
   const { on } = useAiStatus();
   const [text, setText] = useState(""), [busy, setBusy] = useState(false), [said, setSaid] = useState<ChatReply | null>(null);
+  const waiting = useStore((s) => s.ai.pendingNotes); // not `?? []` here: a new list each read loops the store
+  const ask = async (t: string, again: boolean): Promise<ChatReply> => {
+    const r = await askChat(`Noticed: ${t}`, ABOUT_NOTICE, again);
+    act.setAi((a) => {
+      const rest = (a.pendingNotes ?? []).filter((n) => n.text !== t), was = (a.pendingNotes ?? []).find((n) => n.text === t);
+      // read, or turned down for a reason that won't change by waiting: off the list; not reached: on it, a try more
+      return { pendingNotes: r.ok || !UNREACHED.has(r.error) || (was?.tries ?? 0) + 1 >= NOTES.tries ? rest : [...rest, { text: t, at: was?.at ?? Date.now(), tries: (was?.tries ?? 0) + 1 }] };
+    });
+    return r;
+  };
   const save = async () => {
     const t = text.trim(); if (!t || busy) return;
     const e = act.addEntry({ kind: "notice", at: Date.now(), text: t }); setText(""); setSaid(null);
     if (!on) { offerUndo([e.id], "Noted — the AI will look into it with you"); return; }
     offerUndo([e.id], "Noted");
     setBusy(true);
-    setSaid(await askChat(`Noticed: ${t}`, ABOUT_NOTICE));
+    setSaid(await ask(t, false));
     setBusy(false);
   };
+  // the ones that didn't get through: read one at a time, once a minute while the app is open and online
+  useEffect(() => {
+    if (!on) return;
+    const t = setInterval(() => {
+      const next = (getState().ai.pendingNotes ?? [])[0];
+      if (!next || busy || document.visibilityState !== "visible" || navigator.onLine === false) return;
+      setBusy(true);
+      void ask(next.text, true).then((r) => { setSaid(r); setBusy(false); });
+    }, NOTES.everyMs);
+    return () => clearInterval(t);
+  }, [on, busy]); // eslint-disable-line react-hooks/exhaustive-deps
   return (
     <div className="card notice-box">
       <h3>Noticed something? <span>tell the AI anything</span></h3>
@@ -37,6 +62,7 @@ export function NoticeBox() {
       {said && (said.ok ? <div className="ask-reply" aria-live="polite"><Md text={said.reply} />
         {said.proposals.length > 0 && <Proposals at={said.at} list={said.proposals} now={said.at} />}
         <a className="linkish" href="#ai">More in the AI tab ›</a></div>
+        : UNREACHED.has(said.error) && waiting?.length ? <p className="note">Kept as a note — the AI couldn't be reached, so it'll read it on its own once it can. {said.message}</p>
         : <p className="err">Kept as a note. {said.message}</p>)}
     </div>
   );

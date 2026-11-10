@@ -56,10 +56,32 @@ export function tracking(tracked: Tracked[], entries: Entry[], now: number): Tra
   });
 }
 
-/** The section the read gets: its kinds, what's tracked, what to follow up, what not to ask again. */
-export function askLines(kinds: QKind[], track: TrackLine[], followup: string[], asked: string[], dayOf: (t: number) => string): string[] {
+/** When each read's questions are answered, as the read is told (PLAN 201: a morning one asked about "before 13:00 today"). */
+export const WHEN_ANSWERED: Record<"morning" | "evening", string> = {
+  morning: "They're answered when this read arrives, 7–9 in the morning: ask about yesterday and last night, never about later today (\"did you get protein in before 13:00 today?\" can't be answered at 8 — ask \"yesterday, did you…?\").",
+  evening: "They're answered this evening: about today is fine.",
+};
+
+/**
+ * The minute of the day a question can be answered from (PLAN 201; owner, 9 Nov, of "Did you get protein in before 13:00
+ * today?" shown at 08:09: "why ts getting aasked at 08:09?"): one that names a time ("before 13:00", "by 14:30", "after
+ * 14:00") waits until then, "this afternoon" until 17:00, "this evening" or "tonight" until 21:00; one only about
+ * yesterday or last night, any time (0).
+ */
+export function askableFrom(text: string): number {
+  // about the past only: any time; "…yesterday. Did you … before 13:00 today?" is about today
+  if (/\byesterday\b|\blast night\b/i.test(text) && !/\btoday\b|\btonight\b|\bthis (?:morning|afternoon|evening)\b/i.test(text)) return 0;
+  const at = [...text.matchAll(/\b(?:before|by|until|till|after|past)\s+(\d{1,2})[:.](\d{2})\b/gi)].map((m) => +m[1] * 60 + +m[2]).filter((m) => m < 1440);
+  if (/\bthis evening\b|\btonight\b/i.test(text)) at.push(21 * 60);
+  if (/\bthis afternoon\b/i.test(text)) at.push(17 * 60);
+  return at.length ? Math.max(...at) : 0;
+}
+
+/** The section the read gets: its kinds, when they're answered, what's tracked, what to follow up, what not to ask again. */
+export function askLines(kinds: QKind[], track: TrackLine[], followup: string[], asked: string[], dayOf: (t: number) => string, when: "morning" | "evening" = "morning"): string[] {
   return [
     "## Questions this time (the app's picks, so days differ)",
+    WHEN_ANSWERED[when],
     ...kinds.map((k) => `- ${KIND_BRIEF[k]}`),
     ...(track.length ? ["Tracking you follow (key — what it tracks · last answered · last answers):", ...track.map((t) => `- ${t.key} — ${t.what} · ${t.last ? dayOf(t.last) : "not answered yet"}${t.answers.length ? ` · ${t.answers.join(" / ")}` : ""}${t.due ? "" : " · not due yet"}`)] : []),
     ...(followup.length ? ["Suggested to you lately (for a follow-up):", ...followup.map((f) => `- ${f}`)] : []),

@@ -3,6 +3,7 @@
  * (calls today, cost) for Settings, and build the context the AI is told — on demand, at call time.
  */
 import { AI_ERRORS, MONTHLY_USD, READ_ROUNDS, isLooks, type AiError } from "./tasks";
+import { droppedWords, withRetry } from "./retry";
 import { pickLead } from "./lead";
 import { runChatTool } from "./chattools";
 import { gridLines, todayLines, trainingLines } from "./sections";
@@ -69,17 +70,31 @@ const failed = (error: AiError, detail?: string) => ({ ok: false as const, error
 /** A call that hasn't answered in 5 minutes is given up (and a read tried again): one that hung held up the ones behind it. */
 export const AI_TIMEOUT_MS = 5 * 60_000;
 
+/** On screen and online: a dropped call is sent again only then (lib/ai/retry). */
+const usable = () => (typeof document === "undefined" || document.visibilityState === "visible") && (typeof navigator === "undefined" || navigator.onLine !== false);
+const offScreen = () => typeof document !== "undefined" && document.visibilityState === "hidden";
+
 export async function askAi<T extends Task>(req: Extract<AiRequest, { task: T }>): Promise<AiResult<AiAnswer<T>>> {
   set({ busy: status.busy + 1 });
   const stop = new AbortController(), timer = setTimeout(() => stop.abort(), AI_TIMEOUT_MS);
   try {
-    const r = await fetch(`/api/ai?tz=${encodeURIComponent(tz())}`, {
-      method: "POST",
-      headers: { "content-type": "application/json", ...(await auth()) },
-      body: JSON.stringify({ ...req, models: getState().ai.models }),
-      signal: stop.signal,
-    });
-    const b = (await r.json().catch(() => ({}))) as { answer?: AiAnswer<T>; usage?: UsageDoc; costUsd?: number; error?: string; message?: string; webFailed?: string[] };
+    // a connection that drops (the app sent to the background, a network blip) is tried again — PLAN 202
+    // the body read inside the try too: a connection cut while the answer is coming is a drop like any other
+    const sent = await withRetry(async () => {
+      const r = await fetch(`/api/ai?tz=${encodeURIComponent(tz())}`, {
+        method: "POST",
+        headers: { "content-type": "application/json", ...(await auth()) },
+        body: JSON.stringify({ ...req, models: getState().ai.models }),
+        signal: stop.signal,
+      });
+      return { r, text: await r.text() };
+    }, { aborted: () => stop.signal.aborted, usable, hidden: offScreen, sleep: (ms) => new Promise((r) => setTimeout(r, ms)), now: Date.now });
+    if (!sent.ok) {
+      if (sent.dropped.aborted) return failed("timeout");
+      return failed(typeof navigator !== "undefined" && navigator.onLine === false ? "offline" : "no-server", droppedWords(sent.dropped));
+    }
+    const { r, text } = sent.value;
+    const b = ((): unknown => { try { return JSON.parse(text); } catch { return {}; } })() as { answer?: AiAnswer<T>; usage?: UsageDoc; costUsd?: number; error?: string; message?: string; webFailed?: string[] };
     if (b.usage) set({ usage: b.usage });
     if (r.status === 503 && b.error === "no-key") set({ on: false });
     // no words from the server: it crashed (500, Cloudflare's own page), or Cloudflare couldn't get to it (502–504)

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { checkLink, checkReadLinks, checkSupplementLinks, pageTitles } from "./links";
-import type { DigestAnswer, SupplementAnswer } from "../src/lib/ai/tasks";
+import { checkFoundLinks, checkLink, checkReadLinks, checkSupplementLinks, findPaper, pageTitles } from "./links";
+import type { DigestAnswer, DiveAnswer, SupplementAnswer } from "../src/lib/ai/tasks";
 
 // PLAN 160 — owner, 21 Oct: "do 2, 1, 3, 4" (2: every cited link opened before you see it). The network here can't reach
 // PubMed or the journals, so the pages are stand-ins in the shapes those sites send: PubMed's <title> "… - PubMed" and
@@ -116,5 +116,62 @@ describe("a supplement's sources", () => {
     const a = { name: "Caffeine", what: "", usualDose: "", timing: "", evidence: "strong", uses: [], cautions: [], interactions: [],
       sources: [{ title: "NIH: caffeine fact sheet", url: "https://ods.od.nih.gov/caf" }, { title: "Old page", url: "https://gone.example.com/x" }, { title: "Blocked", url: "https://academic.example.com/2" }] } as SupplementAnswer;
     expect((await checkSupplementLinks(a, f)).sources).toEqual([{ title: "NIH: caffeine fact sheet", url: "https://ods.od.nih.gov/caf", checked: true }, { title: "Blocked", url: "https://academic.example.com/2" }]);
+  });
+});
+
+// PLAN 201 — owner, 9 Nov, of "the study was left out — its link didn't open, or the page was about something else":
+// "pls stop doing this". The AI names a real paper with the wrong address: it's found again by title, PubMed first (its
+// search and summaries, in their JSON shapes), then Crossref; controls — a made-up paper whose searches find only other
+// papers, and a title too short to look up — are still left out.
+describe("a paper found again by its title", () => {
+  const BATH = "Before-bedtime passive body heating by warm shower or bath to improve sleep: A systematic review and meta-analysis.";
+  function lookups(o: { pubmed?: Record<string, string>; crossref?: { DOI: string; title: string[] }[] }) {
+    const asked: string[] = [];
+    const f = (async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input instanceof Request ? input.url : input), u = new URL(url);
+      asked.push(url);
+      expect((init?.headers as Record<string, string>)?.["user-agent"]).toMatch(/HealthOS link check/);
+      if (url === "https://pubmed.ncbi.nlm.nih.gov/12345678/") return new Response(PUBMED, { headers: { "content-type": "text/html" } }); // another paper
+      if (url === "https://pubmed.ncbi.nlm.nih.gov/99999999/") return new Response("", { status: 404 });
+      if (u.pathname.endsWith("/esearch.fcgi")) return Response.json({ esearchresult: { idlist: Object.keys(o.pubmed ?? {}) } });
+      if (u.pathname.endsWith("/esummary.fcgi")) return Response.json({ result: Object.fromEntries(Object.entries(o.pubmed ?? {}).map(([id, title]) => [id, { uid: id, title }])) });
+      if (u.hostname === "api.crossref.org") return Response.json({ message: { items: o.crossref ?? [] } });
+      return new Response("Forbidden", { status: 403 });
+    }) as typeof fetch;
+    return { f, asked };
+  }
+  const read = (url: string, title = "Passive body heating before bed and sleep"): DigestAnswer => ({ greeting: "Morning", items: [
+    { type: "pattern", title: "Your nights", text: "…" },
+    { type: "study", title: "A warm bath 90 minutes before bed", text: "Asleep about 10 minutes faster.", source: { title, url } },
+  ] });
+
+  it("a wrong PubMed number (the page is another paper): found on PubMed by title, kept with the right address", async () => {
+    const { f, asked } = lookups({ pubmed: { "31102877": BATH, "555": "Unrelated work on knees" } });
+    const a = await checkReadLinks(read("https://pubmed.ncbi.nlm.nih.gov/12345678/"), f);
+    expect(a.items.map((i) => i.title)).toEqual(["Your nights", "A warm bath 90 minutes before bed"]);
+    expect(a.items[1].source).toEqual({ title: BATH.replace(/\.$/, ""), url: "https://pubmed.ncbi.nlm.nih.gov/31102877/", checked: true });
+    expect(a.unlinked).toBeUndefined(); // nothing to say was left out
+    expect(asked.some((u) => u.includes("esearch.fcgi") && u.includes(encodeURIComponent("Passive body heating before bed and sleep")))).toBe(true);
+  });
+  it("a dead link PubMed can't place: Crossref's DOI", async () => {
+    const { f } = lookups({ crossref: [{ DOI: "10.1016/j.smrv.2019.04.008", title: [BATH] }] });
+    const a = await checkReadLinks(read("https://pubmed.ncbi.nlm.nih.gov/99999999/"), f);
+    expect(a.items[1].source).toEqual({ title: BATH, url: "https://doi.org/10.1016/j.smrv.2019.04.008", checked: true });
+  });
+  it("control: a made-up paper — both searches find only other papers — is still left out, and said", async () => {
+    const { f } = lookups({ pubmed: { "555": "Knee osteoarthritis and walking" }, crossref: [{ DOI: "10.1/x", title: ["Bathing habits of Victorian England"] }] });
+    const a = await checkReadLinks(read("https://pubmed.ncbi.nlm.nih.gov/99999999/", "Lavender foot baths double deep sleep in astronauts"), f);
+    expect(a.items.map((i) => i.title)).toEqual(["Your nights"]);
+    expect(a.unlinked).toEqual(["study"]);
+  });
+  it("control: a title too short to look up isn't searched", async () => {
+    const { f, asked } = lookups({ pubmed: { "31102877": BATH } });
+    expect(await findPaper("Bath sleep", f)).toBeNull();
+    expect(asked).toEqual([]);
+  });
+  it("a deep dive's study with a wrong address is found again too", async () => {
+    const { f } = lookups({ pubmed: { "31102877": BATH } });
+    const dive = { topic: "sleep", why: "", yourData: "", verdict: "", sure: "strong", found: [{ title: "Bath", text: "…", source: { title: "Passive body heating before bed and sleep", url: "https://pubmed.ncbi.nlm.nih.gov/99999999/" } }] } as DiveAnswer;
+    expect((await checkFoundLinks(dive, f)).found[0].source.url).toBe("https://pubmed.ncbi.nlm.nih.gov/31102877/");
   });
 });

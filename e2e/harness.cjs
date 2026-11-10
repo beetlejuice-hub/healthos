@@ -79,7 +79,7 @@ async function openCard(pg, id) {
 }
 /**
  * Today's "For you" shows one ask at a time (28 Oct, Today A): skip, as a person would, until the ask is the one shown —
- * by its key ("morning", "smoke", "ghost", "due:…" a prefix) or by a selector inside it (".weighin"). False when it
+ * by its key ("morning", "smoke", "foodgap", "due:…" a prefix) or by a selector inside it (".weighin"). False when it
  * isn't there at all.
  */
 async function forYou(pg, key) {

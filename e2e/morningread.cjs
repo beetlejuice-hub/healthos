@@ -105,7 +105,8 @@ const READ = { greeting: 'Morning! 7 h last night — a better start.', items: [
   check('opened once: not new any more, and that sticks', await mr.getAttribute('data-new') === null && (await pg.evaluate((k) => JSON.parse(localStorage.getItem(k)).ai.digest.seen, KEY)) > 0);
   check('the news isn\'t on Today — it\'s a message', !/Creatine and sleep loss/.test(card));
   // the read's questions (PLAN 156): asked with the kinds the app picked, shown with the read, a study with its source
-  check(`the read is told which kinds of question to ask, and not to repeat words (${c.slice(c.indexOf('## Questions this time')).split('\n').slice(0, 3).join(' | ').slice(0, 160)})`, /## Questions this time \(the app's picks, so days differ\)\n- \w+/.test(c));
+  // …and when they're answered: about yesterday, never later today (PLAN 201)
+  check(`the read is told which kinds of question to ask, and not to repeat words (${c.slice(c.indexOf('## Questions this time')).split('\n').slice(0, 3).join(' | ').slice(0, 160)})`, /## Questions this time \(the app's picks, so days differ\)\nThey're answered when this read arrives, 7–9 in the morning: ask about yesterday and last night, never about later today[^\n]*\n- \w+/.test(c));
   await forYou(pg, 'questions'); // For you: one ask at a time
   const qc = pg.locator('.question');
   check(`its study question is on Today, labelled, with its source (${(await qc.innerText().catch(() => '')).split('\n').slice(0, 3).join(' | ')})`, /^Saw a study/i.test(await qc.locator('h3').innerText().catch(() => '')) && /glycine before bed/.test(await qc.innerText()) && await qc.locator('a.q-src').getAttribute('href') === 'https://example.org/gly');

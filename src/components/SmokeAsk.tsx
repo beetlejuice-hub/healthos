@@ -12,10 +12,10 @@ export function SmokeAsk({ now }: { now: number }) {
   const entries = useStore((s) => s.entries);
   const ask = useMemo(() => smokeAsk(entries, now), [entries, now]);
   if (!ask) return null;
-  const answer = (b: SmokeBand | typeof SMOKE_UNSURE) => { const e = act.addEntry(smokeEntry(ask.day, b)); offerUndo([e.id], `Cigarettes ${ask.when === "tonight" ? "today" : "yesterday"}: ${b === SMOKE_UNSURE ? b : SMOKE_LABEL[b].toLowerCase()}`); };
+  const answer = (b: SmokeBand | typeof SMOKE_UNSURE) => { const e = act.addEntry(smokeEntry(ask.day, b)); offerUndo([e.id], `Cigarettes yesterday: ${b === SMOKE_UNSURE ? b : SMOKE_LABEL[b].toLowerCase()}`); };
   return (
     <div className="card catchup smokeask" role="region" aria-label="Cigarettes">
-      <h3>Cigarettes <span>{ask.when === "tonight" ? "today" : "yesterday"}?</span></h3>
+      <h3>Cigarettes <span>yesterday?</span></h3>
       <div className="cu-btns fg-btns">
         {SMOKE_BANDS.map((b) => <button key={b} type="button" className={`pill-btn${b === "0" ? " pri" : ""}`} onClick={() => answer(b)}>{SMOKE_LABEL[b]}</button>)}
       </div>

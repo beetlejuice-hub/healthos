@@ -10,12 +10,20 @@
  *   ok        it opens and matches → kept, marked checked
  *
  * Words: lower case, 4+ letters or digits, the commonest English ones left out ("with", "from", "study"…). No AI call.
+ *
+ * A dead or mismatched link isn't the end of a study (PLAN 201; owner, 9 Nov, of "the study was left out — its link didn't
+ * open, or the page was about something else": "pls stop doing this"): the AI names real papers but often gets their
+ * address wrong, so the paper is looked up by its title — PubMed's search, then Crossref's — and kept with the address
+ * found, when the hit's own title holds most of the cited title's words. Only a paper neither knows is left out.
  */
 
 import type { DigestAnswer, DiveStudy, NightAnswer, SupplementAnswer } from "../src/lib/ai/tasks";
 
 export type LinkVerdict = "ok" | "dead" | "mismatch" | "unknown";
-export const LINKS = { timeoutMs: 5000, maxBytes: 300_000, titleShare: 0.5, textShare: 0.6, most: 10 } as const;
+/** findShare: of the cited title's words, how many a found paper's title must hold; findWords: fewer and it isn't looked up; finds: per read. */
+export const LINKS = { timeoutMs: 5000, maxBytes: 300_000, titleShare: 0.5, textShare: 0.6, most: 10, findShare: 0.6, findWords: 3, finds: 3 } as const;
+const UA = "Mozilla/5.0 (compatible; HealthOS link check)";
+const EUTILS = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils", CROSSREF = "https://api.crossref.org/works";
 
 const STOP = new Set(["with", "from", "that", "this", "than", "what", "when", "your", "into", "over", "after", "before", "about", "their", "they", "have", "does", "study", "studies", "review", "trial", "effect", "effects", "health", "pubmed", "journal", "article", "research", "evidence", "www", "https", "http", "html"]);
 export const words = (s: string) => new Set((s.toLowerCase().normalize("NFKD").replace(/[̀-ͯ]/g, "").match(/[a-z0-9]{4,}/g) ?? []).filter((w) => !STOP.has(w)));
@@ -45,7 +53,7 @@ async function open(url: string, f: typeof fetch): Promise<Opened> {
   if (!/^https:\/\//i.test(url)) return { kind: "dead" };
   let r: Response;
   try {
-    r = await f(url, { redirect: "follow", headers: { "user-agent": "Mozilla/5.0 (compatible; HealthOS link check)", accept: "text/html,*/*" }, signal: AbortSignal.timeout(LINKS.timeoutMs) });
+    r = await f(url, { redirect: "follow", headers: { "user-agent": UA, accept: "text/html,*/*" }, signal: AbortSignal.timeout(LINKS.timeoutMs) });
   } catch (e) {
     // slow is "can't tell"; no such site, or nothing answering, is dead
     return { kind: (e as Error)?.name === "TimeoutError" || (e as Error)?.name === "AbortError" ? "unknown" : "dead" };
@@ -70,6 +78,41 @@ export async function checkLink(url: string, title: string, f: typeof fetch): Pr
 
 type Src = { title: string; url: string; checked?: boolean };
 const keyOf = (s: Src) => `${s.url}\n${s.title}`;
+
+async function getJson(url: string, f: typeof fetch): Promise<Record<string, unknown> | null> {
+  try {
+    const r = await f(url, { headers: { "user-agent": UA, accept: "application/json" }, signal: AbortSignal.timeout(LINKS.timeoutMs) });
+    return r.ok ? ((await r.json()) as Record<string, unknown>) : null;
+  } catch { return null; }
+}
+const get = (o: unknown, ...path: string[]): unknown => path.reduce<unknown>((x, k) => (x && typeof x === "object" ? (x as Record<string, unknown>)[k] : undefined), o);
+
+/** A paper found again by its cited title: its PubMed (or DOI) address and its real title, marked checked — or null. */
+export async function findPaper(title: string, f: typeof fetch): Promise<Src | null> {
+  const want = words(title), fits = (t: string) => !!t && share(want, words(t)) >= LINKS.findShare;
+  if (want.size < LINKS.findWords) return null;
+  const found = await getJson(`${EUTILS}/esearch.fcgi?db=pubmed&retmode=json&retmax=3&sort=relevance&tool=healthos&term=${encodeURIComponent(title)}`, f);
+  const ids = ((get(found, "esearchresult", "idlist") as unknown[]) ?? []).map(String).filter((id) => /^\d+$/.test(id));
+  if (ids.length) {
+    const sum = await getJson(`${EUTILS}/esummary.fcgi?db=pubmed&retmode=json&tool=healthos&id=${ids.join(",")}`, f);
+    for (const id of ids) {
+      const t = String(get(sum, "result", id, "title") ?? "").replace(/\.$/, "");
+      if (fits(t)) return { title: t, url: `https://pubmed.ncbi.nlm.nih.gov/${id}/`, checked: true };
+    }
+  }
+  const cr = await getJson(`${CROSSREF}?rows=3&select=DOI,title&query.bibliographic=${encodeURIComponent(title)}`, f);
+  for (const it of (get(cr, "message", "items") as unknown[]) ?? []) {
+    const t = String((get(it, "title") as unknown[])?.[0] ?? ""), doi = String(get(it, "DOI") ?? "");
+    if (doi && fits(t)) return { title: t, url: `https://doi.org/${doi}`, checked: true };
+  }
+  return null;
+}
+
+/** The sources of the items about to be left out, found again by title — at most LINKS.finds, side by side. */
+async function refind(srcs: Src[], f: typeof fetch): Promise<Map<string, Src>> {
+  const found = await Promise.all(srcs.slice(0, LINKS.finds).map(async (s) => [keyOf(s), await findPaper(s.title, f).catch(() => null)] as const));
+  return new Map(found.filter((x): x is readonly [string, Src] => !!x[1]));
+}
 /** Check a batch: each link opened once (at most `most` links), each citation of it judged on its own title. */
 async function verdicts(srcs: Src[], f: typeof fetch): Promise<Map<string, LinkVerdict>> {
   const urls = [...new Set(srcs.map((s) => s.url))].slice(0, LINKS.most);
@@ -87,13 +130,17 @@ const mark = <T extends Src | undefined>(v: Map<string, LinkVerdict>, s: T): T =
 export async function checkReadLinks<A extends DigestAnswer | NightAnswer>(a: A, f: typeof fetch): Promise<A> {
   const items = a.items ?? [], qs = a.questions ?? [], news = "news" in a ? a.news : null, disc = a.discovery ?? null;
   const v = await verdicts([...items.map((i) => i.source), ...qs.map((q) => q.source), news?.source, disc?.source].filter((s): s is Src => !!s), f);
-  const unlinked = items.filter((i) => !keep(v, i.source)).map((i) => i.type);
+  // a study first, then the rest: found again by title, kept with the address found
+  const lost = items.filter((i) => !keep(v, i.source)).sort((x, y) => +(y.type === "study") - +(x.type === "study"));
+  const again = await refind(lost.map((i) => i.source!), f);
+  const fixed = (i: (typeof items)[number]) => (i.source && again.get(keyOf(i.source))) || null;
+  const unlinked = lost.filter((i) => !fixed(i)).map((i) => i.type);
   return {
     ...a,
     ...(unlinked.length ? { unlinked } : {}),
     // the day's discovery (PLAN 187): a dead link, or a page about something else, and it goes
     ...(disc ? { discovery: keep(v, disc.source) ? { ...disc, source: mark(v, disc.source) } : null } : {}),
-    ...(a.items ? { items: items.filter((i) => keep(v, i.source)).map((i) => (i.source ? { ...i, source: mark(v, i.source) } : i)) } : {}),
+    ...(a.items ? { items: items.flatMap((i) => (keep(v, i.source) ? [i.source ? { ...i, source: mark(v, i.source) } : i] : fixed(i) ? [{ ...i, source: fixed(i)! }] : [])) } : {}),
     ...(a.questions ? { questions: qs.filter((q) => keep(v, q.source)).map((q) => (q.source ? { ...q, source: mark(v, q.source) } : q)) } : {}),
     ...(news ? { news: keep(v, news.source) ? { ...news, source: mark(v, news.source) } : null } : {}),
   };
@@ -108,5 +155,6 @@ export async function checkSupplementLinks(a: SupplementAnswer, f: typeof fetch)
 /** A deep dive's or an experiment verdict's studies with their links checked (PLAN 160): a dead or mismatched one is left out, good ones marked. */
 export async function checkFoundLinks<A extends { found: DiveStudy[] }>(a: A, f: typeof fetch): Promise<A> {
   const v = await verdicts(a.found.map((x) => x.source), f);
-  return { ...a, found: a.found.filter((x) => keep(v, x.source)).map((x) => ({ ...x, source: mark(v, x.source) })) };
+  const again = await refind(a.found.filter((x) => !keep(v, x.source)).map((x) => x.source), f);
+  return { ...a, found: a.found.flatMap((x) => (keep(v, x.source) ? [{ ...x, source: mark(v, x.source) }] : again.has(keyOf(x.source)) ? [{ ...x, source: again.get(keyOf(x.source))! }] : [])) };
 }

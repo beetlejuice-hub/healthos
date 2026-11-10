@@ -3,9 +3,9 @@
 // and each has "Don't remember": it goes, stays gone after a reload, and is never kept as a "no" or a zero.
 // A — Fri 9 Oct 07:50, yesterday only lunch logged: the catch-up's magnesium row → no supplement logged (not "skipped"),
 //     the other rows stay; the cigarettes card → kept as "don't remember", the day's cigarettes stay unknown. Control:
-//     tonight's cigarettes question still comes at 21:00. 320 px fits with the third button.
-// B — Tue 27 Oct 09:00, the weekend not logged: the drafts → both days answered, nothing logged for them; then "how did
-//     you eat?" → "Don't remember" too. A reload asks neither again.
+//     at 21:00 nothing asks about today's cigarettes (PLAN 201: always yesterday's). 320 px fits with the third button.
+// B — Tue 27 Oct 09:00, the weekend not logged: "how did you eat?" → "Don't remember" too (the weekend's drafts went in
+//     PLAN 201). A reload doesn't ask again.
 const { chromium, APP, OUT, handle, tables, forYou } = require('./harness.cjs');
 
 const KEY = 'healthos.v1:u-test';
@@ -81,19 +81,11 @@ function weekend() {
   check('after a reload: neither asks again', await pg.getByRole('region', { name: 'Cigarettes' }).count() === 0 && (await pg.locator('#catchup .cu-row[data-kind="supp"]').count()) === 0);
   // the day's cigarettes stay unknown: Log shows the answer in words, not "None"
   await pg.clock.setSystemTime(new Date('2026-10-09T21:00:00').getTime()); await pg.reload(); await pg.waitForSelector('#feel'); await pg.waitForTimeout(400);
-  await forYou(pg, 'smoke');
-  check('control: tonight\'s cigarettes question still comes at 21:00', /Cigarettes\s+today\?/i.test(await pg.getByRole('region', { name: 'Cigarettes' }).innerText().catch(() => '')));
+  check('control: at 21:00 nothing asks about today\'s cigarettes (always yesterday\'s — PLAN 201)', await pg.getByRole('region', { name: 'Cigarettes' }).count() === 0);
   await ctx.close();
 
-  // B — the weekend's drafts, then "how did you eat?"
+  // B — the weekend not logged: "how did you eat?"
   ({ ctx, pg, store } = await open(390, '2026-10-27T09:00:00', weekend()));
-  await forYou(pg, 'ghost');
-  const ghost = pg.getByRole('region', { name: 'Usual things, drafted' });
-  const m0 = (await store()).length;
-  await ghost.getByRole('button', { name: "Don't remember" }).click(); await pg.waitForTimeout(400);
-  const es = await store(), gh = es.filter((e) => e.kind === 'answer' && /^ghost:/.test(e.key));
-  const logged = es.filter((e) => e.kind !== 'answer' && [24, 25].includes(new Date(e.at).getDate()) && new Date(e.at).getMonth() === 9);
-  check(`drafts: both days answered "don't remember", nothing logged for them (${gh.map((e) => `${e.key}=${e.answer}`).join(', ')}; ${logged.length} logged)`, es.length === m0 + 2 && gh.length === 2 && gh.every((e) => e.answer === "don't remember") && logged.length === 0 && await ghost.count() === 0);
   await forYou(pg, 'foodgap');
   const gap = pg.getByRole('region', { name: 'Days not logged' });
   check('"how did you eat?" asks next, with "Don\'t remember"', await gap.getByRole('button', { name: "Don't remember" }).count() === 1);
@@ -101,7 +93,7 @@ function weekend() {
   const ate = (await store()).filter((e) => e.kind === 'answer' && /^ate:/.test(e.key));
   check(`kept as not sure, no guess at what you ate (${ate.map((e) => `${e.key}=${e.answer}`).join(', ')})`, ate.length >= 1 && ate.every((e) => e.answer === 'unsure'));
   await pg.reload(); await pg.waitForSelector('#feel'); await pg.waitForTimeout(400);
-  check('after a reload: neither asks again', await pg.getByRole('region', { name: 'Usual things, drafted' }).count() === 0 && await pg.getByRole('region', { name: 'Days not logged' }).count() === 0);
+  check('after a reload: it doesn\'t ask again', await pg.getByRole('region', { name: 'Days not logged' }).count() === 0);
   check(`390: fits (${await sw(pg)} px)`, await sw(pg) <= 390);
   await ctx.close();
   console.log('errors: ' + JSON.stringify(errs)); await b.close();

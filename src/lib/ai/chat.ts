@@ -14,10 +14,12 @@ import { CHAT_ROUNDS, type ChatTurn } from "./tasks";
 import { turnText, wholeReply } from "./reply";
 import type { Proposal } from "./propose";
 
-export type ChatReply = { ok: true; at: number; reply: string; proposals: Proposal[]; charts: ChartSpec[]; looked: string[]; learned: string[] } | { ok: false; message: string };
+export type ChatReply = { ok: true; at: number; reply: string; proposals: Proposal[]; charts: ChartSpec[]; looked: string[]; learned: string[] } | { ok: false; error: string; message: string };
 
-export async function askChat(msg: string, about?: string): Promise<ChatReply> {
-  act.setAi((a) => ({ chat: [...a.chat, { role: "user" as const, text: msg, at: Date.now() }].slice(-80) }));
+/** `again`: the same message sent once more after it didn't get through — not added to the conversation twice. */
+export async function askChat(msg: string, about?: string, again = false): Promise<ChatReply> {
+  const last = getState().ai.chat.at(-1);
+  if (!(again && last?.role === "user" && last.text === msg)) act.setAi((a) => ({ chat: [...a.chat, { role: "user" as const, text: msg, at: Date.now() }].slice(-80) }));
   // The API wants the conversation to start with you: earlier AI-first messages ride along as context.
   const hist = getState().ai.chat.slice(-20);
   const first = hist.findIndex((m) => m.role === "user");
@@ -29,7 +31,7 @@ export async function askChat(msg: string, about?: string): Promise<ChatReply> {
   const charts: ChartSpec[] = [], looked: string[] = [], learned: string[] = [], proposals: Proposal[] = [], onTheWay: string[] = [];
   for (let round = 0; ; round++) {
     const r = await askAi({ task: "chat", messages, context, ...(turn.length ? { turn } : {}), ...(round >= CHAT_ROUNDS ? { final: true } : {}) });
-    if (!r.ok) return { ok: false, message: r.message };
+    if (!r.ok) return { ok: false, error: r.error, message: r.message };
     if (!r.answer.calls?.length || round >= CHAT_ROUNDS) {
       // an answer with no words (shouldn't happen — the server checks it) is said plainly, not a crash
       // the words of every round, not just the last (PLAN 196: an answer written before a chart was lost — lib/ai/reply)

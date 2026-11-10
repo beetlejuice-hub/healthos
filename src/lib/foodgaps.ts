@@ -56,7 +56,7 @@ export const ateEntries = (days: string[], ate: Ate) => days.map((d) => ({ kind:
 /**
  * For Today's question: the latest run of days not logged in the week before today, none of them answered yet. Null when
  * there's none, or no usual day to judge by (under 7 fully logged days in four weeks). `answered`: keep days already
- * answered here (ghost logging drafts them either way — saying "ate as usual" doesn't log the coffee).
+ * answered here (saying "ate as usual" doesn't log the coffee).
  */
 export function openGap(entries: Entry[], today: string, opts: { answered?: boolean } = {}): { days: string[]; usual: number; kcal: (number | null)[] } | null {
   const usual = usualBefore(entries, today);

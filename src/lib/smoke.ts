@@ -1,15 +1,16 @@
 /**
  * Cigarettes, one question a day (PLAN 177; owner, 27 Oct: "we could implement a small tick that says cigarettes...or like a
- * better way to track smoking days and not" — then "cigarettes lets do B": "i may not log them immediately"). Asked before
- * bed (from 20:00, and past midnight for the evening just ending), and in the next morning's catch-up if it was missed.
+ * better way to track smoking days and not" — then "cigarettes lets do B": "i may not log them immediately"). Always about
+ * yesterday (owner, 9 Nov: "it should ask abput yesterday, always"): from 04:00 until it's answered — not "today?" in the
+ * evening, when the day isn't over.
  * Kept as an answer on that day (key smoke:<day>): None, 1–2, 3–5 or 6+ — counted at the middle of the band. Pure.
  */
 
 import type { Entry } from "./types";
 import { addDays, atMinute, localDay, minuteOfDay } from "./time";
 
-/** askFrom: the evening's question from this minute; morningTo: the morning catch-up asks about yesterday until then. */
-export const SMOKE = { askFrom: 20 * 60, nightEnds: 4 * 60, morningTo: 14 * 60 } as const;
+/** nightEnds: before this minute the night's still on, and nothing's asked. */
+export const SMOKE = { nightEnds: 4 * 60 } as const;
 export const SMOKE_BANDS = ["0", "1-2", "3-5", "6+"] as const;
 export type SmokeBand = (typeof SMOKE_BANDS)[number];
 export const SMOKE_LABEL: Record<SmokeBand, string> = { "0": "None", "1-2": "1–2", "3-5": "3–5", "6+": "6+" };
@@ -33,16 +34,11 @@ export function smokeSaid(entries: Entry[]): Map<string, SmokeBand> {
   return out;
 }
 
-/**
- * What to ask now, or null: tonight's (from 20:00, or before 04:00 for the evening just ending), else yesterday's in the
- * morning (until 14:00) when it wasn't answered. Never in the afternoon, never twice.
- */
-export function smokeAsk(entries: Entry[], now: number): { day: string; when: "tonight" | "yesterday" } | null {
-  const m = minuteOfDay(now), today = localDay(now), said = smokeAnswered(entries);
-  if (m < SMOKE.nightEnds) { const d = addDays(today, -1); return said.has(d) ? null : { day: d, when: "tonight" }; }
-  if (m >= SMOKE.askFrom) return said.has(today) ? null : { day: today, when: "tonight" };
-  if (m < SMOKE.morningTo) { const d = addDays(today, -1); return said.has(d) ? null : { day: d, when: "yesterday" }; }
-  return null;
+/** What to ask now, or null: yesterday's, from 04:00, while it isn't answered. Never about today, never twice. */
+export function smokeAsk(entries: Entry[], now: number): { day: string; when: "yesterday" } | null {
+  if (minuteOfDay(now) < SMOKE.nightEnds) return null;
+  const d = addDays(localDay(now), -1);
+  return smokeAnswered(entries).has(d) ? null : { day: d, when: "yesterday" };
 }
 
 /** The answer kept on that day, at 21:00 — so it's that day's however late it was given. */

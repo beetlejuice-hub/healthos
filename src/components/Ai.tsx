@@ -23,7 +23,7 @@ import { scout } from "../lib/scout";
 import { currentKg } from "../lib/body";
 import { Proposals } from "./Proposal";
 import { MODELS, checkDay, estimateMonthUsd, type ModelChoice, type Question, type Tier } from "../lib/ai/tasks";
-import { askLines, KIND_LABEL, questionKinds, tracking, type Tracked } from "../lib/ai/asking";
+import { askableFrom, askLines, KIND_LABEL, questionKinds, tracking, type Tracked } from "../lib/ai/asking";
 import { savedFollowups } from "../lib/ai/saved";
 import { SavedCard } from "./Saved";
 import { DeepDive } from "./DeepDive";
@@ -35,7 +35,7 @@ import { xpSkipped } from "../lib/ai/xpdays";
 import { ExperimentDays } from "./ExperimentStrip";
 import { judge } from "../lib/ai/apply";
 import { dailyFacts } from "../lib/insights";
-import { addDays, atMinute, clock, dayLabel, localDay, stamp } from "../lib/time";
+import { addDays, atMinute, clock, dayLabel, localDay, minuteOfDay, stamp } from "../lib/time";
 import type { Supplement } from "../lib/types";
 import { InboxCard } from "./Inbox";
 import { ReviewCard } from "./Review";
@@ -261,7 +261,7 @@ function askFor(day: string, when: "morning" | "evening", suggested: string[]): 
   const check = checkupLines(st.entries, bandNow(), now);
   const kinds = questionKinds(day, when, { checkup: check.length > 0, followup: follow.length > 0 });
   return [...(kinds.includes("checkup") ? check : []),
-    ...askLines(kinds, tracking(st.ai.daily, st.entries, now), kinds.includes("followup") ? follow : [], [...st.ai.asked, ...(st.ai.stopped ?? []).map((k) => `(never ask again) ${k}`)], (t) => dayLabel(t))];
+    ...askLines(kinds, tracking(st.ai.daily, st.entries, now), kinds.includes("followup") ? follow : [], [...st.ai.asked, ...(st.ai.stopped ?? []).map((k) => `(never ask again) ${k}`)], (t) => dayLabel(t), when)];
 }
 
 /** One you said to stop asking never comes back, and never the same words twice — even if the AI writes them again. */
@@ -470,7 +470,9 @@ export function AiQuestions() {
   const live = !!q0 && (q0.from === "morning" ? ai.digest?.day === q0.day && morningShown(ai.digest, ai.night, now)
     : q0.from === "evening" ? ai.night?.day === q0.day && nightShown(ai.night, ai.digest, now) : q0.day === today);
   const stopped = new Set(ai.stopped ?? []), skipped = new Set(ai.skipped?.day === today ? ai.skipped.keys : []);
-  const list: Question[] = (live ? q0!.list : []).filter((q) => !answeredToday.has(q.key) && !stopped.has(q.key) && !skipped.has(q.key));
+  // one that names a time later today waits until then (PLAN 201: "before 13:00 today?" was asked at 08:09)
+  const m = minuteOfDay(now);
+  const list: Question[] = (live ? q0!.list : []).filter((q) => !answeredToday.has(q.key) && !stopped.has(q.key) && !skipped.has(q.key) && askableFrom(q.text) <= m);
   const [q] = list;
   return q ? <QuestionCard key={q.key} q={q} count={list.length} today={today} /> : null;
 }

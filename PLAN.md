@@ -3633,7 +3633,7 @@ both reads and the questions. Phases in that order; #152 RPE waits (owner).
    to reform whole app look at each part and change, visuallty and engine wise"). After 199. One part at a time, a canvas
    for each, his call on each.
 
-201. [ ] **Questions at the wrong time, the study left out, the weekend drafts gone** (owner, 9 Nov, with screenshots — a
+201. [x] **Questions at the wrong time, the study left out, the weekend drafts gone** (owner, 9 Nov, with screenshots — a
    Follow-up at 08:09: "Pizza-only start yesterday. Did you get protein in before 13:00 today?"; "Not logged · Your weekend,
    drafted": "why ts getting aasked at 08:09? same w cigarettes, it should ask abput yesterday, always" · "the study was
    left out — its link didn't open, or the page was about something e … pls stop doing this" · "image2 : delete this
@@ -3644,3 +3644,30 @@ both reads and the questions. Phases in that order; #152 RPE waits (owner).
    - The study: a link the AI got wrong is looked up by the paper's title (PubMed, then Crossref) and replaced, instead of
      the study being dropped.
    - The weekend drafts (ghost logging, PLAN 177 body lab 9): removed.
+   - Done 10 Nov. Questions: lib/ai/asking `askableFrom` — one naming a time later today ("before 13:00", "by 18:30", "this
+     afternoon", "tonight") shows from then; one only about yesterday or last night, any time (his question waits until
+     13:00 — it says "yesterday" and "today", so it counts as today's). The morning read is told its questions are
+     answered at 7–9: about yesterday and last night only. Cigarettes (lib/smoke): yesterday's, from 04:00, all day until
+     answered; never "today?" — the 02:00 night asks nothing. The study: worker/links `findPaper` — a dead or mismatched
+     link is looked up by its cited title on PubMed (search, then the papers' own titles) and Crossref, and the item kept
+     with the address found when that title holds 60 % of the cited words; only a paper neither knows is left out (the
+     read's study first, 3 a read; deep dives too). Ghost logging removed (lib/ghost, GhostCard, its card on Today, e2e
+     ghost); the catch-up asks about yesterday's coffee and stack again, "how did you eat?" no longer waits on drafts.
+     Tests: asking.test, smoke.test, links.test (a wrong PubMed number found by title, a dead link via Crossref; controls:
+     a made-up paper, a title too short), e2e smoke, dontremember, foodgap.
+
+202. [ ] **The server error, workouts that finish themselves and feel 1–10, reads without the boring part, the sleep score**
+   (owner, 10 Nov, with a screenshot of "Kept as a note. Couldn't reach the app's server. (no-server)": "Fix this" · "Do a
+   1-10 slider for workouts and connect sleep, how i feel, what i eat to my gym performance, cardio strength etc" ·
+   "Workout should be finished automatically, app should detect when my heartrate started to come down like its p easy to
+   spot, and if its just for a couple minutes it should ask if its just a break or finished" · "Aalso we should cut the
+   summary, i never read, give the interesting things, what i should do or change, studies, new protocols, etc. not the
+   boring things i already know like calories ate, workout, etc. i want to hear how my day was compared to others. This is
+   inline w the gamification" · "feel like sleep score still way too high always"). Claimed 10 Nov.
+   - no-server: the phone's request failed outright (no code) — the app sent to the background, the screen locked or the
+     network blipped during a long AI answer. Done 10 Nov: lib/ai/retry — a dropped call is sent again once the app is on
+     screen and online (3 tries, the answer's reading included); still failing, it says how long and whether the app was
+     in the background; a note the AI couldn't be reached for is kept and read on its own once it can. Tests: retry.test.
+   - Next: workouts finish themselves (heart rate coming down; a short dip asks "break or done?"), a 1–10 for each
+     workout and what goes with it (sleep, how you felt, what you ate → strength, cardio); the reads without the summary,
+     your day against people like you; the sleep score's bar.

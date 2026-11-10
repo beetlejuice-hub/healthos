@@ -7,7 +7,6 @@ import { AUTO_END } from "../lib/training";
 import { NoticeBox } from "../components/NoticeBox";
 import { HeartAsk } from "../components/HeartAsk";
 import { FoodGapAsk } from "../components/FoodGapAsk";
-import { GhostCard } from "../components/GhostCard";
 import { SmokeAsk } from "../components/SmokeAsk";
 import { GuardBox } from "../components/GuardBox";
 import { checkWeight, type Guard } from "../lib/sanity";
@@ -176,7 +175,6 @@ export function Today() {
     ...(s.ai.watches ?? []).filter((w) => !w.stopped && !w.closed).map((w) => ({ key: `watchdone:${w.id}`, name: `what ${w.what.toLowerCase()} showed`, node: <WatchDoneAsk w={w} now={now} />, read: true })),
     { key: "heart", name: "your heart", node: <HeartAsk now={now} /> },
     { key: "catchup", name: "yesterday", node: <CatchUp now={now} /> },
-    { key: "ghost", name: "yesterday, drafted", node: <GhostCard now={now} /> },
     { key: "foodgap", name: "how you ate", node: <FoodGapAsk now={now} /> },
     { key: "smoke", name: "cigarettes", node: <SmokeAsk now={now} /> },
     { key: "nightcheck", name: "last night's check", node: <NightCheckAsk now={now} /> },

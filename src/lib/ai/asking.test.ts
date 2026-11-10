@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { askLines, questionKinds, tracking, TRACK_EVERY_DAYS } from "./asking";
+import { askableFrom, askLines, questionKinds, tracking, TRACK_EVERY_DAYS } from "./asking";
 import type { Entry } from "../types";
 import { addDays, DAY } from "../time";
 
@@ -48,5 +48,26 @@ describe("what's tracked comes back re-worded, not before it's due", () => {
     expect(txt).toMatch(/- social_battery — mood dips after busy social days · Mon 20 Oct · Low \/ Full · not due yet/);
     expect(txt).toMatch(/Suggested to you lately[\s\S]*Protein coffee before 10/);
     expect(txt).toMatch(/Already asked — never the same words again: Did you nap today\?/);
+  });
+});
+
+// PLAN 201 — owner, 9 Nov, of a Follow-up at 08:09, "Pizza-only start yesterday. Did you get protein in before 13:00
+// today?": "why ts getting aasked at 08:09?". It waits until 13:00; about yesterday only, any time.
+describe("when a question can be answered", () => {
+  it("one naming a later time today waits until then — his question until 13:00", () => {
+    expect(askableFrom("Pizza-only start yesterday. Did you get protein in before 13:00 today?")).toBe(13 * 60);
+    expect(askableFrom("Coffee after 14:00 today?")).toBe(14 * 60);
+    expect(askableFrom("Any cardio by 18.30?")).toBe(18 * 60 + 30);
+    expect(askableFrom("A nap this afternoon?")).toBe(17 * 60);
+    expect(askableFrom("Screens in bed tonight?")).toBe(21 * 60);
+  });
+  it("control: about yesterday or last night, or no time at all — any time", () => {
+    expect(askableFrom("Did you have coffee after 14:00 yesterday?")).toBe(0);
+    expect(askableFrom("How did you sleep last night?")).toBe(0);
+    expect(askableFrom("How's your energy today?")).toBe(0);
+  });
+  it("the read is told when its questions are answered", () => {
+    expect(askLines(["study"], [], [], [], () => "", "morning").join("\n")).toMatch(/answered when this read arrives, 7–9 in the morning: ask about yesterday and last night, never about later today/);
+    expect(askLines(["study"], [], [], [], () => "", "evening").join("\n")).toMatch(/answered this evening: about today is fine/);
   });
 });
