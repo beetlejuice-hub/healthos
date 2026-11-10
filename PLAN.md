@@ -3826,3 +3826,18 @@ both reads and the questions. Phases in that order; #152 RPE waits (owner).
      range), B a scatter lab (any two things, a lag, colour by, held-level fit, slope with its range, how sure, splits,
      the nights), C findings as a notebook (each a figure to poke: drinks in steps, the bedtime curve, training and deep
      sleep, what didn't hold), D the phone (three numbers, findings as swipe cards, a small what-if). Waiting on his pick.
+   - Owner, 10 Nov, on the canvas: "I love all designs but gotta make them more creative, and not just do the same we
+     have but different looking. like rethink how u show data, how u summarize it, especially pls focus on what makes a
+     day, focus, etc better and worse. and make nice graphs … can research net for this. and like w dots and lines, how
+     my datapoints line up on a chart and compared to you know food, sleep, training, drink, etc" · "idk why u not
+     searching for cool useful repos or skills". Round 2 on the same canvas (example data made in the page, switchable):
+     E what makes a day (every day a dot on each thing, best third blue, worst orange, sorted by how far apart), F days
+     worst to best (a strip per thing, brightness = amount, running average, ρ), G ripples (every night out / hard
+     session / short night / late caffeine laid on top, average and band, day before to +3, against the same weekday's
+     usual), H day lines (parallel coordinates ending at focus), I why today (a waterfall from your usual Tuesday to
+     "days like this", against what you rated), J the phone. Colours checked for colour blindness (blue #3987e5 /
+     orange #d95926 on the dark surface, all pairs).
+   - Research for the engine: SYNAPS (github.com/scerelli/SYNAPS — within-person, lags 0–2 days, effective sample size
+     for autocorrelation, Benjamini-Hochberg false-discovery correction); quantified-sleep (gianlucatruda — n-of-1
+     sleep models, clustering correlated features); Bearable's factor effect (same day to 7 days after, 3 with and 3
+     without); Whoop's journal impact (5 yes and 5 no, isolated effect); Observable Plot's dodge for the dots.
