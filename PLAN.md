@@ -3723,3 +3723,12 @@ both reads and the questions. Phases in that order; #152 RPE waits (owner).
      20 % deep, 25 % REM, HRV 10 % over usual, heart 2 under); the zones are the studies' as before. A plain night
      (7 h 12, 88 %, rated 7) 94 → 82; a short broken one 76 → 62; a full 8 h night 98 → 98. Tests: sleepscore.test
      updated and the three nights added, nights.test, e2e sleepscore.
+
+203. [ ] **Reform phase 1: Today with the game — weekly goals and one week score** (owner, 10 Nov, to "the game's
+   flavour: points and levels, streaks and quests, or one week score? Start at Today? Any repos?": "1 yes 2 yes 3 no" —
+   weekly goals plus one week score, my pick; Today first; no repos of his). PLAN 200 phase 1. Claimed 10 Nov.
+   - Goals each Monday from his last 4 weeks (lib/game, pure, tested): drinks under his usual, in bed by a target on 5
+     nights, protein days, the stack every day, his usual sessions; a few at a time, each worth points.
+   - One week score 0–100 from them, against last week and with "you vs everyone" (lib/norms).
+   - Streaks that keep one free miss a week.
+   - Canvas first (a few directions at phone size), the default built while he picks.
