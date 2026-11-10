@@ -3761,3 +3761,19 @@ both reads and the questions. Phases in that order; #152 RPE waits (owner).
    - Gamification works (g 0.42 across 16 trials) but fades after (0.15) — so it has to keep changing (Mazeas 2022, JMIR).
    - Directions on a new canvas: a player card rated against people your age, a boss of the week, a week you start at
      70 and defend with a stake, a race against your own ghost — and seasons to keep it changing.
+   - Owner, 10 Nov, on the canvas: "I fucking love the idea of all of these. see thats a good direction to go w app. but
+     keep it professional too. keep the datas. keep the smart engine. use minimal ai, i dont want to pay 30 bucks in
+     credits every month. i think u can degrade the claude api models a bit so its cheaper..it does not do much thinking
+     overall. easy the language, kepp it playful but informal. brainstorm, make it better, and add most of these features
+     u listed.. then choose 5 parts of app we should revisit or change now..after all done here". Building 10 Nov:
+     - AI cheaper: Haiku for the light jobs, the chat and the reads, Sonnet for the research (no Opus by default), saved
+       picks moved once; fewer web searches per read; the month's budget $10, Haiku after it.
+     - The week you defend (F): start at 70, a miss past a goal's spare days costs 10, 50+ on Sunday levels you up; a
+       stake you pick, due under 50.
+     - The boss (E): your weakest goal as a boss, its HP the days still needed; beaten, a title for the card.
+     - Your ghosts (G): the week's points by day against last week's you and your best week. (A real rival needs
+       accounts that see each other — not now.)
+     - Seasons (H): 6 weeks each, a twist from your weakest area (its misses cost double, its hits earn season XP twice),
+       tiers with titles; one thing you love only on gym days.
+     - The player card (D): each stat where you'd rank among men your age in the studies (VO2 max, resting heart rate,
+       sleep, steps, strength trend, the week's level), out of 99, an overall and its tier.
