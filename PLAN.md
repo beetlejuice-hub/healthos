@@ -3798,3 +3798,18 @@ both reads and the questions. Phases in that order; #152 RPE waits (owner).
      studies. Tests: play.test (planted weeks, known answers; controls: a bad week, no last week, a week that met
      everything, a new account, a stake not owed, a card with too little), e2e week (rewritten), e2e game (new). Not
      yet: a real rival (accounts that see each other), the Sunday recap screen.
+
+205. [ ] **Cost at about $10 without living on Haiku; the game less cringe; Insights web-first** (owner, 10 Nov: "can set ai
+   to $20 monthly, but its better if we keep usage at 10 dollar mark max, but i dont want to limit to haiku. idk how good
+   is that. for research we can keep sonnet at least. lmk if u have a better option for more cost efficient usage" ·
+   "insights can be web-first since it should show a bunch of data, findings, etc. lots of it. graphs. interesting stuff.
+   let me interact, simulate, etc. scientific stuff. on phone it can be more compact and more game-y" · "logging is pretty
+   good as is rn" · workout tie-in: "3 ok i guess" · quests: "no — i want to live my life and not live for this game, so
+   this app functions more of a logging/data analysis place, not to dictate my life, and tell me that i cant have a
+   coffee after 14:00" · game notifications: "nah. also this goblin ass is cringe"). Claimed 10 Nov.
+   - AI: Sonnet for the chat, the reads and the research, Haiku for food and the questions; past $10 in a month the
+     chat and the reads drop to Haiku (research stays on Sonnet), past $20 everything on Haiku.
+   - The game: no creatures, no fantasy titles — the weakest goal is "this week's focus", plain words.
+   - Never: quests or experiments that tell him what not to do; game notifications.
+   - Insights: canvas first — web-first with lots of data, graphs, findings, things to play with (simulate); phone
+     compact and more like the game.
