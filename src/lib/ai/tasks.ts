@@ -32,26 +32,30 @@ export const WEB_SEARCH_USD = 0.01;
 export const TIER: Record<Task, Tier> = { describe: "light", chat: "everyday", questions: "light", supplement: "research", digest: "reads", night: "reads", review: "reads", dive: "research", verdict: "research", research: "reads" };
 export type Models = Record<Tier, ModelChoice>;
 /**
- * Cheap where it's simple, a step up only for the research. Owner, 27 Oct: the reads and the chat on Sonnet, Opus for the
- * research. Owner, 10 Nov: "use minimal ai, i dont want to pay 30 bucks in credits every month. i think u can degrade the
- * claude api models a bit so its cheaper..it does not do much thinking overall" — Haiku for the light jobs, the chat and
- * the reads (a twentieth of Sonnet's price), Sonnet for the deep dive, verdicts and supplement look-ups; no Opus unless
- * he picks it. The numbers come from the engines; the AI words them.
+ * Haiku where it's simple, Sonnet where it thinks. Owner, 27 Oct: the reads and the chat on Sonnet, Opus for the research.
+ * Owner, 10 Nov: "use minimal ai, i dont want to pay 30 bucks" — then, the same day: "can set ai to $20 monthly, but its
+ * better if we keep usage at 10 dollar mark max, but i dont want to limit to haiku … for research we can keep sonnet at
+ * least". So: Haiku for food and the questions; Sonnet for the chat, the reads and the research; no Opus unless he picks
+ * it. Past half the month's budget ($10 of $20) the chat and the reads drop to Haiku and the research stays on Sonnet;
+ * past all of it, everything's on Haiku until the 1st.
  */
-export const DEFAULT_MODELS: Models = { light: "haiku", everyday: "haiku", reads: "haiku", research: "sonnet" };
-/** Picks saved before the 10 Nov defaults (v1, v2) move to them once; a pick made after stays. */
-export const MODELS_V = 3;
+export const DEFAULT_MODELS: Models = { light: "haiku", everyday: "sonnet", reads: "sonnet", research: "sonnet" };
+/** Picks saved before these defaults (v1–v3) move to them once; a pick made after stays. */
+export const MODELS_V = 4;
 export function modelsNow(m: Partial<Models> | undefined, v: number | undefined): Models {
   if ((v ?? 1) >= MODELS_V) return { ...DEFAULT_MODELS, ...m };
   return { ...DEFAULT_MODELS };
 }
-/** A month's spend after which every task runs on the cheapest model until the 1st (the 50-a-day stop still holds). */
-export const MONTHLY_USD = 10;
-/** The model a task runs on: yours for its tier (older synced docs have no light tier — its default then), Haiku past the month's budget. */
+/** The month's hard budget: past it, every task on the cheapest model until the 1st (the 50-a-day stop still holds). */
+export const MONTHLY_USD = 20;
+/** Past this share of it, everything but the research runs on Haiku — where he'd like the month to end. */
+export const SOFT_SHARE = 0.5;
+/** The model a task runs on: yours for its tier (older synced docs have no light tier — its default then); Haiku for all
+ *  but the research past half the budget; Haiku for everything past the budget. */
 export function modelFor(task: Task, models: Partial<Models> | undefined, monthUsd: number, budget = MONTHLY_USD): ModelChoice {
   if (monthUsd >= budget) return "haiku";
-  const pick = models?.[TIER[task]];
-  return pick && pick in MODELS ? pick : DEFAULT_MODELS[TIER[task]];
+  const pick = models?.[TIER[task]], m = pick && pick in MODELS ? pick : DEFAULT_MODELS[TIER[task]];
+  return monthUsd >= budget * SOFT_SHARE && TIER[task] !== "research" ? "haiku" : m;
 }
 
 /** One sampling attempt's tokens; a `fallback_message` names the model that ran it (a refusal's server-side fallback). */

@@ -76,7 +76,7 @@ describe("/api/ai", () => {
     expect(sent.tools.map((t) => t.name)).toEqual(["day", "series", "find", "show_chart", "compare", "nights", "sessions", "propose", "remember", "web_search"]);
     // strict, all but propose: 28 optional fields, past the API's 24 for a request (28 Oct: every chat message turned down)
     expect(sent.tools.slice(0, 9).filter((t) => t.strict !== true).map((t) => t.name)).toEqual(["propose"]);
-    expect(sent.tools[9]).toMatchObject({ type: "web_search_20250305", max_uses: 2 }); // the chat on Haiku since 10 Nov
+    expect(sent.tools[9]).toMatchObject({ type: "web_search_20260209", max_uses: 2 });
     expect(sent.output_config.format).toBeUndefined(); // replies are Markdown now, not JSON
     expect(sent.tool_choice).toBeUndefined();
     // the app ran the tool; the same message continues — past the daily 50 it still goes through, and isn't counted again
@@ -95,7 +95,7 @@ describe("/api/ai", () => {
     expect((await handleAi(post({ task: "chat", messages: msgs, context: "ctx" }), env, w.deps)).status).toBe(429);
   });
 
-  it("review: the week read on the reads' model (Haiku since 10 Nov), the enforced shape, a bad request refused (PLAN 65)", async () => {
+  it("review: the week read on the reads' model (Sonnet), the enforced shape, a bad request refused (PLAN 65)", async () => {
     const ans = { title: "Better mood, short on protein", summary: "Mood **7.5** against a usual 6.", notices: [{ title: "Mood up", text: "7.5 all week.", measure: "mood" }, { title: "", text: "dropped", measure: "" }], next: [{ what: "Protein at lunch", why: "0 of 7 days at goal" }], remember: [] };
     const w = world([{ text: JSON.stringify(ans) }]);
     const res = await handleAi(post({ task: "review", kind: "week", from: "2026-10-12", to: "2026-10-18", context: "## The week 12 Oct–18 Oct" }), env, w.deps);
@@ -104,7 +104,7 @@ describe("/api/ai", () => {
     expect(body.answer.title).toBe("Better mood, short on protein");
     expect(body.answer.notices).toEqual([{ title: "Mood up", text: "7.5 all week.", measure: "mood" }]); // an empty notice left out
     const sent = w.sent[0].body;
-    expect(sent.model).toBe("claude-haiku-5-5");
+    expect(sent.model).toBe("claude-sonnet-5-5");
     expect((sent.output_config as { format: { type: string } }).format.type).toBe("json_schema");
     expect(sent.tools).toBeUndefined();
     expect(JSON.stringify(sent.messages)).toContain("Write my week read: 2026-10-12 to 2026-10-18");
@@ -175,23 +175,27 @@ describe("/api/ai", () => {
     expect(await run({ task: "describe", text: "coffee" })).toBe("claude-haiku-5-5");
     expect(await run({ task: "describe", text: "coffee", models: { everyday: "opus", research: "opus" } })).toBe("claude-haiku-5-5");
     expect(await run({ task: "chat", messages: [{ role: "user", text: "yo" }], context: "c", models: { everyday: "opus", research: "opus" } })).toBe("claude-opus-5-5");
-    // 10 Nov ("use minimal ai"): the chat's default is Haiku now; a pick of Opus (above) still goes
-    expect(await run({ task: "chat", messages: [{ role: "user", text: "yo" }], context: "c" })).toBe("claude-haiku-5-5");
+    // the chat's default is Sonnet; a pick of Opus (above) still goes
+    expect(await run({ task: "chat", messages: [{ role: "user", text: "yo" }], context: "c" })).toBe("claude-sonnet-5-5");
   });
 
-  it("past the month's $10, everything on Haiku 5.5 until the 1st; the usage says the budget", async () => {
-    const usage = { day: "2026-10-01", calls: 3, dayUsd: 1, month: "2026-10", monthUsd: 10.4, byModel: {} };
+  it("past the month's $20, everything on Haiku 5.5 until the 1st; the usage says the budget", async () => {
+    const usage = { day: "2026-10-01", calls: 3, dayUsd: 1, month: "2026-10", monthUsd: 20.4, byModel: {} };
     const w = world([{ text: JSON.stringify({ reply: "hi", remember: [] }) }], { usage });
     expect((await handleAi(post({ task: "chat", messages: [{ role: "user", text: "yo" }], context: "c", models: { everyday: "opus" } }), env, w.deps)).status).toBe(200);
     expect(w.sent[0].body.model).toBe("claude-haiku-5-5");
     const w2 = world([{ text: JSON.stringify({ reply: "hi", remember: [] }) }], { usage: { ...usage, monthUsd: 9.9 } });
     await handleAi(post({ task: "chat", messages: [{ role: "user", text: "yo" }], context: "c", models: { everyday: "opus" } }), env, w2.deps);
     expect(w2.sent[0].body.model).toBe("claude-opus-5-5");
+    // between $10 and $20 the chat drops to Haiku, the research keeps its pick (owner, 10 Nov: "keep usage at 10 dollar mark")
+    const w4 = world([{ text: JSON.stringify({ reply: "hi", remember: [] }) }], { usage: { ...usage, monthUsd: 12 } });
+    await handleAi(post({ task: "chat", messages: [{ role: "user", text: "yo" }], context: "c", models: { everyday: "opus" } }), env, w4.deps);
+    expect(w4.sent[0].body.model).toBe("claude-haiku-5-5");
     const w3 = world([{ text: JSON.stringify({ reply: "hi", remember: [] }) }], { usage: { ...usage, month: "2026-09" } }); // a new month starts at 0
     await handleAi(post({ task: "chat", messages: [{ role: "user", text: "yo" }], context: "c", models: { everyday: "opus" } }), env, w3.deps);
     expect(w3.sent[0].body.model).toBe("claude-opus-5-5");
     const g = (await (await handleAi(new Request("https://app/api/ai/usage", { headers: { authorization: "Bearer good" } }), env, world([]).deps)).json()) as { budget: number };
-    expect(g.budget).toBe(10);
+    expect(g.budget).toBe(20);
   });
 
   it("drops answers that don't make physical sense", async () => {
@@ -218,7 +222,7 @@ describe("/api/ai", () => {
     const body = (await res.json()) as { answer: { items: { title: string }[] }; costUsd: number };
     expect(w.sent).toHaveLength(2);
     expect(body.answer.items.map((i) => i.title)).toEqual(["Creatine and sleep"]); // a fact without a source isn't shown
-    expect(body.costUsd).toBeCloseTo((2000 * 0.1 + 1000 * 0.5) / 1e6 + 0.03, 6); // the reads on Haiku 5.5 (10 Nov)
+    expect(body.costUsd).toBeCloseTo((2000 * 2 + 1000 * 10) / 1e6 + 0.03, 6); // the reads on Sonnet 5.5
   });
 
   it("the read's links are opened before you see it: a dead one's item goes, a matching one is marked (PLAN 160)", async () => {
@@ -321,7 +325,7 @@ describe("/api/ai", () => {
     expect(body.answer.found).toHaveLength(1);
     expect(body.answer.found[0].source.checked).toBe(true);
     expect((w.sent[0].body.tools as { name: string; max_uses: number }[])).toEqual([expect.objectContaining({ name: "web_search", max_uses: 2 })]);
-    expect(w.sent[0].body.model).toBe("claude-haiku-5-5");
+    expect(w.sent[0].body.model).toBe("claude-sonnet-5-5");
     expect(JSON.stringify(w.sent[0].body.system)).toContain("the app's own research on ONE thing");
     const bad = world([{ text: JSON.stringify({ title: "", known: "" }) }]);
     expect((await handleAi(post({ task: "research", context: "c" }), env, bad.deps)).status).not.toBe(200);
@@ -382,13 +386,12 @@ describe("/api/ai", () => {
     const quick = await handleAi(post({ task: "chat", messages: [{ role: "user", text: "hi" }], context: "c" }), env, w.deps); // …when a chat comes and goes
     expect(quick.status).toBe(200);
     expect((await slow).status).toBe(200);
-    const diveUsd = (10_000 * 2 + 2000 * 10) / 1e6 + 5 * 0.01, chatUsd = (1000 * 0.1 + 500 * 0.5) / 1e6; // the dive on Sonnet, the chat on Haiku (10 Nov)
+    const diveUsd = (10_000 * 2 + 2000 * 10) / 1e6 + 5 * 0.01, chatUsd = (1000 * 2 + 500 * 10) / 1e6; // both on Sonnet
     const u = w.docs.get("ai_usage") as { calls: number; dayUsd: number; monthUsd: number; byModel: { opus: number; sonnet: number; haiku: number }; recent: { task: string }[]; rev: number };
     expect(u.calls).toBe(5);
     expect(u.dayUsd).toBeCloseTo(1 + diveUsd + chatUsd, 6);
     expect(u.monthUsd).toBeCloseTo(5 + diveUsd + chatUsd, 6);
-    expect(u.byModel.sonnet).toBeCloseTo(diveUsd, 6);
-    expect(u.byModel.haiku).toBeCloseTo(chatUsd, 6);
+    expect(u.byModel.sonnet).toBeCloseTo(diveUsd + chatUsd, 6);
     expect(u.recent.map((r) => r.task)).toEqual(["chat", "dive"]);
     expect(u.rev).toBe(2);
     // and by job (PLAN 195): each call under its own task

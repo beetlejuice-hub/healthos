@@ -1,14 +1,14 @@
 /**
- * The game page, off Today's week card (PLAN 204; owner, 10 Nov, on the wilder canvas: "I fucking love the idea of all of
+ * The game page, off Today's week card (PLAN 204, 205: no creatures — "this goblin ass is cringe"; owner, 10 Nov, on the wilder canvas: "I fucking love the idea of all of
  * these … keep it professional too. keep the datas. keep the smart engine … easy the language, kepp it playful but
- * informal"). Your player card rated against the big studies, this week's boss, the race against your ghosts, the season,
+ * informal"). Your player card rated against the big studies, this week's focus, the race against your ghosts, the season,
  * the stake you put on the week and the treat you only get on gym days — then how it all works, with the studies.
  * Numbers from lib/play and lib/card (via components/useGame); this file only draws and saves your two picks.
  */
 
 import { useState } from "react";
 import { MOVES, type Card } from "../lib/card";
-import { BOSSES, PLAY, standing, type Ghosts } from "../lib/play";
+import { AREAS, PLAY, standing, type Ghosts } from "../lib/play";
 import { act, useStore } from "../lib/store";
 import { addDays } from "../lib/time";
 import { useGame } from "../components/useGame";
@@ -16,7 +16,7 @@ import { useGame } from "../components/useGame";
 const STAKES = ["100 burpees on Sunday", "€10 to a cause you'd rather not fund", "No coffee on Monday"];
 const short = (day: string) => new Date(`${day}T12:00:00`).toLocaleDateString("en-GB", { day: "numeric", month: "short" });
 
-function PlayerCard({ card, was, title, level }: { card: Card; was: Card; title: string | null; level: number }) {
+function PlayerCard({ card, was, level }: { card: Card; was: Card; level: number }) {
   const moved = card.ovr != null && was.ovr != null ? card.ovr - was.ovr : null;
   return (
     <section className="gm-card" aria-label="Your player card" data-ovr={card.ovr ?? ""} data-tier={card.tier ?? ""}>
@@ -27,7 +27,7 @@ function PlayerCard({ card, was, title, level }: { card: Card; was: Card; title:
           {moved != null && <small className={moved > 0 ? "up" : moved < 0 ? "down" : undefined}>{moved > 0 ? `+${moved}` : moved < 0 ? `−${-moved}` : "same as"} 4 weeks ago</small>}
         </div>
       </div>
-      <b className="gm-name">You <span>· {title ?? `level ${level}`}</span></b>
+      <b className="gm-name">You <span>· level {level}</span></b>
       <div className="gm-stats">
         {card.stats.map((s) => (
           <div key={s.key} data-stat={s.key} className={s.rating == null ? "none" : card.weakest?.key === s.key ? "low" : undefined}>
@@ -78,22 +78,22 @@ export function GameScreen() {
       <div className="card"><p className="note">The game starts once the app has a few weeks of you to set goals from — log, wear the band, train, and it'll be here.</p></div>
     </div>
   );
-  const { now: w, boss, season, level, titles } = game, mine = stakes?.[w.from];
-  const bossGoal = boss ? w.goals.find((g) => g.id === boss.id) : null, bossCost = boss ? w.costs.find((c) => c.id === boss.id) : null;
+  const { now: w, focus, season, level } = game, mine = stakes?.[w.from];
+  const fGoal = focus ? w.goals.find((g) => g.id === focus.id) : null, fCost = focus ? w.costs.find((c) => c.id === focus.id) : null;
   const lockStake = (what: string) => { if (what.trim()) act.setSettings({ stakes: { ...stakes, [w.from]: { what: what.trim() } } }); };
   return (
     <div className="calm gm">
       <div className="head"><span>The game</span><a href="#today">Done</a></div>
 
-      <PlayerCard card={card} was={was} title={titles[0] ?? null} level={level.level} />
+      <PlayerCard card={card} was={was} level={level.level} />
 
-      {boss && (
-        <section className="card gm-boss" aria-label="This week's boss" data-boss={boss.id} data-state={boss.state}>
-          <h3>This week's boss <span>picked from your weakest goal last week</span></h3>
-          <b className="gm-big">{boss.name}</b>
-          <span className="gm-sub">Feeds on {boss.feeds}. {boss.state === "beaten" ? `Beaten — “${boss.title}” goes on your card.` : boss.state === "escaped" ? "It got away this week. Monday it's back." : `${bossGoal?.title} hits it${bossCost ? ` · ${standing(bossGoal!, bossCost).say}` : ""}.`}</span>
-          <div className="gm-hp"><span>HP</span><span className="gm-hpbar" aria-hidden="true"><i style={{ width: `${boss.hp}%` }} /></span><b>{boss.hp}</b></div>
-          {boss.next && <p className="gm-foot">Next up, once this one's down: {BOSSES[boss.next].name}.</p>}
+      {focus && fGoal && (
+        <section className="card gm-focus" aria-label="This week's focus" data-focus={focus.id} data-state={focus.state}>
+          <h3>This week's focus <span>your weakest goal last week</span></h3>
+          <b className="gm-big">{fGoal.title}</b>
+          <span className="gm-sub">{focus.state === "done" ? "Done this week. Nice." : focus.state === "missed" ? "Out of reach this week — it's a fresh go on Monday." : `${fGoal.kind === "atMost" ? `${fGoal.done} so far` : `${fGoal.done} of ${fGoal.need}`}${fCost ? ` · ${standing(fGoal, fCost).say}` : ""}.`}</span>
+          <div className="gm-hp"><span>Done</span><span className="gm-hpbar" aria-hidden="true"><i style={{ width: `${100 - focus.left}%` }} /></span><b>{100 - focus.left} %</b></div>
+          {focus.next && <p className="gm-foot">After this one: {AREAS[focus.next].toLowerCase()}.</p>}
         </section>
       )}
 
@@ -101,11 +101,9 @@ export function GameScreen() {
 
       <section className="card gm-season" aria-label="The season" data-season={season.n} data-tier={season.tier}>
         <h3>Season {season.n} · {season.name} <span>{short(season.from)} – {short(season.to)}</span></h3>
-        <span className="gm-sub">Week {season.week} of {PLAY.seasonWeeks}. The twist: {season.twist}. Next season changes the rules.</span>
+        <span className="gm-sub">Week {season.week} of {PLAY.seasonWeeks}. This season, {season.twist}. The next one picks a new area.</span>
         <div className="gm-tiers" aria-hidden="true">{Array.from({ length: PLAY.tiers }, (_, k) => <i key={k} className={k < season.tier ? "on" : undefined} />)}</div>
         <div className="gm-row"><span>Tier <b>{season.tier}</b> of {PLAY.tiers} · {season.xp} XP</span>{season.toNext != null && <span>{season.toNext} to the next</span>}</div>
-        {season.nextReward && <p className="gm-note">Tier {season.nextReward.tier}: the title <b>“{season.nextReward.title}”</b>.</p>}
-        {season.won.length > 0 && <p className="gm-foot">Won this season: {season.won.map((t) => `“${t}”`).join(", ")}.</p>}
       </section>
 
       <section className="card gm-stake" aria-label="Your stake">
@@ -135,8 +133,8 @@ export function GameScreen() {
           <li><b>Your week:</b> you start with 70. Each goal has a few spare days; a miss past them costs 10, so does a drink over or a session that can't fit any more. Keep 50 by Sunday and you go up a level; under 50, down one. Losing points works better than earning them: 53 % of goal days against 32 % (BE FIT, Patel 2017).</li>
           <li><b>The goals</b> come from your own last 4 weeks, a notch past them — never a number from nowhere.</li>
           <li><b>The race:</b> you against last week's you and your best week. Competition beat support and teamwork, and kept working after the game stopped (STEP UP, Patel 2019).</li>
-          <li><b>The boss</b> is your weakest goal from last week, with a name. A story pulls people out: Pokémon Go players walked about 1,500 more steps a day (Althoff 2016).</li>
-          <li><b>Seasons</b> last 6 weeks and change the twist, starting on a fresh start (Dai 2014) — games wear off when they stop changing (Mazeas 2022).</li>
+          <li><b>The focus</b> is your weakest goal from last week, put first — the next move points at it.</li>
+          <li><b>Seasons</b> last 6 weeks and change the area that earns extra, starting on a fresh start (Dai 2014) — games wear off when they stop changing (Mazeas 2022).</li>
           <li><b>The card</b> rates you against big studies: VO2 max against people your age (HUNT), resting heart rate (92,457 Fitbit wearers), sleep (about 120,000), steps (717,527 people).</li>
         </ul>
         <p className="gm-foot">Week of {short(w.from)} – {short(addDays(w.from, 6))} · level {level.level} (best {level.best}).</p>

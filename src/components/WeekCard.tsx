@@ -1,7 +1,7 @@
 /**
  * Today: your week (PLAN 203, then 204; owner, 10 Nov, on the wilder canvas: "I fucking love the idea of all of these …
  * keep it professional too … easy the language, kepp it playful but informal"). You start the week with 70 and defend it:
- * each goal with its days and what it can still take, this week's boss, last week's you, the next move that counts, a
+ * each goal with its days and what it can still take, this week's focus (last week's weakest goal), last week's you, the next move that counts, a
  * stake that's owed, the gym-day treat, and you against everyone. The card, the race and the season are on the game page.
  * Numbers from lib/game, lib/play and lib/norms; this file only draws.
  */
@@ -38,11 +38,11 @@ export function WeekCard({ now }: { now: number }) {
     return vsBest({ steps, sleepMin: night?.asleep ?? null, rhr: band.rhr[today] ?? null });
   }, [band, ns, today]);
   if (!game) return null;
-  const { now: w, boss, ghosts: gh, level, past } = game, h = new Date(now).getHours();
+  const { now: w, focus, ghosts: gh, level, past } = game, h = new Date(now).getHours();
   const last = past.at(-1)?.from === addDays(w.from, -7) ? past.at(-1)! : null;
-  // the boss's goal first, then whatever's one miss from costing, then the rest
+  // the focus first, then whatever's one miss from costing, then the rest
   const risk = (id: string) => Number(w.costs.find((c) => c.id === id)!.risk);
-  const order = [...w.goals].sort((a, b) => Number(b.id === boss?.id) - Number(a.id === boss?.id) || risk(b.id) - risk(a.id));
+  const order = [...w.goals].sort((a, b) => Number(b.id === focus?.id) - Number(a.id === focus?.id) || risk(b.id) - risk(a.id));
   const move = order.map((g) => nextMove(g, h)).find(Boolean);
   const owed = stakeDue(stakes, past, today), trained = workouts.some((x) => x.endedAt != null && localDay(x.startedAt) === today);
   const ahead = gh.vsLast == null ? null : gh.vsLast > 0 ? `${gh.vsLast} ahead of last week's you` : gh.vsLast < 0 ? `${-gh.vsLast} behind last week's you` : "level with last week's you";
@@ -71,10 +71,10 @@ export function WeekCard({ now }: { now: number }) {
           );
         })}
       </ul>
-      {boss && (
-        <p className="wk-boss" data-boss={boss.id} data-hp={boss.hp}>
-          <span><b>{boss.name}</b> · {boss.state === "beaten" ? <>beaten. “{boss.title}” is yours.</> : boss.state === "escaped" ? "got away this week." : `${boss.hp} HP left`}</span>
-          {boss.state === "fighting" && <span className="wk-hp" aria-hidden="true"><i style={{ width: `${boss.hp}%` }} /></span>}
+      {focus && (
+        <p className="wk-focus" data-focus={focus.id} data-left={focus.left}>
+          <span><b>This week's focus: {focus.area.toLowerCase()}</b> · {focus.state === "done" ? "done. Nice." : focus.state === "missed" ? "out of reach this week — fresh go Monday." : `${100 - focus.left} % there`}</span>
+          {focus.state === "on" && <span className="wk-hp" aria-hidden="true"><i style={{ width: `${100 - focus.left}%` }} /></span>}
         </p>
       )}
       {move && <p className="wk-move"><b>Next:</b> {move}.</p>}
@@ -84,7 +84,7 @@ export function WeekCard({ now }: { now: number }) {
       )}
       {treat && trained && <p className="wk-treat"><b>Trained today</b> — {treat} is yours.</p>}
       {(ahead || vs) && <p className="wk-vs">{ahead && <><b>The race</b> · {ahead}{gh.vsBest != null && gh.vsBest < 0 ? `, ${-gh.vsBest} behind your best` : ""}</>}{ahead && vs && <br />}{vs && <><b>You vs everyone</b> · {vs}</>}</p>}
-      <a className="wk-open" href="#game">Your card, the boss, the race and the season ›</a>
+      <a className="wk-open" href="#game">Your card, the race and the season ›</a>
     </section>
   );
 }

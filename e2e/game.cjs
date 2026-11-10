@@ -1,8 +1,8 @@
 // The game page (PLAN 204; owner, 10 Nov: "I fucking love the idea of all of these … keep it professional too"). The
 // week suite's six weeks (last week bad: 7 drinks, never in bed by 23:30 — 0 kept), Tue 10 Nov 21:40. #game: the player
 // card (resting heart rate 54 → HRT 94; asleep 7 h 10 → REC 79; discipline 0 of 70 kept → 35; no VO2, no lifts: "—";
-// overall 69, Silver, Gold at 75); the boss (the Goblin, 80 HP); the race (level with last week's you, both on 70; the
-// best week the first, 70 all week); season 1 Night Shift, week 2 of 6. The stake: picked and locked. A stake owed from
+// overall 69, Silver, Gold at 75); the focus (bedtime, 20 % there; no creatures anywhere — 10 Nov: "cringe"); the race
+// (level with last week's you, both on 70; the best week the first, 70 all week); season 1 Sleep, week 2 of 6. The stake: picked and locked. A stake owed from
 // last week shows on Today until it's done; the treat shows on Today only on a day you've trained (control: a day without).
 // Fits 320. Control: a new account — the page says it starts once there's data.
 const { chromium, APP, OUT, handle, tables } = require('./harness.cjs');
@@ -66,12 +66,12 @@ function world() {
   check(`overall 69, Silver, Gold at 75 (${await card.getAttribute('data-ovr')} ${await card.getAttribute('data-tier')} · ${flat(await card.locator('.gm-ovr').innerText().catch(() => ''))})`,
     await card.getAttribute('data-ovr') === '69' && await card.getAttribute('data-tier') === 'Silver' && /Gold at 75/i.test(await card.locator('.gm-ovr').innerText()));
   check(`the weakest and what moves it (${flat(await card.locator('.gm-note').innerText().catch(() => ''))})`, flat(await card.locator('.gm-note').innerText().catch(() => '')) === 'Weakest: Discipline — holding more of your 70 moves this one.');
-  const boss = pg.getByRole('region', { name: "This week's boss" });
-  check(`the boss (${flat(await boss.innerText().catch(() => ''))})`, await boss.getAttribute('data-boss') === 'bed' && /The 2 AM Goblin/i.test(await boss.innerText()) && /In bed by 23:30 hits it · 2 spare nights/.test(flat(await boss.innerText())) && /HP 80/.test(flat(await boss.innerText())) && /Next up, once this one's down: The Beer Troll/.test(await boss.innerText()));
+  const focus = pg.getByRole('region', { name: "This week's focus" });
+  check(`the focus (${flat(await focus.innerText().catch(() => ''))})`, await focus.getAttribute('data-focus') === 'bed' && /In bed by 23:30/i.test(await focus.innerText()) && /1 of 5 · 2 spare nights/.test(flat(await focus.innerText())) && /Done 20 %/i.test(flat(await focus.innerText())) && /After this one: drinks/.test(await focus.innerText()) && !/goblin|troll|HP/i.test(await pg.locator('.gm').innerText()));
   const race = pg.getByRole('region', { name: 'The race' });
   check(`the race (${flat(await race.innerText().catch(() => ''))})`, /Level with last week's you/i.test(await race.innerText()) && /level with your best week \(from 28 Sept?, 70 kept\)/.test(flat(await race.innerText())) && await race.locator('polyline').count() === 3);
   const season = pg.getByRole('region', { name: 'The season' });
-  check(`the season (${flat(await season.locator('h3').innerText().catch(() => ''))})`, /Season 1 · Night Shift/i.test(flat(await season.locator('h3').innerText())) && /Week 2 of 6/.test(await season.innerText()));
+  check(`the season (${flat(await season.locator('h3').innerText().catch(() => ''))})`, /Season 1 · Sleep/i.test(flat(await season.locator('h3').innerText())) && /Week 2 of 6/.test(await season.innerText()));
   // the stake: picked, locked in
   const stake = pg.getByRole('region', { name: 'Your stake' });
   await stake.getByRole('button', { name: '100 burpees on Sunday' }).click();

@@ -25,7 +25,7 @@ import { notice } from "../lib/findings";
 import { scout } from "../lib/scout";
 import { currentKg } from "../lib/body";
 import { Proposals } from "./Proposal";
-import { MODELS, checkDay, estimateMonthUsd, type ModelChoice, type Question, type Tier } from "../lib/ai/tasks";
+import { MODELS, SOFT_SHARE, checkDay, estimateMonthUsd, type ModelChoice, type Question, type Tier } from "../lib/ai/tasks";
 import { askableFrom, askLines, KIND_LABEL, questionKinds, tracking, type Tracked } from "../lib/ai/asking";
 import { savedFollowups } from "../lib/ai/saved";
 import { SavedCard } from "./Saved";
@@ -724,7 +724,8 @@ export function AiSettings() {
       <p className="note ai-gemini">{gemini.free || gemini.paid
         ? <>Food estimates and the app's questions go to Gemini first — {[gemini.free && "its free tier", gemini.paid && "your Gemini credit"].filter(Boolean).join(", then ")}, then Claude.{viaToday.length ? ` Today: ${viaToday.filter((c) => c.via === "gemini-free").length} free, ${viaToday.filter((c) => c.via === "gemini").length} on credit.` : ""}</>
         : <>Food estimates and the app's questions can run on Gemini's free tier first: add GEMINI_FREE_KEY (a Google AI Studio key from a project without billing) — and GEMINI_API_KEY for the project with your credit — in Cloudflare's settings for this app.</>}</p>
-      {usage && usage.monthUsd >= budget && <p className="note">This month's {usd(budget)} is used: everything runs on {MODELS.haiku.label} until the 1st.</p>}
+      {usage && usage.monthUsd >= budget ? <p className="note">This month's {usd(budget)} is used: everything runs on {MODELS.haiku.label} until the 1st.</p>
+        : usage && usage.monthUsd >= budget * SOFT_SHARE ? <p className="note">Past {usd(budget * SOFT_SHARE)} this month: the chat and the reads run on {MODELS.haiku.label} until the 1st; research stays on yours.</p> : null}
       {/* owner, 15 Oct: "for harder or more important request can leave a better model but for food or simple everyday things can add a cheaper one" */}
       <label className="field">Food, photos and quick questions<select value={ai.models.light} onChange={(e) => pick("light", e.target.value as ModelChoice)}>{option("light")}</select></label>
       <label className="field">Chat (your questions about your data)<select value={ai.models.everyday} onChange={(e) => pick("everyday", e.target.value as ModelChoice)}>{option("everyday")}</select></label>
@@ -733,7 +734,7 @@ export function AiSettings() {
       <label className="check ai-research-on"><input type="checkbox" checked={!ai.researchOff} onChange={(e) => act.setAi({ researchOff: !e.target.checked })} />
         <span>The app researches your data on its own — what you take, eat, how you train, move, your heart: at most {RESEARCH.perWeek} a week, {usd(RESEARCH.monthUsd)} a month, none once the month is past half its {usd(budget)}{(ai.researched ?? []).length ? ` · this month ${usd(researchUsd(ai.researched ?? [], localDay(now.getTime())))}` : ""}</span></label>
       <label className="field">Research (the weekly deep dive, experiment verdicts, supplement look-ups)<select value={ai.models.research} onChange={(e) => pick("research", e.target.value as ModelChoice)}>{option("research")}</select></label>
-      <p className="note">Estimate for a month with these: ≈ {usd(est.total)} — {est.measured ? `from your last ${est.measured} call${est.measured > 1 ? "s" : ""}` : "a first guess until you've used it"}. Past {usd(budget)} in a month everything drops to {MODELS.haiku.label} until the 1st; hard stop at {cap} calls a day.</p>
+      <p className="note">Estimate for a month with these: ≈ {usd(est.total)} — {est.measured ? `from your last ${est.measured} call${est.measured > 1 ? "s" : ""}` : "a first guess until you've used it"}. Past {usd(budget * SOFT_SHARE)} in a month the chat and the reads drop to {MODELS.haiku.label}, past {usd(budget)} everything does, until the 1st; hard stop at {cap} calls a day.</p>
       {(recent.length > 0 || failed.length > 0) && <details className="ai-calls"><summary>Last calls — what each cost{failed.length ? `, and ${failed.length} that failed` : ""}</summary>
         {/* the ones that failed in among them, with why (22 Oct: the morning read didn't come, and nothing said why) */}
         <ul>{[...recent.map((c) => ({ at: c.at, c, f: null })), ...failed.map((f) => ({ at: f.at, c: null, f }))].sort((x, y) => y.at - x.at).slice(0, 12).map(({ at, c, f }) => c

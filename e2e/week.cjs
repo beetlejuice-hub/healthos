@@ -2,7 +2,7 @@
 // planted (7 drinks a week, in bed 23:50 by the band, 140 g protein on Mon–Wed, creatine every day, 3 sessions), then this
 // Monday (1 drink, in bed 23:20, 150 g, the stack, a session) and Tuesday so far (the stack, 82 g). Tue 21:40: after the
 // check-in and For you (Today A's order kept), "Your week" (PLAN 204: the week you defend) — 70 of 70 left, level 1, last
-// week kept 0; the five goals with what each can still take; the boss (bed, last week's weakest: 80 HP); the next move is
+// week kept 0; the five goals with what each can still take; the focus (bedtime, last week's weakest: 20 % there); the next move is
 // tonight's bed; the race and you against everyone. Fits 320 and 390. Control: a new account — no card.
 const { chromium, APP, OUT, handle, tables } = require('./harness.cjs');
 
@@ -70,12 +70,12 @@ function world() {
     '5 drinks or fewer · 1 so far 4 to spare', 'In bed by 23:30 · 1 of 5 2 spare nights', '140 g protein · 1 of 4 3 spare days', 'The stack, every day · 2 of 6 1 spare day', '3 sessions · 1 of 3 4 spare days']));
   const days = await c.locator('[data-goal="bed"] .wk-days i').evaluateAll((is) => is.map((i) => i.className || '-'));
   check(`bed: Monday hit, tonight open (${days.join(' ')})`, days.join(' ') === 'hit - - - - - -');
-  const boss = c.locator('.wk-boss');
-  check(`the boss: last week's weakest, bed — the Goblin, 80 HP (${(await boss.innerText().catch(() => '')).replace(/\s+/g, ' ')})`, await boss.getAttribute('data-boss') === 'bed' && await boss.getAttribute('data-hp') === '80' && /^The 2 AM Goblin · 80 HP left/.test((await boss.innerText()).replace(/\s+/g, ' ')));
-  check(`the next move is the boss's: tonight's bed (${await c.locator('.wk-move').innerText().catch(() => '')})`, (await c.locator('.wk-move').innerText().catch(() => '')).replace(/\s+/g, ' ') === 'Next: in bed by 23:30 tonight makes it 2 of 5.');
+  const focus = c.locator('.wk-focus');
+  check(`the focus: last week's weakest, bedtime — 20 % there (${(await focus.innerText().catch(() => '')).replace(/\s+/g, ' ')})`, await focus.getAttribute('data-focus') === 'bed' && await focus.getAttribute('data-left') === '80' && /^This week's focus: bedtime · 20 % there$/i.test((await focus.innerText()).replace(/\s+/g, ' ').trim()));
+  check(`the next move is the focus's: tonight's bed (${await c.locator('.wk-move').innerText().catch(() => '')})`, (await c.locator('.wk-move').innerText().catch(() => '')).replace(/\s+/g, ' ') === 'Next: in bed by 23:30 tonight makes it 2 of 5.');
   check(`the race and you vs everyone (${await c.locator('.wk-vs').innerText().catch(() => '')})`, /^The race · level with last week's you You vs everyone · resting heart rate 11 under the average of 92,457 Fitbit wearers$/.test((await c.locator('.wk-vs').innerText().catch(() => '')).replace(/\s+/g, ' ')));
   check('no stake owed, no treat (none set)', await c.locator('.wk-owed').count() === 0 && await c.locator('.wk-treat').count() === 0);
-  check('the game page link', await c.getByRole('link', { name: /Your card, the boss, the race and the season/ }).count() === 1);
+  check('the game page link', await c.getByRole('link', { name: /Your card, the race and the season/ }).count() === 1);
   check(`390: fits (${await pg.evaluate(() => document.documentElement.scrollWidth)} px)`, await pg.evaluate(() => document.documentElement.scrollWidth) <= 390);
   await c.screenshot({ path: OUT + 'week-390.png' });
   await ctx.close();

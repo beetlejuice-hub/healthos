@@ -1,4 +1,4 @@
-// PLAN 204 — the game, wilder: defend your 70, levels, ghosts, the boss, seasons, the stake; and the player card.
+// PLAN 204/205 — the game: defend your 70, levels, ghosts, the week's focus, seasons, the stake; and the player card.
 // Known answers from planted weeks (the same six weeks as game.test: 7 drinks a week, in bed at 23:50, 150 g protein
 // Mon–Wed, the stack every day, sessions Mon/Wed/Fri) with last week planted good — in bed 23:20 every night, 4 drinks.
 // Controls: a bad last week, a new account, a stake not owed, a card with too little to rate.
@@ -6,7 +6,7 @@ import { describe, expect, it } from "vitest";
 import { cardOf, middle, rate } from "./card";
 import { vo2At } from "./fitage";
 import type { Inputs, Progress } from "./game";
-import { bossOf, costOf, gameOf, ghosts, history, levelOf, PLAY, playWeek, seasonOf, stakeDue, titles, track, type Past } from "./play";
+import { costOf, focusOf, gameOf, ghosts, history, levelOf, PLAY, playWeek, seasonOf, stakeDue, track, type Past } from "./play";
 import { addDays, atMinute } from "./time";
 import type { Entry, Supplement } from "./types";
 
@@ -111,39 +111,36 @@ describe("ghosts (STEP UP: competition)", () => {
   });
 });
 
-describe("the boss (a story pulls you out)", () => {
-  it("last week's weakest goal is this week's boss: protein (3 of 4) — The Protein Thief, 75 HP on Tuesday", () => {
-    const inp = thisWeek(world()), past = history(TODAY, inp), b = bossOf(playWeek(MON, TODAY, inp)!, past.at(-1)!)!;
-    expect([b.id, b.name, b.hp, b.state, b.next]).toEqual(["protein", "The Protein Thief", 75, "fighting", "drinks"]);
+describe("this week's focus (last week's weakest goal; plain words — no creatures, 10 Nov)", () => {
+  it("protein (3 of 4 last week) is the focus: 75 % still to go on Tuesday; after it, drinks", () => {
+    const inp = thisWeek(world()), past = history(TODAY, inp), f = focusOf(playWeek(MON, TODAY, inp)!, past.at(-1)!)!;
+    expect([f.id, f.area, f.left, f.state, f.next]).toEqual(["protein", "Protein", 75, "on", "drinks"]);
   });
-  it("beaten when the goal's met: protein on Thu, Fri and Sat → 0 HP, a title", () => {
+  it("done when the goal's met: protein on Thu, Fri and Sat → nothing left", () => {
     const sat = addDays(MON, 5), inp = thisWeek(world(), [food(addDays(MON, 3), 150), food(addDays(MON, 4), 150), food(sat, 150)]);
-    const b = bossOf(playWeek(MON, sat, inp)!, history(TODAY, inp).at(-1)!)!;
-    expect([b.hp, b.state, b.title]).toEqual([0, "beaten", "Thief Catcher"]);
+    const f = focusOf(playWeek(MON, sat, inp)!, history(TODAY, inp).at(-1)!)!;
+    expect([f.left, f.state]).toEqual([0, "done"]);
   });
-  it("control: after a bad week the boss is bed (0 of 5), and it escapes once a third night's missed", () => {
+  it("control: after a bad week the focus is bedtime (0 of 5), missed once a third night's gone", () => {
     const inp = thisWeek(world(false)), last = history(TODAY, inp).at(-1)!;
-    expect(bossOf(playWeek(MON, TODAY, inp)!, last)!.name).toBe("The 2 AM Goblin");
+    expect(focusOf(playWeek(MON, TODAY, inp)!, last)!.area).toBe("Bedtime");
     const thu = addDays(MON, 3), late = thisWeek(world(false), [], [1, 2, 3].map((k) => ({ eve: addDays(MON, k), h: 25 })));
-    expect(bossOf(playWeek(MON, thu, late, true)!, last)!.state).toBe("escaped");
+    expect(focusOf(playWeek(MON, thu, late, true)!, last)!.state).toBe("missed");
   });
-  it("controls: no last week, or a last week that met every goal — no boss", () => {
+  it("controls: no last week, or a last week that met every goal — no focus", () => {
     const now = playWeek(MON, TODAY, thisWeek(world()))!;
-    expect(bossOf(now, null)).toBeNull();
+    expect(focusOf(now, null)).toBeNull();
     const all = history(TODAY, thisWeek(world())).find((w) => w.points === 70 && w.costs.every((c) => c.met))!;
-    expect(bossOf(now, all)).toBeNull();
-  });
-  it("titles: last week beat the Goblin (bed was the boss after a bad week, and every night was on time)", () => {
-    expect(titles(history(TODAY, thisWeek(world())))[0]).toBe("Goblin Slayer");
+    expect(focusOf(now, all)).toBeNull();
   });
 });
 
 describe("seasons (fresh starts; games fade unless they change)", () => {
-  it("season 1 is 2 Nov – 13 Dec; its twist from its first week's boss (bed → Night Shift); XP = points kept + 10 a night on time", () => {
+  it("season 1 is 2 Nov – 13 Dec; its area from its first week's focus (bedtime → Sleep); XP = points kept + 10 a night on time", () => {
     const inp = thisWeek(world()), past = history(TODAY, inp), s = seasonOf(TODAY, playWeek(MON, TODAY, inp), past);
-    expect([s.n, s.from, s.to, s.week, s.name]).toEqual([1, LAST, "2026-12-13", 2, "Night Shift"]);
+    expect([s.n, s.from, s.to, s.week, s.name]).toEqual([1, LAST, "2026-12-13", 2, "Sleep"]);
     expect(s.xp).toBe(60 + 70 + 70 + 10); // last week 60 + 7 nights; this week 70 so far + Monday's night
-    expect([s.tier, s.toNext, s.nextReward, s.won]).toEqual([4, 40, { tier: 6, title: "Regular" }, ["Rookie"]]);
+    expect([s.tier, s.toNext]).toEqual([4, 40]);
   });
   it("the next season starts 14 Dec; before the first, it's season 1's first week", () => {
     expect(seasonOf("2026-12-15", null, []).from).toBe("2026-12-14");
@@ -165,9 +162,9 @@ describe("the stake (a deposit you'd lose)", () => {
 });
 
 describe("all of it", () => {
-  it("gameOf: the week, level, ghosts, boss, season", () => {
+  it("gameOf: the week, level, ghosts, focus, season", () => {
     const g = gameOf(TODAY, thisWeek(world()))!;
-    expect([g.now.points, g.level.level >= 1, g.boss?.id, g.season.name]).toEqual([70, true, "protein", "Night Shift"]);
+    expect([g.now.points, g.level.level >= 1, g.focus?.id, g.season.name]).toEqual([70, true, "protein", "Sleep"]);
     expect(g.risk.map((c) => c.id)).toEqual([]);
   });
   it("control: a new account has no game", () => {

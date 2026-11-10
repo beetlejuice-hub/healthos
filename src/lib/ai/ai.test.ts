@@ -2,7 +2,7 @@ import type { Finding } from "../findings";
 import { describe, expect, it } from "vitest";
 import { fromDescribed, judge } from "./apply";
 import { ASK_MORE, CONTEXT_MAX, buildContext, onTodayLines, dayTimeline, feelByTime, moodJournal } from "./context";
-import { checkAsk, checkDescribe, checkDigest, checkNight, checkQuestions, costUsd, estimateMonthUsd, jsonFrom, modelFor, modelsNow, MONTHLY_USD, SYSTEM, type CallLog } from "./tasks";
+import { checkAsk, checkDescribe, checkDigest, checkNight, checkQuestions, costUsd, estimateMonthUsd, jsonFrom, modelFor, modelsNow, MONTHLY_USD, SOFT_SHARE, SYSTEM, type CallLog } from "./tasks";
 import { parseItem } from "../quickadd";
 import { mealFood } from "../units";
 import { runChatTool } from "./chattools";
@@ -257,23 +257,25 @@ describe("the month's estimate (owner, 15 Oct: \"i feel like u are waay underest
   });
 });
 
-describe("models (owner, 10 Nov: \"use minimal ai … degrade the claude api models a bit so its cheaper\")", () => {
-  it("the light jobs, the chat and the reads on Haiku; the deep dive, verdicts and supplement look-ups on Sonnet; Opus never by default", () => {
+describe("models (owner, 10 Nov: \"keep usage at 10 dollar mark max, but i dont want to limit to haiku … research we can keep sonnet\")", () => {
+  it("food and the questions on Haiku; the chat, the reads and the research on Sonnet; Opus never by default", () => {
     const m = modelsNow(undefined, undefined);
-    expect((["digest", "night", "review", "chat", "dive", "verdict", "supplement", "describe", "questions", "research"] as const).map((t) => modelFor(t, m, 0))).toEqual(["haiku", "haiku", "haiku", "haiku", "sonnet", "sonnet", "sonnet", "haiku", "haiku", "haiku"]);
+    expect((["describe", "questions", "chat", "digest", "night", "review", "research", "dive", "verdict", "supplement"] as const).map((t) => modelFor(t, m, 0))).toEqual(["haiku", "haiku", "sonnet", "sonnet", "sonnet", "sonnet", "sonnet", "sonnet", "sonnet", "sonnet"]);
     expect(Object.values(m)).not.toContain("opus");
   });
-  it("picks saved before move once (his were Sonnet for the reads and the chat, Opus for research); a pick made after stays", () => {
-    expect(modelsNow({ light: "haiku", everyday: "sonnet", reads: "sonnet", research: "opus" }, 2)).toEqual({ light: "haiku", everyday: "haiku", reads: "haiku", research: "sonnet" });
-    expect(modelsNow({ light: "haiku", everyday: "opus", research: "opus" }, undefined)).toEqual({ light: "haiku", everyday: "haiku", reads: "haiku", research: "sonnet" });
-    expect(modelsNow({ light: "sonnet", everyday: "opus", reads: "opus", research: "haiku" }, 3)).toEqual({ light: "sonnet", everyday: "opus", reads: "opus", research: "haiku" });
-    // an old app version's request (no reads tier) gets the reads on the default
-    expect(modelFor("digest", { light: "haiku", everyday: "opus", research: "opus" }, 0)).toBe("haiku");
+  it("picks saved before move once (v3's Haiku chat and reads among them); a pick made after stays", () => {
+    expect(modelsNow({ light: "haiku", everyday: "haiku", reads: "haiku", research: "sonnet" }, 3)).toEqual({ light: "haiku", everyday: "sonnet", reads: "sonnet", research: "sonnet" });
+    expect(modelsNow({ light: "haiku", everyday: "opus", research: "opus" }, undefined)).toEqual({ light: "haiku", everyday: "sonnet", reads: "sonnet", research: "sonnet" });
+    expect(modelsNow({ light: "sonnet", everyday: "opus", reads: "opus", research: "haiku" }, 4)).toEqual({ light: "sonnet", everyday: "opus", reads: "opus", research: "haiku" });
+    expect(modelFor("digest", { light: "haiku", everyday: "opus", research: "opus" }, 0)).toBe("sonnet"); // an old app version's request: the reads' default
   });
-  it("past $10 in a month, everything on Haiku until the 1st", () => {
-    expect(MONTHLY_USD).toBe(10);
-    expect(modelFor("dive", { light: "haiku", everyday: "opus", reads: "opus", research: "opus" }, 10)).toBe("haiku");
-    expect(modelFor("dive", { light: "haiku", everyday: "opus", reads: "opus", research: "opus" }, 9.99)).toBe("opus");
+  it("past $10 the chat and the reads on Haiku, the research kept; past $20 everything on Haiku", () => {
+    expect([MONTHLY_USD, SOFT_SHARE]).toEqual([20, 0.5]);
+    const m = modelsNow(undefined, undefined);
+    expect((["chat", "digest", "dive", "verdict"] as const).map((t) => modelFor(t, m, 9.99))).toEqual(["sonnet", "sonnet", "sonnet", "sonnet"]);
+    expect((["chat", "digest", "dive", "verdict"] as const).map((t) => modelFor(t, m, 10))).toEqual(["haiku", "haiku", "sonnet", "sonnet"]);
+    expect((["chat", "digest", "dive", "verdict"] as const).map((t) => modelFor(t, m, 20))).toEqual(["haiku", "haiku", "haiku", "haiku"]);
+    expect(modelFor("dive", { light: "haiku", everyday: "opus", reads: "opus", research: "opus" }, 15)).toBe("opus"); // his own pick for research holds to $20
   });
 });
 

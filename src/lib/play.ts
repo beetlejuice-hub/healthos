@@ -7,10 +7,10 @@
  *            BE FIT (Patel 2017): points you hold and can lose beat points you earn, 53 % of goal days against 32 %
  *   ghosts   your points day by day against last week's you and your best week — STEP UP (Patel 2019): competition beat
  *            support and teamwork, and lasted after
- *   boss     your weakest goal from last week as a boss: its HP is what the goal still needs; beaten, a title — a story
- *            pulls people out (Pokémon Go, Althoff 2016)
+ *   focus    your weakest goal from last week, put first: how much of it is still to go (owner, 10 Nov, on the
+ *            boss version: "this goblin ass is cringe" — so no creatures, no titles; plain words)
  *   season   6 weeks each from a fresh start (Dai 2014), a twist from the weakest area at its start (its hits earn season
- *            XP too), 12 tiers with titles — games fade once they stop changing (Mazeas 2022)
+ *            XP too), 12 tiers — games fade once they stop changing (Mazeas 2022)
  *
  * The stake (deposit contracts, Halpern 2015) and the gym-day treat (temptation bundling, Milkman 2014) are what you
  * pick; this file only says when the stake is due. Pure.
@@ -104,17 +104,11 @@ export function ghosts(today: string, inp: Inputs, past: Past[]): Ghosts {
     vsLast: lastW && i >= 0 ? you[i] - lastW.track[i] : null, vsBest: best && i >= 0 ? you[i] - best.track[i] : null };
 }
 
-/* ------------------------------------------------------------------ the boss */
+/* ------------------------------------------------------------------ the focus */
 
-export const BOSSES: Record<GoalId, { name: string; feeds: string; title: string }> = {
-  bed: { name: "The 2 AM Goblin", feeds: "late nights", title: "Goblin Slayer" },
-  drinks: { name: "The Beer Troll", feeds: "one more round", title: "Troll Tamer" },
-  protein: { name: "The Protein Thief", feeds: "light-protein days", title: "Thief Catcher" },
-  stack: { name: "The Forgetter", feeds: "missed pills", title: "Never Forgets" },
-  sessions: { name: "The Couch Golem", feeds: "skipped sessions", title: "Golem Breaker" },
-};
+export const AREAS: Record<GoalId, string> = { bed: "Bedtime", drinks: "Drinks", protein: "Protein", stack: "The stack", sessions: "Sessions" };
 
-/** How much of a goal a finished week met, 0–1: the weakest is the boss. */
+/** How much of a goal a finished week met, 0–1: the weakest is the focus. */
 const share = (g: Progress) => (g.kind === "atMost" ? (g.done <= g.target ? 1 : g.target / Math.max(1, g.done)) : Math.min(1, g.done / Math.max(1, g.need)));
 
 /** This week's goals, weakest first by how last week went (no last week: as they come). */
@@ -123,40 +117,31 @@ export function weakest(goals: Goal[], last: Play | null): GoalId[] {
   return goals.map((g, i) => ({ id: g.id, s: s(g.id), i })).sort((a, b) => a.s - b.s || a.i - b.i).map((x) => x.id);
 }
 
-export type Boss = { id: GoalId; name: string; feeds: string; title: string; hp: number; state: "fighting" | "beaten" | "escaped"; next: GoalId | null };
-/** The boss: HP is what its goal still needs (drinks: the days still to hold); beaten when the goal's met, escaped when it can't be. None without a last week, or when last week met every goal. */
-export function bossOf(w: Play, last: Play | null): Boss | null {
-  // no last week, no weakest: no boss to fight (and no title from a fight that never was)
+export type Focus = { id: GoalId; area: string; /** % of it still to go */ left: number; state: "on" | "done" | "missed"; next: GoalId | null };
+/** The week's focus: last week's weakest goal. `left`: what it still needs (drinks: the days still to hold); done when met,
+ *  missed when it can't be. None without a last week, or when last week met every goal. */
+export function focusOf(w: Play, last: Play | null): Focus | null {
   if (!last) return null;
   const order = weakest(w.goals, last), id = order[0], was = last.goals.find((x) => x.id === id);
-  // a boss is something that beat you last week: every goal met, no boss
   if (!id || !was || share(was) >= 1) return null;
   const g = w.goals.find((x) => x.id === id)!, c = w.costs.find((x) => x.id === id)!;
   const held = w.dayN - 1 + (w.done ? 1 : 0);
-  const hp = g.kind === "atMost" ? (g.done > g.target ? 100 : Math.round(100 * (1 - held / 7))) : Math.round((100 * Math.max(0, g.need - g.done)) / g.need);
-  const state = c.met ? "beaten" : c.lost > 0 ? "escaped" : "fighting";
-  return { id, ...BOSSES[id], hp: state === "beaten" ? 0 : hp, state, next: order[1] ?? null };
-}
-
-/** The titles you've won, latest first, one each. */
-export function titles(past: Past[]): string[] {
-  const out: string[] = [];
-  past.forEach((w, i) => { const b = bossOf(w, past[i - 1]?.from === addDays(w.from, -7) ? past[i - 1] : null); if (b?.state === "beaten") out.unshift(b.title); });
-  return [...new Set(out)];
+  const left = g.kind === "atMost" ? (g.done > g.target ? 100 : Math.round(100 * (1 - held / 7))) : Math.round((100 * Math.max(0, g.need - g.done)) / g.need);
+  const state = c.met ? "done" : c.lost > 0 ? "missed" : "on";
+  return { id, area: AREAS[id], left: state === "done" ? 0 : left, state, next: order[1] ?? null };
 }
 
 /* ------------------------------------------------------------------ seasons */
 
 export const SEASONS: Record<GoalId, { name: string; twist: string }> = {
-  bed: { name: "Night Shift", twist: "every night you're in bed on time earns season XP on top" },
-  drinks: { name: "Dry Run", twist: "a week inside your drinks goal earns 50 season XP on top" },
-  protein: { name: "Fuel Up", twist: "every protein day earns season XP on top" },
-  stack: { name: "Clockwork", twist: "every full stack day earns season XP on top" },
-  sessions: { name: "Iron", twist: "every session earns season XP on top" },
+  bed: { name: "Sleep", twist: "each night in bed on time adds 10 season XP" },
+  drinks: { name: "Drinks", twist: "a week inside your drinks goal adds 50 season XP" },
+  protein: { name: "Protein", twist: "each protein day adds 10 season XP" },
+  stack: { name: "Supplements", twist: "each full stack day adds 10 season XP" },
+  sessions: { name: "Training", twist: "each session adds 10 season XP" },
 };
-export const TIER_TITLES: Record<number, string> = { 3: "Rookie", 6: "Regular", 9: "Veteran" };
 
-export type Season = { n: number; from: string; to: string; week: number; id: GoalId; name: string; twist: string; xp: number; tier: number; toNext: number | null; nextReward: { tier: number; title: string } | null; won: string[] };
+export type Season = { n: number; from: string; to: string; week: number; id: GoalId; name: string; twist: string; xp: number; tier: number; toNext: number | null };
 
 /** The week's XP: the points kept, and the twist's on top. A drinks week counts its bonus once it's over. */
 function xpOf(w: Play, twist: GoalId): number {
@@ -165,20 +150,17 @@ function xpOf(w: Play, twist: GoalId): number {
   return w.points + bonus;
 }
 
-/** The season `today` is in: 6 weeks from 2 Nov 2026, every 6 weeks after; its twist from its first week's boss. */
+/** The season `today` is in: 6 weeks from 2 Nov 2026, every 6 weeks after; its twist from its first week's focus. */
 export function seasonOf(today: string, now: Play | null, past: Past[]): Season {
   const weeks = Math.floor((Date.parse(`${monday(today)}T12:00:00`) - Date.parse(`${PLAY.seasonFrom}T12:00:00`)) / (7 * 864e5));
   const n = Math.max(0, Math.floor(weeks / PLAY.seasonWeeks)), from = addDays(PLAY.seasonFrom, 7 * PLAY.seasonWeeks * n), to = addDays(from, 7 * PLAY.seasonWeeks - 1);
   const first = from === now?.from ? now : past.find((w) => w.from === from) ?? null;
   const prev = past.find((w) => w.from === addDays(from, -7)) ?? null;
-  const id = (first ? bossOf(first, prev)?.id : null) ?? "bed";
+  const id = (first ? focusOf(first, prev)?.id : null) ?? "bed";
   const ws = [...past.filter((w) => w.from >= from && w.from <= to), ...(now && now.from >= from ? [now] : [])];
   const xp = ws.reduce((a, w) => a + xpOf(w, id), 0), tier = Math.min(PLAY.tiers, Math.floor(xp / PLAY.tierXp));
-  const rewards = { ...TIER_TITLES, [PLAY.tiers]: `${SEASONS[id].name} Legend` } as Record<number, string>;
-  const nextT = Object.keys(rewards).map(Number).filter((t) => t > tier).sort((a, b) => a - b)[0];
   return { n: n + 1, from, to, week: Math.min(PLAY.seasonWeeks, Math.max(1, weeks - n * PLAY.seasonWeeks + 1)), id, ...SEASONS[id], xp, tier,
-    toNext: tier < PLAY.tiers ? (tier + 1) * PLAY.tierXp - xp : null, nextReward: nextT ? { tier: nextT, title: rewards[nextT] } : null,
-    won: Object.keys(rewards).map(Number).filter((t) => t <= tier).sort((a, b) => b - a).map((t) => rewards[t]) };
+    toNext: tier < PLAY.tiers ? (tier + 1) * PLAY.tierXp - xp : null };
 }
 
 /* ------------------------------------------------------------------ the stake */
@@ -201,12 +183,12 @@ export function standing(g: Progress, c: Cost): { say: string; tone?: "ok" | "ri
 
 /* ------------------------------------------------------------------ all of it */
 
-export type Game = { now: Play; past: Past[]; level: { level: number; best: number }; ghosts: Ghosts; boss: Boss | null; season: Season; titles: string[]; risk: Cost[] };
+export type Game = { now: Play; past: Past[]; level: { level: number; best: number }; ghosts: Ghosts; focus: Focus | null; season: Season; risk: Cost[] };
 /** Everything the Today card and the game page show, or null with no goals this week. */
 export function gameOf(today: string, inp: Inputs): Game | null {
   const now = playWeek(monday(today), today, inp);
   if (!now) return null;
   const past = history(today, inp), last = past.at(-1)?.from === addDays(now.from, -7) ? past.at(-1)! : null;
-  return { now, past, level: levelOf(past), ghosts: ghosts(today, inp, past), boss: bossOf(now, last), season: seasonOf(today, now, past), titles: titles(past),
+  return { now, past, level: levelOf(past), ghosts: ghosts(today, inp, past), focus: focusOf(now, last), season: seasonOf(today, now, past),
     risk: now.costs.filter((c) => c.risk) };
 }

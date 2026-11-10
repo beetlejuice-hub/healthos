@@ -116,11 +116,11 @@ const RATED = { id: 'sl', kind: 'sleep', at: NOW - H, rating: 7 };
   check(`…each with when and why (${rows.map((r) => r.replace(/\n/g, ' ')).join(' | ')})`, rows.length === 2 && /^08:32 · morning read · failed\s+The AI service failed \(500\)\./.test(rows[0]) && /^08:30 · morning read · failed\s+The AI is busy/.test(rows[1]));
   await calls4.screenshot({ path: OUT + 'readretry-settings.png', timeout: 2000 }).catch(() => {});
 
-  // 10 Nov ("use minimal ai"): the reads and the chat on Haiku, the deep dive on Sonnet — his saved picks moved once
+  // 10 Nov ("keep usage at 10 dollar mark … i dont want to limit to haiku"): the chat, the reads and research on Sonnet — his saved picks moved once
   const sel = async (label) => pg.locator('#ai label.field', { hasText: label }).locator('select').inputValue({ timeout: 2000 }).catch(() => '');
   const picks = [await sel('Chat'), await sel('Daily reads'), await sel('Research')];
-  check(`Settings → AI: chat and the daily reads on Haiku, research on Sonnet (${picks.join(', ')})`, picks.join() === 'haiku,haiku,sonnet');
-  check(`…and the calls say so: the morning read asked for Haiku, the deep dive for Sonnet (${st.models.digest?.reads}, ${st.models.dive?.research})`, st.models.digest?.reads === 'haiku' && st.models.dive?.research === 'sonnet');
+  check(`Settings → AI: chat, the daily reads and research on Sonnet (${picks.join(', ')})`, picks.join() === 'sonnet,sonnet,sonnet');
+  check(`…and the calls say so: the morning read and the deep dive asked for Sonnet (${st.models.digest?.reads}, ${st.models.dive?.research})`, st.models.digest?.reads === 'sonnet' && st.models.dive?.research === 'sonnet');
   await pg.locator('#ai').screenshot({ path: OUT + 'readretry-models.png', timeout: 2000 }).catch(() => {});
   console.log('errors:', JSON.stringify(errs));
   check('no page errors', errs.length === 0);

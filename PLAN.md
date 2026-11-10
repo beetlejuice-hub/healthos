@@ -3813,3 +3813,16 @@ both reads and the questions. Phases in that order; #152 RPE waits (owner).
    - Never: quests or experiments that tell him what not to do; game notifications.
    - Insights: canvas first — web-first with lots of data, graphs, findings, things to play with (simulate); phone
      compact and more like the game.
+   - Done 10 Nov. AI: Haiku for food and the questions; Sonnet for the chat, the reads and the research (no Opus unless
+     picked; MODELS_V 4 moves saved picks once); past $10 (half of AI_MONTHLY_USD, default $20) the chat and the reads on
+     Haiku, research kept on its pick; past $20 everything Haiku. Settings → AI says which applies. Tests: ai.test (the
+     two steps, research kept), worker ai.test, sync.test, e2e readretry.
+   - Done 10 Nov. The game, plain: no creatures and no titles — lib/play focusOf (last week's weakest goal: "% there",
+     done, out of reach), seasons named by their area (Sleep, Drinks, Protein, Supplements, Training), tiers without
+     titles. Today: "This week's focus: bedtime · 20 % there". Tests: play.test, e2e week, e2e game (no goblin, troll or
+     HP anywhere on the page).
+   - Canvas 10 Nov https://claude.ai/artifact/Qjg5CUfXJ9vwvwMTfYYhuA — A the lab (numbers across the top, every metric
+     on one clock as lanes with drinks and sessions marked, findings down the side, a what-if from his own nights with a
+     range), B a scatter lab (any two things, a lag, colour by, held-level fit, slope with its range, how sure, splits,
+     the nights), C findings as a notebook (each a figure to poke: drinks in steps, the bedtime curve, training and deep
+     sleep, what didn't hold), D the phone (three numbers, findings as swipe cards, a small what-if). Waiting on his pick.

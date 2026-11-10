@@ -60,10 +60,10 @@ describe("mergePull", () => {
   // owner, 27 Oct ("4 ok"): the reads and the chat on Sonnet; an older device's doc must not put them back on Opus
   it("an older device's AI doc: its model picks move like this one's did; a pick made since stays", () => {
     const old = mergePull(base, [], [{ key: "ai", value: { models: { light: "haiku", everyday: "opus", research: "opus" }, memory: [] }, updated_at: "x" }], []);
-    expect(old.ai.models).toEqual({ light: "haiku", everyday: "haiku", reads: "haiku", research: "sonnet" });
+    expect(old.ai.models).toEqual({ light: "haiku", everyday: "sonnet", reads: "sonnet", research: "sonnet" });
     const two = mergePull(base, [], [{ key: "ai", value: { models: { light: "haiku", everyday: "sonnet", reads: "sonnet", research: "opus" }, modelsV: 2 }, updated_at: "x" }], []);
-    expect(two.ai.models).toEqual({ light: "haiku", everyday: "haiku", reads: "haiku", research: "sonnet" }); // 10 Nov: moved once more
-    const mine = mergePull(base, [], [{ key: "ai", value: { models: { light: "haiku", everyday: "opus", reads: "sonnet", research: "opus" }, modelsV: 3 }, updated_at: "x" }], []);
+    expect(two.ai.models).toEqual({ light: "haiku", everyday: "sonnet", reads: "sonnet", research: "sonnet" }); // 10 Nov: moved once more
+    const mine = mergePull(base, [], [{ key: "ai", value: { models: { light: "haiku", everyday: "opus", reads: "sonnet", research: "opus" }, modelsV: 4 }, updated_at: "x" }], []);
     expect(mine.ai.models.everyday).toBe("opus");
   });
 });

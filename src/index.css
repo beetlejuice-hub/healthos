@@ -2407,8 +2407,8 @@ span.fd-score[data-band="none"] { background: none; min-width: 34px; }
 .wk-goals b.risk { color: var(--gym); }
 .wk-goals b.lost { color: var(--warn); }
 .wk-goals b { color: var(--c-ink-2); font-weight: 600; }
-.wk-boss { margin: 0; display: grid; gap: 6px; padding: 10px 12px; border-radius: 12px; background: color-mix(in srgb, var(--supp) 9%, var(--c-card-2)); font-size: 13.5px; }
-.wk-boss b { font-weight: 700; }
+.wk-focus { margin: 0; display: grid; gap: 6px; padding: 10px 12px; border-radius: 12px; background: color-mix(in srgb, var(--supp) 9%, var(--c-card-2)); font-size: 13.5px; }
+.wk-focus b { font-weight: 700; }
 .wk-hp { display: block; height: 6px; border-radius: 3px; background: var(--c-track); overflow: hidden; }
 .wk-hp i { display: block; height: 100%; border-radius: 3px; background: var(--supp); }
 .wk-owed { margin: 0; display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 12px; border-radius: 12px; background: var(--c-card-2); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--warn) 45%, transparent); font-size: 13.5px; line-height: 1.4; }
@@ -2444,7 +2444,7 @@ span.fd-score[data-band="none"] { background: none; min-width: 34px; }
 .gm-foot { margin: 0; font-size: 12px; line-height: 1.45; color: var(--c-ink-2); }
 .gm-big { font-family: var(--f-cond); font-size: 26px; line-height: 1.05; text-transform: uppercase; }
 .gm-sub { font-size: 13.5px; line-height: 1.4; color: var(--c-ink-2); }
-.gm-boss { background: linear-gradient(180deg, color-mix(in srgb, var(--supp) 12%, var(--c-card)) 0%, var(--c-card) 100%); }
+.gm-focus { background: linear-gradient(180deg, color-mix(in srgb, var(--supp) 12%, var(--c-card)) 0%, var(--c-card) 100%); }
 .gm-hp { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 10px; font-size: 12.5px; font-weight: 700; letter-spacing: .08em; }
 .gm-hpbar { height: 12px; border-radius: 6px; background: var(--c-track); overflow: hidden; }
 .gm-hpbar i { display: block; height: 100%; border-radius: 6px; background: var(--supp); }
