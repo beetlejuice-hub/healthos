@@ -47,3 +47,16 @@ export function vsOthers(d: { steps?: number | null; sleepMin?: number | null; r
 
 /** The section the reads get, or nothing. */
 export const vsBlock = (lines: string[]): string[] => (lines.length ? ["## You against everyone else (the app's numbers from big studies — quote these, never make up another comparison)", ...lines.map((l) => `- ${l}`)] : []);
+
+/**
+ * The one comparison for a small space (Today's week card): the most striking of the three — the furthest from the
+ * average, in spreads (resting heart rate's spread taken as 8 bpm, men's 50–80 being most) — short: "more steps
+ * yesterday than about 85 % of 717,527 people". Null with nothing known.
+ */
+export function vsBest(d: { steps?: number | null; sleepMin?: number | null; rhr?: number | null }): string | null {
+  const c: [number, string][] = [];
+  if (d.steps != null && d.steps > 0) { const z = (d.steps - NORMS.steps.mean) / NORMS.steps.sd, p = normalCdf(z); c.push([Math.abs(z), z >= 0 ? `more steps yesterday than ${about(p)} of 717,527 people` : `fewer steps yesterday than ${about(1 - p)} of 717,527 people`]); }
+  if (d.sleepMin != null && d.sleepMin > 0) { const z = (d.sleepMin - NORMS.sleep.mean) / NORMS.sleep.sd, p = normalCdf(z); c.push([Math.abs(z), z >= 0 ? `longer asleep last night than ${about(p)} of 120,000 Fitbit wearers` : `shorter asleep last night than ${about(1 - p)} of 120,000 Fitbit wearers`]); }
+  if (d.rhr != null && d.rhr > 25) { const diff = Math.round(d.rhr - NORMS.rhr.mean); c.push([Math.abs(diff) / 8, diff === 0 ? "resting heart rate right at the average of 92,457 Fitbit wearers" : `resting heart rate ${Math.abs(diff)} ${diff < 0 ? "under" : "over"} the average of 92,457 Fitbit wearers`]); }
+  return c.length ? c.sort((a, b) => b[0] - a[0])[0][1] : null;
+}

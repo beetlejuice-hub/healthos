@@ -2363,3 +2363,34 @@ span.fd-score[data-band="none"] { background: none; min-width: 34px; }
 /* The reads' "you vs everyone" (PLAN 202): a scoreboard line where the summary was */
 .rd-vs { margin: 6px 0 0; font-size: 14.5px; line-height: 1.45; display: grid; gap: 2px; }
 .rd-vs small { font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--ok); }
+
+/* Your week (PLAN 203, canvas A): the score ring, the goals, the next move */
+.week { display: grid; gap: 12px; }
+.wk-top { display: flex; align-items: center; gap: 14px; }
+.wk-ring { position: relative; width: 74px; height: 74px; flex: none; display: grid; place-items: center; }
+.wk-ring svg { position: absolute; inset: 0; }
+.wk-ring circle { fill: none; stroke-width: 7; }
+.wk-ring .wk-track { stroke: var(--c-track); }
+.wk-ring .wk-arc { stroke: var(--gym); stroke-linecap: round; }
+.wk-ring b { font-family: var(--f-cond); font-size: 30px; line-height: 1; }
+.wk-words { display: grid; gap: 3px; min-width: 0; font-size: 13.5px; }
+.wk-k { font-family: var(--f-cond); font-size: 20px; font-weight: 700; letter-spacing: .02em; text-transform: uppercase; }
+.wk-pace { color: var(--gym); }
+.wk-words small { font-size: 12.5px; color: var(--c-ink-2); }
+.wk-goals { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.wk-goals li { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px 10px; align-items: center; font-size: 14px; }
+.wk-t { font-weight: 600; }
+.wk-t span { font-weight: 400; color: var(--c-ink-2); }
+.wk-goals b { font-size: 13px; font-variant-numeric: tabular-nums; }
+.wk-goals b.ok { color: var(--ok); }
+.wk-days { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 3px; }
+.wk-days i { height: 6px; border-radius: 3px; background: var(--c-track); }
+.wk-days i.hit { background: var(--gym); }
+.wk-days i.miss { background: #4a3b1d; }
+.wk-bar { grid-column: 1 / -1; height: 6px; border-radius: 3px; background: var(--c-track); overflow: hidden; }
+.wk-bar i { display: block; height: 100%; border-radius: 3px; background: var(--gym); }
+.wk-bar i.ok { background: var(--ok); } .wk-bar i.over { background: var(--warn); }
+.wk-move { margin: 0; padding: 10px 12px; border-radius: 12px; background: var(--c-card-2); font-size: 13.5px; line-height: 1.4; }
+.wk-move b { color: var(--gym); }
+.wk-vs { margin: 0; font-size: 12.5px; line-height: 1.45; color: var(--c-ink-2); }
+.wk-vs b { color: var(--ok); font-weight: 600; }

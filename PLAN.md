@@ -3732,3 +3732,16 @@ both reads and the questions. Phases in that order; #152 RPE waits (owner).
    - One week score 0–100 from them, against last week and with "you vs everyone" (lib/norms).
    - Streaks that keep one free miss a week.
    - Canvas first (a few directions at phone size), the default built while he picks.
+   - Built 10 Nov (A, while he picks): canvas https://claude.ai/artifact/NJWv92De7QkzN9KzhvhD1V — A "Your week" under
+     the tiles, A's Sunday (the week done, next week's goals), B goals inside the tiles with the score up top, C one move
+     at a time. lib/game: goals each Monday from the 4 weeks before — drinks (usual week less a quarter, from 2+ a week),
+     in bed by (usual less 15 min, on the quarter hour, from 10+ band nights), protein days (usual + 1, 3–6), the stack
+     (6 of 7, one free miss), sessions (usual week); 20 points each, scaled to 100 with fewer; so far and on pace (the
+     same rate to Sunday); drinks earn with the days within the goal, half one over; last week scored the same way;
+     the stack's streak lets one miss a week through. components/WeekCard on Today after the check-in and For you (under the tiles pushed the check-in off the first
+     screen, against Today A's order of 28 Oct): the ring, "On pace
+     for 100 · last week 55", each goal with its days, the next move ("in bed by 23:30 tonight makes it 2 of 5"), you vs
+     everyone (lib/norms vsBest, the most striking of steps, sleep, resting heart rate). Tests: game.test (a planted six
+     weeks, exact points and pace; controls: a new account, no drinks, no band, the drinks goal's edges, the streak),
+     norms.test, e2e week (320 and 390; control: a new account). Not yet: Sunday's done-and-next-week screen with
+     "Keep these / Change one", and changing a goal.

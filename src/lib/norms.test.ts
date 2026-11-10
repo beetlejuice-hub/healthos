@@ -3,7 +3,7 @@
 // 6 h 47 asleep is the middle; a resting 54 is 11 under 65. Controls: nothing known says nothing; a 0 or a junk
 // heart rate isn't compared.
 import { describe, expect, it } from "vitest";
-import { normalCdf, vsBlock, vsOthers } from "./norms";
+import { normalCdf, vsBest, vsBlock, vsOthers } from "./norms";
 
 describe("you against everyone else", () => {
   it("the bell curve: half at the middle, 84 % at one spread, 98 % at two", () => {
@@ -25,5 +25,11 @@ describe("you against everyone else", () => {
     expect(vsOthers({ steps: 0, sleepMin: 0, rhr: 3 })).toEqual([]);
     expect(vsBlock([])).toEqual([]);
     expect(vsBlock(["x"])[0]).toMatch(/^## You against everyone else/);
+  });
+  it("the one for a small space: the furthest from the average, short", () => {
+    expect(vsBest({ steps: 10_000, sleepMin: 407, rhr: 54 })).toBe("more steps yesterday than about 95 % of 717,527 people"); // 1.9 spreads vs 0 and 1.4
+    expect(vsBest({ steps: 5_000, sleepMin: 407, rhr: 50 })).toBe("resting heart rate 15 under the average of 92,457 Fitbit wearers");
+    expect(vsBest({ sleepMin: 330 })).toBe("shorter asleep last night than about 95 % of 120,000 Fitbit wearers");
+    expect(vsBest({})).toBeNull();
   });
 });
