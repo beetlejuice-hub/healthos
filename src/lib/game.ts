@@ -48,6 +48,10 @@ const median = (v: number[]) => { const s = [...v].sort((a, b) => a - b); return
 const week7 = (from: string) => Array.from({ length: 7 }, (_, k) => addDays(from, k));
 const hhmm = (h: number) => { const m = Math.round(h * 60) % 1440; return `${String(Math.floor(m / 60)).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}`; };
 
+/** byDay once per entries list: the history below scores many weeks from the same entries. */
+const days0 = new WeakMap<Entry[], ReturnType<typeof byDay>>();
+const daysOf = (es: Entry[]) => { let d = days0.get(es); if (!d) { d = byDay(es); days0.set(es, d); } return d; };
+
 const drinkDays = (es: Entry[]) => es.filter((e) => e.kind === "drink" && e.alcoholG > 0).map((e) => localDay(e.at));
 function stackDay(inp: Inputs, day: string): boolean | null {
   const due = inp.supplements.filter((s) => s.active && dueOn(s, day));
@@ -68,7 +72,7 @@ export function goalsFor(from: string, inp: Inputs): Goal[] {
     const m = median(beds.map((b) => b.h)), at = Math.max(GAME.earliestBed, Math.floor((m - 0.25) * 4) / 4);
     out.push({ id: "bed", title: `In bed by ${hhmm(at)}`, detail: `${GAME.bedNights} nights · usual ${hhmm(m)}`, kind: "days", target: GAME.bedNights, need: GAME.bedNights, at });
   }
-  const days = byDay(inp.entries), logged = [...days.values()].filter((d) => d.logged && d.day >= weeks[GAME.weeks - 1] && d.day < from);
+  const days = daysOf(inp.entries), logged = [...days.values()].filter((d) => d.logged && d.day >= weeks[GAME.weeks - 1] && d.day < from);
   if (inp.proteinGoal > 0 && logged.length >= GAME.minLogged) {
     const hit = median(weeks.map((w) => logged.filter((d) => inWeek(d.day, w) && d.totals.p >= inp.proteinGoal).length));
     const need = Math.min(6, Math.max(3, Math.round(hit) + 1));
@@ -80,8 +84,8 @@ export function goalsFor(from: string, inp: Inputs): Goal[] {
   return out;
 }
 
-/** One goal over its week up to `today` (today's day isn't decided until it's done, or over). */
-export function progress(g: Goal, from: string, today: string, inp: Inputs): Progress {
+/** One goal over its week up to `today` (today's day isn't decided until it's done, or over — `closed`: it's over). */
+export function progress(g: Goal, from: string, today: string, inp: Inputs, closed = false): Progress {
   const ds = week7(from), dayN = Math.min(7, Math.max(1, ds.filter((d) => d <= today).length)), P = GAME.pts;
   if (g.kind === "atMost") {
     const done = drinkDays(inp.entries).filter((d) => d >= from && d <= today && d < addDays(from, 7)).length;
@@ -94,9 +98,10 @@ export function progress(g: Goal, from: string, today: string, inp: Inputs): Pro
   }
   const hitOn = (d: string): boolean | null => {
     if (d > today) return null;
-    if (g.id === "bed") { const b = inp.beds.find((x) => x.eve === d); return b ? b.h <= g.at! + 1 / 120 : d < today ? false : null; } // tonight isn't over
-    if (g.id === "protein") { const p = byDay(inp.entries).get(d)?.totals.p ?? 0; return p >= inp.proteinGoal ? true : d < today ? false : null; }
-    const s = stackDay(inp, d); return s === true ? true : s === false && d < today ? false : null;
+    const over = d < today || closed;
+    if (g.id === "bed") { const b = inp.beds.find((x) => x.eve === d); return b ? b.h <= g.at! + 1 / 120 : over ? false : null; } // tonight isn't over
+    if (g.id === "protein") { const p = daysOf(inp.entries).get(d)?.totals.p ?? 0; return p >= inp.proteinGoal ? true : over ? false : null; }
+    const s = stackDay(inp, d); return s === true ? true : s === false && over ? false : null;
   };
   const days = ds.map(hitOn), done = days.filter((x) => x === true).length, decided = days.filter((x) => x !== null).length;
   const rate = decided ? done / decided : 1, left = days.filter((x) => x === null).length;

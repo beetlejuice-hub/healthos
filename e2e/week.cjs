@@ -1,8 +1,9 @@
 // The game on Today (PLAN 203; owner, 10 Nov: "1 yes 2 yes" — weekly goals plus one week score, Today first). Six weeks
 // planted (7 drinks a week, in bed 23:50 by the band, 140 g protein on Mon–Wed, creatine every day, 3 sessions), then this
 // Monday (1 drink, in bed 23:20, 150 g, the stack, a session) and Tuesday so far (the stack, 82 g). Tue 21:40: after the
-// check-in and For you (Today A's order kept), "Your week" — 28 so far, on pace for 100, last week 55; the five goals with their days; the next move is
-// tonight's bed; you against everyone. Fits 320 and 390. Control: a new account — no card.
+// check-in and For you (Today A's order kept), "Your week" (PLAN 204: the week you defend) — 70 of 70 left, level 1, last
+// week kept 0; the five goals with what each can still take; the boss (bed, last week's weakest: 80 HP); the next move is
+// tonight's bed; the race and you against everyone. Fits 320 and 390. Control: a new account — no card.
 const { chromium, APP, OUT, handle, tables } = require('./harness.cjs');
 
 const KEY = 'healthos.v1:u-test', MIN = 60_000, H = 3_600_000;
@@ -61,15 +62,20 @@ function world() {
   // after For you: Today A's order (the tiles, the log row, the check-in) stays (e2e hownow checks the check-in's place)
   const order = await pg.evaluate(() => { const w = document.querySelector('section.week'), f = document.querySelector('#feel'); return { after: !!w && !!f && (f.compareDocumentPosition(w) & Node.DOCUMENT_POSITION_FOLLOWING) !== 0, feelY: Math.round(f?.getBoundingClientRect().y ?? 9999) }; });
   check('after the check-in and For you', order.after && await pg.evaluate(() => { const w = document.querySelector('section.week'), y = document.querySelector('.foryou, [aria-label^="For you"]'); return !y || (y.compareDocumentPosition(w) & Node.DOCUMENT_POSITION_FOLLOWING) !== 0; }));
-  check(`the score so far, the pace, last week (${await c.getAttribute('data-score')} · ${await c.getAttribute('data-pace')} · ${(await c.locator('.wk-words').innerText().catch(() => '')).replace(/\s+/g, ' ')})`,
-    await c.getAttribute('data-score') === '28' && /On pace for 100 · last week 55/.test(await c.locator('.wk-words').innerText()) && /2 of 7 days in · 5 goals, out of 100/.test(await c.locator('.wk-words').innerText()));
+  const words = (await c.locator('.wk-top').innerText().catch(() => '')).replace(/\s+/g, ' ').trim();
+  check(`70 to defend, level, last week (${await c.getAttribute('data-points')} · ${await c.getAttribute('data-level')} · ${words})`,
+    await c.getAttribute('data-points') === '70' && await c.getAttribute('data-level') === '1' && words.toLowerCase() === '70 of 70 left your week · level 1 keep 50 by sunday and you level up 2 of 7 days in · last week you kept 0');
   const goals = (await c.locator('.wk-goals li').allInnerTexts()).map((t) => t.replace(/\s+/g, ' ').trim());
-  check(`the five goals, each so far (${JSON.stringify(goals)})`, JSON.stringify(goals) === JSON.stringify([
-    '5 drinks or fewer · usual 7 a week 1 so far', 'In bed by 23:30 · 5 nights · usual 23:50 1 of 5', '140 g protein · 4 days · usual 3 1 of 4', 'The stack, every day · 44 in a row 2 of 6', '3 sessions · your usual week 1 of 3']));
+  check(`the five goals, each so far and what it can still take (${JSON.stringify(goals)})`, JSON.stringify(goals) === JSON.stringify([
+    '5 drinks or fewer · 1 so far 4 to spare', 'In bed by 23:30 · 1 of 5 2 spare nights', '140 g protein · 1 of 4 3 spare days', 'The stack, every day · 2 of 6 1 spare day', '3 sessions · 1 of 3 4 spare days']));
   const days = await c.locator('[data-goal="bed"] .wk-days i').evaluateAll((is) => is.map((i) => i.className || '-'));
   check(`bed: Monday hit, tonight open (${days.join(' ')})`, days.join(' ') === 'hit - - - - - -');
-  check(`the next move is tonight's bed (${await c.locator('.wk-move').innerText().catch(() => '')})`, (await c.locator('.wk-move').innerText().catch(() => '')).replace(/\s+/g, ' ') === 'Next: in bed by 23:30 tonight makes it 2 of 5.');
-  check(`you vs everyone (${await c.locator('.wk-vs').innerText().catch(() => '')})`, /^You vs everyone · resting heart rate 11 under the average of 92,457 Fitbit wearers$/.test((await c.locator('.wk-vs').innerText().catch(() => '')).replace(/\s+/g, ' ')));
+  const boss = c.locator('.wk-boss');
+  check(`the boss: last week's weakest, bed — the Goblin, 80 HP (${(await boss.innerText().catch(() => '')).replace(/\s+/g, ' ')})`, await boss.getAttribute('data-boss') === 'bed' && await boss.getAttribute('data-hp') === '80' && /^The 2 AM Goblin · 80 HP left/.test((await boss.innerText()).replace(/\s+/g, ' ')));
+  check(`the next move is the boss's: tonight's bed (${await c.locator('.wk-move').innerText().catch(() => '')})`, (await c.locator('.wk-move').innerText().catch(() => '')).replace(/\s+/g, ' ') === 'Next: in bed by 23:30 tonight makes it 2 of 5.');
+  check(`the race and you vs everyone (${await c.locator('.wk-vs').innerText().catch(() => '')})`, /^The race · level with last week's you You vs everyone · resting heart rate 11 under the average of 92,457 Fitbit wearers$/.test((await c.locator('.wk-vs').innerText().catch(() => '')).replace(/\s+/g, ' ')));
+  check('no stake owed, no treat (none set)', await c.locator('.wk-owed').count() === 0 && await c.locator('.wk-treat').count() === 0);
+  check('the game page link', await c.getByRole('link', { name: /Your card, the boss, the race and the season/ }).count() === 1);
   check(`390: fits (${await pg.evaluate(() => document.documentElement.scrollWidth)} px)`, await pg.evaluate(() => document.documentElement.scrollWidth) <= 390);
   await c.screenshot({ path: OUT + 'week-390.png' });
   await ctx.close();

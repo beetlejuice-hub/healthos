@@ -122,6 +122,10 @@ export type Settings = {
   distUnit?: "mi" | "km";
   /** Whose norms your fitness age is set against (lib/fitage; owner, 27 Oct: "men"). Unset: the card asks once. */
   sex?: "male" | "female";
+  /** The game's stakes (PLAN 204): what you'd do if a week ends under 50, by its Monday — locked once set; `paid` once done. */
+  stakes?: Record<string, { what: string; paid?: boolean }>;
+  /** One thing you love, only on gym days (temptation bundling, Milkman 2014). */
+  treat?: string;
   /** The drink the one-tap button logs. Chosen on Today; ✕ clears it. */
   usualDrink: Drink | null;
   /** The newest Apple Health weigh-in already brought in (PLAN 184): synced, so one you deleted doesn't come back. */

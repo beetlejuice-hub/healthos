@@ -76,7 +76,7 @@ describe("/api/ai", () => {
     expect(sent.tools.map((t) => t.name)).toEqual(["day", "series", "find", "show_chart", "compare", "nights", "sessions", "propose", "remember", "web_search"]);
     // strict, all but propose: 28 optional fields, past the API's 24 for a request (28 Oct: every chat message turned down)
     expect(sent.tools.slice(0, 9).filter((t) => t.strict !== true).map((t) => t.name)).toEqual(["propose"]);
-    expect(sent.tools[9]).toMatchObject({ type: "web_search_20260209", max_uses: 3 });
+    expect(sent.tools[9]).toMatchObject({ type: "web_search_20250305", max_uses: 2 }); // the chat on Haiku since 10 Nov
     expect(sent.output_config.format).toBeUndefined(); // replies are Markdown now, not JSON
     expect(sent.tool_choice).toBeUndefined();
     // the app ran the tool; the same message continues — past the daily 50 it still goes through, and isn't counted again
@@ -95,7 +95,7 @@ describe("/api/ai", () => {
     expect((await handleAi(post({ task: "chat", messages: msgs, context: "ctx" }), env, w.deps)).status).toBe(429);
   });
 
-  it("review: the week read on the reads' model (Sonnet since 27 Oct), the enforced shape, a bad request refused (PLAN 65)", async () => {
+  it("review: the week read on the reads' model (Haiku since 10 Nov), the enforced shape, a bad request refused (PLAN 65)", async () => {
     const ans = { title: "Better mood, short on protein", summary: "Mood **7.5** against a usual 6.", notices: [{ title: "Mood up", text: "7.5 all week.", measure: "mood" }, { title: "", text: "dropped", measure: "" }], next: [{ what: "Protein at lunch", why: "0 of 7 days at goal" }], remember: [] };
     const w = world([{ text: JSON.stringify(ans) }]);
     const res = await handleAi(post({ task: "review", kind: "week", from: "2026-10-12", to: "2026-10-18", context: "## The week 12 Oct–18 Oct" }), env, w.deps);
@@ -104,7 +104,7 @@ describe("/api/ai", () => {
     expect(body.answer.title).toBe("Better mood, short on protein");
     expect(body.answer.notices).toEqual([{ title: "Mood up", text: "7.5 all week.", measure: "mood" }]); // an empty notice left out
     const sent = w.sent[0].body;
-    expect(sent.model).toBe("claude-sonnet-5-5");
+    expect(sent.model).toBe("claude-haiku-5-5");
     expect((sent.output_config as { format: { type: string } }).format.type).toBe("json_schema");
     expect(sent.tools).toBeUndefined();
     expect(JSON.stringify(sent.messages)).toContain("Write my week read: 2026-10-12 to 2026-10-18");
@@ -122,7 +122,7 @@ describe("/api/ai", () => {
     expect(body.answer.items[0]).toMatchObject({ name: "Pityókaleves", unit: { name: "bowl", g: 350 } });
     const sent = w.sent[0].body;
     expect(sent.model).toBe("claude-haiku-5-5");
-    expect(sent.tools).toEqual([{ type: "web_search_20250305", name: "web_search", max_uses: 2 }]);
+    expect(sent.tools).toEqual([{ type: "web_search_20250305", name: "web_search", max_uses: 1 }]);
     expect((sent.output_config as { format?: unknown }).format).toBeUndefined();
     expect(JSON.stringify(sent.messages)).toContain("Look up: pityoka leves");
     expect((w.docs.get("ai_usage") as { recent: { searches: number }[] }).recent[0].searches).toBe(1);
@@ -175,23 +175,23 @@ describe("/api/ai", () => {
     expect(await run({ task: "describe", text: "coffee" })).toBe("claude-haiku-5-5");
     expect(await run({ task: "describe", text: "coffee", models: { everyday: "opus", research: "opus" } })).toBe("claude-haiku-5-5");
     expect(await run({ task: "chat", messages: [{ role: "user", text: "yo" }], context: "c", models: { everyday: "opus", research: "opus" } })).toBe("claude-opus-5-5");
-    // 27 Oct ("4 ok"): the chat's default is Sonnet now; a pick of Opus (above) still goes
-    expect(await run({ task: "chat", messages: [{ role: "user", text: "yo" }], context: "c" })).toBe("claude-sonnet-5-5");
+    // 10 Nov ("use minimal ai"): the chat's default is Haiku now; a pick of Opus (above) still goes
+    expect(await run({ task: "chat", messages: [{ role: "user", text: "yo" }], context: "c" })).toBe("claude-haiku-5-5");
   });
 
-  it("past the month's $20, everything on Haiku 5.5 until the 1st; the usage says the budget", async () => {
-    const usage = { day: "2026-10-01", calls: 3, dayUsd: 1, month: "2026-10", monthUsd: 20.4, byModel: {} };
+  it("past the month's $10, everything on Haiku 5.5 until the 1st; the usage says the budget", async () => {
+    const usage = { day: "2026-10-01", calls: 3, dayUsd: 1, month: "2026-10", monthUsd: 10.4, byModel: {} };
     const w = world([{ text: JSON.stringify({ reply: "hi", remember: [] }) }], { usage });
     expect((await handleAi(post({ task: "chat", messages: [{ role: "user", text: "yo" }], context: "c", models: { everyday: "opus" } }), env, w.deps)).status).toBe(200);
     expect(w.sent[0].body.model).toBe("claude-haiku-5-5");
-    const w2 = world([{ text: JSON.stringify({ reply: "hi", remember: [] }) }], { usage: { ...usage, monthUsd: 19.9 } });
+    const w2 = world([{ text: JSON.stringify({ reply: "hi", remember: [] }) }], { usage: { ...usage, monthUsd: 9.9 } });
     await handleAi(post({ task: "chat", messages: [{ role: "user", text: "yo" }], context: "c", models: { everyday: "opus" } }), env, w2.deps);
     expect(w2.sent[0].body.model).toBe("claude-opus-5-5");
     const w3 = world([{ text: JSON.stringify({ reply: "hi", remember: [] }) }], { usage: { ...usage, month: "2026-09" } }); // a new month starts at 0
     await handleAi(post({ task: "chat", messages: [{ role: "user", text: "yo" }], context: "c", models: { everyday: "opus" } }), env, w3.deps);
     expect(w3.sent[0].body.model).toBe("claude-opus-5-5");
     const g = (await (await handleAi(new Request("https://app/api/ai/usage", { headers: { authorization: "Bearer good" } }), env, world([]).deps)).json()) as { budget: number };
-    expect(g.budget).toBe(20);
+    expect(g.budget).toBe(10);
   });
 
   it("drops answers that don't make physical sense", async () => {
@@ -218,7 +218,7 @@ describe("/api/ai", () => {
     const body = (await res.json()) as { answer: { items: { title: string }[] }; costUsd: number };
     expect(w.sent).toHaveLength(2);
     expect(body.answer.items.map((i) => i.title)).toEqual(["Creatine and sleep"]); // a fact without a source isn't shown
-    expect(body.costUsd).toBeCloseTo((2000 * 2 + 1000 * 10) / 1e6 + 0.03, 6); // the reads on Sonnet 5.5
+    expect(body.costUsd).toBeCloseTo((2000 * 0.1 + 1000 * 0.5) / 1e6 + 0.03, 6); // the reads on Haiku 5.5 (10 Nov)
   });
 
   it("the read's links are opened before you see it: a dead one's item goes, a matching one is marked (PLAN 160)", async () => {
@@ -283,7 +283,7 @@ describe("/api/ai", () => {
     expect(w2.sent).toHaveLength(0);
   });
 
-  it("the weekly deep dive: up to 10 searches and the reads' look-ups; its studies' links checked (PLAN 160)", async () => {
+  it("the weekly deep dive: up to 5 searches and the reads' look-ups; its studies' links checked (PLAN 160)", async () => {
     const good = "https://pubmed.ncbi.nlm.nih.gov/34883514/", gone = "https://journal.example.com/missing";
     const dive = { topic: "Is magnesium doing anything for your sleep?", why: "40 nights on it.", yourData: "6.4 with vs 6.6 without — not clear.", verdict: "Your data can't tell yet.", sure: "weak",
       found: [{ title: "Magnesium and sleep in older adults", text: "Small effect on sleep onset.", source: { title: "Magnesium supplementation and sleep in older adults", url: good } }, { title: "Gone", text: "…", source: { title: "Magnesium and REM sleep", url: gone } }] };
@@ -294,7 +294,7 @@ describe("/api/ai", () => {
     expect(body.answer.topic).toBe("Is magnesium doing anything for your sleep?");
     expect(body.answer.found.map((f) => [f.title, f.source.checked ?? false])).toEqual([["Magnesium and sleep in older adults", true]]);
     const tools = w.sent[0].body.tools as { name: string; max_uses?: number }[];
-    expect(tools.find((t) => t.name === "web_search")?.max_uses).toBe(10);
+    expect(tools.find((t) => t.name === "web_search")?.max_uses).toBe(5);
     expect(tools.some((t) => t.name === "compare")).toBe(true);
     expect(JSON.stringify(w.sent[0].body.system)).toContain("this week's deep dive");
   });
@@ -306,11 +306,11 @@ describe("/api/ai", () => {
     const body = (await res.json()) as { answer: { text: string; found: { source: { checked?: boolean } }[] } };
     expect(res.status).toBe(200);
     expect(body.answer.found[0].source.checked).toBe(true);
-    expect((w.sent[0].body.tools as { name: string; max_uses: number }[])).toEqual([expect.objectContaining({ name: "web_search", max_uses: 3 })]);
+    expect((w.sent[0].body.tools as { name: string; max_uses: number }[])).toEqual([expect.objectContaining({ name: "web_search", max_uses: 2 })]);
     expect(JSON.stringify(w.sent[0].body.system)).toContain("The app's result is THE result");
   });
 
-  it("the app's own research: 3 searches at most, on the reads' model, its sources' links checked, an empty answer refused (PLAN 192)", async () => {
+  it("the app's own research: 2 searches at most, on the reads' model, its sources' links checked, an empty answer refused (PLAN 192)", async () => {
     const a = { title: "Creatine at 5 g: does the timing matter?", known: "Daily intake matters more than timing; 3–5 g a day saturates muscle in about a month.", forYou: "You take 5 g on 14 of 14 days — that's the dose studied.", tip: "Keep it daily, any time", sure: "strong",
       found: [{ title: "ISSN position stand", text: "3–5 g/day is effective and safe.", source: { title: "ISSN position stand: creatine", url: "https://pubmed.ncbi.nlm.nih.gov/28615996/" } }, { title: "no link", text: "dropped", source: { title: "x", url: "ftp://x" } }] };
     const w = world([{ text: JSON.stringify(a), searches: 2 }], { pages: { "https://pubmed.ncbi.nlm.nih.gov/28615996/": { html: "<title>International Society of Sports Nutrition position stand: safety and efficacy of creatine supplementation - PubMed</title>" } } });
@@ -320,8 +320,8 @@ describe("/api/ai", () => {
     expect(body.answer.title).toBe(a.title);
     expect(body.answer.found).toHaveLength(1);
     expect(body.answer.found[0].source.checked).toBe(true);
-    expect((w.sent[0].body.tools as { name: string; max_uses: number }[])).toEqual([expect.objectContaining({ name: "web_search", max_uses: 3 })]);
-    expect(w.sent[0].body.model).toBe("claude-sonnet-5-5");
+    expect((w.sent[0].body.tools as { name: string; max_uses: number }[])).toEqual([expect.objectContaining({ name: "web_search", max_uses: 2 })]);
+    expect(w.sent[0].body.model).toBe("claude-haiku-5-5");
     expect(JSON.stringify(w.sent[0].body.system)).toContain("the app's own research on ONE thing");
     const bad = world([{ text: JSON.stringify({ title: "", known: "" }) }]);
     expect((await handleAi(post({ task: "research", context: "c" }), env, bad.deps)).status).not.toBe(200);
@@ -376,19 +376,19 @@ describe("/api/ai", () => {
     const w = world([
       { text: JSON.stringify(dive), ms: 60, usage: { input_tokens: 10_000, output_tokens: 2000, cache_read_input_tokens: 0, cache_creation_input_tokens: 0, server_tool_use: { web_search_requests: 5 } } },
       { text: "Sure." },
-    ], { usage: { day: "2026-10-01", calls: 3, dayUsd: 1, month: "2026-10", monthUsd: 10, byModel: { opus: 10 } } });
+    ], { usage: { day: "2026-10-01", calls: 3, dayUsd: 1, month: "2026-10", monthUsd: 5, byModel: { opus: 5 } } });
     const slow = handleAi(post({ task: "dive", context: "c" }), env, w.deps);
     while (!w.sent.length) await new Promise((ok) => setTimeout(ok, 1)); // the dive is with the AI…
     const quick = await handleAi(post({ task: "chat", messages: [{ role: "user", text: "hi" }], context: "c" }), env, w.deps); // …when a chat comes and goes
     expect(quick.status).toBe(200);
     expect((await slow).status).toBe(200);
-    const diveUsd = (10_000 * 4 + 2000 * 20) / 1e6 + 5 * 0.01, chatUsd = (1000 * 2 + 500 * 10) / 1e6; // the dive on Opus, the chat on Sonnet
-    const u = w.docs.get("ai_usage") as { calls: number; dayUsd: number; monthUsd: number; byModel: { opus: number; sonnet: number }; recent: { task: string }[]; rev: number };
+    const diveUsd = (10_000 * 2 + 2000 * 10) / 1e6 + 5 * 0.01, chatUsd = (1000 * 0.1 + 500 * 0.5) / 1e6; // the dive on Sonnet, the chat on Haiku (10 Nov)
+    const u = w.docs.get("ai_usage") as { calls: number; dayUsd: number; monthUsd: number; byModel: { opus: number; sonnet: number; haiku: number }; recent: { task: string }[]; rev: number };
     expect(u.calls).toBe(5);
     expect(u.dayUsd).toBeCloseTo(1 + diveUsd + chatUsd, 6);
-    expect(u.monthUsd).toBeCloseTo(10 + diveUsd + chatUsd, 6);
-    expect(u.byModel.opus).toBeCloseTo(10 + diveUsd, 6);
-    expect(u.byModel.sonnet).toBeCloseTo(chatUsd, 6);
+    expect(u.monthUsd).toBeCloseTo(5 + diveUsd + chatUsd, 6);
+    expect(u.byModel.sonnet).toBeCloseTo(diveUsd, 6);
+    expect(u.byModel.haiku).toBeCloseTo(chatUsd, 6);
     expect(u.recent.map((r) => r.task)).toEqual(["chat", "dive"]);
     expect(u.rev).toBe(2);
     // and by job (PLAN 195): each call under its own task

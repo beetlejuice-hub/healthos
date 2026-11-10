@@ -168,9 +168,9 @@ export async function callModel(b: AiRequest, choice: ModelChoice, apiKey: strin
   // strict: the API holds every argument to its schema — but it allows 24 optional fields across a request's strict
   // schemas, and propose has 28 (28 Oct: "Schemas contains too many optional parameters (28)" turned every chat message
   // down). propose goes non-strict: the app checks each one itself before it becomes a card (lib/ai/propose).
-  const tools = chat ? [...CHAT_TOOLS.map((t) => ({ ...t, strict: !LOOSE.has(t.name) })), { type: m.web, name: "web_search" as const, max_uses: 3 }]
-    : read ? [...READ_TOOLS.map((t) => ({ ...t, strict: true })), { type: m.web, name: "web_search" as const, max_uses: b.task === "dive" ? 10 : 4 }]
-    : web ? [{ type: m.web, name: "web_search" as const, max_uses: lookup ? 2 : task === "verdict" || task === "research" ? 3 : 4 }] : null;
+  const tools = chat ? [...CHAT_TOOLS.map((t) => ({ ...t, strict: !LOOSE.has(t.name) })), { type: m.web, name: "web_search" as const, max_uses: 2 }]
+    : read ? [...READ_TOOLS.map((t) => ({ ...t, strict: true })), { type: m.web, name: "web_search" as const, max_uses: b.task === "dive" ? 5 : 2 }]
+    : web ? [{ type: m.web, name: "web_search" as const, max_uses: lookup ? 1 : task === "verdict" || task === "research" ? 2 : 3 }] : null;
   // A search that comes back "unavailable" (Anthropic: "an internal error occurred") is tried again once, the whole
   // request, with the search called directly instead of from dynamic filtering's code — a different path to the same
   // search (owner, 28 Oct: "Ai says web search is down..why?"). Failing again, it's said with the answer as before.

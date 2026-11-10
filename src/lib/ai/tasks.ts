@@ -32,20 +32,21 @@ export const WEB_SEARCH_USD = 0.01;
 export const TIER: Record<Task, Tier> = { describe: "light", chat: "everyday", questions: "light", supplement: "research", digest: "reads", night: "reads", review: "reads", dive: "research", verdict: "research", research: "reads" };
 export type Models = Record<Tier, ModelChoice>;
 /**
- * Cheap where it's simple, the strongest where it matters. Owner, 27 Oct ("ai is in fact spending around 50 cent to 1
- * dollar a day so we can tune it down just a liitle bit or make cheaper models run more often" — then "4 ok"): the daily
- * reads and the chat on Sonnet 5.5, half Opus's price, studies and things to try kept; Opus for the weekly deep dive,
- * verdicts and supplement look-ups.
+ * Cheap where it's simple, a step up only for the research. Owner, 27 Oct: the reads and the chat on Sonnet, Opus for the
+ * research. Owner, 10 Nov: "use minimal ai, i dont want to pay 30 bucks in credits every month. i think u can degrade the
+ * claude api models a bit so its cheaper..it does not do much thinking overall" — Haiku for the light jobs, the chat and
+ * the reads (a twentieth of Sonnet's price), Sonnet for the deep dive, verdicts and supplement look-ups; no Opus unless
+ * he picks it. The numbers come from the engines; the AI words them.
  */
-export const DEFAULT_MODELS: Models = { light: "haiku", everyday: "sonnet", reads: "sonnet", research: "opus" };
-/** Picks saved before the reads had their own (v1) move once: the chat and the reads to the new default, the rest kept. */
-export const MODELS_V = 2;
+export const DEFAULT_MODELS: Models = { light: "haiku", everyday: "haiku", reads: "haiku", research: "sonnet" };
+/** Picks saved before the 10 Nov defaults (v1, v2) move to them once; a pick made after stays. */
+export const MODELS_V = 3;
 export function modelsNow(m: Partial<Models> | undefined, v: number | undefined): Models {
   if ((v ?? 1) >= MODELS_V) return { ...DEFAULT_MODELS, ...m };
-  return { ...DEFAULT_MODELS, ...(m?.light ? { light: m.light } : {}), ...(m?.research ? { research: m.research } : {}) };
+  return { ...DEFAULT_MODELS };
 }
 /** A month's spend after which every task runs on the cheapest model until the 1st (the 50-a-day stop still holds). */
-export const MONTHLY_USD = 20;
+export const MONTHLY_USD = 10;
 /** The model a task runs on: yours for its tier (older synced docs have no light tier — its default then), Haiku past the month's budget. */
 export function modelFor(task: Task, models: Partial<Models> | undefined, monthUsd: number, budget = MONTHLY_USD): ModelChoice {
   if (monthUsd >= budget) return "haiku";

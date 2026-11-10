@@ -15,10 +15,10 @@ import { startBand } from "./lib/band-client";
 import { startHealth } from "./lib/health-client";
 
 // each screen's file asked for once — the one in the address bar from the start, beside signing in — and kept when it comes
-type Loads = { log: typeof import("./screens/Log"); workout: typeof import("./screens/Workout"); insights: typeof import("./screens/Insights"); settings: typeof import("./screens/Settings"); dev: typeof import("./screens/Dev") };
+type Loads = { log: typeof import("./screens/Log"); workout: typeof import("./screens/Workout"); insights: typeof import("./screens/Insights"); settings: typeof import("./screens/Settings"); dev: typeof import("./screens/Dev"); game: typeof import("./screens/Game") };
 const IMPORTS: { [K in keyof Loads]: () => Promise<Loads[K]> } = {
   log: () => import("./screens/Log"), workout: () => import("./screens/Workout"), insights: () => import("./screens/Insights"),
-  settings: () => import("./screens/Settings"), dev: () => import("./screens/Dev"),
+  settings: () => import("./screens/Settings"), dev: () => import("./screens/Dev"), game: () => import("./screens/Game"),
 };
 const got: Partial<Loads> = {}, asked: Partial<Record<keyof Loads, Promise<unknown>>> = {};
 function load<K extends keyof Loads>(k: K): Promise<Loads[K]> {
@@ -55,6 +55,7 @@ const WorkoutScreen = screen("workout", (m) => m.WorkoutScreen);
 const Insights = screen("insights", (m) => m.Insights);
 const Settings = screen("settings", (m) => m.Settings);
 const Dev = screen("dev", (m) => m.Dev);
+const GameScreen = screen("game", (m) => m.GameScreen);
 /** A screen that still won't load (offline, or the new app's file missing too): a line and Try again, never a blank page. */
 class ScreenFailed extends Component<{ children: ReactNode; route: string }, { failed: boolean }> {
   state = { failed: false };
@@ -118,6 +119,7 @@ export function App() {
         {route === "insights" && <Insights />}
         {route === "ai" && <AiScreen />}
         {route === "settings" && <Settings tester={auth.tester} email={auth.session.user.email ?? ""} />}
+        {route === "game" && <GameScreen />}
         {route === "dev" && (auth.tester ? <Dev /> : <Settings tester={false} email={auth.session.user.email ?? ""} />)}
         </Suspense></ScreenFailed>
       </main>

@@ -3777,3 +3777,24 @@ both reads and the questions. Phases in that order; #152 RPE waits (owner).
        tiers with titles; one thing you love only on gym days.
      - The player card (D): each stat where you'd rank among men your age in the studies (VO2 max, resting heart rate,
        sleep, steps, strength trend, the week's level), out of 99, an overall and its tier.
+   - Done 10 Nov. AI: Haiku 5.5 for food, the questions, the chat and the reads; Sonnet 5.5 for the deep dive, verdicts
+     and supplement look-ups; no Opus unless picked (lib/ai/tasks DEFAULT_MODELS, MODELS_V 3 moves saved picks once).
+     Web searches: chat 2, reads 2, deep dive 5, verdicts and research 2, a food look-up 1. Budget $10 a month, then
+     Haiku till the 1st (AI_MONTHLY_USD in Cloudflare still overrides it, if it's set). Tests: ai.test, worker ai.test,
+     sync.test.
+   - Done 10 Nov. lib/play (pure): defend your 70 (a goal's spare days are 7 less what it needs; a miss past them, a drink
+     over, a session that can't fit costs 10; 50+ kept levels up, under down, never under 1); history from the week you
+     first logged anything (before it, a stack goal "missed" every day — 20 phantom weeks found in testing); the race (by
+     day, last week and the best week); the boss (last week's weakest goal, none when last week met them all; HP what it
+     still needs; beaten → a title); seasons (6 weeks from Mon 2 Nov; the twist from its first week's boss: the twist's
+     hits earn 10 XP each, a drinks week inside the goal 50; 50 XP a tier, 12 tiers; titles at 3, 6, 9 and 12); the stake
+     (owed when last week ended under 50, till "Done it"). lib/card (pure): END (VO2 max vs HUNT for your age), HRT (vs
+     65), REC (asleep vs 6 h 47), PAC (steps vs 4,961), STR (your strength trend), DSC (kept of 70, last 4 weeks), each
+     35–99 off the curve (67 the average), overall from 3+, Bronze/Silver/Gold (75)/Elite (85), against 4 weeks ago.
+     Today's week card: 70 of 70 left, level, last week, each goal with what it can still take ("2 spare nights", "next
+     miss costs 10", "−10", "done"), the boss's HP, the next move (the boss's goal first), a stake owed, the treat on a
+     day you trained, the race and you vs everyone, a link to #game. The game page (screens/Game): the card, the boss,
+     the race (chart), the season, put something on it (locked once set), only on gym days, how it works with the
+     studies. Tests: play.test (planted weeks, known answers; controls: a bad week, no last week, a week that met
+     everything, a new account, a stake not owed, a card with too little), e2e week (rewritten), e2e game (new). Not
+     yet: a real rival (accounts that see each other), the Sunday recap screen.
