@@ -3630,8 +3630,42 @@ both reads and the questions. Phases in that order; #152 RPE waits (owner).
    reaction-time test. Waiting for his pick; plan and canvas first.
 
 200. [ ] **Reform the whole app, part by part — the look and the engine** (owner, 5 Nov: "after u done w all we willl have
-   to reform whole app look at each part and change, visuallty and engine wise"). After 199. One part at a time, a canvas
-   for each, his call on each.
+   to reform whole app look at each part and change, visuallty and engine wise"; 9 Nov: "need to rework the app. new
+   connections, smarter engine, etc etc. can add free repos from github. looots of good valuable repos for ai or data, or
+   health or connections, math, design, graph etc" · "also while renovating the app, can add a some type of gamifying, to
+   push me to be better, drink less, sleep better, eat less abd healthier, lift more, etc. to improve my overall health.
+   be momre consistent w supps"; 10 Nov: "i want to hear how my day was compared to others. This is inline w the
+   gamification"). The plan, written 10 Nov:
+   - **Why.** Much of the app shows data and stops there (his 6 Nov: "others are just data, no?"); Findings stays quiet
+     because most days are alike; nothing pushes. The reform makes every screen end in what to do, makes the app create
+     the differences it needs (199's tests), and makes getting better feel like a game he's winning — honestly.
+   - **What it looks like.** One part at a time, a canvas for each, in this order: Today (where he is every day) → the
+     game layer → Insights/Findings → Workout → Sleep and Heart → the AI tab → Log → Settings. A screen that only draws a
+     number gets a line of what to do, or goes.
+   - **The game (draft for the canvas).** Built on his own baseline, never on shaming:
+     - weekly quests per area from his last 4 weeks — drinks under his usual, in bed by his target on 5 nights, protein
+       days, steps, the stack ticked, a lift's best — each worth points, a few at a time, re-picked each Monday;
+     - streaks with one free miss a week (a slip doesn't zero a month);
+     - a week score 0–100 across the areas, against last week and against everyone else (lib/norms, PLAN 202: steps,
+       sleep, resting heart rate from studies of 92,000–717,000 people; VO2 max via HUNT);
+     - levels and badges for what's hard to fake: a finished test (199), a new best, a month of the stack.
+   - **The engine.** 199's test engine (coin-flip days, on/off blocks, a queue the AI fills from studies and his leads,
+     a verdict card); the findings engines kept and reused (they're tested), the reads told only what's new.
+   - **Open-source to reuse (licences checked when each goes in; most are MIT/ISC):**
+     - stats: simple-statistics, jStat, ml-matrix / ml-regression (the ml.js family) — distributions, t-tests and
+       regressions instead of hand-rolled ones, each tested against the app's known-answer cases before swapping;
+     - charts: uPlot (fast time series for the heart rate), Observable Plot or visx (the rest), d3 where they're used;
+     - connections as a map: Cytoscape.js or sigma.js / react-force-graph — what goes with what, as a web;
+     - UI: Radix primitives (accessible sliders, sheets, dialogs), Motion for the game's feedback;
+     - data: Open Food Facts (barcodes; ODbL data) beside USDA's; NeuroKit2's published formulas (MIT, Python) as the
+       reference for any HRV work; zod for the AI's answer shapes; seedrandom for the tests' coin flips.
+   - **How it's tested.** As now: pure engines with planted effects and controls, e2e per screen at 320 and 390, the
+     full suite before each push. A swapped library must reproduce the old engine's known answers first.
+   - **Phases.** 1: Today + the game's first layer (weekly quests, streaks, the week score, you vs everyone) — canvas
+     first. 2: the test engine (199) + the 30-second reaction-time test. 3: Insights/Findings. 4: Workout (cardio's
+     pace and heart rate join the "what goes with a good session" grid). 5: Sleep and Heart. 6: the AI tab, Log, Settings.
+   - **Open questions for him.** The game's flavour: points and levels, streaks and quests, or one week score? Start at
+     Today (my pick)? Any repos he had in mind?
 
 201. [x] **Questions at the wrong time, the study left out, the weekend drafts gone** (owner, 9 Nov, with screenshots — a
    Follow-up at 08:09: "Pizza-only start yesterday. Did you get protein in before 13:00 today?"; "Not logged · Your weekend,
@@ -3656,7 +3690,7 @@ both reads and the questions. Phases in that order; #152 RPE waits (owner).
      Tests: asking.test, smoke.test, links.test (a wrong PubMed number found by title, a dead link via Crossref; controls:
      a made-up paper, a title too short), e2e smoke, dontremember, foodgap.
 
-202. [ ] **The server error, workouts that finish themselves and feel 1–10, reads without the boring part, the sleep score**
+202. [x] **The server error, workouts that finish themselves and feel 1–10, reads without the boring part, the sleep score**
    (owner, 10 Nov, with a screenshot of "Kept as a note. Couldn't reach the app's server. (no-server)": "Fix this" · "Do a
    1-10 slider for workouts and connect sleep, how i feel, what i eat to my gym performance, cardio strength etc" ·
    "Workout should be finished automatically, app should detect when my heartrate started to come down like its p easy to
@@ -3668,6 +3702,24 @@ both reads and the questions. Phases in that order; #152 RPE waits (owner).
      network blipped during a long AI answer. Done 10 Nov: lib/ai/retry — a dropped call is sent again once the app is on
      screen and online (3 tries, the answer's reading included); still failing, it says how long and whether the app was
      in the background; a note the AI couldn't be reached for is kept and read on its own once it can. Tests: retry.test.
-   - Next: workouts finish themselves (heart rate coming down; a short dip asks "break or done?"), a 1–10 for each
-     workout and what goes with it (sleep, how you felt, what you ate → strength, cardio); the reads without the summary,
-     your day against people like you; the sleep score's bar.
+   - Done 10 Nov. Workouts finish themselves: lib/autofinish — "working" is resting + 30 % of the way to max on a 3-minute
+     mean; down 5–15 min with the band live and no rest timer → "Your heart rate's been down since 18:42 — a break, or
+     done?" (Today's running line and the workout screen); down 15+ min → finished at that minute, with Undo; "a break"
+     isn't asked again for that drop and done then waits 30 min; a band that stopped sending is a gap, not an end; gaps
+     judged by the band's own rate. Tests: autofinish.test (lifting that ends found within 2 min across 20 sessions;
+     controls: rests between sets, a long rest, stale data, the band off, a 5-minute band), e2e autofinish (new).
+   - 1–10: "How did it go?" on the Finish sheet; a workout that ended without one is asked in For you within the day.
+     It's an outcome on Insights → Training's "what goes with a strong session" (the grid that already compared sleep,
+     carbs, the 3-day deficit, HRV, coffee, supplements against strength), with two new rows: energy 7+ in the 4 h
+     before, protein ≥ 25 g in the 4 h before; the card says what's gone with the sessions you rated higher once 10 are
+     rated. Tests: sessionfacts.test (planted: energy before +1.5, a short night −1.5; control: 10 worlds quiet). Not
+     yet: cardio's pace at a heart rate as an outcome (phase 4 of PLAN 200).
+   - The reads: no summary, no "last night"/"yesterday" lines, no "what happened" list, never a recap of what he logged;
+     items are what to do or change, studies, protocols. "You vs everyone" where the summary was: lib/norms — steps
+     (4,961 ± 2,684, 717,527 people, Althoff 2017), asleep (6 h 47 ± 48 min, ~120,000 Fitbit wearers, Jaiswal 2020),
+     resting heart rate (65, 92,457 Fitbit wearers, Quer 2020) — the app's numbers, the read only quotes them. Tests:
+     norms.test (known answers, controls), readday.test, e2e readday rewritten.
+   - The sleep score: points rise through each ideal zone instead of flat across it (full at 8 h, 95 % asleep in bed,
+     20 % deep, 25 % REM, HRV 10 % over usual, heart 2 under); the zones are the studies' as before. A plain night
+     (7 h 12, 88 %, rated 7) 94 → 82; a short broken one 76 → 62; a full 8 h night 98 → 98. Tests: sleepscore.test
+     updated and the three nights added, nights.test, e2e sleepscore.

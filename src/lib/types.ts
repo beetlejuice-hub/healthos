@@ -152,8 +152,13 @@ export type Workout = {
   cardio?: { what: string; done?: boolean; at?: number; startedAt?: number };
   /** A cardio session of its own (PLAN 130): one tap starts it, a timer runs, it has no sets. Unset: lifting. */
   kind?: "cardio";
-  /** Its timer was left running and it ended itself (lib/cardio CARDIO_MAX_MIN). */
+  /** Its timer was left running and it ended itself (lib/cardio CARDIO_MAX_MIN), or your heart rate came down and it
+   * finished at that minute (lib/autofinish, PLAN 202). */
   autoEnded?: true;
+  /** You said the drop in heart rate was a break (PLAN 202): that drop's start, so it isn't asked again. */
+  breakAt?: number;
+  /** How it went, 1–10 (PLAN 202; owner, 10 Nov: "Do a 1-10 slider for workouts"). */
+  rating?: number;
   /** A cardio session's phases, in order (lib/cardiostats; PLAN 191: "incline walk then normal running"): each ends where
    * the next starts, the last at the session's end; `km` and `incline` as the treadmill said, typed on Save. */
   phases?: CardioPhase[];

@@ -31,6 +31,13 @@
  *
  * Unknown parts (no rating yet, no stages, a measure the band didn't send, under 5 nights for the heart's usual) are left
  * out, named, and the rest scaled to 100. Words on Fitbit's bands: 90+ great, 80+ good, 60+ fair, under that rough.
+ *
+ * Points rise through the ideal zone, not flat across it (PLAN 202; owner, 10 Nov: "feel like sleep score still way too
+ * high always"): every part gave full points anywhere in its ideal range — 7 h and 9 h alike, the heart full at your
+ * usual — so a plain night (7 h 12 asleep, 88 % of the time in bed, 25 min awake, rated 7) scored 94, "great". Now the
+ * zones (what the studies call ideal, fair, poor) stay, and the points climb to the top of each: 8 h for length, 95 %
+ * asleep in bed, 20 % deep, 25 % REM, HRV 10 % over your usual and heart rate 2 under it — at your usual is good, not
+ * best. That night is now about 80, "good"; a short, broken one about 60; a full night still 100.
  */
 
 import { clockH, usual, type Night } from "./sleep";
@@ -84,17 +91,17 @@ export function restless(n: Pick<Night, "stages" | "onset" | "wake" | "asleep">)
 
 type Spec = { name: string; max: number; scale: [number, number]; zones: [number, number, Zone][]; curve: [number, number][]; ideal: string; text: (v: number) => string };
 export const SPECS: Record<PartId, Spec> = {
-  length: { name: "Length", max: 25, scale: [4, 11], zones: [[4, 6, "poor"], [6, 7, "fair"], [7, 9, "ideal"], [9, 10, "fair"], [10, 11, "poor"]], curve: [[4, 0], [5, 0.25], [6, 0.6], [7, 1], [9, 1], [10, 0.8], [11, 0.5]], ideal: "7–9 h", text: (h) => hm(h * 60) },
-  efficiency: { name: "Asleep in bed", max: 9, scale: [60, 100], zones: [[60, 75, "poor"], [75, 85, "fair"], [85, 100, "ideal"]], curve: [[60, 0], [75, 0.4], [85, 1], [100, 1]], ideal: "85 %+", text: (v) => `${Math.round(v)} %` },
-  waso: { name: "Awake in the night", max: 5, scale: [0, 90], zones: [[0, 20, "ideal"], [20, 50, "fair"], [50, 90, "poor"]], curve: [[0, 1], [20, 1], [50, 0.4], [90, 0]], ideal: "20 min or less", text: (v) => `${Math.round(v)} min` },
-  wakings: { name: "Wakings over 5 min", max: 2, scale: [0, 6], zones: [[0, 1.5, "ideal"], [1.5, 3.5, "fair"], [3.5, 6, "poor"]], curve: [[0, 1], [1, 1], [3, 0.5], [5, 0]], ideal: "0–1", text: (v) => String(Math.round(v)) },
-  restless: { name: "Restless", max: 8, scale: [0, 9], zones: [[0, 4, "ideal"], [4, 6, "fair"], [6, 9, "poor"]], curve: [[0, 1], [4, 1], [6, 0.4], [9, 0]], ideal: "4 an hour or fewer", text: (v) => `${v.toFixed(1)} an hour` },
-  onset: { name: "Fell asleep in", max: 5, scale: [0, 75], zones: [[0, 30, "ideal"], [30, 45, "fair"], [45, 75, "poor"]], curve: [[0, 1], [30, 1], [45, 0.5], [60, 0.1], [75, 0]], ideal: "30 min or less", text: (v) => `${Math.round(v)} min` },
-  deep: { name: "Deep", max: 5, scale: [0, 30], zones: [[0, 8, "poor"], [8, 13, "fair"], [13, 30, "ideal"]], curve: [[0, 0], [8, 0.4], [13, 1], [30, 1]], ideal: "13 %+ of sleep", text: (v) => `${Math.round(v)} %` },
-  rem: { name: "REM", max: 6, scale: [0, 35], zones: [[0, 15, "poor"], [15, 20, "fair"], [20, 35, "ideal"]], curve: [[0, 0], [15, 0.5], [20, 1], [35, 1]], ideal: "20 %+ of sleep", text: (v) => `${Math.round(v)} %` },
+  length: { name: "Length", max: 25, scale: [4, 11], zones: [[4, 6, "poor"], [6, 7, "fair"], [7, 9, "ideal"], [9, 10, "fair"], [10, 11, "poor"]], curve: [[4, 0], [5, 0.15], [6, 0.45], [7, 0.75], [7.5, 0.88], [8, 1], [9, 1], [10, 0.8], [11, 0.5]], ideal: "7–9 h", text: (h) => hm(h * 60) },
+  efficiency: { name: "Asleep in bed", max: 9, scale: [60, 100], zones: [[60, 75, "poor"], [75, 85, "fair"], [85, 100, "ideal"]], curve: [[60, 0], [75, 0.3], [85, 0.7], [90, 0.88], [95, 1], [100, 1]], ideal: "85 %+", text: (v) => `${Math.round(v)} %` },
+  waso: { name: "Awake in the night", max: 5, scale: [0, 90], zones: [[0, 20, "ideal"], [20, 50, "fair"], [50, 90, "poor"]], curve: [[0, 1], [10, 1], [20, 0.8], [50, 0.3], [90, 0]], ideal: "20 min or less", text: (v) => `${Math.round(v)} min` },
+  wakings: { name: "Wakings over 5 min", max: 2, scale: [0, 6], zones: [[0, 1.5, "ideal"], [1.5, 3.5, "fair"], [3.5, 6, "poor"]], curve: [[0, 1], [1, 0.75], [3, 0.3], [5, 0]], ideal: "0–1", text: (v) => String(Math.round(v)) },
+  restless: { name: "Restless", max: 8, scale: [0, 9], zones: [[0, 4, "ideal"], [4, 6, "fair"], [6, 9, "poor"]], curve: [[0, 1], [2, 1], [4, 0.75], [6, 0.35], [9, 0]], ideal: "4 an hour or fewer", text: (v) => `${v.toFixed(1)} an hour` },
+  onset: { name: "Fell asleep in", max: 5, scale: [0, 75], zones: [[0, 30, "ideal"], [30, 45, "fair"], [45, 75, "poor"]], curve: [[0, 1], [20, 1], [30, 0.8], [45, 0.4], [60, 0.1], [75, 0]], ideal: "30 min or less", text: (v) => `${Math.round(v)} min` },
+  deep: { name: "Deep", max: 5, scale: [0, 30], zones: [[0, 8, "poor"], [8, 13, "fair"], [13, 30, "ideal"]], curve: [[0, 0], [8, 0.3], [13, 0.7], [18, 0.95], [20, 1], [30, 1]], ideal: "13 %+ of sleep", text: (v) => `${Math.round(v)} %` },
+  rem: { name: "REM", max: 6, scale: [0, 35], zones: [[0, 15, "poor"], [15, 20, "fair"], [20, 35, "ideal"]], curve: [[0, 0], [15, 0.4], [20, 0.75], [25, 1], [35, 1]], ideal: "20 %+ of sleep", text: (v) => `${Math.round(v)} %` },
   bedtime: { name: "Fell asleep at", max: 5, scale: [20, 27], zones: [[20, 22, "fair"], [22, 23, "ideal"], [23, 24.5, "fair"], [24.5, 27, "poor"]], curve: [[20, 0.6], [22, 1], [23, 1], [24, 0.7], [25, 0.4], [26, 0.15], [27, 0]], ideal: "22:00–23:00", text: clockOf },
-  hrv: { name: "HRV", max: 8, scale: [-40, 20], zones: [[-40, -20, "poor"], [-20, -8, "fair"], [-8, 20, "ideal"]], curve: [[-35, 0], [-20, 0.35], [-8, 1], [20, 1]], ideal: "within 8 % of your usual", text: (v) => `${v >= 0 ? "+" : "−"}${Math.abs(Math.round(v))} %` },
-  hrsleep: { name: "Heart rate asleep", max: 7, scale: [-5, 10], zones: [[-5, 1.5, "ideal"], [1.5, 4, "fair"], [4, 10, "poor"]], curve: [[-5, 1], [1.5, 1], [4, 0.5], [8, 0]], ideal: "at your usual", text: (v) => `${v >= 0 ? "+" : "−"}${Math.abs(v).toFixed(1)} bpm` },
+  hrv: { name: "HRV", max: 8, scale: [-40, 20], zones: [[-40, -20, "poor"], [-20, -8, "fair"], [-8, 20, "ideal"]], curve: [[-35, 0], [-20, 0.3], [-8, 0.7], [0, 0.85], [10, 1], [20, 1]], ideal: "within 8 % of your usual", text: (v) => `${v >= 0 ? "+" : "−"}${Math.abs(Math.round(v))} %` },
+  hrsleep: { name: "Heart rate asleep", max: 7, scale: [-5, 10], zones: [[-5, 1.5, "ideal"], [1.5, 4, "fair"], [4, 10, "poor"]], curve: [[-5, 1], [-2, 1], [0, 0.85], [1.5, 0.7], [4, 0.35], [8, 0]], ideal: "at your usual", text: (v) => `${v >= 0 ? "+" : "−"}${Math.abs(v).toFixed(1)} bpm` },
   rating: { name: "Your rating", max: 15, scale: [1, 10], zones: [[1, 4, "poor"], [4, 7, "fair"], [7, 10, "ideal"]], curve: [[0, 0], [10, 1]], ideal: "7–10", text: (v) => `${v}/10` },
 };
 

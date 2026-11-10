@@ -14,9 +14,9 @@ const D = 86_400_000, H = 3_600_000;
  * Planted when `plant`: carbs ≥ 60 g in the 4 h before → +3.5 % against each lift's line; under 6 h 30 asleep → −4 %.
  * Nothing for coffee, creatine, evening.
  */
-function world(seed: number, plant: boolean) {
+function world(seed: number, plant: boolean, rate = false) {
   const { r, g } = rng(seed), entries: Entry[] = [], sets: LoggedSet[] = [], ns: Night[] = [];
-  const workouts: { id: string; template: string; startedAt: number; endedAt: number }[] = [];
+  const workouts: { id: string; template: string; startedAt: number; endedAt: number; rating?: number }[] = [];
   const LIFTS: Record<string, [string, number][]> = { Push: [["Bench press", 100], ["Overhead press", 60]], Pull: [["Deadlift", 160], ["Barbell row", 85]], Legs: [["Squat", 130], ["Romanian deadlift", 110]] };
   const t0 = new Date(2026, 6, 20).getTime(); let n = 0;
   for (let k = 0; k < 84; k++) {
@@ -33,7 +33,12 @@ function world(seed: number, plant: boolean) {
     else entries.push({ id: `m${k}`, kind: "food", at: start - (1 + r() * 2) * H, name: "Eggs", grams: 200, macros: { kcal: 300, p: 25, c: Math.round(5 + r() * 25), f: 20 } });
     if (coffee) entries.push({ id: `cf${k}`, kind: "drink", at: start - (0.3 + r()) * H, name: "Coffee", ml: 250, caffeineMg: 95, alcoholG: 0, kcal: 2 });
     const eff = plant ? (carbs ? 3.5 : 0) - (short ? 4 : 0) : 0;
-    workouts.push({ id, template: tpl, startedAt: start, endedAt: start + H });
+    // PLAN 202: an energy check-in 1–3 h before on most days, high or low at random; rated 1–10 when `rate` — planted:
+    // energy 7+ before → +1.5 on the rating, a short night → −1.5 (nothing for carbs or coffee on the rating)
+    const feltHigh = r() < 0.5;
+    if (r() < 0.85) entries.push({ id: `fb${k}`, kind: "feel", at: start - (1 + r() * 2) * H, energy: feltHigh ? 8 : 5 });
+    const rating = rate ? Math.max(1, Math.min(10, Math.round(6 + (plant ? (feltHigh ? 1.5 : 0) - (short ? 1.5 : 0) : 0) + g() * 0.9))) : undefined;
+    workouts.push({ id, template: tpl, startedAt: start, endedAt: start + H, ...(rating != null ? { rating } : {}) });
     for (const [ex, b] of LIFTS[tpl]) {
       const e1 = b * (1 + 0.006 * wk) * (1 + (eff + g() * 1.2) / 100), kg = e1 / (1 + 5 / 30);
       for (let q = 0; q < 3; q++) sets.push({ at: start + (q + 1) * 60_000, workoutId: id, exercise: ex, kg: q ? kg * 0.95 : kg, reps: 5 });
@@ -72,5 +77,22 @@ describe("Training B · what goes with a strong session (PLAN 64)", () => {
     const w = world(41, true), pts = w.ss.flatMap((s, i) => (w.fs[i].carbs4h != null && s.pct != null ? [[w.fs[i].carbs4h!, s.pct] as [number, number]] : []));
     const sl = slopeTest(pts);
     expect(sl.slope!).toBeGreaterThan(0); expect(["clear", "likely"]).toContain(sl.sure);
+  });
+  // PLAN 202 — owner, 10 Nov: "Do a 1-10 slider for workouts and connect sleep, how i feel, what i eat to my gym performance"
+  it("the 1–10: finds energy 7+ before (+1.5) and a short night (−1.5); nothing for carbs or coffee on it", () => {
+    const w = world(41, true, true), felt = cellOf(w, "feltgood", "rating"), short = cellOf(w, "short", "rating");
+    expect(["clear", "likely"]).toContain(felt.sure); expect(felt.toward).toBe("better"); expect(felt.diff!).toBeGreaterThan(0.8); expect(felt.diff!).toBeLessThan(2.3);
+    expect(["clear", "likely"]).toContain(short.sure); expect(short.toward).toBe("worse");
+    for (const f of ["carbs", "coffee"]) expect(cellOf(w, f, "rating").sure).not.toBe("clear");
+  });
+  it("control: rated but nothing planted — the rating column stays quiet across 10 worlds", () => {
+    let clear = 0;
+    for (let s = 800; s < 810; s++) { const w = world(s, false, true); clear += goesWith<Session, typeof w.fs[number]>(w.ss, w.fs, { factors: w.factors, outcomes: SESSION_OUTCOMES, seed: s }).filter((c) => c.outcome === "rating" && c.sure === "clear").length; }
+    expect(clear).toBeLessThanOrEqual(2);
+  });
+  it("how you felt and the protein before are read from the check-in and the food in the 4 h before", () => {
+    const w = world(41, false);
+    expect(w.fs.filter((f) => f.feltBefore != null).length).toBeGreaterThan(w.fs.length * 0.6);
+    expect(w.fs.every((f) => f.protein4h == null || f.protein4h >= 20)).toBe(true);
   });
 });

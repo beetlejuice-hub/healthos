@@ -46,11 +46,11 @@ export function mainLifts(sets: LoggedSet[], max = 4): LiftTrend[] {
     .map(([ex]) => liftTrend(sets, ex)).filter((t): t is LiftTrend => t != null).slice(0, max);
 }
 
-export type Session = { id: string; template: string; startedAt: number; endedAt: number | null; sets: LoggedSet[]; volume: number; workingSets: number;
+export type Session = { id: string; template: string; startedAt: number; endedAt: number | null; /** How it went, 1–10 (PLAN 202). */ rating?: number; sets: LoggedSet[]; volume: number; workingSets: number;
   /** Each lift's best against its own trend, averaged, in % (null: no lift in it has a trend yet). */ pct: number | null; lifts: { exercise: string; pct: number }[] };
 
 /** Every session, with its strength against your trends (all lifts with a trend, not only the main four). */
-export function sessions(workouts: { id: string; template: string; startedAt: number; endedAt: number | null }[], sets: LoggedSet[]): Session[] {
+export function sessions(workouts: { id: string; template: string; startedAt: number; endedAt: number | null; rating?: number }[], sets: LoggedSet[]): Session[] {
   const trends = new Map<string, LiftTrend>();
   for (const ex of new Set(working(sets).map((s) => s.exercise))) { const t = liftTrend(sets, ex); if (t) trends.set(ex, t); }
   return [...workouts].sort((a, b) => a.startedAt - b.startedAt).map((w) => {

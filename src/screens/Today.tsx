@@ -25,6 +25,7 @@ import { go, OPEN_CARD, openCard } from "../lib/nav";
 import { morningAway, morningShown, nightShown } from "../lib/ai/morning";
 import { ForYou, type Ask } from "../components/ForYou";
 import { NightCheckAsk } from "../components/NightCheckAsk";
+import { BreakOrDone, RateWorkout, useAutoFinish } from "../components/AutoFinish";
 import { BandAlarm } from "../components/BandAlarm";
 import { TipAsk } from "../components/TipAsk";
 import { WeekAsk } from "../components/WeekReport";
@@ -177,6 +178,7 @@ export function Today() {
     { key: "catchup", name: "yesterday", node: <CatchUp now={now} /> },
     { key: "foodgap", name: "how you ate", node: <FoodGapAsk now={now} /> },
     { key: "smoke", name: "cigarettes", node: <SmokeAsk now={now} /> },
+    { key: "rateworkout", name: "how the workout went", node: <RateWorkout now={now} /> },
     { key: "nightcheck", name: "last night's check", node: <NightCheckAsk now={now} /> },
     ...due.filter(later).map(dueAsk),
     { key: "checkin", name: "two-week check-in", node: <CheckInCard now={now} /> },
@@ -451,12 +453,14 @@ function Stack({ now, onClose }: { now: number; onClose: () => void }) {
 function WorkoutRunning({ now }: { now: number }) {
   const w = useStore((x) => x.workouts.find((v) => v.endedAt === null));
   const entries = useStore((x) => x.entries);
+  const ending = useAutoFinish(w, now); // PLAN 202: heart rate down → finished, or "a break, or done?"
   if (!w) return null;
   // a cardio session (PLAN 130): its timer, no sets — it only ends itself after 3 h
   if (w.kind === "cardio") return (
     <div className="noticed-line running">
       <span><small>Cardio running</small>{w.cardio?.what || "Cardio"} · {Math.max(0, Math.floor((now - w.startedAt) / MIN))} min so far<small className="sub">started {clock(w.startedAt)} · ends by itself at {clock(w.startedAt + AUTO_END.cardioMaxMin * MIN)} if you forget</small></span>
       <span className="acts"><button type="button" className="pill-btn" onClick={() => go("workout")}>Open</button><button type="button" className="pill-btn pri" onClick={() => { const t = Date.now(); act.updateWorkout(w.id, { endedAt: t, cardio: { what: w.cardio?.what || "Cardio", startedAt: w.startedAt, done: true, at: t } }); }}>Stop</button></span>
+      <BreakOrDone w={w} e={ending} />
     </div>
   );
   const last = entries.reduce((m, e) => (e.kind === "set" && e.workoutId === w.id ? Math.max(m, e.at) : m), 0);
@@ -465,6 +469,7 @@ function WorkoutRunning({ now }: { now: number }) {
     <div className="noticed-line running">
       <span><small>Workout running</small>{w.template} · {last ? `last set ${clock(last)}` : `started ${clock(w.startedAt)}, no sets yet`}<small className="sub">{now < ends ? `ends by itself at ${clock(ends)} if you forget` : "ending now"}</small></span>
       <span className="acts"><button type="button" className="pill-btn" onClick={() => go("workout")}>Open</button><button type="button" className="pill-btn pri" onClick={() => (last ? act.endWorkout(w.id, Date.now() - last > 10 * MIN ? last + 2 * MIN : Date.now()) : act.tidyWorkouts(Date.now(), true))}>Finish</button></span>
+      <BreakOrDone w={w} e={ending} />
     </div>
   );
 }

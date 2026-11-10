@@ -22,9 +22,12 @@ export type SessionFacts = {
   /** Started at 15:00 or later. */ evening: boolean;
   /** Each supplement that day: taken, or not (said "didn't", or not logged on a day the app was used); unknown left out. */ supps: Record<string, boolean | null>;
   /** Energy (else mood) at the first check-in within 3 h after it ended. */ feltAfter: number | null;
+  /** PLAN 202 (owner, 10 Nov: "connect sleep, how i feel, what i eat to my gym performance"): energy (else mood) at the
+   * last check-in in the 4 h before it started; g of protein in the 4 h before (null as carbs4h). */
+  feltBefore: number | null; protein4h: number | null;
 };
 
-export const CARBS_G = 60, SHORT_MIN = 390, UNDER_KCAL = 400;
+export const CARBS_G = 60, SHORT_MIN = 390, UNDER_KCAL = 400, FELT_GOOD = 7, PROTEIN_G = 25;
 
 export function sessionFacts(ss: Session[], entries: Entry[], ns: Night[] = []): SessionFacts[] {
   const foods = entries.filter((e): e is Extract<Entry, { kind: "food" }> => e.kind === "food");
@@ -46,10 +49,13 @@ export function sessionFacts(ss: Session[], entries: Entry[], ns: Night[] = []):
     const hrv = ns.find((n) => n.day === day)?.hrv ?? null;
     const supps: Record<string, boolean | null> = Object.fromEntries(suppsBy.get(day) ?? []);
     const after = entries.find((e): e is Extract<Entry, { kind: "feel" }> => e.kind === "feel" && e.at >= end && e.at < end + 3 * HOUR && (e.energy != null || e.mood != null));
+    const before = entries.filter((e): e is Extract<Entry, { kind: "feel" }> => e.kind === "feel" && e.at >= t - 4 * HOUR && e.at < t && (e.energy != null || e.mood != null)).at(-1);
     return {
       carbs4h, asleep: night?.asleep ?? null, under3, hrvLow: q1 != null && hrv != null ? hrv <= q1 : null,
       coffee: entries.some((e) => e.kind === "drink" && e.caffeineMg > 0 && e.at >= t - 2 * HOUR && e.at < t),
       evening: new Date(t).getHours() >= 15, supps, feltAfter: after ? after.energy ?? after.mood ?? null : null,
+      feltBefore: before ? before.energy ?? before.mood ?? null : null,
+      protein4h: dayFood.length ? dayFood.filter((f) => f.at >= t - 4 * HOUR).reduce((a, f) => a + f.macros.p, 0) : null,
     };
   });
 }
@@ -62,6 +68,8 @@ export function sessionFactors(supplements: { id: string; name: string }[], fs: 
     { id: "short", name: "Under 6 h 30 asleep the night before", has: (_, f) => f.asleep != null && f.asleep < SHORT_MIN, known: (_, f) => f.asleep != null },
     { id: "cut", name: `${UNDER_KCAL}+ kcal a day under your usual, 3 days before`, has: (_, f) => (f.under3 ?? 0) >= UNDER_KCAL, known: (_, f) => f.under3 != null },
     { id: "hrv", name: "HRV in your lowest quarter that morning", has: (_, f) => f.hrvLow === true, known: (_, f) => f.hrvLow != null },
+    { id: "feltgood", name: `Energy ${FELT_GOOD}+ in the 4 h before`, has: (_, f) => (f.feltBefore ?? 0) >= FELT_GOOD, known: (_, f) => f.feltBefore != null },
+    { id: "protein", name: `Protein ≥ ${PROTEIN_G} g in the 4 h before`, has: (_, f) => (f.protein4h ?? 0) >= PROTEIN_G, known: (_, f) => f.protein4h != null },
     { id: "coffee", name: "Coffee in the 2 h before", has: (_, f) => f.coffee },
     { id: "evening", name: "Evening session (from 15:00)", has: (_, f) => f.evening },
     ...supp.map((x) => ({ id: `supp:${x.id}`, name: `${x.name} that day`, has: (_: Session, f: SessionFacts) => f.supps[x.id] === true, known: (_: Session, f: SessionFacts) => f.supps[x.id] != null })),
@@ -71,6 +79,8 @@ export function sessionFactors(supplements: { id: string; name: string }[], fs: 
 export const SESSION_OUTCOMES: Outcome<Session, SessionFacts>[] = [
   { id: "pct", name: "Strength", unit: "%", better: 1, of: (s) => s.pct },
   { id: "felt", name: "Felt after", unit: "/10", better: 1, of: (_, f) => f.feltAfter },
+  // your own 1–10 for it (PLAN 202; owner, 10 Nov: "Do a 1-10 slider for workouts")
+  { id: "rating", name: "How it went", unit: "/10", better: 1, of: (s) => s.rating ?? null },
 ];
 
 export type Slope = { pts: [number, number][]; slope: number | null; p: number | null; sure: Sure };

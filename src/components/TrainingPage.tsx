@@ -200,6 +200,12 @@ function StrongSessions({ ss, facts, supplements, w, wide }: { ss: Session[]; fa
   const words = measured < B_COPY.minNights ? `Needs ${B_COPY.minNights} sessions measured against your trend — ${measured} so far. Each lift needs 3 sessions before its sessions count.`
     : found.length ? `Your strength against your trend has gone with ${found.map((c) => `${nameOf(c.factor)} (${c.diff! >= 0 ? "+" : "−"}${Math.abs(c.diff!).toFixed(1)} %, ${c.sure})`).join(" and ")}.`
       : "Nothing goes clearly with your strength yet.";
+  // your own 1–10 (PLAN 202): what's gone with the sessions you rated higher
+  const rated = ss.filter((s) => s.rating != null).length;
+  const byRating = cells.filter((c) => c.outcome === "rating" && (c.sure === "clear" || c.sure === "likely")).sort((a, b) => a.p! - b.p!);
+  const ratingWords = rated < B_COPY.minNights ? `Rate sessions 1–10 when you finish (or in For you after): ${rated} rated so far, ${B_COPY.minNights} to start comparing what goes with the good ones.`
+    : byRating.length ? `Sessions you rated higher went with ${byRating.map((c) => `${nameOf(c.factor)} (${c.diff! >= 0 ? "+" : "−"}${Math.abs(c.diff!).toFixed(1)} of 10, ${c.sure})`).join(" and ")}.`
+      : `Nothing goes clearly with how you rate your sessions yet (${rated} rated).`;
   // carbs as a number, not only yes / no
   const pts = useMemo(() => ss.flatMap((s, i) => (facts[i].carbs4h != null && s.pct != null ? [[facts[i].carbs4h!, s.pct] as [number, number]] : [])), [ss, facts]);
   const sl = useMemo(() => slopeTest(pts), [pts]);
@@ -210,6 +216,7 @@ function StrongSessions({ ss, facts, supplements, w, wide }: { ss: Session[]; fa
       <section className="sl-p tp-bwords" aria-label="Your strong sessions">
         <span className="cmp-k">Your strong sessions · {measured} sessions</span>
         <p className="mp-big" data-found={found.map((c) => c.factor).join(",")}>{words}</p>
+        <p className="note" data-rated={rated} data-found-rating={byRating.map((c) => c.factor).join(",")}>{ratingWords}</p>
         {found.length > 0 && <TellAi where="Insights → Training, your strong sessions" label="Your strong sessions" finding={`${words} From ${measured} sessions, each measured against its lift's own trend; sessions with the thing against sessions without — goes with, not proof of cause.`} />}
       </section>
       {measured >= 2 && <SessionLanes ss={ss} facts={facts} supps={factors.filter((f) => f.id.startsWith("supp:")).map((f) => ({ id: f.id.slice(5), name: f.name.replace(/ that day$/, "") }))} w={w} />}

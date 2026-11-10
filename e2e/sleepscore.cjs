@@ -58,8 +58,8 @@ function world() {
   const score = +(await card.getAttribute('data-score'));
   check(`last night: 5 h, not rated — "fair", not good (${(await card.locator('.sl-score-n').innerText()).replace(/\n/g, ' ')})`, score >= 60 && score < 80 && /\/ 100 ·\s*fair/.test(await card.locator('.sl-score-n').innerText()));
   const len = await part('length'), bt = await part('bedtime');
-  // 5 h is under the NSF's 6: poor, 6.3 of 25 — whatever your usual; drawn at 1/7 of the 4–11 h bar, your usual 7 h 40 past half
-  check(`length: 5 h asleep is poor, 6.3 of 25, ideal and usual said (${len})`, len && len[0] === 6.3 && len[1] === '5 h 00' && len[2] === 'poor' && /^ideal 7–9 h · your usual 7 h [34]\d$/.test(len[3]));
+  // 5 h is under the NSF's 6: poor, 3.8 of 25 (PLAN 202's curve) — whatever your usual; drawn at 1/7 of the 4–11 h bar, your usual 7 h 40 past half
+  check(`length: 5 h asleep is poor, 3.8 of 25, ideal and usual said (${len})`, len && len[0] === 3.8 && len[1] === '5 h 00' && len[2] === 'poor' && /^ideal 7–9 h · your usual 7 h [34]\d$/.test(len[3]));
   check(`length's bar: the dot red at 5 h, your usual's tick at 7 h 40 (${len && len.slice(4)})`, len && Math.abs(len[4] - 14.3) < 0.5 && len[5] > 50 && len[5] < 55 && /\bpoor\b/.test(len[6]));
   // asleep at 01:42: past the study's window — poor, about 1 of 5
   check(`fell asleep at 01:42: poor, about 1 of 5, against 22:00–23:00 (${bt})`, bt && bt[0] > 0.5 && bt[0] < 1.6 && bt[1] === '01:42' && bt[2] === 'poor' && /^ideal 22:00–23:00 · your usual 23:[34]\d$/.test(bt[3]));

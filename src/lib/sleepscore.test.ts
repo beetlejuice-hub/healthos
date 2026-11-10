@@ -8,15 +8,17 @@ const H = 3_600_000, MIN = 60_000;
 function night(k: number, o: Partial<Night> & { bedH?: number; asleepMin?: number } = {}): Night {
   const eve = `2026-09-${String(k).padStart(2, "0")}`, bed = atMinute(eve, Math.round((o.bedH ?? 22.5) * 60)), asleep = o.asleepMin ?? 480;
   return { id: `n${k}`, day: `2026-09-${String(k + 1).padStart(2, "0")}`, eve, bed, up: bed + (asleep + 25) * MIN, onset: bed + 10 * MIN, wake: bed + (asleep + 20) * MIN,
-    asleep, deep: asleep * 0.15, rem: asleep * 0.22, light: asleep * 0.63, awake: 10, wakes: 1, latency: 10, stages: [], low: 50, lowAt: bed + 4 * H, meanHr: 54, hrv: 50, rhr: 54, nap: null, ...o };
+    asleep, deep: asleep * 0.2, rem: asleep * 0.25, light: asleep * 0.55, awake: 10, wakes: 1, latency: 10, stages: [], low: 50, lowAt: bed + 4 * H, meanHr: 54, hrv: 50, rhr: 54, nap: null, ...o };
 }
 const usualNights = Array.from({ length: 10 }, (_, i) => night(i + 1));
 const p = (s: ReturnType<typeof sleepScore>, id: string) => s.parts.find((x) => x.id === id)!;
+/** The heart a little better than usual (HRV 10 % up, 2 bpm down): the top of its parts since PLAN 202. */
+const TOP = { hrv: 55, meanHr: 52 };
 
 describe("a night out of 100, on the studies' ranges (PLAN 97; owner, 15 Oct)", () => {
   it("a full night on every count, rated 10: 100, \"great\"; with stages every part is in and they add to 100", () => {
     const aw = (h: number) => ({ type: "awake" as const, start: atMinute("2026-09-20", 22 * 60 + 30) + h * H, end: atMinute("2026-09-20", 22 * 60 + 30) + h * H + 3 * MIN });
-    const s = sleepScore(night(20, { stages: [aw(3)] }), 10, usualNights);
+    const s = sleepScore(night(20, { stages: [aw(3)], ...TOP }), 10, usualNights);
     expect(s.score).toBe(100); expect(s.word).toBe("great"); expect(s.left).toEqual([]);
     expect(s.parts.reduce((a, x) => a + x.max, 0)).toBe(100);
     expect(s.parts.every((x) => x.zone === "ideal")).toBe(true);
@@ -39,12 +41,12 @@ describe("a night out of 100, on the studies' ranges (PLAN 97; owner, 15 Oct)", 
   it("your usual being poor doesn't make a poor night good (owner: \"if my usual is pretty bad, it will still show me a good score\")", () => {
     const fives = Array.from({ length: 10 }, (_, i) => night(i + 1, { asleepMin: 300 }));
     const s = sleepScore(night(20, { asleepMin: 300 }), 7, fives);
-    expect(p(s, "length").got).toBe(6.3); expect(p(s, "length").zone).toBe("poor"); expect(p(s, "length").usualText).toBe("5 h 00");
+    expect(p(s, "length").got).toBe(3.8); expect(p(s, "length").zone).toBe("poor"); expect(p(s, "length").usualText).toBe("5 h 00");
     expect(s.word).not.toBe("great"); expect(s.word).not.toBe("good");
   });
-  it("length on the NSF's ranges: 7–9 h ideal, 6–7 fair, under 6 poor", () => {
+  it("length on the NSF's ranges: 7–9 h ideal, 6–7 fair, under 6 poor — full points from 8 h (PLAN 202)", () => {
     const L = (m: number) => p(sleepScore(night(20, { asleepMin: m }), 10, usualNights), "length");
-    expect([L(420).got, L(360).got, L(300).got, L(240).got]).toEqual([25, 15, 6.3, 0]);
+    expect([L(480).got, L(420).got, L(360).got, L(300).got, L(240).got]).toEqual([25, 18.8, 11.3, 3.8, 0]);
     expect([L(480).zone, L(390).zone, L(330).zone, L(570).zone, L(630).zone]).toEqual(["ideal", "fair", "poor", "fair", "poor"]);
   });
   it("bedtime on the study's window, never against your usual: an earlier night than usual isn't marked down", () => {
@@ -57,21 +59,21 @@ describe("a night out of 100, on the studies' ranges (PLAN 97; owner, 15 Oct)", 
   it("continuity on the NSF's marks: asleep in bed, awake in the night, long wakings, falling asleep", () => {
     const c = (o: Partial<Night>) => sleepScore(night(20, o), 10, usualNights);
     const bed = atMinute("2026-09-20", 22 * 60 + 30);
-    expect(p(c({ up: bed + 640 * MIN }), "efficiency").got).toBe(3.6); // 480 of 640 min: 75 % → fair, 3.6 of 9
+    expect(p(c({ up: bed + 640 * MIN }), "efficiency").got).toBe(2.7); // 480 of 640 min: 75 % → fair, 2.7 of 9
     expect(p(c({ up: bed + 640 * MIN }), "efficiency").zone).toBe("fair");
-    expect([p(c({ awake: 35 }), "waso").got, p(c({ awake: 50 }), "waso").got, p(c({ awake: 90 }), "waso").got]).toEqual([3.5, 2, 0]);
+    expect([p(c({ awake: 35 }), "waso").got, p(c({ awake: 50 }), "waso").got, p(c({ awake: 90 }), "waso").got]).toEqual([2.8, 1.5, 0]);
     const aw = (h: number, min: number) => ({ type: "awake" as const, start: bed + h * H, end: bed + h * H + min * MIN });
     const three = p(c({ stages: [aw(2, 8), aw(3, 12), aw(5, 6), aw(6, 3)] }), "wakings"); // the 3-min one doesn't count
-    expect([three.got, three.why, three.zone]).toEqual([1, "3", "fair"]); // half of 2
-    expect([p(c({ latency: 25 }), "onset").got, p(c({ latency: 45 }), "onset").got, p(c({ latency: 75 }), "onset").got]).toEqual([5, 2.5, 0]);
+    expect([three.got, three.why, three.zone]).toEqual([0.6, "3", "fair"]); // 30 % of 2
+    expect([p(c({ latency: 25 }), "onset").got, p(c({ latency: 45 }), "onset").got, p(c({ latency: 75 }), "onset").got]).toEqual([4.5, 2, 0]);
   });
   it("no stages: wakings, deep and REM left out and named, not counted as none", () => {
-    const s = sleepScore(night(20, { deep: null, rem: null }), 10, usualNights);
+    const s = sleepScore(night(20, { deep: null, rem: null, ...TOP }), 10, usualNights);
     expect(s.left.map((l) => l.id)).toEqual(["wakings", "restless", "deep", "rem"]); expect(s.score).toBe(100);
   });
-  it("deep and REM by their share: 10 % deep is fair, 64 % of its 7; 15 % REM half of its 8", () => {
+  it("deep and REM by their share: 10 % deep is fair, 46 % of its 5; 15 % REM fair, 40 % of its 6", () => {
     const s = sleepScore(night(20, { deep: 48, rem: 72 }), 10, usualNights);
-    expect([p(s, "deep").got, p(s, "deep").zone, p(s, "rem").got, p(s, "rem").zone]).toEqual([3.2, "fair", 3, "fair"]);
+    expect([p(s, "deep").got, p(s, "deep").zone, p(s, "rem").got, p(s, "rem").zone]).toEqual([2.3, "fair", 2.4, "fair"]);
   });
   it("a night after wine: HRV 25 % under your usual and heart rate 5 bpm up — both red, whatever else", () => {
     const s = sleepScore(night(20, { hrv: 37.5, meanHr: 59 }), 6, usualNights);
@@ -84,7 +86,7 @@ describe("a night out of 100, on the studies' ranges (PLAN 97; owner, 15 Oct)", 
     expect([p(s, "hrsleep").why, p(s, "hrsleep").zone]).toEqual(["lowest 54 bpm · usual 50", "fair"]);
   });
   it("not rated yet: left out and named, the rest scaled to 100", () => {
-    const s = sleepScore(night(20), null, usualNights);
+    const s = sleepScore(night(20, TOP), null, usualNights);
     expect(s.left.map((l) => l.id)).toEqual(["wakings", "restless", "rating"]); expect(s.score).toBe(100);
   });
   it("more sleep never lowers it up to 9 h", () => {
@@ -109,5 +111,25 @@ describe("a night out of 100, on the studies' ranges (PLAN 97; owner, 15 Oct)", 
   it("curves: straight between points, flat past the ends; words as Fitbit's bands", () => {
     expect([curveAt([[0, 0], [10, 1]], 5), curveAt([[0, 0], [10, 1]], -3), curveAt([[0, 0], [10, 1]], 12)]).toEqual([0.5, 0, 1]);
     expect([95, 90, 89, 80, 79, 60, 59].map(scoreWord)).toEqual(["great", "great", "good", "good", "fair", "fair", "rough"]);
+  });
+  // PLAN 202 — owner, 10 Nov: "feel like sleep score still way too high always". Every part was full anywhere in its
+  // ideal zone, so a plain night scored 94, "great". Three nights with known shapes: plain → "good" (about 81), a full
+  // one → 95+, a short broken one → under 60; and a plain night is never "great".
+  it("a plain night (7 h 12 asleep, 88 % in bed, 25 min awake, deep 15 %, REM 21 %, asleep 23:40, heart at usual, rated 7): good, not great", () => {
+    const bed = atMinute("2026-09-20", 23 * 60 + 28), asleep = 432, st = (h: number, min: number) => ({ type: "awake" as const, start: bed + h * H, end: bed + h * H + min * MIN });
+    const plain = night(20, { bedH: 23 + 28 / 60, asleepMin: asleep, up: bed + Math.round(asleep / 0.88) * MIN, latency: 12, onset: bed + 12 * MIN, awake: 25, deep: asleep * 0.15, rem: asleep * 0.21, stages: [st(3, 8)] });
+    const s = sleepScore(plain, 7, usualNights);
+    expect(s.score).toBeGreaterThanOrEqual(76); expect(s.score).toBeLessThanOrEqual(86);
+    expect(s.word).toBe("good");
+  });
+  it("a short broken night (6 h 12, 84 % in bed, 35 min awake, asleep 00:40, HRV 10 % down, heart +2, rated 5): about 60, fair at best", () => {
+    const bed = atMinute("2026-09-20", 24 * 60 + 25), asleep = 372, st = (h: number, min: number) => ({ type: "awake" as const, start: bed + h * H, end: bed + h * H + min * MIN });
+    const bad = night(20, { bedH: 24 + 25 / 60, asleepMin: asleep, up: bed + Math.round(asleep / 0.84) * MIN, latency: 15, onset: bed + 15 * MIN, awake: 35, deep: asleep * 0.12, rem: asleep * 0.18, hrv: 45, meanHr: 56, stages: [st(2, 9), st(4, 12)] });
+    const b = sleepScore(bad, 5, usualNights);
+    expect(b.score).toBeLessThan(65); expect(["fair", "rough"]).toContain(b.word);
+  });
+  it("control: a full night still tops out — 95 or more without the heart's extra", () => {
+    expect(sleepScore(night(20), 9, usualNights).score).toBeGreaterThanOrEqual(90);
+    expect(sleepScore(night(20, TOP), 10, usualNights).score).toBe(100);
   });
 });

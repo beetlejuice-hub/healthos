@@ -13,6 +13,9 @@ import { aiStatusNow, askAi, askRead, bandForRead, chatContext, contextNow, lead
 import { leadLines, withLead } from "../lib/ai/lead";
 import { askChat } from "../lib/ai/chat";
 import { bandNow, bandSettled, onBandSettled, onNights } from "../lib/band-client";
+import { vsBlock, vsOthers } from "../lib/norms";
+import { stepsByDay } from "../lib/steps";
+import { nights as bandNights } from "../lib/sleep";
 import { ChatChart } from "./ChatChart";
 import { GoalsAsk } from "./GoalsAsk";
 import { eveningBrief, morningBrief } from "../lib/ai/brief";
@@ -78,6 +81,18 @@ const keepFail = (task: string) => (r: { error: string; message: string }) =>
 export const makeDigest = (day: string, now = false) =>
   now ? tryNow(`digest:${day}`, () => writeDigest(day), keepFail("digest")) : attempt(`digest:${day}`, () => writeDigest(day), { lane: "read", onFail: keepFail("digest") });
 
+/**
+ * For the reads: you against everyone else (PLAN 202, lib/norms) — the morning's steps are yesterday's, the evening's
+ * today's; last night's sleep and this morning's resting heart rate either way.
+ */
+function vsFor(day: string, when: "morning" | "evening"): string[] {
+  const b = bandNow();
+  if (!b) return [];
+  const night = bandNights(b.sleep, b.hr, b.rhr, b.hrv).find((n) => n.day === day);
+  const steps = stepsByDay(b.steps ?? [], b.hr, day).get(when === "morning" ? addDays(day, -1) : day) ?? null;
+  return vsBlock(vsOthers({ steps, sleepMin: night?.asleep ?? null, rhr: b.rhr[day] ?? null }, when === "morning" ? "yesterday" : "today"));
+}
+
 /** For the reads: what's been cited, so no paper comes back (PLAN 194; owner, 4 Nov: "make sure studies are good, not the same thing"). */
 const citedBlock = (cited: Cited[] | undefined): string[] => ((l) => (l.length ? ["## Papers and pages already cited (never cite one of these again — find another)", ...l.map((x) => `- ${x}`)] : []))(citedLines(cited));
 
@@ -95,7 +110,7 @@ async function writeDigest(day: string) {
     ...(ai.night && ai.night.day >= addDays(day, -1) ? ai.night.change.map((c) => `${ai.night!.day} read-back: ${c.what}`) : []),
   ];
   // it may check its claims with the app's own numbers first (PLAN 160)
-  const r = await askRead({ task: "digest", context: `${contextNow()}\n${brief.join("\n")}\n${lead ? `${leadLines(lead).join("\n")}\n` : ""}${askFor(day, "morning", follow).join("\n")}\n${discoveryLines(day, "morning", ai.discoveries).join("\n")}\n${citedBlock(ai.cited).join("\n")}`, shown: ai.shown.slice(-40) });
+  const r = await askRead({ task: "digest", context: `${contextNow()}\n${brief.join("\n")}\n${lead ? `${leadLines(lead).join("\n")}\n` : ""}${askFor(day, "morning", follow).join("\n")}\n${discoveryLines(day, "morning", ai.discoveries).join("\n")}\n${citedBlock(ai.cited).join("\n")}\n${vsFor(day, "morning").join("\n")}`, shown: ai.shown.slice(-40) });
   if (!r.ok) return r;
   // advice on a topic said in the last 5 days goes, whatever it's called now (lib/ai/said; owner, 28 Oct: "in the last
   // liike 7 days it only recommended me to take in more protein w breakfast… it can repeat sometimes but not every day")
@@ -198,7 +213,7 @@ async function writeNight(day: string, force: boolean, auto = false) {
   // the day's totals it's written from: when what's logged moves past them, the card says so (owner, 28 Oct: "i ate around
   // 1900 kcal (160 left), yet ai digest says i ate 650 something")
   const tot = dayTotals(getState().entries, day), redone = (ai.night?.day === day ? ai.night.redone ?? 0 : 0) + (auto ? 1 : 0);
-  const r = await askRead({ task: "night", day, context: [nightContext(day), ...eveningBrief(ai.shown), ...askFor(day, "evening", follow), ...discoveryLines(day, "evening", ai.discoveries), ...citedBlock(ai.cited)].join("\n") });
+  const r = await askRead({ task: "night", day, context: [nightContext(day), ...eveningBrief(ai.shown), ...askFor(day, "evening", follow), ...discoveryLines(day, "evening", ai.discoveries), ...citedBlock(ai.cited), ...vsFor(day, "evening")].join("\n") });
   if (!r.ok) return r;
   const at = Date.now(), qs = keepNew(r.answer.questions ?? [], `${day}:e`);
   // no advice on a topic said in the last 5 days (lib/ai/said) — a rewrite of the same evening replaces its own, so that's
@@ -381,9 +396,8 @@ export function MorningRead() {
         <span className="chev" aria-hidden="true">{open ? "▴" : "▾"}</span>
       </button>
       <p className="greet">{d.greeting}</p>
-      {/* the day around the items (owner, 3 Nov): the summary always, its two lines when open */}
-      {d.summary && <p className={`rd-sum${open ? "" : " clamp2"}`} onClick={() => !open && setOpen(true)}>{d.summary}</p>}
-      {open && <DayLines slept={d.slept} felt={d.felt} feltLabel="Yesterday" />}
+      {/* no summary (owner, 10 Nov: "we should cut the summary, i never read"): your day against everyone else instead */}
+      {d.vs && <p className="rd-vs"><small>You vs everyone</small>{d.vs}</p>}
       <ReadItems key={String(open)} items={d.items} open={open} onOpen={() => setOpen(true)} tip="Today" from="morning" day={d.day} />
       {/* one left out over its link is said, not lost (PLAN 193) */}
       {open && unlinkedNote(d.items, d.unlinked) && <p className="note rd-unlinked">{unlinkedNote(d.items, d.unlinked)}</p>}
@@ -395,15 +409,6 @@ export function MorningRead() {
 }
 
 /** Last night and how the day felt, one line each (owner, 3 Nov: "how i slept, how i felt thoughout the day"). */
-function DayLines({ slept, felt, feltLabel }: { slept?: string; felt?: string; feltLabel: string }) {
-  if (!slept && !felt) return null;
-  return (
-    <dl className="rd-day">
-      {slept && <><dt>Last night</dt><dd>{slept}</dd></>}
-      {felt && <><dt>{feltLabel}</dt><dd>{felt}</dd></>}
-    </dl>
-  );
-}
 
 /* ------------------------------------------------------------------ Today: your day, read back */
 
@@ -437,9 +442,8 @@ export function NightRead() {
       <p className={`greet${open ? "" : " clamp2"}`} onClick={() => !open && setOpen(true)}>{n.summary}</p>
       {stale && <p className="night-stale">Written at {clock(n.at)} — since then you {stale.kcal >= 0 ? "logged" : "took off"} {num(stale.kcal)} kcal{stale.p ? ` and ${num(stale.p)} g protein` : ""}. The day now: <b>{stale.now.kcal.toLocaleString("en-GB")} kcal, {stale.now.p} g protein</b>.{" "}
         <button type="button" className="linkish" onClick={() => void makeNight(n.day, true)}>Read it again</button></p>}
+      {n.vs && <p className="rd-vs"><small>You vs everyone</small>{n.vs}</p>}
       {open && <>
-        <DayLines slept={n.slept} felt={n.felt} feltLabel="Today" />
-        {n.happened.length > 0 && <ul className="night-list">{n.happened.map((h, i) => <li key={i}>{h}</li>)}</ul>}
         {n.notes && <p className="night-notes"><small>Your notes</small>{n.notes}</p>}
         {/* PLAN 129: on a workout day, the session against the last one — in the same call, no extra one */}
         {n.workout && <div className="night-workout"><small>Your workout</small><p>{n.workout.summary}</p>

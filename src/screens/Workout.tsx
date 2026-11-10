@@ -25,6 +25,9 @@ import { bandLatest, useBand } from "../lib/band-client";
 import { ZoneBar } from "../components/ZoneBar";
 import { WeekEntry, WeekReport } from "../components/WeekReport";
 import { readRoute } from "../lib/nav";
+import { BreakOrDone, useAutoFinish } from "../components/AutoFinish";
+import { FeelSlider } from "../components/FeelSlider";
+import { workoutWord } from "../lib/workoutfeel";
 
 type SetE = EntryOf<"set">;
 /** One tap for cardio when none was planned. */
@@ -270,6 +273,8 @@ function Session({ w }: { w: Workout }) {
   }, [i, cur?.name]);
 
   const [now, setNow] = useState(Date.now());
+  // your heart rate coming down finishes it, or asks "a break, or done?" (PLAN 202)
+  const ending = useAutoFinish(w, now);
   useEffect(() => { const t = setInterval(() => setNow(Date.now()), 1000); return () => clearInterval(t); }, []);
   // Rest ends at a saved time (owner: "time should continue when i quit the app"): leave the app,
   // come back, and it shows what's really left. A buzz when it runs out while open (Android).
@@ -343,6 +348,7 @@ function Session({ w }: { w: Workout }) {
   return (
     <div className="cockpit">
       <div className="top"><h1>{w.template}</h1><div className="meta"><b>{fmt(el)}</b>elapsed</div></div>
+      <BreakOrDone w={w} e={ending} />
       <div className="prog">{Array.from({ length: total }, (_, k) => <i key={k} className={k < doneN ? "on" : ""} />)}</div>
 
       {/* PLAN 142 (owner, 20 Oct: "When starting cardio kg tracker for strength workout should disappear"): while cardio
@@ -496,7 +502,9 @@ function FinishSheet({ w, onBack }: { w: Workout; onBack: () => void }) {
         {/* how hard the heart worked, from the band (PLAN 52; owner, 21 Oct: "3 per workout") */}
         {band && <ZoneBar hr={band.hr} start={w.startedAt} end={now} upTo={bandLatest()} />}
         {sum.bests.length > 0 && <div className="fin-bests"><span className="k" style={{ color: "var(--gym)" }}>New bests</span>{sum.bests.map((b) => <p key={b.exercise}><b>{b.exercise}</b> {b.kg} kg × {b.reps} · est. 1RM {b.e1rm} kg</p>)}</div>}
-        <label className="kfield">How did it feel?<textarea rows={2} value={w.note ?? ""} placeholder="Strong today, left shoulder a bit off…" onChange={(e) => act.updateWorkout(w.id, { note: e.target.value })} /></label>
+        {/* 1–10 (PLAN 202; owner, 10 Nov: "Do a 1-10 slider for workouts"): what sleep, food and how you felt go with */}
+        <FeelSlider label="How did it go?" name="workout" value={w.rating} word={workoutWord} color="var(--gym)" onChange={(v) => act.updateWorkout(w.id, { rating: v })} />
+        <label className="kfield">In your words<textarea rows={2} value={w.note ?? ""} placeholder="Strong today, left shoulder a bit off…" onChange={(e) => act.updateWorkout(w.id, { note: e.target.value })} /></label>
       </div>
       <button type="button" className="go" onClick={() => act.endWorkout(w.id)}>Finish</button>
       <button type="button" className="kbtn" onClick={onBack}>Keep going</button>
