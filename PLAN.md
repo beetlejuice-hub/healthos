@@ -3626,8 +3626,9 @@ both reads and the questions. Phases in that order; #152 RPE waits (owner).
    tests, a weekly wildcard, an evidence-graded library; new data — a 30-second reaction-time test, ratings 2–3 times a
    day, training as an outcome, daylight/air/pollen/bedroom temperature/screen time/calendar, gut, social, a blood panel
    every 3–6 months, a 2-week glucose sensor, waist and grip, an evening voice note; fun — monthly themes, his top 5
-   levers and a didn't-work wall, a Sunday results push. My pick: the coin-flip engine + the queue the AI fills + the
-   reaction-time test. Waiting for his pick; plan and canvas first.
+   levers and a didn't-work wall, a Sunday results push. **Owner, 10 Nov: "I TOLD U NO COIN FLIP AND REACTION TOME@@@" —
+   no coin-flip days and no reaction-time test, ever; they're off this list.** What's left to pick from: the queue the
+   AI fills from studies and his leads, on/off blocks, dose tests, bet first, the new data sources.
 
 200. [ ] **Reform the whole app, part by part — the look and the engine** (owner, 5 Nov: "after u done w all we willl have
    to reform whole app look at each part and change, visuallty and engine wise"; 9 Nov: "need to rework the app. new
@@ -3649,8 +3650,8 @@ both reads and the questions. Phases in that order; #152 RPE waits (owner).
      - a week score 0–100 across the areas, against last week and against everyone else (lib/norms, PLAN 202: steps,
        sleep, resting heart rate from studies of 92,000–717,000 people; VO2 max via HUNT);
      - levels and badges for what's hard to fake: a finished test (199), a new best, a month of the stack.
-   - **The engine.** 199's test engine (coin-flip days, on/off blocks, a queue the AI fills from studies and his leads,
-     a verdict card); the findings engines kept and reused (they're tested), the reads told only what's new.
+   - **The engine.** 199's test engine without coin-flip days (owner, 10 Nov: no coin flip, no reaction time) — on/off
+     blocks, a queue the AI fills from studies and his leads, a verdict card; the findings engines kept and reused (they're tested), the reads told only what's new.
    - **Open-source to reuse (licences checked when each goes in; most are MIT/ISC):**
      - stats: simple-statistics, jStat, ml-matrix / ml-regression (the ml.js family) — distributions, t-tests and
        regressions instead of hand-rolled ones, each tested against the app's known-answer cases before swapping;
@@ -3658,11 +3659,11 @@ both reads and the questions. Phases in that order; #152 RPE waits (owner).
      - connections as a map: Cytoscape.js or sigma.js / react-force-graph — what goes with what, as a web;
      - UI: Radix primitives (accessible sliders, sheets, dialogs), Motion for the game's feedback;
      - data: Open Food Facts (barcodes; ODbL data) beside USDA's; NeuroKit2's published formulas (MIT, Python) as the
-       reference for any HRV work; zod for the AI's answer shapes; seedrandom for the tests' coin flips.
+       reference for any HRV work; zod for the AI's answer shapes.
    - **How it's tested.** As now: pure engines with planted effects and controls, e2e per screen at 320 and 390, the
      full suite before each push. A swapped library must reproduce the old engine's known answers first.
    - **Phases.** 1: Today + the game's first layer (weekly quests, streaks, the week score, you vs everyone) — canvas
-     first. 2: the test engine (199) + the 30-second reaction-time test. 3: Insights/Findings. 4: Workout (cardio's
+     first. 2: the test engine (199), no coin flips, no reaction-time test (owner, 10 Nov). 3: Insights/Findings. 4: Workout (cardio's
      pace and heart rate join the "what goes with a good session" grid). 5: Sleep and Heart. 6: the AI tab, Log, Settings.
    - **Open questions for him.** The game's flavour: points and levels, streaks and quests, or one week score? Start at
      Today (my pick)? Any repos he had in mind?
@@ -3745,3 +3746,18 @@ both reads and the questions. Phases in that order; #152 RPE waits (owner).
      weeks, exact points and pace; controls: a new account, no drinks, no band, the drinks goal's edges, the streak),
      norms.test, e2e week (320 and 390; control: a new account). Not yet: Sunday's done-and-next-week screen with
      "Keep these / Change one", and changing a goal.
+
+204. [ ] **The game, wilder — researched** (owner, 10 Nov, looking at the game canvas: "meh idk about this. be a little
+   wilder, more creative, do research, etc."). Claimed 10 Nov. What the studies say works, and what each new direction
+   takes from it:
+   - Loss aversion: points you start with and can lose beat points you earn — families who started each week at 70 and
+     lost 10 per missed day hit their step goal on 53 % of days against 32 % (BE FIT, Patel 2017, JAMA Intern Med).
+   - Competition beats support or teamwork, and is the only one that lasted after the game stopped: +920 steps a day,
+     569 still after (STEP UP, Patel 2019, JAMA Intern Med).
+   - A stake you'd lose (deposit contracts) did twice as well among the people who took one (Halpern 2015, NEJM).
+   - Temptation bundling: audiobooks only at the gym, 51 % more visits (Milkman 2014, Management Science).
+   - Fresh starts: Mondays, the 1st, a birthday — people start goals after landmarks (Dai 2014, Management Science).
+   - A story and a world pull people out: the engaged Pokémon Go players walked ~1,473 more steps a day (Althoff 2016).
+   - Gamification works (g 0.42 across 16 trials) but fades after (0.15) — so it has to keep changing (Mazeas 2022, JMIR).
+   - Directions on a new canvas: a player card rated against people your age, a boss of the week, a week you start at
+     70 and defend with a stake, a race against your own ghost — and seasons to keep it changing.
