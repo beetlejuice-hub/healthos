@@ -18,18 +18,26 @@ import { addDays, localDay } from "../time";
 import { scheduleWords } from "../schedule";
 import { allPhases, beatsText, distText, kindStats, paceText, type DistUnit } from "../cardiostats";
 import { stepsByDay } from "../steps";
-import { laneOn } from "./lanes";
+import { laneOn, LANES, pickFor } from "./lanes";
 
-export const RESEARCH = { perWeek: 4, againDays: 45, monthUsd: 2.5, pauseShare: 0.5, keep: 60, fromHour: 10, topFoods: 3, minFoodDays: 6, minSuppDays: 3, minSessions: 6, said: 20 } as const;
+export const RESEARCH = { perWeek: 5, againDays: 45, monthUsd: 3.5, pauseShare: 0.5, keep: 60, fromHour: 10, topFoods: 3, minFoodDays: 6, minSuppDays: 3, minSessions: 6, said: 20 } as const;
 
-/** `wild`: a field the app picks at random, not from your data (PLAN 194: "sometimes random ones") — its turn comes like the others'. */
-export type Area = "supp" | "food" | "training" | "cardio" | "steps" | "heart" | "wild";
-export const AREAS: Area[] = ["supp", "food", "training", "cardio", "steps", "heart", "wild"];
+/**
+ * `wild`: a field the app picks at random, not from your data (PLAN 194: "sometimes random ones") — its turn comes like the
+ * others'. PLAN 206 (owner, 10–11 Nov: "studies/protocols it can find or come up w based on my results" · "could check
+ * reddits, X threads, whatever. some of the not so average studies too"): `mine` — a link the app found in your own days
+ * (lib/connect), looked into with a protocol to test it on you; `crowd` — what people report trying on Reddit, X and
+ * forums, as anecdotes, then what studies say; `edge` — a small, new or odd study, said as early.
+ */
+export type Area = "mine" | "supp" | "food" | "training" | "cardio" | "steps" | "heart" | "crowd" | "edge" | "wild";
+export const AREAS: Area[] = ["mine", "supp", "food", "training", "cardio", "steps", "heart", "crowd", "edge", "wild"];
+/** Not from your data: never first, and never jumping the queue. */
+const RANDOM = new Set<Area>(["crowd", "edge", "wild"]);
 export type Topic = { key: string; area: Area; name: string; lines: string[] };
 /** What came back, kept: the answer, its topic, when, what it cost. `seen`: opened in the AI tab. */
 export type Researched = ResearchAnswer & { key: string; area: Area; name: string; at: number; day: string; usd: number; seen?: number };
 
-type Data = { entries: Entry[]; workouts: Workout[]; supplements: Supplement[]; settings: Pick<Settings, "distUnit">; goals?: { kcal: number; p: number } };
+type Data = { entries: Entry[]; workouts: Workout[]; supplements: Supplement[]; settings: Pick<Settings, "distUnit">; goals?: { kcal: number; p: number }; /** lib/connect's links in words, surest first */ links?: string[] };
 const median = (v: number[]) => { const s = [...v].sort((a, b) => a - b); return s.length ? s[(s.length - 1) >> 1] : 0; };
 const mean = (v: number[]) => (v.length ? v.reduce((a, x) => a + x, 0) / v.length : NaN);
 const r0 = (n: number) => Math.round(n).toLocaleString("en-GB");
@@ -106,6 +114,26 @@ export function researchTopics(d: Data, band: Pick<BandData, "rhr" | "hrv" | "st
       "- Look into: what these numbers mean for someone like me, what moves them (training, sleep, alcohol, weight loss), and how fast.",
     ] });
   }
+  // what the app found in your own days (PLAN 206): the surest two, each its own topic
+  for (const l of (d.links ?? []).slice(0, 2)) {
+    const key = `mine:${l.split(" goes with ")[0].toLowerCase().replace(/[^a-z0-9]+/g, "-")}>${(l.split(" goes with ")[1] ?? "").split(" ")[0].toLowerCase()}`;
+    out.push({ key, area: "mine", name: `your own data: ${l.split(" (")[0].toLowerCase()}`, lines: [
+      `- What: the app found this in my own days (its maths: same day to two days on, honest about how many days, corrected for checking many at once): ${l}.`,
+      "- Look into: what's known about this link in people; whether it's likely real for someone like me and by what route; and a protocol to test it on me — what to change, how many days, what the app should watch — in \"protocol\".",
+    ] });
+  }
+  // what people actually try (PLAN 206): Reddit, X, forums — anecdotes, said so — then the studies
+  const crowd = pickFor(LANES, today, "crowd");
+  out.push({ key: `crowd:${crowd.id}`, area: "crowd", name: `what people try: ${crowd.words.split(" — ")[0]}`, lines: [
+    `- What: what people like me report trying, on Reddit (r/Biohackers, r/Nootropics, r/sleep, r/Fitness, r/Supplements and the like), X threads and forums (the Quantified Self forum, Longecity) — the field: ${crowd.words}.`,
+    "- Look into: the 2–3 things people report most, each with a real thread's link, said as an anecdote; then what studies say about the most common one; a protocol to try it on me when it's safe — in \"protocol\".",
+  ] });
+  // the not-so-average studies (PLAN 206)
+  const edge = pickFor(LANES, today, "edge");
+  out.push({ key: `edge:${edge.id}`, area: "edge", name: `an unusual study: ${edge.words.split(" — ")[0]}`, lines: [
+    `- What: not-so-average research in this field: ${edge.words} — a pilot, a small or new trial (the last 3 years), a preprint, an n-of-1, or a surprising null result.`,
+    "- Look into: one such study — say plainly that it's early or small, and why it's interesting anyway; one safe thing to try, as a protocol when it fits.",
+  ] });
   // something random (PLAN 194; owner, 4 Nov: "make research, protocols, studies fun and different, sometimes random ones")
   const lane = laneOn(today, "research");
   out.push({ key: `wild:${lane.id}`, area: "wild", name: lane.words.split(" — ")[0], lines: [
@@ -134,12 +162,12 @@ export function nextResearch(list: Topic[] | (() => Topic[]), done: Researched[]
   if (spend.monthUsd >= spend.budget * RESEARCH.pauseShare) return { wait: `the month's AI spend is past half the $${spend.budget} budget` };
   // the topics only now, past every cheap check: they read weeks of the band's minutes
   const topics = typeof list === "function" ? list() : list;
-  // the random field only once something of yours has been looked into: research is about you, random sometimes
-  const fresh = topics.filter((t) => !done.some((r) => r.key === t.key && r.day > addDays(today, -RESEARCH.againDays)) && (t.area !== "wild" || done.some((r) => r.area !== "wild")));
+  // the random fields only once something of yours has been looked into: research is about you, random sometimes
+  const fresh = topics.filter((t) => !done.some((r) => r.key === t.key && r.day > addDays(today, -RESEARCH.againDays)) && (!RANDOM.has(t.area) || done.some((r) => !RANDOM.has(r.area))));
   if (!fresh.length) return { wait: "nothing new to look into" };
   // the random field never jumps the queue: never done, it waits as if just done, so it comes after a round of the others
   const latest = Math.max(0, ...done.map((r) => r.at));
-  const lastIn = (a: Area) => { const at = done.filter((r) => r.area === a).map((r) => r.at); return at.length ? Math.max(...at) : a === "wild" ? latest : 0; };
+  const lastIn = (a: Area) => { const at = done.filter((r) => r.area === a).map((r) => r.at); return at.length ? Math.max(...at) : RANDOM.has(a) ? latest : 0; };
   const order = [...AREAS].sort((a, b) => lastIn(a) - lastIn(b) || AREAS.indexOf(a) - AREAS.indexOf(b));
   for (const a of order) { const t = fresh.find((x) => x.area === a); if (t) return { topic: t }; }
   return { wait: "nothing new to look into" };

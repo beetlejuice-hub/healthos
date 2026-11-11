@@ -11,7 +11,7 @@
 
 import type { Storage } from "./push";
 import {
-  GOOGLE_TOKEN, HEALTH_API, STEP_WINDOWS, readVo2, dailyFilter, dailyRollUpBody, readDailyKcal, wakeFor, mergeMinutes, mergeSteps, perMinute, readDaily, readHeartRate, readSleep, readSteps, rollUpBody, sampleFilter, sleepFilter,
+  GOOGLE_TOKEN, HEALTH_API, STEP_WINDOWS, readVo2, readVo2Samples, dailyFilter, dailyRollUpBody, readDailyKcal, wakeFor, mergeMinutes, mergeSteps, perMinute, readDaily, readHeartRate, readSleep, readSteps, rollUpBody, sampleFilter, sleepFilter,
   type HrMinute, type Page, type RollUpPage, type SleepSession, type StepBucket,
 } from "../src/lib/band";
 import type { Vo2Day } from "../src/lib/vo2";
@@ -275,8 +275,16 @@ export class BandHub {
       const kept = await this.storage.get<Record<string, Vo2Day>>("vo2"), days = kept ? back(7, 90) : 90;
       const page = await this.list("daily-vo2-max", dailyFilter("daily_vo2_max", utcDay(now - days * DAY)), 1000, nightErrors);
       const got = readVo2(page), pts = page.dataPoints ?? [];
-      await this.storage.put("vo2", { ...(kept ?? {}), ...got });
-      await this.storage.put("vo2:pull", { at: now, days, points: pts.length, ...(pts.length && !Object.keys(got).length ? { sample: JSON.stringify(pts[0]).slice(0, 200) } : {}) } satisfies Vo2Pull);
+      // the two sample kinds too (PLAN 206): without outdoor runs a band may only have these. Each on its own — one
+      // Google turns down doesn't stop the others. The daily value wins a day, then a run's, then any other sample.
+      const more: { samples?: number; runs?: number; moreErr?: string } = {};
+      let samples: Record<string, Vo2Day> = {}, runs: Record<string, Vo2Day> = {};
+      try { const sp = await this.list("vo2-max", sampleFilter("vo2_max", now - days * DAY), 1000, nightErrors); samples = readVo2Samples(sp, "vo2"); more.samples = sp.dataPoints?.length ?? 0; }
+      catch (e) { more.moreErr = `vo2-max: ${String((e as Error).message).slice(0, 60)}`; }
+      try { const rp = await this.list("run-vo2-max", sampleFilter("run_vo2_max", now - days * DAY), 1000, nightErrors); runs = readVo2Samples(rp, "run"); more.runs = rp.dataPoints?.length ?? 0; }
+      catch (e) { more.moreErr = `${more.moreErr ? `${more.moreErr}; ` : ""}run-vo2-max: ${String((e as Error).message).slice(0, 60)}`; }
+      await this.storage.put("vo2", { ...(kept ?? {}), ...samples, ...runs, ...got });
+      await this.storage.put("vo2:pull", { at: now, days, points: pts.length, ...more, ...(pts.length && !Object.keys(got).length ? { sample: JSON.stringify(pts[0]).slice(0, 200) } : {}) } satisfies Vo2Pull);
     } catch (e) {
       nightErrors.push(String((e as Error).message));
       await this.storage.put("vo2:pull", { at: now, days: 0, points: 0, error: String((e as Error).message).slice(0, 120) } satisfies Vo2Pull);

@@ -1,9 +1,8 @@
-// The game on Today (PLAN 203; owner, 10 Nov: "1 yes 2 yes" — weekly goals plus one week score, Today first). Six weeks
-// planted (7 drinks a week, in bed 23:50 by the band, 140 g protein on Mon–Wed, creatine every day, 3 sessions), then this
-// Monday (1 drink, in bed 23:20, 150 g, the stack, a session) and Tuesday so far (the stack, 82 g). Tue 21:40: after the
-// check-in and For you (Today A's order kept), "Your week" (PLAN 204: the week you defend) — 70 of 70 left, level 1, last
-// week kept 0; the five goals with what each can still take; the focus (bedtime, last week's weakest: 20 % there); the next move is
-// tonight's bed; the race and you against everyone. Fits 320 and 390. Control: a new account — no card.
+// How you compare (PLAN 206; owner, 11 Nov: "i like the comparisons … the whole gamification idea is not that good"). The
+// week suite's six weeks with the band (resting heart rate 54 this morning, ~7 h 10 asleep a night). Tue 21:40 on Today,
+// where the game's week card was: resting heart ahead of about 90 % of 92,457 Fitbit wearers, sleep ahead of about 70 %;
+// endurance, steps and strength say what they need; "You vs everyone" under it. No game anywhere: no points, levels,
+// focus or #game. Fits 320 and 390. Control: a new account without the band — no card.
 const { chromium, APP, OUT, handle, tables } = require('./harness.cjs');
 
 const KEY = 'healthos.v1:u-test', MIN = 60_000, H = 3_600_000;
@@ -54,40 +53,30 @@ function world() {
     await pg.goto(APP + '#today'); await pg.reload(); await pg.waitForSelector('.t2-head'); await pg.waitForTimeout(1500);
     return { ctx, pg };
   }
-  const card = (pg) => pg.getByRole('region', { name: "This week's goals" });
+  const card = (pg) => pg.getByRole('region', { name: 'How you compare' });
 
   let { ctx, pg } = await open(390, world());
   await card(pg).waitFor({ timeout: 8000 }).catch(() => {});
   const c = card(pg);
-  // after For you: Today A's order (the tiles, the log row, the check-in) stays (e2e hownow checks the check-in's place)
-  const order = await pg.evaluate(() => { const w = document.querySelector('section.week'), f = document.querySelector('#feel'); return { after: !!w && !!f && (f.compareDocumentPosition(w) & Node.DOCUMENT_POSITION_FOLLOWING) !== 0, feelY: Math.round(f?.getBoundingClientRect().y ?? 9999) }; });
-  check('after the check-in and For you', order.after && await pg.evaluate(() => { const w = document.querySelector('section.week'), y = document.querySelector('.foryou, [aria-label^="For you"]'); return !y || (y.compareDocumentPosition(w) & Node.DOCUMENT_POSITION_FOLLOWING) !== 0; }));
-  const words = (await c.locator('.wk-top').innerText().catch(() => '')).replace(/\s+/g, ' ').trim();
-  check(`70 to defend, level, last week (${await c.getAttribute('data-points')} · ${await c.getAttribute('data-level')} · ${words})`,
-    await c.getAttribute('data-points') === '70' && await c.getAttribute('data-level') === '1' && words.toLowerCase() === '70 of 70 left your week · level 1 keep 50 by sunday and you level up 2 of 7 days in · last week you kept 0');
-  const goals = (await c.locator('.wk-goals li').allInnerTexts()).map((t) => t.replace(/\s+/g, ' ').trim());
-  check(`the five goals, each so far and what it can still take (${JSON.stringify(goals)})`, JSON.stringify(goals) === JSON.stringify([
-    '5 drinks or fewer · 1 so far 4 to spare', 'In bed by 23:30 · 1 of 5 2 spare nights', '140 g protein · 1 of 4 3 spare days', 'The stack, every day · 2 of 6 1 spare day', '3 sessions · 1 of 3 4 spare days']));
-  const days = await c.locator('[data-goal="bed"] .wk-days i').evaluateAll((is) => is.map((i) => i.className || '-'));
-  check(`bed: Monday hit, tonight open (${days.join(' ')})`, days.join(' ') === 'hit - - - - - -');
-  const focus = c.locator('.wk-focus');
-  check(`the focus: last week's weakest, bedtime — 20 % there (${(await focus.innerText().catch(() => '')).replace(/\s+/g, ' ')})`, await focus.getAttribute('data-focus') === 'bed' && await focus.getAttribute('data-left') === '80' && /^This week's focus: bedtime · 20 % there$/i.test((await focus.innerText()).replace(/\s+/g, ' ').trim()));
-  check(`the next move is the focus's: tonight's bed (${await c.locator('.wk-move').innerText().catch(() => '')})`, (await c.locator('.wk-move').innerText().catch(() => '')).replace(/\s+/g, ' ') === 'Next: in bed by 23:30 tonight makes it 2 of 5.');
-  check(`the race and you vs everyone (${await c.locator('.wk-vs').innerText().catch(() => '')})`, /^The race · level with last week's you You vs everyone · resting heart rate 11 under the average of 92,457 Fitbit wearers$/.test((await c.locator('.wk-vs').innerText().catch(() => '')).replace(/\s+/g, ' ')));
-  check('no stake owed, no treat (none set)', await c.locator('.wk-owed').count() === 0 && await c.locator('.wk-treat').count() === 0);
-  check('the game page link', await c.getByRole('link', { name: /Your card, the race and the season/ }).count() === 1);
+  const rows = (await c.locator('li').allInnerTexts()).map((t) => t.replace(/\s+/g, ' ').trim());
+  check(`the rows (${JSON.stringify(rows)})`, JSON.stringify(rows) === JSON.stringify([
+    'Endurance needs VO2 max', 'Resting heart 54 bpm ahead of about 90 % · 92,457 Fitbit wearers', 'Sleep 7 h 10 a night ahead of about 70 % · about 120,000 Fitbit wearers', 'Steps needs steps', 'Strength needs 3 sessions of a lift']));
+  check(`you vs everyone (${await c.locator('.wk-vs').innerText().catch(() => '')})`, /^You vs everyone · resting heart rate 11 under the average of 92,457 Fitbit wearers$/.test((await c.locator('.wk-vs').innerText().catch(() => '')).replace(/\s+/g, ' ')));
+  const order = await pg.evaluate(() => { const w = document.querySelector('section.vsall'), f = document.querySelector('#feel'); return !!w && !!f && (f.compareDocumentPosition(w) & Node.DOCUMENT_POSITION_FOLLOWING) !== 0; });
+  check('after the check-in (Today A\'s order kept)', order);
+  const body = await pg.locator('main').innerText();
+  check('no game anywhere on Today', !/of 70 left|level \d|This week's focus|spare night|Your card, the race/i.test(body) && await pg.locator('a[href="#game"]').count() === 0);
   check(`390: fits (${await pg.evaluate(() => document.documentElement.scrollWidth)} px)`, await pg.evaluate(() => document.documentElement.scrollWidth) <= 390);
-  await c.screenshot({ path: OUT + 'week-390.png' });
+  await c.screenshot({ path: OUT + 'howcompare-390.png' });
   await ctx.close();
 
   ({ ctx, pg } = await open(320, world()));
   await card(pg).waitFor({ timeout: 8000 }).catch(() => {});
   check(`320: fits (${await pg.evaluate(() => document.documentElement.scrollWidth)} px)`, await pg.evaluate(() => document.documentElement.scrollWidth) <= 320);
-  await card(pg).screenshot({ path: OUT + 'week-320.png' }).catch(() => {});
   await ctx.close();
 
   ({ ctx, pg } = await open(390, null));
-  check('control: a new account — no card', await card(pg).count() === 0);
+  check('control: a new account without the band — no card', await card(pg).count() === 0);
   await ctx.close();
   console.log('errors: ' + JSON.stringify(errs));
   check('no page errors', errs.length === 0);

@@ -35,21 +35,21 @@ a { color: inherit; }
 .screen { padding-top: env(safe-area-inset-top, 0px); min-width: 0; }
 /* Every screen in Workout's black and yellow (owner, 6 Oct: Today's look, then "do" for the rest). The
    palette is set on the app root, so cards, inputs and the tab bar of Log, Settings, AI and Dev follow it. */
-.app.r-today, .app.r-log, .app.r-settings, .app.r-game, .app.r-ai, .app.r-dev {
+.app.r-today, .app.r-log, .app.r-settings, .app.r-ai, .app.r-dev {
   --c-bg: #0f1012; --c-bg-top: #0f1012; --c-card: #1a1c20; --c-card-2: #23262b; --c-track: #2d3036;
   --c-ink: #f3f3f1; --c-ink-2: #a2a4a9; --c-dim: #7c7f86;
   background: var(--k-bg); font-family: var(--f-bar);
 }
-.app.r-today .tabs, .app.r-log .tabs, .app.r-settings .tabs, .app.r-game .tabs, .app.r-ai .tabs, .app.r-dev .tabs { --tab-bg: var(--k-bg); }
-.r-today .tabs a.on i, .r-log .tabs a.on i, .r-settings .tabs a.on i, .r-game .tabs a.on i, .r-ai .tabs a.on i { background: var(--gym); }
-.app:is(.r-log, .r-settings, .r-game, .r-ai, .r-dev) .calm > .head { padding: 0 2px 2px; align-items: flex-end; }
-.app:is(.r-log, .r-settings, .r-game, .r-ai, .r-dev) .calm > .head > span:first-child { font-family: var(--f-cond); font-size: 38px; font-weight: 700; line-height: 1; text-transform: uppercase; color: var(--c-ink); }
-.app:is(.r-log, .r-settings, .r-game, .r-ai, .r-dev) .calm > .head > a { padding: 12px 4px; font-size: 13.5px; font-weight: 600; }
-.app:is(.r-log, .r-settings, .r-game, .r-ai, .r-dev) .card h3 { font-family: var(--f-cond); font-size: 20px; font-weight: 700; letter-spacing: .02em; text-transform: uppercase; color: var(--c-ink); }
-.app:is(.r-log, .r-settings, .r-game, .r-ai, .r-dev) .card h3 span { font-family: var(--f-bar); font-size: 12.5px; letter-spacing: 0; text-transform: none; color: var(--c-ink-2); font-weight: 500; }
+.app.r-today .tabs, .app.r-log .tabs, .app.r-settings .tabs, .app.r-ai .tabs, .app.r-dev .tabs { --tab-bg: var(--k-bg); }
+.r-today .tabs a.on i, .r-log .tabs a.on i, .r-settings .tabs a.on i, .r-ai .tabs a.on i { background: var(--gym); }
+.app:is(.r-log, .r-settings, .r-ai, .r-dev) .calm > .head { padding: 0 2px 2px; align-items: flex-end; }
+.app:is(.r-log, .r-settings, .r-ai, .r-dev) .calm > .head > span:first-child { font-family: var(--f-cond); font-size: 38px; font-weight: 700; line-height: 1; text-transform: uppercase; color: var(--c-ink); }
+.app:is(.r-log, .r-settings, .r-ai, .r-dev) .calm > .head > a { padding: 12px 4px; font-size: 13.5px; font-weight: 600; }
+.app:is(.r-log, .r-settings, .r-ai, .r-dev) .card h3 { font-family: var(--f-cond); font-size: 20px; font-weight: 700; letter-spacing: .02em; text-transform: uppercase; color: var(--c-ink); }
+.app:is(.r-log, .r-settings, .r-ai, .r-dev) .card h3 span { font-family: var(--f-bar); font-size: 12.5px; letter-spacing: 0; text-transform: none; color: var(--c-ink-2); font-weight: 500; }
 /* A long subtitle stays beside its title and wraps there, instead of dropping to a right-aligned line of its own. */
-.app:is(.r-today, .r-log, .r-settings, .r-game, .r-ai, .r-dev) .card h3 { flex-wrap: nowrap; }
-.app:is(.r-today, .r-log, .r-settings, .r-game, .r-ai, .r-dev) .card h3 span { flex: 1 1 0; min-width: 40%; line-height: 1.3; }
+.app:is(.r-today, .r-log, .r-settings, .r-ai, .r-dev) .card h3 { flex-wrap: nowrap; }
+.app:is(.r-today, .r-log, .r-settings, .r-ai, .r-dev) .card h3 span { flex: 1 1 0; min-width: 40%; line-height: 1.3; }
 .app.r-workout { background: var(--k-bg); color: var(--k-ink); font-family: var(--f-bar); }
 .app.r-insights { background: var(--i-bg); color: var(--i-ink); font-family: var(--f-plex); }
 
@@ -2365,115 +2365,36 @@ span.fd-score[data-band="none"] { background: none; min-width: 34px; }
 .rd-vs small { font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--ok); }
 
 /* Your week (PLAN 203, canvas A): the score ring, the goals, the next move */
-.week { display: grid; gap: 12px; }
-.wk-top { display: flex; align-items: center; gap: 14px; }
-.wk-ring { position: relative; width: 74px; height: 74px; flex: none; display: grid; place-items: center; }
-.wk-ring svg { position: absolute; inset: 0; }
-.wk-ring circle { fill: none; stroke-width: 7; }
-.wk-ring .wk-track { stroke: var(--c-track); }
-.wk-ring .wk-arc { stroke: var(--gym); stroke-linecap: round; }
-.wk-ring b { font-family: var(--f-cond); font-size: 30px; line-height: 1; }
-.wk-words { display: grid; gap: 3px; min-width: 0; font-size: 13.5px; }
-.wk-k { font-family: var(--f-cond); font-size: 20px; font-weight: 700; letter-spacing: .02em; text-transform: uppercase; }
-.wk-pace { color: var(--gym); }
-.wk-words small { font-size: 12.5px; color: var(--c-ink-2); }
-.wk-goals { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
-.wk-goals li { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px 10px; align-items: center; font-size: 14px; }
-.wk-t { font-weight: 600; }
-.wk-t span { font-weight: 400; color: var(--c-ink-2); }
-.wk-goals b { font-size: 13px; font-variant-numeric: tabular-nums; }
-.wk-goals b.ok { color: var(--ok); }
-.wk-days { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 3px; }
-.wk-days i { height: 6px; border-radius: 3px; background: var(--c-track); }
-.wk-days i.hit { background: var(--gym); }
-.wk-days i.miss { background: #4a3b1d; }
-.wk-bar { grid-column: 1 / -1; height: 6px; border-radius: 3px; background: var(--c-track); overflow: hidden; }
-.wk-bar i { display: block; height: 100%; border-radius: 3px; background: var(--gym); }
-.wk-bar i.ok { background: var(--ok); } .wk-bar i.over { background: var(--warn); }
-.wk-move { margin: 0; padding: 10px 12px; border-radius: 12px; background: var(--c-card-2); font-size: 13.5px; line-height: 1.4; }
-.wk-move b { color: var(--gym); }
+
+
+/* PLAN 206 — how you compare (Today) */
+.vsall { display: grid; gap: 12px; }
+.vsall ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; }
+.vsall li { display: grid; gap: 5px; font-size: 14px; }
+.vs-w b { font-weight: 600; }
+.vs-w small, .vs-p small { color: var(--c-ink-2); font-size: 12.5px; }
+.vs-bar { position: relative; display: block; height: 8px; border-radius: 4px; background: var(--c-track); }
+.vs-bar i { display: block; height: 100%; border-radius: 4px; background: var(--ok); }
+.vs-bar i.down { background: var(--warn); }
+.vs-bar em { position: absolute; left: 50%; top: -3px; bottom: -3px; width: 2px; margin-left: -1px; background: var(--c-ink); opacity: .55; }
+.vs-p { font-size: 13px; }
+.vsall li.none { opacity: .7; }
 .wk-vs { margin: 0; font-size: 12.5px; line-height: 1.45; color: var(--c-ink-2); }
 .wk-vs b { color: var(--ok); font-weight: 600; }
 
-/* PLAN 204 — the week you defend (Today) */
-.wk-pts { display: grid; justify-items: start; gap: 0; flex: none; min-width: 74px; }
-.wk-pts b { font-family: var(--f-cond); font-size: 56px; font-weight: 700; line-height: .85; color: var(--gym); }
-.wk-pts span { font-size: 12px; color: var(--c-ink-2); font-weight: 600; }
-.wk-k { font-size: 11px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--c-ink-2); }
-.wk-hold { position: relative; display: block; height: 8px; border-radius: 4px; background: var(--c-track); }
-.wk-hold i { display: block; height: 100%; border-radius: 4px; background: var(--gym); }
-.wk-hold i.under { background: var(--warn); }
-.wk-hold em { position: absolute; top: -4px; bottom: -4px; width: 2px; margin-left: -1px; border-radius: 1px; background: var(--c-ink); opacity: .7; }
-.wk-goals b.risk { color: var(--gym); }
-.wk-goals b.lost { color: var(--warn); }
-.wk-goals b { color: var(--c-ink-2); font-weight: 600; }
-.wk-focus { margin: 0; display: grid; gap: 6px; padding: 10px 12px; border-radius: 12px; background: color-mix(in srgb, var(--supp) 9%, var(--c-card-2)); font-size: 13.5px; }
-.wk-focus b { font-weight: 700; }
-.wk-hp { display: block; height: 6px; border-radius: 3px; background: var(--c-track); overflow: hidden; }
-.wk-hp i { display: block; height: 100%; border-radius: 3px; background: var(--supp); }
-.wk-owed { margin: 0; display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 12px; border-radius: 12px; background: var(--c-card-2); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--warn) 45%, transparent); font-size: 13.5px; line-height: 1.4; }
-.wk-owed b { color: var(--warn); }
-.wk-owed .kbtn { flex: none; min-height: 44px; }
-.wk-treat { margin: 0; font-size: 13.5px; line-height: 1.4; }
-.wk-treat b { color: var(--gym); }
-.wk-open { justify-self: start; display: inline-flex; align-items: center; min-height: 44px; font-size: 13.5px; font-weight: 600; color: var(--c-ink); text-decoration: none; }
+/* PLAN 206 — the night bet's workings and your own reason */
+.fc-basis { margin-top: 2px; }
+.fc-own { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; margin-top: 8px; }
+.fc-own input { background: var(--c-card-2); border: 1px solid transparent; border-radius: 12px; color: var(--c-ink); padding: 10px 12px; font: inherit; font-size: 16px; min-width: 0; }
 
-/* PLAN 204 — the game page */
-.gm { display: grid; gap: 12px; }
-.gm-card { display: grid; gap: 12px; padding: 18px 16px 16px; border-radius: 20px; background: linear-gradient(160deg, color-mix(in srgb, var(--gym) 16%, var(--c-card-2)) 0%, var(--c-card-2) 55%, var(--c-card) 100%); box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--gym) 45%, transparent); }
-.gm-ovr { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
-.gm-ovr > div:first-child { display: grid; }
-.gm-ovr b { font-family: var(--f-cond); font-size: 64px; line-height: .9; color: var(--gym); }
-.gm-ovr span { font-size: 11px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--gym); }
-.gm-ovr-r { display: grid; justify-items: end; gap: 4px; }
-.gm-tag { padding: 5px 10px; border-radius: 12px; background: #0f101288; font-size: 11.5px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--c-ink) !important; }
-.gm-ovr-r small { font-size: 12px; font-weight: 600; color: var(--c-ink-2); }
-.gm-ovr-r small.up { color: var(--ok); } .gm-ovr-r small.down { color: var(--warn); }
-.gm-name { font-family: var(--f-cond); font-size: 26px; line-height: 1; text-transform: uppercase; }
-.gm-name span { font-size: 18px; color: var(--c-ink-2); }
-.gm-stats { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px 16px; }
-.gm-stats > div { display: grid; grid-template-columns: 38px minmax(0, 1fr); align-items: center; gap: 8px; min-width: 0; }
-.gm-stats b { font-family: var(--f-cond); font-size: 28px; line-height: 1; font-variant-numeric: tabular-nums; }
-.gm-stats span { display: grid; gap: 1px; min-width: 0; }
-.gm-stats em { font-style: normal; font-size: 12px; font-weight: 700; letter-spacing: .08em; }
-.gm-stats small { font-size: 11px; color: var(--c-ink-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.gm-stats > .low b { color: var(--warn); }
-.gm-stats > .none b { color: var(--c-dim); }
-.gm-note { margin: 0; font-size: 13.5px; line-height: 1.4; }
-.gm-note b { color: var(--gym); }
-.gm-foot { margin: 0; font-size: 12px; line-height: 1.45; color: var(--c-ink-2); }
-.gm-big { font-family: var(--f-cond); font-size: 26px; line-height: 1.05; text-transform: uppercase; }
-.gm-sub { font-size: 13.5px; line-height: 1.4; color: var(--c-ink-2); }
-.gm-focus { background: linear-gradient(180deg, color-mix(in srgb, var(--supp) 12%, var(--c-card)) 0%, var(--c-card) 100%); }
-.gm-hp { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 10px; font-size: 12.5px; font-weight: 700; letter-spacing: .08em; }
-.gm-hpbar { height: 12px; border-radius: 6px; background: var(--c-track); overflow: hidden; }
-.gm-hpbar i { display: block; height: 100%; border-radius: 6px; background: var(--supp); }
-.gm-race svg { display: block; overflow: visible; }
-.gm-l { fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
-.gm-l.you { stroke: var(--gym); stroke-width: 2.5; }
-.gm-l.last { stroke: var(--supp); stroke-dasharray: 4 4; }
-.gm-l.best { stroke: var(--c-ink-2); stroke-dasharray: 4 4; }
-.gm-dot { fill: var(--gym); stroke: var(--c-card); stroke-width: 2; }
-.gm-keep { stroke: var(--c-track); stroke-width: 1; stroke-dasharray: 2 4; }
-.gm-ax { fill: var(--c-ink-2); font-size: 10.5px; font-family: var(--f-bar); }
-.gm-ax.on { fill: var(--c-ink); font-weight: 700; }
-.gm-legend { display: flex; flex-wrap: wrap; gap: 14px; font-size: 12px; color: var(--c-ink-2); }
-.gm-legend span { display: inline-flex; align-items: center; gap: 6px; }
-.gm-legend i { display: inline-block; width: 14px; height: 0; border-radius: 0; background: none; border-top: 2px dashed var(--c-ink-2); }
-.gm-legend i.you { border-top: 3px solid var(--gym); } .gm-legend i.last { border-top-color: var(--supp); }
-.gm-season { background: linear-gradient(160deg, color-mix(in srgb, var(--wt) 14%, var(--c-card)) 0%, var(--c-card) 70%); }
-.gm-tiers { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 3px; }
-.gm-tiers i { height: 8px; border-radius: 4px; background: var(--c-track); }
-.gm-tiers i.on { background: var(--gym); }
-.gm-row { display: flex; justify-content: space-between; gap: 10px; font-size: 13px; color: var(--c-ink-2); }
-.gm-row b { color: var(--c-ink); }
-.gm-chips { display: flex; flex-wrap: wrap; gap: 6px; }
-.gm-pick { min-height: 44px; padding: 0 14px; border: 0; border-radius: 22px; background: var(--c-track); color: var(--c-ink); font: 600 13.5px var(--f-bar); }
-.gm-pick[aria-pressed="true"] { background: var(--gym); color: #0f1012; }
-.gm-own { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; }
-.gm-own input { background: var(--c-card-2); border: 1px solid transparent; border-radius: 12px; color: var(--c-ink); padding: 10px 12px; font: inherit; font-size: 16px; min-width: 0; }
-.gm-own .kbtn { min-height: 44px; }
-.gm-own .kbtn:disabled { opacity: .45; }
-.gm-how summary { cursor: pointer; font-family: var(--f-cond); font-size: 20px; font-weight: 700; text-transform: uppercase; min-height: 32px; }
-.gm-how ul { margin: 6px 0 0; padding-left: 18px; display: grid; gap: 8px; font-size: 13.5px; line-height: 1.45; }
-.gm-how li b { color: var(--gym); }
+/* PLAN 206 — connecting the dots (Insights → Findings) */
+.cd-list { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 14px; }
+.cd-list li { display: grid; gap: 6px; padding: 12px; border: 1px solid var(--i-line); border-radius: 8px; background: var(--i-panel-2); min-width: 0; }
+.cd-list p { margin: 0; font-size: 14px; line-height: 1.4; color: var(--i-ink); }
+.cd-list small { font-family: var(--f-mono); font-size: 11px; color: var(--i-ink-2); }
+.cd-dots { width: 100%; height: auto; display: block; }
+.cd-axis { stroke: var(--i-line-2); stroke-width: 1; }
+.cd-dot { fill: var(--i-ink-2); fill-opacity: .55; }
+.cd-fit { stroke-width: 2.5; stroke-linecap: round; }
+.cd-fit.good { stroke: var(--ok); } .cd-fit.bad { stroke: var(--warn); }
+.cd-t { fill: var(--i-ink-2); font-size: 10px; font-family: var(--f-mono); }

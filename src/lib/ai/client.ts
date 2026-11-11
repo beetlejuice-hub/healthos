@@ -2,6 +2,7 @@
  * The app's side of the AI: send a request to the Worker with your session, keep the latest usage
  * (calls today, cost) for Settings, and build the context the AI is told — on demand, at call time.
  */
+import { connect, linkLines, thingsFrom } from "../connect";
 import { AI_ERRORS, MONTHLY_USD, READ_ROUNDS, isLooks, type AiError } from "./tasks";
 import { droppedWords, withRetry } from "./retry";
 import { pickLead } from "./lead";
@@ -160,6 +161,15 @@ export function leadNow(state: State = getState(), now = Date.now()) {
   return pickLead(scout(days, state.supplements, (id) => !!state.scout[id]?.dismissed), state.ai.leads, today);
 }
 
+/** Connecting the dots now (PLAN 206, lib/connect): the app's links over 120 days, in words, surest first. */
+export function linksNow(state: State = getState(), now = Date.now(), n = 10): string[] {
+  try {
+    const today = localDay(now), band = bandNow();
+    const th = thingsFrom(withBand(dailyFacts(state.entries, state.workouts, state.settings, addDays(today, -120), addDays(today, -1)), band, today), band);
+    return linkLines(connect(th), th, n);
+  } catch { return []; }
+}
+
 export function contextNow(state: State = getState(), now = Date.now(), { slim = false, todaySoFar = true } = {}): string {
   // the chat sees what Today shows from the AI: it isn't posted in the chat any more (owner, 16 Oct)
   const onToday = slim ? onTodayLines(state.ai, now) : [];
@@ -174,7 +184,9 @@ export function contextNow(state: State = getState(), now = Date.now(), { slim =
   const sets = state.entries.filter((e): e is EntryOf<"set"> => e.kind === "set") as LoggedSet[];
   const ready = band ? readinessNow(state, band, now) : null;
   const ss = sessions(state.workouts, sets);
-  return buildContext({ state, now, days, findings: report.found, patterns, weight: t ? { kg: t.nowKg, perWeek: t.perDay * 7 } : null, nights: nightsSeen, lab: labNow(state, band, now),
+  // connecting the dots (PLAN 206): 120 days, every pair — so a read can tie a note or a study to what his days show
+  const links = linksNow(state, now, slim ? 5 : 10);
+  return buildContext({ state, now, days, findings: report.found, patterns, weight: t ? { kg: t.nowKg, perWeek: t.perDay * 7 } : null, nights: nightsSeen, lab: labNow(state, band, now), links,
     // last night's skin temperature, breathing and blood oxygen against your usual, and the night check's line (PLAN 52)
     today: [...todayLines(ready), ...(band && ready ? nightCheckLines(nightCheck(today, band, heartSigns(ready))) : []),
       // yesterday's food as a whole day, out of 100 (lib/dayscore)

@@ -3,7 +3,7 @@
 // box "just face value, so i can input whatever, a finding, a new supp that makes me feel good, ai can understand
 // everything and make changes/ sort things/ start ivestigating"). A fake AI. (1) A morning read item: "For me it's the
 // opposite" goes to the chat with the item attached; the AI remembers it; its reply shows under the item and in the AI
-// tab. (2) The Noticed box: "Started magnesium glycinate…" is kept as a note and read by the AI at once, which proposes
+// tab. (2) The Noticed box: "Started magnesium glycinate…" is kept as a note and put on the list to look into (no AI call); "Ask now" has the AI read it, which proposes
 // adding it to the stack; the reply and its Apply card show under the box; Apply puts it in the stack — not before.
 const { chromium, APP, OUT, handle } = require('./harness.cjs');
 
@@ -60,11 +60,17 @@ const PROPOSE = { id: 'p1', name: 'propose', input: { change: 'add_supplement', 
   const box = pg.locator('.notice-box');
   await box.locator('input').fill('Started magnesium glycinate 400 mg at night, sleeping way better');
   await box.getByRole('button', { name: 'Save' }).click();
+  // 11 Nov ("ai doesnt have to answer right away, just note it and later look into it"): saved, on the list to look into, nothing asked yet
+  await pg.waitForTimeout(400);
+  const asked0 = chats.filter((c) => /"Noticed something\?" box/.test(c.context)).length;
+  const threads = await pg.evaluate((k) => (JSON.parse(localStorage.getItem(k)).ai.threads || []).map((t) => t.text), KEY);
+  check(`saving only notes it — on the list the reads look into, no AI call (${asked0} · ${JSON.stringify(threads)})`, asked0 === 0 && threads.some((t) => /^You noticed: "Started magnesium glycinate/.test(t)) && /The AI looks into it in its next read/.test(await box.innerText()));
+  await box.getByRole('button', { name: 'Ask now ›' }).click();
   await box.locator('.ask-reply:not(.typing)').waitFor({ timeout: 5000 }).catch(() => {});
   const note = await stored((s) => s.entries.filter((e) => e.kind === 'notice').map((e) => e.text), (v) => v.length > 0);
   check(`kept as a note, as before (${note.join(' | ')})`, note.length === 1 && /magnesium glycinate/.test(note[0]));
   const nc = chats.find((c) => /"Noticed something\?" box/.test(c.context));
-  check(`…and read by the AI at once, told to act on it (${nc?.messages.at(-1)?.text})`, nc?.messages.at(-1)?.text === 'Noticed: Started magnesium glycinate 400 mg at night, sleeping way better' && /propose it \(add_supplement/.test(nc.context));
+  check(`…and, on Ask now, read by the AI, told to act on it (${nc?.messages.at(-1)?.text})`, nc?.messages.at(-1)?.text === 'Noticed: Started magnesium glycinate 400 mg at night, sleeping way better' && /propose it \(add_supplement/.test(nc.context));
   const boxText = await box.innerText();
   check(`the reply and the change it proposes show under the box (${boxText.replace(/\s+/g, ' ').slice(0, 120)})`, /tap Apply/.test(boxText) && await box.locator('.proposals').count() === 1);
   const before = await pg.evaluate((k) => JSON.parse(localStorage.getItem(k)).supplements.map((x) => x.name), KEY);

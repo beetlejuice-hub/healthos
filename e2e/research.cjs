@@ -2,7 +2,7 @@
 // not let it soend way too much credits. Like researxh on what i take what i eat how i train how much i move my heartrate").
 // Tue 3 Nov 11:00, creatine taken on 14 of the last 14 days, the month's AI spend $3 of $20. The app picks the topic
 // itself and asks once, small: its context is About me and creatine's own lines; the answer is kept with its cost. The AI
-// tab: "Researched for you" — the title, what's known, for you, what to try, the source, $0.07 of $2.50 this month, and
+// tab: "Researched for you" — the title, what's known, for you, what to try, the source, $0.07 of $3.50 this month, and
 // it waits (one a day). A reload asks nothing more. Controls: Settings → AI's switch off asks nothing; nor does a month
 // past half its budget. 390 px.
 const { chromium, APP, OUT, handle } = require('./harness.cjs');
@@ -50,7 +50,7 @@ async function run(b, { off = false, monthUsd = 3 } = {}) {
   check(`kept with its topic and cost (${JSON.stringify(kept.map((r) => [r.key, r.usd]))})`, kept.length === 1 && kept[0].key === 'supp:cre:5g' && kept[0].usd === 0.07);
   await pg.goto(APP + '#ai'); await pg.waitForSelector('[aria-label="Researched for you"]', { timeout: 8000 }).catch(() => {});
   const card = (await pg.locator('[aria-label="Researched for you"]').innerText().catch(() => '')).replace(/\s+/g, ' ');
-  check(`the AI tab: "Researched for you", its cost against its cap, waiting till tomorrow (${card.slice(0, 160)})`, /RESEARCHED FOR YOU on its own · \$0\.07 of \$2\.50 this month/i.test(card) && /Next: waiting — one a day\./.test(card));
+  check(`the AI tab: "Researched for you", its cost against its cap, waiting till tomorrow (${card.slice(0, 160)})`, /RESEARCHED FOR YOU on its own · \$0\.07 of \$3\.50 this month/i.test(card) && /Next: waiting — one a day\./.test(card));
   check(`…the newest open: what's known, for you, what to try, the source (${card.slice(160, 420)})`, /Creatine at 5 g: does the timing matter\?/.test(card) && /Daily intake matters more than timing/.test(card) && /For you: You take 5 g on 14 of the last 14 days/.test(card) && /Try: Keep it daily, at any time/.test(card) && /ISSN position stand: creatine ✓/.test(card));
   check(`390: fits (${await pg.evaluate(() => document.documentElement.scrollWidth)} px)`, await pg.evaluate(() => document.documentElement.scrollWidth) <= 390);
   await pg.locator('[aria-label="Researched for you"]').screenshot({ path: OUT + 'research.png' });

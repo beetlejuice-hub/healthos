@@ -43,6 +43,7 @@ const CALL = { id: 'w1', name: 'propose', input: { change: 'watch', why: 'you no
     // 20:12: the note
     await pg.getByLabel('Something you noticed').fill('creatine makes my muscles fuller');
     await pg.getByLabel('Something you noticed').press('Enter');
+    await pg.locator('.notice-box').getByRole('button', { name: 'Ask now ›' }).click();
     const card = pg.locator('.notice-box .propose');
     await card.waitFor({ timeout: 8000 });
     const ctext = (await card.innerText()).replace(/\s+/g, ' ');

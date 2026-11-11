@@ -3,7 +3,8 @@
 // predict when im gonna go to sleep"). 63 fake band nights, bed 23:15 ± 50 min and the alarm at 07:24, so a later bed is
 // a shorter night; planted: each drink that evening heart rate asleep +2.5, HRV −5, 25 min less sleep. Morning (08:00):
 // the last night was a bad one with no drinks — the card says the real score, the bedtime, what the app said for that
-// bedtime, "Missed by …", the week of bets, and asks; "Stressed" tags last night. Evening (21:30) after 2 beers: a score
+// bedtime, "Missed by …", the week of bets, what it was based on (adding up to the bet), and asks; "Stressed" tags last
+// night, and so do your own words. Evening (21:30) after 2 beers: a score
 // per bedtime from 22:00, each later one lower; what each hour costs; "already set by today" has the drinks. Control: an
 // evening with no drinks — every bedtime's score higher, no drinks in what's set. 320 px fits.
 const { chromium, APP, OUT, handle } = require('./harness.cjs');
@@ -68,9 +69,22 @@ function world() {
   check(`…and it asks what it didn't see (${(m.match(/Worse than it bet[^?]*\?/) || [''])[0]})`, /Worse than it bet — something it didn't see\?/.test(m));
   check(`320: fits (${await pg.evaluate(() => document.documentElement.scrollWidth)} px)`, await pg.evaluate(() => document.documentElement.scrollWidth) <= 320);
   await card("Last night's bet").screenshot({ path: OUT + 'forecast-morning.png' });
+  // what it was based on (owner, 11 Nov: "can i see what sleep score predict is based on")
+  await card("Last night's bet").getByRole('button', { name: /What it was based on/ }).click(); await pg.waitForTimeout(200);
+  const basis = (await card("Last night's bet").locator('.fc-basis').innerText().catch(() => '')).replace(/\s+/g, ' ');
+  const usual = +(basis.match(/Your usual night: (\d+)/i) || [])[1], pts = await card("Last night's bet").locator('.fc-basis li b').allInnerTexts();
+  const sum = usual + pts.reduce((a, t) => a + (t.startsWith('−') ? -1 : 1) * +t.slice(1), 0);
+  check(`…what it was based on: your usual, what moved it, adding up to the bet (${basis.slice(0, 220)})`, !!usual && pts.length >= 1 && Math.abs(sum - +nums[3]) <= 1 && /It learned from your own \d+ nights/.test(basis) && /drinks/.test(basis) && /can't see what isn't logged/.test(basis));
   await card("Last night's bet").getByRole('button', { name: 'Stressed' }).click(); await pg.waitForTimeout(300);
   const tags = await pg.evaluate((k) => JSON.parse(localStorage.getItem(k)).entries.filter((e) => e.kind === 'sleep').map((e) => [e.at, e.tags]), KEY);
   check(`"Stressed": last night tagged, for the Sleep page and the bet to learn (${JSON.stringify(tags)})`, tags.length === 1 && tags[0][1].includes('stressed') && /Noted — stressed/.test(await card("Last night's bet").innerText()));
+  // in his own words (owner, 11 Nov: "should be able to input custom reason")
+  await pg.reload(); await pg.waitForSelector('text=Settings'); await card("Last night's bet").waitFor({ timeout: 20000 }).catch(() => {});
+  await card("Last night's bet").getByRole('button', { name: 'Something else…' }).click();
+  await card("Last night's bet").getByLabel('What it was, in your words').fill('neighbours loud, hot');
+  await card("Last night's bet").getByRole('button', { name: 'Save' }).click(); await pg.waitForTimeout(300);
+  const tags2 = await pg.evaluate((k) => JSON.parse(localStorage.getItem(k)).entries.filter((e) => e.kind === 'sleep').flatMap((e) => e.tags), KEY);
+  check(`…or in your own words: each part a tag (${JSON.stringify(tags2)})`, ['stressed', 'neighbours-loud', 'hot'].every((t) => tags2.includes(t)) && /Noted — neighbours loud, hot/.test(await card("Last night's bet").innerText()));
 
   // 21:30 after 2 beers
   await pg.evaluate(([k, at]) => { const s = JSON.parse(localStorage.getItem(k)); s.entries.push({ id: 'tb1', kind: 'drink', at, name: 'Beer', ml: 500, caffeineMg: 0, alcoholG: 20, kcal: 215 }, { id: 'tb2', kind: 'drink', at: at + 30 * 60_000, name: 'Beer', ml: 500, caffeineMg: 0, alcoholG: 20, kcal: 215 }); localStorage.setItem(k, JSON.stringify(s)); }, [KEY, new Date('2026-10-27T20:00:00').getTime()]);

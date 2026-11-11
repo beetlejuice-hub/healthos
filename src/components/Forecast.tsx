@@ -5,8 +5,10 @@
  * ("by 23:00 74 · by 00:00 70"), what each hour later costs him, and what today has already set; when his nights say
  * bedtime barely matters, one number "whenever you go". In the morning, next to the sleep score: "67 · in bed 00:40, for
  * that it said 68 · Called it ±1", or "Missed by 13 — something it didn't see?" — the answer is a last-night tag, so the
- * finder and the Sleep grid test it, and the bet learns it. The week of bets under it. Maths in lib/forecast; the nights
- * and their evenings as the Sleep page reads them.
+ * finder and the Sleep grid test it, and the bet learns it — or in his own words (owner, 11 Nov: "should be able to input
+ * custom reason"). What a bet was based on opens under it (owner, 11 Nov: "can i see what sleep score predict is based
+ * on"): his usual, each thing that moved it and by how much, what it weighs and what it can't see. The week of bets
+ * under it. Maths in lib/forecast; the nights and their evenings as the Sleep page reads them.
  */
 
 import { useMemo, useState } from "react";
@@ -14,10 +16,14 @@ import { useBand } from "../lib/band-client";
 import { clockH, evenings, nights, type Night } from "../lib/sleep";
 import { eveningInputs } from "../lib/eveninputs";
 import { sleepScore } from "../lib/sleepscore";
-import { betBefore, featuresOf, FORECAST, forecastModel, hhmm, lastBets, mostly, perHour, tonight as tonightOf, usualBedH, type Scored } from "../lib/forecast";
+import { betBefore, featuresOf, FEATURES, FORECAST, forecastModel, hhmm, lastBets, mostly, perHour, tonight as tonightOf, usualBedH, type Scored } from "../lib/forecast";
 import { useStore } from "../lib/store";
 import { addDays, atMinute, DAY, localDay } from "../lib/time";
 import { tagMorning } from "./Inbox";
+import { tagsOf } from "../lib/feel";
+
+/** What the bet weighs, by name. */
+const WATCH: Record<string, string> = { drinks: "drinks", caf: "caffeine left at bed", trained: "training", lateTrain: "training late", lateMeal: "eating close to bed", stress: "a stressful evening", bedLate: "bedtime" };
 
 /** What a miss may have been: tags the finder already reads ("out", "worklate") and a few more. */
 const MISSES = [{ tag: "stressed", label: "Stressed" }, { tag: "ill", label: "Getting ill" }, { tag: "hot-room", label: "Hot room" }, { tag: "worklate", label: "Worked late" }, { tag: "out", label: "Out late" }];
@@ -25,7 +31,7 @@ const MISSES = [{ tag: "stressed", label: "Stressed" }, { tag: "ill", label: "Ge
 export function ForecastCard({ now }: { now: number }) {
   const band = useBand().data;
   const entries = useStore((s) => s.entries), workouts = useStore((s) => s.workouts), halfLife = useStore((s) => s.settings.halfLifeMin);
-  const [why, setWhy] = useState(false), [told, setTold] = useState<string | null>(null);
+  const [why, setWhy] = useState(false), [told, setTold] = useState<string | null>(null), [own, setOwn] = useState<string | null>(null);
   const h = new Date(now).getHours(), today = localDay(now);
   const mode = h >= 20 || h < 4 ? "evening" : h < 12 ? "morning" : null;
   const scored = useMemo((): Scored[] => {
@@ -58,7 +64,8 @@ export function ForecastCard({ now }: { now: number }) {
     if (!b) return null;
     // what bedtime did: the bet for your usual one, when you went half an hour or more either side and bedtime counts for you
     const late = clockH(last.n.bed, last.n.eve) - b.model.bedH, usual = Math.abs(late) >= 0.5 && Math.abs(perHour(b.model)) >= FORECAST.flatPerHour ? betBefore(scored, i, true) : null;
-    return { bet: b.bet, real: last.score, off: last.score - b.bet, bed: hhmm(clockH(last.n.bed, last.n.eve)), usualBed: hhmm(b.model.bedH), atUsual: usual?.bet ?? null, week: lastBets(scored) };
+    return { bet: b.bet, real: last.score, off: last.score - b.bet, bed: hhmm(clockH(last.n.bed, last.n.eve)), usualBed: hhmm(b.model.bedH), atUsual: usual?.bet ?? null, week: lastBets(scored),
+      usual: b.usual, pushes: b.pushes, n: b.model.n, band: b.model.band, watched: FEATURES.filter((_, k) => b.model.use[k]).map((f) => WATCH[f.id] ?? f.id) };
   }, [mode, scored, today]);
 
   if (tonight) {
@@ -110,11 +117,24 @@ export function ForecastCard({ now }: { now: number }) {
           {morning.week.map((c) => <i key={c.day} className={c.hit ? "hit" : "miss"} title={`${c.day}: bet ${c.bet}, came ${c.real}`} />)}
           <small>{n} of {morning.week.length}</small>
         </div>}
+        <button type="button" className="linkish" aria-expanded={why} onClick={() => setWhy(!why)}>{why ? "Less" : "What it was based on ›"}</button>
+        {why && <div className="fc-set fc-basis">
+          <small>Your usual night: {morning.usual}, in bed {morning.usualBed}. Then last night:</small>
+          {morning.pushes.length ? <ul>{morning.pushes.map((q) => <li key={q.id}><span>{q.say}</span><b className={q.pts < 0 ? "neg" : "pos"}>{q.pts > 0 ? "+" : "−"}{Math.abs(q.pts)}</b></li>)}</ul>
+            : <p className="note">Nothing about last night moved it from your usual.</p>}
+          <p className="note">= {morning.bet}. It learned from your own {morning.n} nights before this one what each thing has gone with: {morning.watched.join(", ")}{morning.watched.length ? "" : "nothing yet — too few nights that differ"}. 8 in 10 nights it hadn't seen came within {Math.round(morning.band[0])} / +{Math.round(morning.band[1])}. It can't see what isn't logged — stress, getting ill, the room, a late screen — that's what the question below is for.</p>
+        </div>}
         {!hit && (told
           ? <p className="note">Noted — {told}. The bet learns from it, and the Sleep page tests it.</p>
           : <div className="fc-ask"><span>{morning.off < 0 ? "Worse" : "Better"} than it bet — something it didn't see?</span>
             <div className="chips">{MISSES.map((m) => <button key={m.tag} type="button" className="pill-btn" onClick={() => { tagMorning(today, m.tag); setTold(m.label.toLowerCase()); }}>{m.label}</button>)}
-              <button type="button" className="pill-btn fc-none" onClick={() => setTold("nothing different")}>Nothing</button></div></div>)}
+              <button type="button" className="pill-btn" aria-expanded={own != null} onClick={() => setOwn(own == null ? "" : null)}>Something else…</button>
+              <button type="button" className="pill-btn fc-none" onClick={() => setTold("nothing different")}>Nothing</button></div>
+            {own != null && <div className="fc-own">
+              <input aria-label="What it was, in your words" placeholder="e.g. neighbours were loud" value={own} maxLength={80} onChange={(e) => setOwn(e.target.value)}
+                onKeyDown={(e) => { if (e.key === "Enter" && own.trim()) { for (const t of tagsOf(own)) tagMorning(today, t); setTold(own.trim()); } }} />
+              <button type="button" className="pill-btn pri" disabled={!own.trim()} onClick={() => { for (const t of tagsOf(own)) tagMorning(today, t); setTold(own.trim()); }}>Save</button>
+            </div>}</div>)}
       </section>
     );
   }

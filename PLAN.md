@@ -3855,3 +3855,35 @@ both reads and the questions. Phases in that order; #152 RPE waits (owner).
    - VO2 max: why none arrives.
    - Interesting connections (lib/connect, SYNAPS's way) on Insights; research that comes up with studies and protocols
      from his results, Reddit/X/forum experience and the not-so-average studies too.
+   - Done 11 Nov. The game is gone: lib/game, lib/play, the Today week card, the game page, its settings (stakes, treat)
+     and their tests. Today has "How you compare" where it was (lib/card compareOf: endurance from VO2 max against
+     healthy men your age (HUNT), resting heart against 92,457 Fitbit wearers, sleep against ~120,000, steps against
+     717,527, strength against your own trend — each a bar, "ahead of about N %", the middle marked; you vs everyone
+     under it). Tests: card.test, e2e howcompare (new; no points, levels or focus anywhere on Today).
+   - Done 11 Nov. The night bet: "What it was based on" — your usual night, what moved it and by how much, adding up to the
+     bet, what it learned from and what it can't see; "Something else…" saves his own words as last night's tags. Tests:
+     e2e forecast.
+   - Done 11 Nov. VO2 max: the app only asked Google for daily-vo2-max (Fitbit's day value, which needs outdoor runs with
+     GPS). The API's discovery document has two more kinds: vo2-max (samples, measurementMethod FITBIT_RUN or
+     PREDICTION_NON_EXERCISE — the estimate without a run) and run-vo2-max. Now all three, a day each: the daily value,
+     then a run's, then any other (an estimate marked). If none come, the card says all three were asked. Tests: worker
+     band.test (shapes from the discovery document), fitage.test.
+   - Done 11 Nov (owner, mid-turn: "if i write something to noticed something ai doesnt have to answer right away, just
+     note it and later look into it, or connect to other things"): saving a note only keeps it and puts it on the list
+     the reads and the deep dive take first ("You noticed: … — what it goes with in your data, and what's known");
+     "Ask now ›" for an answer on the spot. Tests: e2e askabout, watch, watch2.
+   - Done 11 Nov. Connecting the dots (lib/connect, SYNAPS's mechanism): 120 days, each input (drinks, caffeine after
+     14:00, protein, food calories — a drink's calories left out, found when they made calories a second count of the
+     drinks — training, eating after 21:00, steps, bedtime, sleep, rain, daylight) against each outcome (mood, energy,
+     focus, stress, sleep rating, HRV, resting heart rate) at lags 0–2; against the centred 21-day mean; effective n
+     (Bretherton 1999); Student's t; Benjamini–Hochberg at q ≤ 0.1; each pair at its best lag. Insights → Findings:
+     each link in words with its days as dots and the line through them; the reads, the chat and the deep dive get the
+     links. Tests: connect.test (planted drinks → next-day HRV and steps → mood at the right lags, slope in range, 10
+     worlds; controls: drifts, slow random walks — fooled without effective n — 12 unrelated series, too few days;
+     t, BH, lag-1), e2e connectdots (planted drinks → next-day focus; control random).
+   - Done 11 Nov. Research: mine (the two surest links from his own days, with a protocol to test them on him), crowd
+     (what people report on Reddit, X and forums — anecdotes with their links, then the studies), edge (pilots, new
+     small trials, preprints, nulls — said as early); each answer may carry a protocol, startable as an experiment.
+     5 a week (about every other day; the morning read has a study daily), $3.50 a month. Tests: research.test.
+   - Not yet: the Insights redesign itself (canvas round 3: his colours, trend charts with every day and the average,
+     clearer than E).

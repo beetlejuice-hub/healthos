@@ -49,6 +49,7 @@ const CALL = { id: 'w2', name: 'propose', input: { change: 'watch', why: 'two we
 
   // the note → a watch tied to walks
   await pg.getByLabel('Something you noticed').fill('i feel better after a walk'); await pg.getByLabel('Something you noticed').press('Enter');
+  await pg.locator('.notice-box').getByRole('button', { name: 'Ask now ›' }).click();
   const card = pg.locator('.notice-box .propose'); await card.waitFor({ timeout: 8000 });
   check(`the card: asked 30 min after each walk (${(await card.locator('b').innerText())})`, /Watch: Walks → more energy — ask “Better than before the walk\?” 30 min after each walk for 14 days/.test(await card.locator('b').innerText()));
   await card.getByRole('button', { name: 'Watch it' }).click(); await pg.waitForTimeout(200);

@@ -141,7 +141,8 @@ export function fitAge(rec: Record<string, Vo2Day> | undefined, today: string, s
   return { sex, vo2: t.now, fit, you, est: t.est, per, weeks, change, rhr, cardio };
 }
 
-export type Vo2Pull = { at: number; days: number; points: number; sample?: string; error?: string };
+/** `samples`/`runs`: the vo2-max and run-vo2-max points that came too (PLAN 206); `moreErr`: either turned down. */
+export type Vo2Pull = { at: number; days: number; points: number; samples?: number; runs?: number; moreErr?: string; sample?: string; error?: string };
 
 /**
  * Why there's no fitness age yet, from what Google actually sent (PLAN 198; owner, 5 Nov: "is this going to stay like
@@ -155,5 +156,7 @@ export function vo2Missing(pull: Vo2Pull | null | undefined, rec: Record<string,
   if (!pull) return "Needs a VO2 max from the band. Fitbit works it out from your heart rate as you wear it; it shows here as it comes.";
   if (pull.error) return `Google refused the VO2 max request (${pull.error}); the rest of the band's data still comes. It's asked again every 15 minutes.`;
   if (pull.points > 0) return `Google sent ${pull.points} VO2 max day${pull.points === 1 ? "" : "s"}, but none with a number the app can read — what came: ${pull.sample ?? "?"}. A screenshot of this is enough to fix it.`;
-  return `Google has sent no VO2 max for your last 90 days. ${run}`;
+  const asked = pull.samples != null || pull.runs != null || pull.moreErr ? " (asked for all three kinds it keeps: the daily value, single measurements and run values)" : "";
+  if (pull.moreErr && !pull.samples && !pull.runs) return `Google has sent no daily VO2 max for your last 90 days, and turned down the other kinds (${pull.moreErr}). ${run}`;
+  return `Google has sent no VO2 max for your last 90 days${asked}. ${run}`;
 }

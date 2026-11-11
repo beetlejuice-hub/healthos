@@ -205,6 +205,8 @@ export type ContextInput = {
   todaySoFar?: string[];
   /** The body lab's tested numbers (PLAN 177, lib/ai/lab) — only what's clear or likely. */
   lab?: string[];
+  /** Connecting the dots (PLAN 206, lib/connect): every pair, lags 0–2, honest n, false-discovery corrected. */
+  links?: string[];
 };
 
 export function buildContext(input: ContextInput): string {
@@ -212,7 +214,8 @@ export function buildContext(input: ContextInput): string {
   const base = baseContext(input);
   const engines = moodEngines({ ...state, workouts: state.workouts ?? [] }, now);
   const eng = (engines.length ? `\n## Mood engines (tested numbers)\n${engines.map((l) => `- ${l}`).join("\n")}` : "")
-    + (input.lab?.length ? `\n## Body lab — the app's own tested numbers, only what's clear or likely (goes with, not causes)\n${input.lab.map((l) => `- ${l}`).join("\n")}` : "");
+    + (input.lab?.length ? `\n## Body lab — the app's own tested numbers, only what's clear or likely (goes with, not causes)\n${input.lab.map((l) => `- ${l}`).join("\n")}` : "")
+    + (input.links?.length ? `\n## Connecting the dots — the app's own maths over 120 days (each pair the same day and 1–2 days on, against your recent level, days alike counted as fewer, corrected for checking many at once; goes with, not causes)\n${input.links.map((l) => `- ${l}`).join("\n")}` : "");
   if (input.slim) return `${base}${eng}\n${ASK_MORE}`;
   const extra = eng
     + (input.nights?.length ? `\n## My nights from the band, newest last (the band's measures, then the evening before)\n${input.nights.map((l) => `- ${l}`).join("\n")}` : "");

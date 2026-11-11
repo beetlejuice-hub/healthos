@@ -82,6 +82,12 @@ function google(opts: { hr?: unknown[]; pageSize?: number; expireAccessOnce?: bo
       if (type === "daily-sleep-temperature-derivations") return Response.json({ dataPoints: [{ dailySleepTemperatureDerivations: { date, nightlyTemperatureCelsius: 34.1, baselineTemperatureCelsius: 33.8, relativeNightlyStddev30dCelsius: 0.2 } }] });
       if (type === "daily-respiratory-rate") return Response.json({ dataPoints: [{ dailyRespiratoryRate: { date, breathsPerMinute: 14.6 } }] });
       if (type === "daily-vo2-max") return Response.json({ dataPoints: [{ dailyVo2Max: { date, vo2Max: 44.2, cardioFitnessLevel: "GOOD", estimated: true } }, { dailyVo2Max: { date: { ...date, day: 6 }, vo2Max: 0 } }] });
+      // the two VO2 max sample kinds (PLAN 206), shaped as the API's discovery document has them: an estimate without a run on
+      // the 5th, a run's on the 7th (the daily value wins that day), and a run value on the 6th
+      if (type === "vo2-max") return Response.json({ dataPoints: [
+        { vo2Max: { sampleTime: { physicalTime: "2026-10-05T07:00:00Z", civilTime: { date: { year: 2026, month: 10, day: 5 } } }, vo2Max: 45.1, measurementMethod: "PREDICTION_NON_EXERCISE" } },
+        { vo2Max: { sampleTime: { physicalTime: "2026-10-07T18:00:00Z", civilTime: { date: { year: 2026, month: 10, day: 7 } } }, vo2Max: 47.9, measurementMethod: "FITBIT_RUN" } }] });
+      if (type === "run-vo2-max") return Response.json({ dataPoints: [{ runVo2Max: { sampleTime: { physicalTime: "2026-10-06T17:30:00Z" }, runVo2Max: 46 } }] });
       if (type === "daily-oxygen-saturation") return Response.json({ dataPoints: [{ dailyOxygenSaturation: { date, averagePercentage: 96.2, lowerBoundPercentage: 94, upperBoundPercentage: 98 } }] });
       if (type === "daily-heart-rate-variability") return Response.json({ dataPoints: [{ dailyHeartRateVariability: { date: { year: 2026, month: 10, day: 7 }, averageRmssdMilliseconds: 41 } }] });
     }
@@ -397,7 +403,9 @@ describe("BandHub", () => {
     expect(st.m.get("spo2")).toEqual({ "2026-10-07": 96.2 });
     // VO2 max: 90 days back the first time (a slow trend); a 0 is junk, not a value
     expect(since("daily-vo2-max")).toEqual(["2026-07-09"]);
-    expect(st.m.get("vo2")).toEqual({ "2026-10-07": { v: 44.2, level: "GOOD", est: true } });
+    // PLAN 206: the sample kinds too — a day without Fitbit's daily value takes a run's, then any other (an estimate marked)
+    expect(g.health().some((c) => c.url.pathname.includes("/vo2-max/") && /vo2_max\.sample_time\.physical_time >= /.test(c.url.searchParams.get("filter")!))).toBe(true);
+    expect(st.m.get("vo2")).toEqual({ "2026-10-05": { v: 45.1, est: true }, "2026-10-06": { v: 46 }, "2026-10-07": { v: 44.2, level: "GOOD", est: true } });
     at(T0 + PULL_EVERY_MS); await h.alarm();
     expect(since("daily-oxygen-saturation")).toEqual(["2026-08-28", "2026-09-30"]);
     const d = (await (await h.fetch(new Request("https://band/data"))).json()) as Record<string, unknown>;
@@ -407,7 +415,7 @@ describe("BandHub", () => {
   it("the VO2 max pull is kept for the card (PLAN 198): how many came; a sample when none had a number; Google's error", async () => {
     const { h, st } = setup();
     await connect(h); await h.alarm();
-    expect(st.m.get("vo2:pull")).toEqual({ at: T0, days: 90, points: 2, sample: undefined });
+    expect(st.m.get("vo2:pull")).toEqual({ at: T0, days: 90, points: 2, samples: 2, runs: 1, sample: undefined });
     expect((await status(h)).vo2Pull).toMatchObject({ points: 2, days: 90 });
     // a shape the reader doesn't know: the first point is kept to show
     const g2 = google();
@@ -418,6 +426,11 @@ describe("BandHub", () => {
     const s3 = setup(google({ failType: "daily-vo2-max" }));
     await connect(s3.h); await s3.h.alarm();
     expect(s3.st.m.get("vo2:pull")).toMatchObject({ points: 0, error: "daily-vo2-max 500" });
+    // a sample kind turned down: said, and the daily value still kept
+    const s4 = setup(google({ failType: "vo2-max" }));
+    await connect(s4.h); await s4.h.alarm();
+    expect(s4.st.m.get("vo2:pull")).toMatchObject({ points: 2, runs: 1, moreErr: "vo2-max: vo2-max 500" });
+    expect(s4.st.m.get("vo2")).toMatchObject({ "2026-10-07": { v: 44.2 } });
   });
 
   it("one of the night check's kinds failing is said, but the pull still counts and the others are kept", async () => {

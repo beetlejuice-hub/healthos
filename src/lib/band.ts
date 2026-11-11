@@ -107,6 +107,27 @@ export function readVo2(page: Page): Record<string, Vo2Day> {
   return out;
 }
 
+/**
+ * VO2 max as samples (PLAN 206; owner, 11 Nov: "why dont we get vo2 max"): Google keeps three kinds — daily-vo2-max (Fitbit's
+ * day value, read above), vo2-max ({ sampleTime, vo2Max, measurementMethod }: FITBIT_RUN, PREDICTION_NON_EXERCISE — the
+ * estimate without a run — and others) and run-vo2-max ({ sampleTime, runVo2Max }). The app only asked for the first; a
+ * band that never sees an outdoor run may have only the others. One a day (the day it was taken, in his time), the latest;
+ * an estimate without exercise is marked `est`.
+ */
+export function readVo2Samples(page: Page, kind: "vo2" | "run"): Record<string, Vo2Day> {
+  const out: Record<string, Vo2Day & { t: number }> = {};
+  for (const p of page.dataPoints ?? []) {
+    const b = body(p), st = obj(b?.sampleTime), t = ms(st?.physicalTime), v = num(kind === "run" ? b?.runVo2Max : b?.vo2Max);
+    if (t == null || v == null || v <= 10 || v >= 100) continue;
+    const civil = obj(st?.civilTime), day = civil ? civilDate(civil.date) : null;
+    const d = day && !day.includes("NaN") ? day : new Date(t).toISOString().slice(0, 10);
+    const method = typeof b?.measurementMethod === "string" ? b.measurementMethod : null;
+    const est = kind === "vo2" && method !== "FITBIT_RUN" && method !== "MAX_EXERCISE" && method !== "METABOLIC_CART";
+    if (!out[d] || out[d].t < t) out[d] = { v, t, ...(est ? { est: true } : {}) };
+  }
+  return Object.fromEntries(Object.entries(out).map(([d, { v, est }]) => [d, { v, ...(est ? { est: true } : {}) }]));
+}
+
 export type Stage = { type: string; start: number; end: number };
 export type SleepSession = { id: string; start: number; end: number; asleepMin: number | null; awakeMin: number | null; toFallAsleepMin: number | null; nap: boolean; stageMin: Record<string, number>; stages: Stage[] };
 /** sleep: { interval, metadata.nap, summary: { minutesAsleep, …, stagesSummary[] }, stages[] } → sessions. */

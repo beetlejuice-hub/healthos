@@ -39,6 +39,7 @@ import { sameAsNoticed } from "../lib/findlist";
 import { Experiments } from "../components/Ai";
 import type { GraphFocus } from "../components/MasterGraph";
 import { DOSE_MIN_DAYS, doseCompare } from "../lib/dose";
+import { ConnectDots } from "../components/ConnectDots";
 import { currentKg } from "../lib/body";
 
 const f1 = (v: number) => v.toFixed(1);
@@ -197,7 +198,7 @@ export function Insights() {
       {!nothing && <MindPage data={data} band={band} now={now} entries={s.entries} halfLifeMin={s.settings.halfLifeMin} days={gdays} period={period} />}
       {!nothing && <Mind days={gdays} now={now} period={period} />}
       {!nothing && <Connections days={gdays} />}
-      {!nothing && <div data-sec="connections" className="sec-wrap"><OneList report={report} items={scouted} onShow={showOnGraph} /></div>}
+      {!nothing && <div data-sec="connections" className="sec-wrap"><ConnectDots now={now} /><OneList report={report} items={scouted} onShow={showOnGraph} /></div>}
       {!nothing && <BodyLab band={band} entries={s.entries} now={now} active={shown === "lab" || !shown} />}
       {!nothing && <SleepNights data={data} band={band} now={now} entries={s.entries} halfLifeMin={s.settings.halfLifeMin} />}
       {!nothing && <Body days={gdays} period={period} now={now} bandNights={bandNights} />}

@@ -6,7 +6,8 @@ import { describe, expect, it } from "vitest";
 import { keepResearch, nextResearch, RESEARCH, researchContext, researchLines, researchTopics, researchUsd, type Researched, type Topic } from "./research";
 import type { Entry, Supplement, Workout } from "../types";
 import { EMPTY_PROFILE } from "../store";
-import { LANES, laneOn } from "./lanes";
+import { LANES, laneOn, pickFor } from "./lanes";
+import { checkResearch, type ResearchAnswer } from "./tasks";
 
 const NOW = new Date("2026-11-03T12:00:00").getTime(), D = 86_400_000;
 const at = (k: number, h = 9) => new Date(new Date(NOW - k * D).setHours(h, 0, 0, 0)).getTime();
@@ -33,17 +34,17 @@ const SPEND = { monthUsd: 3, budget: 20 };
 describe("the app's own research (PLAN 192)", () => {
   const topics = researchTopics({ ...world(), supplements: [cre, lth, mag], settings: {}, goals: { kcal: 2300, p: 160 } }, band, NOW);
   it("topics from the data: what you take (enough days), what you eat often, how you train, your heart; not what there's too little of", () => {
-    expect(topics.map((t) => t.key)).toEqual(["supp:cre:5g", "supp:lth:200mg", "food:túró rudi", "training", "heart", `wild:${laneOn("2026-11-03", "research").id}`]);
+    expect(topics.map((t) => t.key)).toEqual(["supp:cre:5g", "supp:lth:200mg", "food:túró rudi", "training", "heart", `crowd:${pickFor(LANES, "2026-11-03", "crowd").id}`, `edge:${pickFor(LANES, "2026-11-03", "edge").id}`, `wild:${laneOn("2026-11-03", "research").id}`]);
     expect(topics[0].lines[0]).toBe("- What: a supplement I take — Creatine, 5 g, every day, in the morning; taken on 14 of the last 14 days.");
     expect(topics[2].lines[0]).toBe("- What: a food I eat often — Túró Rudi, on 15 of the last 30 days; a usual serving 30 g, 125 kcal, 4 g protein.");
     expect(topics[3].lines[0]).toMatch(/^- What: how I train — 7 lifting sessions in the last 4 weeks/);
     expect(topics[4].lines[0]).toBe("- What: my heart — resting heart rate 56 bpm over the last 30 days (59 the 30 before), from a wrist band.");
   });
-  it("one a day, 4 a week; the area looked at longest ago first; a topic again after 45 days", () => {
+  it("one a day, 5 a week; the area looked at longest ago first; a topic again after 45 days", () => {
     expect(nextResearch(topics, [], NOW, SPEND)).toEqual({ topic: topics[0] });
     expect(nextResearch(topics, [R("supp:cre:5g", "supp", 0)], NOW, SPEND)).toEqual({ wait: "one a day" });
-    const week = [1, 2, 3, 4].map((k) => R(`x${k}`, "steps", k));
-    expect(nextResearch(topics, week, NOW, SPEND)).toEqual({ wait: "4 a week" });
+    const week = [1, 2, 3, 4, 5].map((k) => R(`x${k}`, "steps", k));
+    expect(nextResearch(topics, week, NOW, SPEND)).toEqual({ wait: "5 a week" });
     // supplements done 2 days ago: food next (never done), not the other supplement
     expect("topic" in nextResearch(topics, [R("supp:cre:5g", "supp", 2)], NOW, SPEND) && (nextResearch(topics, [R("supp:cre:5g", "supp", 2)], NOW, SPEND) as { topic: Topic }).topic.key).toBe("food:túró rudi");
     // every area done, the oldest the supplements 10 days ago: the supplement not done yet
@@ -63,8 +64,8 @@ describe("the app's own research (PLAN 192)", () => {
     // never done: it waits a round — the others first
     expect((nextResearch(topics, [R("supp:cre:5g", "supp", 6)], NOW, SPEND) as { topic: Topic }).topic.area).not.toBe("wild");
     // every other area done since the last random one: its turn
-    const round = [R("wild:x", "wild", 12), R("supp:cre:5g", "supp", 10), R("food:túró rudi", "food", 9), R("training", "training", 8), R("heart", "heart", 7), R("supp:lth:200mg", "supp", 6)];
-    expect((nextResearch(topics, round, NOW, SPEND) as { topic: Topic }).topic.key).toBe(wild.key);
+    const round = [R("wild:x", "wild", 12), R("crowd:x", "crowd", 12), R("edge:x", "edge", 12), R("supp:cre:5g", "supp", 10), R("food:túró rudi", "food", 9), R("training", "training", 8), R("heart", "heart", 7), R("supp:lth:200mg", "supp", 6)];
+    expect((nextResearch(topics, round, NOW, SPEND) as { topic: Topic }).topic.area).toMatch(/^(wild|crowd|edge)$/);
     // a new field each day; within two rounds' days, every field
     const fields = Array.from({ length: 2 * LANES.length }, (_, k) => laneOn(new Date(NOW + k * D).toISOString().slice(0, 10), "research").id);
     expect(new Set(fields).size).toBe(LANES.length);
@@ -75,11 +76,11 @@ describe("the app's own research (PLAN 192)", () => {
     // the old dose was looked at 5 days ago; with the supplements' turn next, the new dose is what's picked
     expect((nextResearch(t2, [R("supp:cre:5g", "supp", 5), R("food:túró rudi", "food", 3), R("training", "training", 2)], NOW, SPEND) as { topic: Topic }).topic.key).toBe("supp:cre:10g");
   });
-  it("the budget: never past $2.50 of research a month, none past half the month's budget, none while the spend isn't known; off is off", () => {
+  it("the budget: never past $3.50 of research a month, none past half the month's budget, none while the spend isn't known; off is off", () => {
     const spent = Array.from({ length: 3 }, (_, k) => R(`y${k}`, "steps", 8 + k, 0.9));
     expect(researchUsd(spent, "2026-11-03")).toBeCloseTo(0); // those were in October
-    const nov = [R("a", "steps", 1, 1.3), R("b", "steps", 2, 1.3)];
-    expect(nextResearch(topics, nov, NOW + D, SPEND)).toEqual({ wait: "this month's $2.50 for research is spent" });
+    const nov = [R("a", "steps", 1, 1.8), R("b", "steps", 2, 1.8)];
+    expect(nextResearch(topics, nov, NOW + D, SPEND)).toEqual({ wait: "this month's $3.50 for research is spent" });
     expect(nextResearch(topics, [], NOW, { monthUsd: 10, budget: 20 })).toEqual({ wait: "the month's AI spend is past half the $20 budget" });
     expect(nextResearch(topics, [], NOW, { monthUsd: null, budget: 20 })).toEqual({ wait: "the month's AI spend isn't known yet" });
     expect(nextResearch(topics, [], NOW, SPEND, true)).toEqual({ wait: "off in Settings → AI" });
@@ -92,6 +93,36 @@ describe("the app's own research (PLAN 192)", () => {
     expect(c.length).toBeLessThan(2000);
     const kept = keepResearch([], topics[0], { title: "Creatine timing", known: "Timing matters little.", forYou: "", tip: "Keep 5 g daily.", found: [], sure: "moderate" }, 0.06, NOW);
     expect(researchLines(kept, "2026-11-03")).toEqual(["## What the app researched for me lately (its own look-ups — build on them, don't repeat them)", "- 2026-11-03: Creatine timing — Keep 5 g daily."]);
+  });
+});
+
+// PLAN 206 (owner, 10–11 Nov: "studies/protocols it can find or come up w based on my results" · "could check reddits, X
+// threads, whatever. some of the not so average studies too")
+describe("research from your own results, the crowd, and the edges (PLAN 206)", () => {
+  const link = "Each drink goes with focus 0.57 lower the next day (90 %: 0.41–0.73) · 110 days, about 92 independent · q < 0.01";
+  const withLinks = researchTopics({ ...world(), supplements: [cre], settings: {}, links: [link] }, band, NOW);
+  it("a link the app found in your days is a topic of its own, first in line, asking for a protocol", () => {
+    const mine = withLinks.find((t) => t.area === "mine")!;
+    expect(mine.key).toBe("mine:each-drink>focus");
+    expect(mine.lines[0]).toContain(link);
+    expect(mine.lines[1]).toMatch(/a protocol to test it on me/);
+    expect((nextResearch(withLinks, [], NOW, SPEND) as { topic: Topic }).topic.area).toBe("mine");
+  });
+  it("the crowd (Reddit, X, forums — anecdotes) and the edges (pilots, preprints, nulls), each a field picked by day", () => {
+    const crowd = withLinks.find((t) => t.area === "crowd")!, edge = withLinks.find((t) => t.area === "edge")!;
+    expect(crowd.lines[0]).toMatch(/Reddit \(r\/Biohackers.*X threads and forums/);
+    expect(crowd.lines[1]).toMatch(/real thread's link, said as an anecdote; then what studies say/);
+    expect(edge.lines[0]).toMatch(/a pilot, a small or new trial \(the last 3 years\), a preprint, an n-of-1, or a surprising null result/);
+  });
+  it("control: an empty account never starts with the crowd or the edges", () => {
+    const loose = withLinks.filter((t) => t.area === "crowd" || t.area === "edge");
+    expect(nextResearch(loose, [], NOW, SPEND)).toEqual({ wait: "nothing new to look into" });
+  });
+  it("a protocol comes back startable; a bad one is dropped, the rest kept", () => {
+    const a: ResearchAnswer = { title: "Drinks and focus", known: "k.", forYou: "", tip: "", found: [], sure: "moderate", protocol: { name: "Dry weekdays", how: "No drinks Mon–Thu.", days: 14, measure: "focus" } };
+    expect(checkResearch(a).protocol).toEqual({ name: "Dry weekdays", how: "No drinks Mon–Thu.", days: 14, measure: "focus" });
+    expect(checkResearch({ ...a, protocol: { ...a.protocol!, days: 100 } }).protocol).toBeUndefined();
+    expect(checkResearch({ ...a, protocol: undefined }).title).toBe("Drinks and focus");
   });
 });
 

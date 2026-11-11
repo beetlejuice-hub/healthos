@@ -9,7 +9,7 @@ import { healthNow } from "../lib/health-client";
 import { SourceLink } from "./SourceLink";
 import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import { act, getState, newId, useStore, type Experiment } from "../lib/store";
-import { aiStatusNow, askAi, askRead, bandForRead, chatContext, contextNow, leadNow, nightContext, refreshAiStatus, useAiStatus } from "../lib/ai/client";
+import { aiStatusNow, askAi, askRead, bandForRead, chatContext, contextNow, leadNow, linksNow, nightContext, refreshAiStatus, useAiStatus } from "../lib/ai/client";
 import { leadLines, withLead } from "../lib/ai/lead";
 import { askChat } from "../lib/ai/chat";
 import { bandNow, bandSettled, onBandSettled, onNights } from "../lib/band-client";
@@ -192,7 +192,7 @@ const makeResearch = (t: Topic) => attempt(`research:${t.key}:${localDay(Date.no
 /** What's due now, from the state, the band and the month's spend so far. */
 export function researchNow(now = Date.now()) {
   const s = getState(), st = aiStatusNow();
-  const topics = () => researchTopics({ entries: s.entries, workouts: s.workouts, supplements: s.supplements, settings: s.settings, goals: s.goals }, bandNow(), now);
+  const topics = () => researchTopics({ entries: s.entries, workouts: s.workouts, supplements: s.supplements, settings: s.settings, goals: s.goals, links: linksNow(s, now, 2) }, bandNow(), now);
   return nextResearch(topics, s.ai.researched ?? [], now, { monthUsd: st.usage ? (st.usage.month === localDay(now).slice(0, 7) ? st.usage.monthUsd : 0) : st.on ? 0 : null, budget: st.budget }, !!s.ai.researchOff);
 }
 

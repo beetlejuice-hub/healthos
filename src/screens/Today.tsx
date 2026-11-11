@@ -27,7 +27,7 @@ import { ForYou, type Ask } from "../components/ForYou";
 import { NightCheckAsk } from "../components/NightCheckAsk";
 import { BreakOrDone, RateWorkout, useAutoFinish } from "../components/AutoFinish";
 import { BandAlarm } from "../components/BandAlarm";
-import { WeekCard } from "../components/WeekCard";
+import { HowYouCompare } from "../components/HowYouCompare";
 import { TipAsk } from "../components/TipAsk";
 import { WeekAsk } from "../components/WeekReport";
 import { WatchAsk, WatchDoneAsk, WatchOfferAsk } from "../components/Watching";
@@ -218,9 +218,9 @@ export function Today() {
         {moment === "evening" && <Tonight now={now} />}
       </NowCard>
       <ForYou asks={asks} day={day} />
-      {/* the game (PLAN 203): this week's goals and its score — after the check-in and For you, so Today A's order
-          (owner, 28 Oct: the tiles, the log row, the check-in) stays */}
-      <WeekCard now={now} />
+      {/* how you compare (PLAN 206; the game it sat in is gone: "simply dont wnat that complication") — after the check-in
+          and For you, so Today A's order (owner, 28 Oct: the tiles, the log row, the check-in) stays */}
+      <HowYouCompare now={now} />
       {/* owner, 28 Oct: "Now the today page feels too empty" · "I liked charts and connecting dots" — picked a pattern, with today on it */}
       <TodayPattern now={now} />
 

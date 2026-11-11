@@ -102,6 +102,8 @@ describe("your fitness age over the weeks, and what moved it", () => {
   it("why there's none, from what Google sent: refused, unreadable, nothing in 90 days, too old, not pulled yet", () => {
     const at = 0;
     expect(vo2Missing({ at, days: 90, points: 0 }, {}, TODAY)).toMatch(/^Google has sent no VO2 max for your last 90 days\. Fitbit makes a single VO2 max after an outdoor run of 10\+ minutes with GPS on/);
+    expect(vo2Missing({ at, days: 90, points: 0, samples: 0, runs: 0 }, {}, TODAY)).toMatch(/^Google has sent no VO2 max for your last 90 days \(asked for all three kinds it keeps/);
+    expect(vo2Missing({ at, days: 90, points: 0, moreErr: "vo2-max: vo2-max 403" }, {}, TODAY)).toMatch(/^Google has sent no daily VO2 max for your last 90 days, and turned down the other kinds \(vo2-max: vo2-max 403\)/);
     expect(vo2Missing({ at, days: 7, points: 2, sample: '{"x":1}' }, {}, TODAY)).toMatch(/^Google sent 2 VO2 max days, but none with a number the app can read — what came: \{"x":1\}/);
     expect(vo2Missing({ at, days: 0, points: 0, error: "daily-vo2-max 403" }, {}, TODAY)).toMatch(/^Google refused the VO2 max request \(daily-vo2-max 403\)/);
     expect(vo2Missing({ at, days: 7, points: 0 }, { [addDays(TODAY, -40)]: { v: 44 } }, TODAY)).toMatch(/^The newest VO2 max from the band is from \d+ \w+ — over 4 weeks ago/);

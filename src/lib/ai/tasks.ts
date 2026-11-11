@@ -223,14 +223,17 @@ export type DiveAnswer = Pick<Threads, "looked_into"> & { topic: string; why: st
  * let it soend way too much credits"): a title, what's known (from 2–3 studies), what it means for him from his numbers,
  * one thing to try, how sure.
  */
-export type ResearchAnswer = { title: string; known: string; forYou: string; tip: string; found: DiveStudy[]; sure: "strong" | "moderate" | "weak" };
+export type ResearchAnswer = { title: string; known: string; forYou: string; tip: string; found: DiveStudy[]; sure: "strong" | "moderate" | "weak";
+  /** PLAN 206: a protocol to try on yourself, startable as an experiment */ protocol?: { name: string; how: string; days: number; measure: (typeof EXPERIMENT_MEASURES)[number] } };
 export function checkResearch(a: ResearchAnswer): ResearchAnswer {
   const str = (x: unknown, n: number) => (typeof x === "string" ? x.trim().slice(0, n) : "");
   const title = str(a?.title, 120), known = str(a?.known, 700);
   if (!title || !known) throw new SyntaxError("research needs its title and what's known");
   const found = (Array.isArray(a.found) ? a.found : []).filter((f) => f && str(f.title, 1) && /^https:\/\//.test(f.source?.url ?? "")).slice(0, 3)
     .map((f) => ({ title: str(f.title, 120), text: str(f.text, 400), source: { title: str(f.source.title, 160) || str(f.title, 120), url: f.source.url } }));
-  return { title, known, forYou: str(a.forYou, 600), tip: str(a.tip, 300), found, sure: a.sure === "strong" || a.sure === "moderate" ? a.sure : "weak" };
+  const x = a.protocol, okX = x && str(x.name, 1) && str(x.how, 1) && Number.isFinite(x.days) && x.days >= 3 && x.days <= 60 && (EXPERIMENT_MEASURES as readonly string[]).includes(x.measure);
+  return { title, known, forYou: str(a.forYou, 600), tip: str(a.tip, 300), found, sure: a.sure === "strong" || a.sure === "moderate" ? a.sure : "weak",
+    ...(okX ? { protocol: { name: str(x.name, 80), how: str(x.how, 300), days: Math.round(x.days), measure: x.measure } } : {}) };
 }
 
 export function checkDive(a: DiveAnswer): DiveAnswer {
@@ -390,9 +393,10 @@ Task: the app's own research on ONE thing in their life (owner, 3 Nov: "Ai shoul
 - "tip": one concrete thing to try or keep, starting with a verb — or "Nothing to change" when that's the truth;
 - "found": the 1–3 sources you leaned on, each with what it found in one sentence and its real https link;
 - "sure": strong, moderate or weak.
-Goes with, never causes, unless a trial showed it; no medical advice — dosing beyond the label or anything with a condition or medication in About me: say to check with a doctor or pharmacist. Never repeat a title listed under "Already researched", and never lean on one under "## Papers and pages already cited" — find others. Each "found" text names its design, size and year ("an RCT in 96 adults, 2024"); research in people, from the paper's own page (PubMed, the journal, a DOI), not a news story or a shop. A topic the app picked at random ("something random to learn about"): make it fun — the finding that would surprise them.
+- "protocol" (when one fits — always for a topic from their own data): something to try on themselves the app can follow: name (under 40 characters), how (concrete, one or two sentences), days (7–28), measure (${EXPERIMENT_MEASURES.join(", ")}). An option, never an order; leave it out when nothing safe fits.
+Goes with, never causes, unless a trial showed it; no medical advice — dosing beyond the label or anything with a condition or medication in About me: say to check with a doctor or pharmacist. Never repeat a title listed under "Already researched", and never lean on one under "## Papers and pages already cited" — find others. Each "found" text names its design, size and year ("an RCT in 96 adults, 2024"); research in people, from the paper's own page (PubMed, the journal, a DOI), not a news story or a shop. A topic the app picked at random ("something random to learn about"): make it fun — the finding that would surprise them. "What people like me report trying" (owner, 10 Nov: "could check reddits, X threads, whatever"): the threads are the point — each one a "found" with its real link and "an anecdote" in its text — and at least one study besides. "Not-so-average research" (owner: "some of the not so average studies too"): a pilot, a small or new trial, a preprint or a surprising null — say "early" or "small" in "known", sure is weak or moderate.
 Answer with ONLY a JSON object, no prose:
-{"title":"","known":"","forYou":"","tip":"","found":[{"title":"","text":"","source":{"title":"","url":""}}],"sure":"strong|moderate|weak"}`,
+{"title":"","known":"","forYou":"","tip":"","found":[{"title":"","text":"","source":{"title":"","url":""}}],"sure":"strong|moderate|weak","protocol":{"name":"","how":"","days":14,"measure":"energy|mood|focus|stress|sleep|weight"}}`,
   dive: `${VOICE}
 Task: this week's deep dive (owner, 21 Oct: make the AI smarter, "do more research"; the AI picks the topic). "## This week's deep dive" says how to pick: ONE question from THEIR data, never a past topic — and "## On my list to look into" first, when one there fits (the reads put it there for this; owner, 28 Oct: "what it should dive in more, what it should research"): then put its [t:…] id in "looked_into". Then dig:
 - their own numbers first — use the app's look-ups (compare, series, nights, day, find, sessions) and put what they say in "yourData", with the numbers ("sleep 6.4 after magnesium vs 6.6 without over 40 nights — not clear");
