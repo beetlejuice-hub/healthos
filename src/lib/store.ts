@@ -6,7 +6,6 @@
  * (phone ↔ laptop) plugs in through `setRemote` and never blocks the screen.
  */
 
-import type { AirNight } from "./airimport";
 import type { PlaceDay, TopPlace } from "./timeline";
 import { PROGRAMS, asSplit } from "./programs";
 import { useSyncExternalStore } from "react";
@@ -152,13 +151,12 @@ export type State = {
   /** Patterns the scout has shown you: when first flagged, and whether you dismissed them. */
   scout: Record<string, ScoutMemo>;
   ai: AiState;
-  /** Files you brought in (PLAN 210): only what's kept from them — each night's bedroom air, each day's places. */
+  /** What you brought in (PLAN 210, 212): each day's places — from Overland on its own, or a Timeline file. */
   imports: Imports;
 };
 
 export type Imports = {
-  air?: { nights: Record<string, AirNight>; at: number };
-  places?: { days: Record<string, PlaceDay>; top: TopPlace[]; home: string | null; names: Record<string, string>; at: number; from: string; to: string };
+  places?: { days: Record<string, PlaceDay>; top: TopPlace[]; home: string | null; names: Record<string, string>; at: number; from: string; to: string; /** When Overland's last came in (PLAN 212). */ auto?: number };
 };
 
 export type Profile = { conditions: string[]; meds: string[]; allergies: string[]; notes: string; /** What you're working towards, in your words (PLAN 131); unset on older docs. */ aims?: string[] };

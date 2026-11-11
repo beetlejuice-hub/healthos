@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { BandHub, nagWords, nextNag, PULL_EVERY_MS } from "./band";
-import { handleBand, handleHealth } from "./index";
+import { handleBand, handleHealth, handlePlaces } from "./index";
 import type { Storage } from "./push";
 import { readState } from "../src/lib/band";
 
@@ -633,5 +633,60 @@ describe("/api/health — Apple Health in (PLAN 184)", () => {
     await handleHealth(call("/api/health/in", "POST", key, POST), e as never, f);
     const d = (await (await handleHealth(call("/api/health/data", "GET", "good"), e as never, f)).json()) as { samples: unknown[] };
     expect(d.samples).toHaveLength(3);
+  });
+});
+
+describe("/api/places — Overland in (PLAN 212)", () => {
+  function world() {
+    const hubs = new Map<string, BandHub>();
+    const f = (async (input: RequestInfo | URL, init?: RequestInit) => {
+      const req = new Request(input, init);
+      if (new URL(req.url).pathname === "/auth/v1/user") return req.headers.get("authorization") === "Bearer good" ? Response.json({ id: "u1" }) : new Response("no", { status: 401 });
+      return new Response("no", { status: 404 });
+    }) as typeof fetch;
+    let now = Date.UTC(2026, 10, 3, 12, 0);
+    const BAND = { idFromName: (n: string) => n, get: (id: unknown) => { const k = String(id); if (!hubs.has(k)) hubs.set(k, new BandHub({ storage: fakeStorage() }, env, { now: () => now })); return hubs.get(k)!; } };
+    return { e: { BAND, ASSETS: { fetch: async () => new Response("") } }, f, hubs, later: (ms: number) => { now += ms; } };
+  }
+  const call = (path: string, method: string, auth: string, body?: unknown, tz?: string) => new Request(`https://healthos.example${path}`, { method, headers: { authorization: `Bearer ${auth}`, "content-type": "application/json", ...(tz ? { "x-tz": tz } : {}) }, body: body === undefined ? undefined : JSON.stringify(body) });
+  const pt = (t: string, lat: number, lng: number, motion: string[] = ["stationary"]) => ({ type: "Feature", geometry: { type: "Point", coordinates: [lng, lat] }, properties: { timestamp: t, horizontal_accuracy: 10, motion } });
+  /** 2 Nov in Budapest (UTC+1): home till 08:30, a walk north, work till 17:00, back. A point every 2 minutes. */
+  const DAY = (() => {
+    const out = [], t0 = Date.parse("2026-11-02T00:00:00+01:00");
+    for (let m = 0; m < 1440; m += 2) {
+      const at = new Date(t0 + m * 60_000).toISOString();
+      if (m < 510 || m >= 1050) out.push(pt(at, 47.4979, 19.0402));
+      else if (m < 540) out.push(pt(at, 47.4979 + 0.027 * ((m - 510) / 30), 19.0402, ["walking"]));
+      else if (m < 1020) out.push(pt(at, 47.5249, 19.0402));
+      else out.push(pt(at, 47.5249 - 0.027 * ((m - 1020) / 30), 19.0402, ["walking"]));
+    }
+    return out;
+  })();
+
+  it("a key and Overland's setup link (signed in only); Overland posts with it; the app pulls the day's places in its time zone", async () => {
+    const { e, f, hubs } = world();
+    expect((await handlePlaces(call("/api/places/key", "POST", "bad"), e as never, f)).status).toBe(401);
+    const k = (await (await handlePlaces(call("/api/places/key", "POST", "good"), e as never, f)).json()) as { key: string; url: string; setup: string };
+    expect(k.key).toMatch(/^u1\.[0-9a-f]{48}$/);
+    expect(k.setup).toBe(`overland://setup?url=${encodeURIComponent("https://healthos.example/api/places/in")}&token=${encodeURIComponent(k.key)}&device_id=healthos`);
+    expect(JSON.stringify([...(hubs.get("u1")!.storage as ReturnType<typeof fakeStorage>).m.values()])).not.toContain(k.key.split(".")[1]); // only its hash
+    // Overland posts in batches; the answer it waits for is { result: "ok" }
+    for (let i = 0; i < DAY.length; i += 200) expect(await (await handlePlaces(call("/api/places/in", "POST", k.key, { locations: DAY.slice(i, i + 200) }), e as never, f)).json()).toEqual({ result: "ok" });
+    const d = (await (await handlePlaces(call("/api/places/data", "GET", "good", undefined, "-60"), e as never, f)).json()) as { key: boolean; points: number; places: { days: Record<string, { places: number; km: number; awayH: number }>; top: { home: boolean }[] } };
+    expect(d.key).toBe(true);
+    expect(d.points).toBeGreaterThan(355); expect(d.points).toBeLessThan(362); // every other point of a 2-minute feed (3 minutes apart at least): 360
+    expect(d.places.days["2026-11-02"]).toMatchObject({ places: 1 });
+    expect(d.places.days["2026-11-02"].km).toBeGreaterThan(5.5);
+    expect(d.places.days["2026-11-02"].awayH).toBeGreaterThan(8.5);
+    expect(d.places.top[0].home).toBe(true);
+  });
+  it("controls: no key, a wrong key, someone else's account, not Overland's post — nothing kept", async () => {
+    const { e, f, hubs } = world();
+    const { key } = (await (await handlePlaces(call("/api/places/key", "POST", "good"), e as never, f)).json()) as { key: string };
+    for (const bad of ["", "u1", `u1.${"0".repeat(48)}`, `u2.${key.split(".")[1]}`]) expect((await handlePlaces(call("/api/places/in", "POST", bad, { locations: DAY.slice(0, 10) }), e as never, f)).status).toBe(401);
+    expect((await handlePlaces(call("/api/places/in", "POST", key, { foo: 1 }), e as never, f)).status).toBe(400);
+    const d = (await (await handlePlaces(call("/api/places/data", "GET", "good"), e as never, f)).json()) as { points: number; last: unknown };
+    expect([d.points, d.last]).toEqual([0, null]);
+    expect([...(hubs.get("u1")!.storage as ReturnType<typeof fakeStorage>).m.keys()].some((x) => x.startsWith("places:pts:"))).toBe(false);
   });
 });

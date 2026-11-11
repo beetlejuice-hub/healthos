@@ -1,3 +1,4 @@
+import { startPlaces } from "./lib/places-client";
 import { NowScreen } from "./components/NowScreen";
 import { Component, lazy, Suspense, useEffect, useState, type ComponentType, type ReactNode } from "react";
 import type React from "react";
@@ -91,7 +92,7 @@ export function App() {
 
   // The band's heart rate and sleep: pulled on open and every 15 minutes (lib/band-client).
   const signedIn = !!auth.session;
-  useEffect(() => { if (signedIn) { startBand(); startHealth(); } }, [signedIn]);
+  useEffect(() => { if (signedIn) { startBand(); startHealth(); startPlaces(); } }, [signedIn]);
 
   // Forgotten workouts close themselves: on open, when the app comes back, and every few minutes.
   useEffect(() => {

@@ -4009,10 +4009,20 @@ both reads and the questions. Phases in that order; #152 RPE waits (owner).
        caffeine (EFSA 2015, 400 mg); two strongest, two weakest, each weak one with a fix from a study (Reimers 2018,
        Tasali 2022, Banach 2023, Helgerud 2007). The bars say the study's average beside your number.
 
-212. [ ] **Places on their own; no air sensor** (owner, 11 Nov: "i told u no bedroom air sensor · For the damn google maps
+212. [x] **Places on their own; no air sensor** (owner, 11 Nov: "i told u no bedroom air sensor · For the damn google maps
    pls automate it, somehow. like pulling every now and then"). Claimed 11 Nov.
    - Google moved Timeline onto the phone (2024): nothing can pull it. Instead Overland (free, open source, iOS) logs
      location in the background and posts it to an address — set up from Settings with one tap (overland://setup). The
      Worker keeps a few points an hour for 120 days and works out each day's places; the app pulls that on open and
      every 30 minutes. The Timeline file stays as a one-off way to bring in the past.
    - The Aranet import, and bedroom CO₂ in Connections and What makes a day, removed.
+   - Done 11 Nov. lib/placepoints: Overland's GeoJSON → [t, lat×1e5, lng×1e5, motion] (accuracy over 200 m out),
+     thinned to 3 minutes apart (a moving point kept over a still one), stay points (10 min within 150 m → a visit,
+     its ~200 m grid cell its id) and the trips between (km, the motion Overland saw or speed); summarize() shifts to the
+     phone's time zone and hands them to lib/timeline placeDays. Worker /api/places/key (a key, its setup link —
+     overland://setup?url=…&token=…&device_id=healthos), /in (Bearer key → { result: "ok" }), /data (signed in, x-tz);
+     the BandHub keeps a day of points to a key for 120 days and works the summary out again only after new points.
+     places-client pulls it on open, on return and every 30 minutes into imports.places (a newer day wins; names stay).
+     Settings → Places: Overland's three steps and "Set up Overland" (the address and token to paste if it doesn't
+     open); a Timeline file for the past (it never overwrites Overland's days). "Away from home (the day before)" took
+     bedroom CO₂'s place in What makes a day. Tests: placepoints.test, worker band.test (key → posts → data), e2e/places.

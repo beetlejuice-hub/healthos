@@ -151,8 +151,7 @@ export function thingsFrom(days: DayFacts[], band: { rhr?: Record<string, number
     { key: "steps", name: "Steps", unit: "", per: "each 1,000 steps", role: "input", series: s((d) => (d.steps == null ? null : d.steps / 1000)) },
     { key: "bedLate", name: "Bedtime", unit: "", per: "each hour later to bed", role: "input", series: s((d) => d.bedLateH) },
     // PLAN 210: how alike your last 7 nights were (lib/sleep regularityByDay)
-    // PLAN 210, brought in: last night's bedroom air (Aranet), the day's places (Google Maps Timeline)
-    { key: "co2", name: "Bedroom CO₂", unit: "", per: "each 100 ppm more CO₂ in the bedroom overnight", role: "input", series: s((d) => (d.co2 == null ? null : d.co2 / 100)) },
+    // PLAN 210, 212: the day's places (Overland, or a Google Maps Timeline file)
     { key: "awayH", name: "Time away from home", unit: "", per: "each hour away from home", role: "input", series: s((d) => d.awayH) },
     { key: "travelKm", name: "Travel", unit: "", per: "each 10 km travelled", role: "input", series: s((d) => (d.travelKm == null ? null : d.travelKm / 10)) },
     { key: "activeMin", name: "Walking and cycling", unit: "", per: "each 30 min walking or cycling (from Maps)", role: "input", series: s((d) => (d.activeMin == null ? null : d.activeMin / 30)) },

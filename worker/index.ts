@@ -12,6 +12,7 @@
  * uses USDA's shared DEMO_KEY, which is rate-limited but works.
  */
 
+import { fromOverland } from "../src/lib/placepoints";
 import { searchAll } from "../src/lib/foodsearch";
 import { lookupBarcode, normalizeGtin } from "../src/lib/barcode";
 import { handleAi, whoIs, type AiEnv } from "./ai";
@@ -174,6 +175,44 @@ export async function handleHealth(req: Request, env: Env, f: typeof fetch = fet
 }
 
 /**
+ * Places on their own (PLAN 212; owner, 11 Nov: "For the damn google maps pls automate it, somehow"). Overland (iOS)
+ * posts GeoJSON points here in the background; the app makes the key (and Overland's setup link) and pulls each day's
+ * places, worked out in the account's BandHub:
+ *   POST /api/places/key → { key, url, setup } (signed in; a new key replaces the old — only its hash is kept)
+ *   POST /api/places/in  (Authorization: Bearer <account>.<secret>) ← { locations: [GeoJSON points] } → { result: "ok" }
+ *   GET  /api/places/data → { key, last, places, points } (signed in; x-tz: the phone's time zone)
+ */
+export async function handlePlaces(req: Request, env: Env, f: typeof fetch = fetch): Promise<Response> {
+  if (!env.BAND) return json({ error: "places aren't set up on this server" }, 503);
+  const url = new URL(req.url), op = url.pathname.replace(/^\/api\/places\/?/, "");
+  const hub = (id: string) => env.BAND!.get(env.BAND!.idFromName(id));
+  if (op === "in") {
+    if (req.method !== "POST") return json({ error: "POST only" }, 405);
+    const [id, secret] = (req.headers.get("authorization") ?? "").replace(/^Bearer\s+/i, "").trim().split(".");
+    if (!id || !secret || !/^[\w-]{2,64}$/.test(id) || !/^[0-9a-f]{48}$/.test(secret)) return json({ error: "wrong key — set Overland up again from HealthOS → Settings → Bring in" }, 401);
+    const raw = await req.text();
+    if (raw.length > 4_000_000) return json({ error: "too big" }, 413);
+    let post: unknown = null;
+    try { post = JSON.parse(raw); } catch { return json({ error: "not JSON" }, 400); }
+    const { pts, error } = fromOverland(post);
+    if (error) return json({ error }, 400);
+    return hub(id).fetch(new Request("https://band/places-in", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ hash: await sha256(secret), pts }) }));
+  }
+  if (op !== "key" && op !== "data") return json({ error: "not found" }, 404);
+  const user = await whoIs(req, env, { fetch: (u, i) => f(u, i), now: Date.now });
+  if (!user) return json({ error: "sign in first" }, 401);
+  if (op === "key") {
+    if (req.method !== "POST") return json({ error: "POST only" }, 405);
+    const secret = [...crypto.getRandomValues(new Uint8Array(24))].map((b) => b.toString(16).padStart(2, "0")).join("");
+    await hub(user.id).fetch(new Request("https://band/places-key", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ hash: await sha256(secret) }) }));
+    const key = `${user.id}.${secret}`, inUrl = `${url.origin}/api/places/in`;
+    return json({ key, url: inUrl, setup: `overland://setup?url=${encodeURIComponent(inUrl)}&token=${encodeURIComponent(key)}&device_id=healthos` });
+  }
+  const tz = req.headers.get("x-tz") ?? "";
+  return hub(user.id).fetch(new Request("https://band/places-data", { headers: /^-?\d{1,3}$/.test(tz) ? { "x-band-tz": tz } : {} }));
+}
+
+/**
  * /now — the "How now?" check-in on its own. The same app page, but announcing itself as "How now?"
  * (title, icon, manifest), so "Add to Home Screen" from here makes a separate one-tap icon.
  */
@@ -193,6 +232,7 @@ export default {
     if (url.pathname.startsWith("/api/push/")) return handlePush(req, env);
     if (url.pathname.startsWith("/api/band/") || url.pathname === "/api/google/callback") return handleBand(req, env);
     if (url.pathname.startsWith("/api/health/")) return handleHealth(req, env);
+    if (url.pathname.startsWith("/api/places/")) return handlePlaces(req, env);
     if (url.pathname === "/now" || url.pathname === "/now/") {
       const page = await env.ASSETS.fetch(new Request(new URL("/", req.url)));
       return new Response(nowPage(await page.text()), { headers: { "content-type": "text/html; charset=utf-8", "cache-control": "no-cache" } });

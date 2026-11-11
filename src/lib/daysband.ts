@@ -41,14 +41,14 @@ export function withBand(days: DayFacts[], band: BandData | null, today: string)
 }
 
 /**
- * …and what you brought in (PLAN 210): the night's bedroom air on the morning it ended (Aranet), the day's places (Google
- * Maps Timeline). Days stay as they were without them.
+ * …and the day's places (PLAN 210, 212: Overland on its own, or a Google Maps Timeline file). Days stay as they were
+ * without them.
  */
 export function withImports(days: DayFacts[], im: Imports | undefined): DayFacts[] {
-  const air = im?.air?.nights, pl = im?.places?.days;
-  if ((!air && !pl) || !days.length) return days;
+  const pl = im?.places?.days;
+  if (!pl || !days.length) return days;
   return days.map((d) => {
-    const a = air?.[d.day], p = pl?.[d.day];
-    return { ...d, ...(a ? { co2: a.co2, co2Max: a.co2Max, roomC: a.temp } : {}), ...(p ? { awayH: p.awayH, travelKm: p.km, activeMin: p.activeMin, awayNight: p.awayNight } : {}) };
+    const p = pl[d.day];
+    return { ...d, ...(p ? { awayH: p.awayH, travelKm: p.km, activeMin: p.activeMin, awayNight: p.awayNight } : {}) };
   });
 }

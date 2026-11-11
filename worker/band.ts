@@ -16,6 +16,8 @@ import {
 } from "../src/lib/band";
 import type { Vo2Day } from "../src/lib/vo2";
 import { keepSamples, readPostWhy, type HealthSample } from "../src/lib/healthimport";
+import { POINTS, summarize, thin, type Pt } from "../src/lib/placepoints";
+import type { Places } from "../src/lib/timeline";
 
 export type BandEnv = {
   GOOGLE_CLIENT_ID?: string; GOOGLE_CLIENT_SECRET?: string;
@@ -333,6 +335,33 @@ export class BandHub {
       // nothing usable in a readable post: say which fields came, so a wrong key name or an empty value shows
       if (!got.length) { const keys = Object.keys((body.post ?? {}) as object); const fail = `came, but nothing usable — fields: ${keys.join(", ") || "none"}; values: ${JSON.stringify(body.post).slice(0, 160)}`; await this.storage.put("health:fail", { at: this.now(), error: fail }); return json({ ok: false, error: fail }); }
       return json({ ok: true, got: got.map((s) => s.type), ...(Object.keys(skipped).length ? { skipped } : {}) });
+    }
+    // Places on their own (PLAN 212): Overland's points, a day to a key (thinned, 120 days), and each day's places worked
+    // out when the app asks — again only after new points came
+    if (path === "places-key") { await this.storage.put("places:key", String(body.hash ?? "")); return json({ ok: true }); }
+    if (path === "places-in") {
+      const hash = await this.storage.get<string>("places:key"), given = String(body.hash ?? "");
+      if (!hash || hash.length !== given.length || [...hash].reduce((d, c, i) => d | (c.charCodeAt(0) ^ given.charCodeAt(i)), 0) !== 0) return json({ error: "wrong key — set Overland up again from HealthOS → Settings → Bring in" }, 401);
+      const pts = (Array.isArray(body.pts) ? body.pts : []) as Pt[], oldest = Math.floor((this.now() - POINTS.keepDays * DAY) / 1000), byDay = new Map<string, Pt[]>();
+      for (const p of pts) if (p[0] >= oldest && p[0] * 1000 <= this.now() + DAY) { const d = utcDay(p[0] * 1000); (byDay.get(d) ?? byDay.set(d, []).get(d)!).push(p); }
+      for (const [d, add] of byDay) await this.storage.put(`places:pts:${d}`, thin((await this.storage.get<Pt[]>(`places:pts:${d}`)) ?? [], add));
+      const last = (await this.storage.get<{ day?: string }>("places:last")) ?? {}, today = utcDay(this.now());
+      // once a day: the days past 120 go
+      if (last.day !== today) for (let k = POINTS.keepDays + 1; k <= POINTS.keepDays + 10; k++) await this.storage.delete(`places:pts:${utcDay(this.now() - k * DAY)}`);
+      if (pts.length) await this.storage.put("places:last", { at: this.now(), n: pts.length, day: today });
+      return json({ result: "ok" });
+    }
+    if (path === "places-data") {
+      const last = (await this.storage.get<{ at: number; n: number }>("places:last")) ?? null, key = !!(await this.storage.get<string>("places:key"));
+      const tzh = Number(req.headers.get("x-band-tz") ?? (await this.storage.get<number>("tz")) ?? 0), tz = Number.isFinite(tzh) ? tzh : 0;
+      let sum = (await this.storage.get<{ at: number; tz: number; places: Places | null; points: number }>("places:sum")) ?? null;
+      if (last && (!sum || sum.at < last.at || sum.tz !== tz)) {
+        const pts: Pt[] = [];
+        for (let k = POINTS.keepDays; k >= 0; k--) pts.push(...((await this.storage.get<Pt[]>(`places:pts:${utcDay(this.now() - k * DAY)}`)) ?? []));
+        sum = { at: this.now(), tz, places: summarize(pts, tz, 0), points: pts.length };
+        await this.storage.put("places:sum", sum);
+      }
+      return json({ key, last, places: sum?.places ?? null, points: sum?.points ?? 0 });
     }
     if (path === "health-data") return json({ samples: (await this.storage.get<HealthSample[]>("health:samples")) ?? [], last: (await this.storage.get("health:last")) ?? null, fail: (await this.storage.get("health:fail")) ?? null, key: !!(await this.storage.get<string>("health:key")) });
     if (path === "status") return json(await this.status());

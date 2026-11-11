@@ -2620,3 +2620,7 @@ span.fd-score[data-band="none"] { background: none; min-width: 34px; }
 .pb-reads { font-size: 12.5px; color: var(--i-ink-2); } .pb.worse .pb-reads { color: var(--bad); font-weight: 600; } .pb.better .pb-reads { color: var(--good); font-weight: 600; }
 .cb-more { justify-self: start; min-height: 36px; color: var(--gym); }
 @media (max-width: 600px) { .pb { grid-template-columns: 1fr; gap: 6px; } .pb-row { grid-template-columns: minmax(0, 9em) minmax(0, 1fr) 2.8em; } }
+.bi-steps { margin: 0; padding-left: 20px; display: grid; gap: 6px; font-size: 14px; color: var(--c-ink); line-height: 1.4; } .bi-steps a { color: var(--gym); }
+.bi-manual { display: grid; gap: 6px; padding: 10px 12px; border-radius: 12px; background: var(--c-card-2); }
+.bi-manual p { margin: 0; display: grid; grid-template-columns: 9em minmax(0, 1fr) auto; gap: 8px; align-items: center; font-size: 13px; }
+.bi-manual p.note { display: block; } .bi-manual code { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; }

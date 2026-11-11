@@ -1,40 +1,6 @@
-// PLAN 210 — bring in: Aranet4 bedroom air (CSV) and Google Maps Timeline (JSON). Known files, known answers.
+// PLAN 210 — a Google Maps Timeline file (JSON), both shapes. Known files, known answers.
 import { describe, expect, it } from "vitest";
-import { airNights, parseAranet } from "./airimport";
 import { parseTimeline, placeDays } from "./timeline";
-
-const pad = (n: number) => String(n).padStart(2, "0");
-/** An Aranet export: every 10 minutes from 20:00 on 9 Nov to 09:00 on 11 Nov; CO₂ climbs through each night. */
-function aranet(order: "dmy" | "mdy" | "iso", sep = ",") {
-  const head = order === "iso" ? "Time(YYYY-MM-DD HH:mm:ss)" : order === "dmy" ? "Time(dd/mm/yyyy)" : "Time(mm/dd/yyyy)";
-  const out = [[head, "Carbon dioxide(ppm)", "Temperature(°C)", "Relative humidity(%)", "Atmospheric pressure(hPa)"].join(sep)];
-  for (let t = new Date(2026, 10, 9, 20).getTime(); t <= new Date(2026, 10, 11, 9).getTime(); t += 600_000) {
-    const d = new Date(t), h = d.getHours(), night = h >= 22 || h < 7;
-    const co2 = night ? 600 + (h >= 22 ? (h - 22) * 60 + d.getMinutes() : (h + 2) * 60 + d.getMinutes()) * 2 : 500;
-    const date = order === "iso" ? `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(h)}:${pad(d.getMinutes())}:00` : order === "dmy" ? `${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()} ${pad(h)}:${pad(d.getMinutes())}:00` : `${pad(d.getMonth() + 1)}/${pad(d.getDate())}/${d.getFullYear()} ${h % 12 || 12}:${pad(d.getMinutes())}:00 ${h < 12 ? "AM" : "PM"}`;
-    out.push([date, String(Math.round(co2)), sep === ";" ? "19,5" : "19.5", "45", "1012"].join(sep));
-  }
-  return out.join("\n");
-}
-
-describe("Aranet CSV (PLAN 210)", () => {
-  for (const [o, sep] of [["dmy", ","], ["mdy", ","], ["iso", ","], ["dmy", ";"]] as const) {
-    it(`${o}${sep === ";" ? ", semicolons and decimal commas" : ""}: two nights, by the morning they ended, CO₂ rising through each`, () => {
-      const p = parseAranet(aranet(o, sep));
-      expect(p.error).toBeUndefined();
-      const n = airNights(p.rows);
-      expect(Object.keys(n).sort()).toEqual(["2026-11-10", "2026-11-11"]);
-      expect(n["2026-11-10"].co2Max).toBe(600 + (9 * 60 - 10) * 2);
-      expect(n["2026-11-10"].co2).toBeGreaterThan(1000); expect(n["2026-11-10"].co2).toBeLessThan(1200);
-      expect(n["2026-11-10"].temp).toBe(19.5); expect(n["2026-11-10"].rh).toBe(45);
-      expect(n["2026-11-10"].n).toBe(54);
-    });
-  }
-  it("control: not an Aranet file — says so", () => {
-    expect(parseAranet("name,weight\nme,80").error).toMatch(/No time or CO₂ column/);
-    expect(parseAranet("").error).toMatch(/empty/);
-  });
-});
 
 /** Three days: home overnight; day 1 at work 9–17 with a 3 km walk each way; day 2 a trip to another city, the night away. */
 const at = (d: number, h: number, m = 0) => new Date(2026, 10, d, h, m).toISOString();

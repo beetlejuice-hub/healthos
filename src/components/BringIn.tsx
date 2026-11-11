@@ -1,84 +1,90 @@
 /**
- * Settings → Bring in (PLAN 210; owner, 11 Nov: "1 love (all) - i have ios", board R). Two files from apps you already
- * use, picked now and then: Aranet Home's CSV (bedroom air) and Google Maps' Timeline export (places). Read on the phone
- * (lib/airimport, lib/timeline); only each night's air and each day's places are kept, merged with what came before. Your
- * top places, to name once. What comes in becomes things Connections and What makes a day test.
+ * Settings → Places (PLAN 210, 212; owner, 11 Nov: "i told u no bedroom air sensor · For the damn google maps pls automate
+ * it, somehow. like pulling every now and then"). Google keeps Timeline on the phone now, so nothing can pull it:
+ * Overland (free, open source) logs location in the background and posts it to the app's own server; set up with one tap
+ * (its setup link carries the address and a key). Each day's places come back on their own. A Google Maps Timeline file
+ * can still bring in the past. Your top places, to name once. What comes in, Connections and What makes a day test.
  */
 
 import { useState } from "react";
 import { act, useStore } from "../lib/store";
-import { airNights, parseAranet } from "../lib/airimport";
 import { parseTimeline, placeDays } from "../lib/timeline";
-import { dayLabel } from "../lib/time";
+import { newPlacesKey, refreshPlaces, usePlaces } from "../lib/places-client";
+import { clock, dayLabel } from "../lib/time";
 
 const noon = (d: string) => new Date(`${d}T12:00:00`).getTime();
 const span = (ds: string[]) => (ds.length ? `${dayLabel(noon(ds[0]))} – ${dayLabel(noon(ds[ds.length - 1]))}` : "");
+const OVERLAND = "https://apps.apple.com/app/id1292426766";
 
 export function BringIn() {
-  const im = useStore((s) => s.imports);
-  const [err, setErr] = useState<{ air?: string; places?: string }>({});
-  const [busy, setBusy] = useState<string | null>(null);
-  const read = (f: File) => f.text();
+  const im = useStore((s) => s.imports), p = usePlaces();
+  const [err, setErr] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [made, setMade] = useState<{ key: string; url: string; setup: string } | null>(null);
+  const [copied, setCopied] = useState<string | null>(null);
 
-  const air = async (f: File | undefined) => {
-    if (!f) return;
-    setBusy("air"); setErr((e) => ({ ...e, air: undefined }));
-    try {
-      const p = parseAranet(await read(f));
-      if (p.error) { setErr((e) => ({ ...e, air: p.error })); return; }
-      const nights = airNights(p.rows);
-      if (!Object.keys(nights).length) { setErr((e) => ({ ...e, air: "No full nights (22:00–07:00) in it." })); return; }
-      act.setImports({ air: { nights: { ...(im.air?.nights ?? {}), ...nights }, at: Date.now() } });
-    } finally { setBusy(null); }
+  const setUp = async () => {
+    if (p.key && !made && !window.confirm("A new key — Overland's old one stops working. Go on?")) return;
+    setErr(null);
+    try { const m = await newPlacesKey(); setMade(m); window.location.href = m.setup; } catch (e) { setErr((e as Error).message); }
   };
-  const places = async (f: File | undefined) => {
+  const copy = async (what: string, text: string) => { try { await navigator.clipboard.writeText(text); setCopied(what); setTimeout(() => setCopied(null), 1500); } catch { setCopied(null); } };
+  const file = async (f: File | undefined) => {
     if (!f) return;
-    setBusy("places"); setErr((e) => ({ ...e, places: undefined }));
+    setBusy(true); setErr(null);
     try {
       let j: unknown;
-      try { j = JSON.parse(await read(f)); } catch { setErr((e) => ({ ...e, places: "That isn't a JSON file — export Timeline data from Google Maps." })); return; }
+      try { j = JSON.parse(await f.text()); } catch { setErr("That isn't a JSON file — export Timeline data from Google Maps."); return; }
       const t = parseTimeline(j);
-      if (t.error) { setErr((e) => ({ ...e, places: t.error })); return; }
-      const p = placeDays(t.visits, t.moves), prev = im.places;
-      const days = { ...(prev?.days ?? {}), ...p.days }, ds = Object.keys(days).sort();
-      act.setImports({ places: { days, top: p.top, home: p.home, names: prev?.names ?? {}, at: Date.now(), from: ds[0], to: ds[ds.length - 1] } });
-    } finally { setBusy(null); }
+      if (t.error) { setErr(t.error); return; }
+      const got = placeDays(t.visits, t.moves), prev = im.places;
+      // a file brings in the past: days Overland already has stay Overland's
+      const days = { ...got.days, ...(prev?.days ?? {}) }, ds = Object.keys(days).sort();
+      act.setImports({ places: { ...(prev ?? {}), days, top: prev?.top?.length ? prev.top : got.top, home: prev?.home ?? got.home, names: prev?.names ?? {}, at: Date.now(), from: ds[0], to: ds[ds.length - 1] } });
+    } finally { setBusy(false); }
   };
   const name = (id: string, v: string) => act.setImports({ places: { ...im.places!, names: { ...im.places!.names, [id]: v.trim() } } });
-
-  const nights = Object.keys(im.air?.nights ?? {}).sort(), last = nights.length ? im.air!.nights[nights[nights.length - 1]] : null;
+  if (p.off) return null;
   const pdays = Object.keys(im.places?.days ?? {}).sort();
   return (
     <div className="card bringin" id="bringin">
-      <h3>Bring in <span className="note">files from apps you use — read on your phone</span></h3>
+      <h3>Places <span className="note">where your days take you — on their own</span></h3>
 
-      <section className="bi-one" aria-label="Bedroom air">
-        <b>Bedroom air — Aranet4</b>
-        <p className="note">Aranet Home → a sensor's graph → export → CSV, then pick it here. Each night's CO₂ (22:00–07:00) is kept; the file isn't. Do it every couple of months — the app keeps 90 days.</p>
-        <label className="pill-btn bi-pick">{busy === "air" ? "Reading…" : nights.length ? "Add a newer CSV" : "Choose the CSV"}<input type="file" accept=".csv,text/csv,text/plain" onChange={(e) => void air(e.target.files?.[0])} /></label>
-        {err.air && <p className="note err">{err.air}</p>}
-        {nights.length > 0 && <p className="bi-sum" data-nights={nights.length}><b>{nights.length} night{nights.length === 1 ? "" : "s"}</b> in, {span(nights)}.{last && <> Last night: CO₂ averaged <b>{last.co2} ppm</b>, peaked {last.co2Max}{last.temp != null ? ` · ${last.temp} °C` : ""}.</>}{" "}
-          <button type="button" className="linkish" onClick={() => { if (window.confirm("Remove the bedroom air brought in?")) act.setImports({ air: undefined }); }}>Remove</button></p>}
+      <section className="bi-one" aria-label="Overland">
+        <b>On its own — Overland</b>
+        {p.last ? <p className="bi-sum" data-points={p.points}>Last in: <b>{dayLabel(p.last.at)} {clock(p.last.at)}</b> · {p.points.toLocaleString("en-GB")} points kept (120 days){pdays.length ? ` · ${pdays.length} days worked out` : ""}. <button type="button" className="linkish" onClick={() => void refreshPlaces()}>Pull now</button></p>
+          : p.key ? <p className="note">Set up — nothing has come in yet. Open Overland, allow location <b>Always</b>, and turn tracking on.</p>
+          : <ol className="bi-steps">
+              <li>Get <a href={OVERLAND} target="_blank" rel="noreferrer">Overland GPS Tracker</a> — free, open source, no account.</li>
+              <li>Tap <b>Set up Overland</b> here: it opens Overland with the address and your key filled in.</li>
+              <li>In Overland, allow location <b>Always</b> and turn tracking on. It sends your points here in the background.</li>
+            </ol>}
+        <button type="button" className="pill-btn bi-pick" onClick={() => void setUp()}>{p.key ? "Set up again (new key)" : "Set up Overland"}</button>
+        {made && <div className="bi-manual"><p className="note">Didn't open? In Overland → Settings, paste these:</p>
+          <p><small>Receiver endpoint</small><code>{made.url}</code><button type="button" className="linkish" onClick={() => void copy("url", made.url)}>{copied === "url" ? "Copied" : "Copy"}</button></p>
+          <p><small>Access token</small><code>{made.key.slice(0, 10)}…</code><button type="button" className="linkish" onClick={() => void copy("key", made.key)}>{copied === "key" ? "Copied" : "Copy"}</button></p></div>}
+        <p className="note">Kept on the app's own server: a point every few minutes, for 120 days. The app keeps only each day's numbers — time away from home, km, walking and cycling, places, nights away.</p>
       </section>
 
-      <section className="bi-one" aria-label="Places">
-        <b>Places — Google Maps Timeline</b>
-        <p className="note">Google Maps → your picture → Settings → Location & privacy (or Personal content) → Export Timeline data, then pick the file here. Kept: each day's time away from home, km, walking and cycling, places, nights away — not where.</p>
-        <label className="pill-btn bi-pick">{busy === "places" ? "Reading…" : pdays.length ? "Add a newer export" : "Choose Timeline.json"}<input type="file" accept=".json,application/json" onChange={(e) => void places(e.target.files?.[0])} /></label>
-        {err.places && <p className="note err">{err.places}</p>}
-        {pdays.length > 0 && <>
-          <p className="bi-sum" data-days={pdays.length}><b>{pdays.length} day{pdays.length === 1 ? "" : "s"}</b> in, {span(pdays)}.{" "}
-            <button type="button" className="linkish" onClick={() => { if (window.confirm("Remove the places brought in?")) act.setImports({ places: undefined }); }}>Remove</button></p>
-          <p className="note">Your top places — name them if you like:</p>
-          <ul className="bi-top">{im.places!.top.map((t) => (
-            <li key={t.id} data-id={t.id}>
-              <input defaultValue={im.places!.names[t.id] ?? (t.home ? "Home" : "")} placeholder={t.lat != null ? `${t.lat.toFixed(3)}, ${t.lng!.toFixed(3)}` : "a place"} aria-label={`Name for the place with ${t.visits} visits`} onBlur={(e) => name(t.id, e.target.value)} />
-              <small>{t.home ? "home · " : ""}{t.visits} visit{t.visits === 1 ? "" : "s"} · {t.hours} h</small>
-            </li>
-          ))}</ul>
-        </>}
+      <section className="bi-one" aria-label="The past from Google Maps">
+        <b>The past — a Google Maps Timeline file</b>
+        <p className="note">Once, for the months before Overland: Google Maps → your picture → Settings → Location & privacy (or Personal content) → Export Timeline data, then pick the file.</p>
+        <label className="pill-btn bi-pick">{busy ? "Reading…" : "Choose Timeline.json"}<input type="file" accept=".json,application/json" onChange={(e) => void file(e.target.files?.[0])} /></label>
       </section>
-      <p className="note">What comes in is tested like everything else — Connections and What makes a day pick it up once there are about two weeks of it beside your check-ins.</p>
+      {err && <p className="note err">{err}</p>}
+
+      {pdays.length > 0 && <section className="bi-one" aria-label="Your places">
+        <p className="bi-sum" data-days={pdays.length}><b>{pdays.length} day{pdays.length === 1 ? "" : "s"}</b> of places, {span(pdays)}.{" "}
+          <button type="button" className="linkish" onClick={() => { if (window.confirm("Remove the places the app has worked out?")) act.setImports({ places: undefined }); }}>Remove</button></p>
+        <p className="note">Your top places — name them if you like:</p>
+        <ul className="bi-top">{im.places!.top.map((t) => (
+          <li key={t.id} data-id={t.id}>
+            <input defaultValue={im.places!.names[t.id] ?? (t.home ? "Home" : "")} placeholder={t.lat != null ? `${t.lat.toFixed(3)}, ${t.lng!.toFixed(3)}` : "a place"} aria-label={`Name for the place with ${t.visits} visits`} onBlur={(e) => name(t.id, e.target.value)} />
+            <small>{t.home ? "home · " : ""}{t.visits} visit{t.visits === 1 ? "" : "s"} · {t.hours} h</small>
+          </li>
+        ))}</ul>
+      </section>}
+      <p className="note">Connections and What makes a day pick places up once there are about two weeks of them beside your check-ins.</p>
     </div>
   );
 }
