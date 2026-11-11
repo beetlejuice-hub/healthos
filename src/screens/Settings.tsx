@@ -1,3 +1,4 @@
+import { BringIn } from "../components/BringIn";
 import { act, getState, useStore } from "../lib/store";
 import { makeSample } from "../lib/sample";
 import { signOut, useSyncStatus, currentSyncer } from "../lib/session";
@@ -53,6 +54,8 @@ export function Settings({ tester, email }: { tester: boolean; email: string }) 
       <Notifications />
       <Band />
       <AppleHealth />
+      {/* PLAN 210: Aranet's CSV and Google Maps' Timeline */}
+      <BringIn />
 
       <div className="card">
         <h3>Sleep and body</h3>

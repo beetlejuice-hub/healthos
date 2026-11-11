@@ -10,7 +10,7 @@
 import { useMemo, useState } from "react";
 import { useBand } from "../lib/band-client";
 import { connect, linkWords, thingsFrom, type Link, type Thing } from "../lib/connect";
-import { withBand } from "../lib/daysband";
+import { withBand, withImports } from "../lib/daysband";
 import { dailyFacts } from "../lib/insights";
 import { useStore } from "../lib/store";
 import { startExperiment } from "../lib/ai/experiment";
@@ -46,7 +46,7 @@ function Dots({ l, by }: { l: Link; by: Map<string, Thing> }) {
 }
 
 export function ConnectDots({ now }: { now: number }) {
-  const entries = useStore((s) => s.entries), workouts = useStore((s) => s.workouts), settings = useStore((s) => s.settings);
+  const entries = useStore((s) => s.entries), workouts = useStore((s) => s.workouts), settings = useStore((s) => s.settings), imports = useStore((s) => s.imports);
   const band = useBand().data, today = localDay(now);
   const [all, setAll] = useState(false);
   // what the links (and the crowd, and the edges) started: the app's own research, newest first (PLAN 207, L)
@@ -54,10 +54,10 @@ export function ConnectDots({ now }: { now: number }) {
   const started = useMemo(() => (researched ?? []).filter((r) => r.area === "mine" || r.area === "crowd" || r.area === "edge").sort((a, b) => b.at - a.at).slice(0, 3), [researched]);
   const running = useMemo(() => experiments.filter((x) => !x.ended).map((x) => x.name), [experiments]);
   const { things, links } = useMemo(() => {
-    const days = withBand(dailyFacts(entries, workouts, settings, addDays(today, -120), addDays(today, -1)), band, today);
+    const days = withImports(withBand(dailyFacts(entries, workouts, settings, addDays(today, -120), addDays(today, -1)), band, today), imports);
     const things = thingsFrom(days, band);
     return { things, links: connect(things) };
-  }, [entries, workouts, settings, band, today]);
+  }, [entries, workouts, settings, band, today, imports]);
   const by = useMemo(() => new Map(things.map((t) => [t.key, t])), [things]);
   return (
     <section className="p w12 cd" id="connect-dots" aria-label="Connecting the dots">

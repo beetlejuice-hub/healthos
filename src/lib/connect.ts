@@ -151,6 +151,12 @@ export function thingsFrom(days: DayFacts[], band: { rhr?: Record<string, number
     { key: "steps", name: "Steps", unit: "", per: "each 1,000 steps", role: "input", series: s((d) => (d.steps == null ? null : d.steps / 1000)) },
     { key: "bedLate", name: "Bedtime", unit: "", per: "each hour later to bed", role: "input", series: s((d) => d.bedLateH) },
     // PLAN 210: how alike your last 7 nights were (lib/sleep regularityByDay)
+    // PLAN 210, brought in: last night's bedroom air (Aranet), the day's places (Google Maps Timeline)
+    { key: "co2", name: "Bedroom CO₂", unit: "", per: "each 100 ppm more CO₂ in the bedroom overnight", role: "input", series: s((d) => (d.co2 == null ? null : d.co2 / 100)) },
+    { key: "awayH", name: "Time away from home", unit: "", per: "each hour away from home", role: "input", series: s((d) => d.awayH) },
+    { key: "travelKm", name: "Travel", unit: "", per: "each 10 km travelled", role: "input", series: s((d) => (d.travelKm == null ? null : d.travelKm / 10)) },
+    { key: "activeMin", name: "Walking and cycling", unit: "", per: "each 30 min walking or cycling (from Maps)", role: "input", series: s((d) => (d.activeMin == null ? null : d.activeMin / 30)) },
+    { key: "awayNight", name: "A night away", unit: "", per: "a night away from home", role: "input", series: s((d) => (d.awayNight == null ? null : d.awayNight ? 1 : 0)) },
     { key: "regular", name: "Sleep regularity", unit: "", per: "each 10 points more regular sleep (last 7 nights)", role: "input", series: s((d) => (d.regular == null ? null : d.regular / 10)) },
     { key: "rain", name: "Rain", unit: "", per: "each 5 mm of rain", role: "input", series: s((d) => (d.rainMm == null ? null : d.rainMm / 5)) },
     { key: "daylight", name: "Daylight", unit: "", per: "each hour of daylight", role: "input", series: s((d) => d.daylightH) },

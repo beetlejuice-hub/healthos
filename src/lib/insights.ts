@@ -147,6 +147,9 @@ export type DayFacts = {
    * day's weather where you live (Open-Meteo: rain in mm, the day's high in °C, hours of daylight). */
   /** Sleep regularity over the 7 nights ending this morning (PLAN 210, lib/sleep regularityByDay), 0–100. */
   regular?: number | null;
+  /** Brought in (PLAN 210): last night's bedroom air (Aranet), the day's places (Google Maps Timeline). */
+  co2?: number | null; co2Max?: number | null; roomC?: number | null;
+  awayH?: number | null; travelKm?: number | null; activeMin?: number | null; awayNight?: boolean | null;
   bedLateH?: number | null; rainMm?: number | null; tMax?: number | null; daylightH?: number | null;
 };
 

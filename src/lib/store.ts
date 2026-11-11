@@ -6,6 +6,8 @@
  * (phone ↔ laptop) plugs in through `setRemote` and never blocks the screen.
  */
 
+import type { AirNight } from "./airimport";
+import type { PlaceDay, TopPlace } from "./timeline";
 import { PROGRAMS, asSplit } from "./programs";
 import { useSyncExternalStore } from "react";
 import type { Saved } from "./ai/saved";
@@ -150,6 +152,13 @@ export type State = {
   /** Patterns the scout has shown you: when first flagged, and whether you dismissed them. */
   scout: Record<string, ScoutMemo>;
   ai: AiState;
+  /** Files you brought in (PLAN 210): only what's kept from them — each night's bedroom air, each day's places. */
+  imports: Imports;
+};
+
+export type Imports = {
+  air?: { nights: Record<string, AirNight>; at: number };
+  places?: { days: Record<string, PlaceDay>; top: TopPlace[]; home: string | null; names: Record<string, string>; at: number; from: string; to: string };
 };
 
 export type Profile = { conditions: string[]; meds: string[]; allergies: string[]; notes: string; /** What you're working towards, in your words (PLAN 131); unset on older docs. */ aims?: string[] };
@@ -198,7 +207,7 @@ export const upgradeStarter = (t: Template[]): Template[] => (dayKey(t) === dayK
 
 const EMPTY: State = {
   entries: [], foods: [], drinks: [], supplements: DEFAULT_STACK, templates: DEFAULT_TEMPLATES, workouts: [],
-  goals: DEFAULT_GOALS, settings: DEFAULT_SETTINGS, profile: EMPTY_PROFILE, scout: {}, ai: EMPTY_AI,
+  goals: DEFAULT_GOALS, settings: DEFAULT_SETTINGS, profile: EMPTY_PROFILE, scout: {}, ai: EMPTY_AI, imports: {},
 };
 
 /** The save slot. Per account once signed in, so a tester and a personal account never mix. */
@@ -214,7 +223,7 @@ function load(): State {
     lastSeen = raw;
     if (!raw) return EMPTY;
     const s = JSON.parse(raw) as Partial<State>;
-    return { ...EMPTY, ...s, templates: upgradeStarter(s.templates ?? EMPTY.templates), supplements: normalizeStack(s.supplements ?? EMPTY.supplements), settings: { ...DEFAULT_SETTINGS, ...s.settings }, goals: { ...DEFAULT_GOALS, ...s.goals }, profile: { ...EMPTY_PROFILE, ...s.profile }, scout: s.scout ?? {}, ai: { ...EMPTY_AI, ...s.ai, models: modelsNow(s.ai?.models, s.ai?.modelsV), modelsV: MODELS_V } };
+    return { ...EMPTY, ...s, templates: upgradeStarter(s.templates ?? EMPTY.templates), supplements: normalizeStack(s.supplements ?? EMPTY.supplements), settings: { ...DEFAULT_SETTINGS, ...s.settings }, goals: { ...DEFAULT_GOALS, ...s.goals }, profile: { ...EMPTY_PROFILE, ...s.profile }, scout: s.scout ?? {}, imports: s.imports ?? {}, ai: { ...EMPTY_AI, ...s.ai, models: modelsNow(s.ai?.models, s.ai?.modelsV), modelsV: MODELS_V } };
   } catch {
     return EMPTY;
   }
@@ -350,6 +359,7 @@ export const act = {
   setGoals(goals: Goals) { commit({ ...state, goals }); },
   setProfile(profile: Profile) { commit({ ...state, profile }); },
   setScout(scout: Record<string, ScoutMemo>) { commit({ ...state, scout }); },
+  setImports(p: Partial<Imports>) { commit({ ...state, imports: { ...state.imports, ...p } }); },
   setAi(patch: Partial<AiState> | ((ai: AiState) => Partial<AiState>)) { const p = typeof patch === "function" ? patch(state.ai) : patch; commit({ ...state, ai: { ...state.ai, ...p } }); },
   setSettings(patch: Partial<Settings>) { commit({ ...state, settings: { ...state.settings, ...patch } }); },
   /** Close forgotten workouts (lib/training tidyWorkouts). `force` closes any open one now. */

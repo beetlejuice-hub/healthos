@@ -2576,3 +2576,14 @@ span.fd-score[data-band="none"] { background: none; min-width: 34px; }
 .xp-sure-bar { position: relative; height: 10px; border-radius: 5px; background: var(--warn); overflow: hidden; } .xp-sure-bar i { position: absolute; right: 0; top: 0; bottom: 0; background: var(--ok); }
 .xp-sure-k { display: flex; justify-content: space-between; font-size: 11px; color: var(--i-dim); }
 .xp-guessed { color: var(--i-ink-2); } .xp-guessed b { color: var(--i-ink); }
+
+/* PLAN 210 — bring in */
+.bringin { display: grid; gap: 14px; }
+.bi-one { display: grid; gap: 8px; padding-top: 10px; border-top: 1px solid var(--c-track); } .bi-one > b { font-size: 15px; color: var(--c-ink); }
+.bi-pick { position: relative; justify-self: start; overflow: hidden; cursor: pointer; }
+.bi-pick input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+.bi-sum { margin: 0; font-size: 14px; color: var(--c-ink); line-height: 1.45; }
+.bi-top { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.bi-top li { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; align-items: center; }
+.bi-top input { min-height: 40px; padding: 0 10px; border-radius: 10px; border: 1px solid var(--c-track); background: var(--c-card-2); color: var(--c-ink); font: inherit; min-width: 0; }
+.bi-top small { font-size: 12px; color: var(--c-ink-2); white-space: nowrap; }

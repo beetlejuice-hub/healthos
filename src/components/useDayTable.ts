@@ -6,16 +6,16 @@
 import { useMemo } from "react";
 import { useBand } from "../lib/band-client";
 import { dayTable, type DayRow } from "../lib/daytable";
-import { withBand } from "../lib/daysband";
+import { withBand, withImports } from "../lib/daysband";
 import { dailyFacts, type DayFacts } from "../lib/insights";
 import { useStore } from "../lib/store";
 import { addDays, localDay } from "../lib/time";
 
 export function useDayTable(now: number): { rows: DayRow[]; days: DayFacts[]; band: ReturnType<typeof useBand>["data"]; today: string } {
-  const entries = useStore((s) => s.entries), workouts = useStore((s) => s.workouts), settings = useStore((s) => s.settings);
+  const entries = useStore((s) => s.entries), workouts = useStore((s) => s.workouts), settings = useStore((s) => s.settings), imports = useStore((s) => s.imports);
   const band = useBand().data, today = localDay(now);
   return useMemo(() => {
-    const days = withBand(dailyFacts(entries, workouts, settings, addDays(today, -120), today), band, today);
+    const days = withImports(withBand(dailyFacts(entries, workouts, settings, addDays(today, -120), today), band, today), imports);
     return { rows: dayTable(days, band), days, band, today };
-  }, [entries, workouts, settings, band, today]);
+  }, [entries, workouts, settings, band, today, imports]);
 }

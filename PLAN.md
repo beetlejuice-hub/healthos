@@ -3952,7 +3952,7 @@ both reads and the questions. Phases in that order; #152 RPE waits (owner).
    - Known: with very tight noise (the e2e's made-up check-ins, sd ≈ 0.4) a chance 0.4 "together" can still reach clear;
      a 5 % false-discovery rate allows some. Real check-ins are noisier. e2e/combos.
 
-210. [ ] **More of your life in, sharper experiments** (owner, 11 Nov, after the web scan: "1 love (all) - i have ios ·
+210. [x] **More of your life in, sharper experiments** (owner, 11 Nov, after the web scan: "1 love (all) - i have ios ·
    blood panel would be good ill do one in future · guess sounds good could make a low friction version of it ·
    duckdb-wasm … for an ai … researching a cause for smthg, and it pulls all data related to X · letsgo"; and of the pairs
    card: "dont really get this part"). Boards P–S of the Insights canvas. Claimed 11 Nov.
@@ -3968,3 +3968,25 @@ both reads and the questions. Phases in that order; #152 RPE waits (owner).
    - Bring in: Aranet4 bedroom air (CSV from Aranet Home) and Google Maps Timeline (JSON from the iPhone app) — parsed
      on the phone; nightly CO₂, time away from home, travel days, as things for Connections and What makes a day.
    - Not now: phone screen time (no iPhone export), CGM, who-with, life in weeks, money. Blood panel when there's one.
+   - Done 11 Nov.
+     - Pairs card: "what it's for" in one line; nothing clear → "Nothing yet for focus. N pairs checked…" and a compact
+       table (neither / only the 1st / only the 2nd / both) behind "See the N pairs" — no grids.
+     - Body watch (lib/bodywatch): the night check's three plus resting heart rate (3+ bpm and 2× spread over) and HRV
+       (10 %+ and 2× spread under, log scale), each against readiness's 4-week usual. 3 off, or 2 off two mornings
+       running → a standing card above "For you" (not one of the asks that wait their turn; the night check steps aside
+       that morning). Track record: the same pattern's first mornings in your past, and whether you logged feeling ill
+       (the ill body word or "ill/sick/flu" in a note) within 2 days, or had a night out the evening before.
+     - Sleep regularity night by night (lib/sleep regularityByDay, 7 nights): a Trends panel, a Connections input, a
+       What makes a day factor.
+     - Experiments: "Your guess? Helps / No change / Hurts" right under "Try it" wherever an experiment starts, on the
+       morning "did you?" card and Today's strip — open for its first 3 days. Done: "How sure" (the same fit's one-sided
+       t: 99 % at most, "not sure either way" between 20 and 80 %), the guess ✓ / ✗, "Your gut so far: right N of M".
+     - Research gets the reads' look-ups (compare, series, nights, day, find, sessions): it pulls your days on its topic
+       before it searches — the owner's "pulls all data related to X" without DuckDB (the chat, reads and dive had them).
+     - Bring in (Settings): Aranet Home's CSV (lib/airimport: day/month order from the header or the dates; each night
+       22:00–07:00 → average and peak CO₂, temperature, humidity) and Google Maps' Timeline JSON (lib/timeline: both the
+       newer and the iPhone's array shape; home as Google marked it or where 3 a.m. found you; per day hours away, km,
+       walking/cycling minutes, places, a night away; top places to name). Only those numbers kept, in a new "imports"
+       doc (no migration: docs takes any key). They feed Connections (bedroom CO₂, time away, travel, walking and
+       cycling, a night away) and What makes a day (bedroom CO₂).
+     - e2e: bodywatch, guess, bringin; combos extended.
