@@ -3841,3 +3841,17 @@ both reads and the questions. Phases in that order; #152 RPE waits (owner).
      for autocorrelation, Benjamini-Hochberg false-discovery correction); quantified-sleep (gianlucatruda — n-of-1
      sleep models, clustering correlated features); Bearable's factor effect (same day to 7 days after, 3 with and 3
      without); Whoop's journal impact (5 yes and 5 no, isolated effect); Observable Plot's dodge for the dots.
+
+206. [ ] **No game; the forecast's workings; VO2 max; the interesting stuff** (owner, 11 Nov, with the night bet card: "can i
+   see what sleep score predict is based on · also should be able to input custom reason · why dont we get vo2 max · also
+   i like the comparisons, etc, but the whole gamification idea is not that good, actually we should revert back, keep
+   the charts, keep the not so dry · Still we need the redesign but maybe rework or trash the gamification - simply dont
+   wnat that complication - more like i just track, it shows all the data it can, show what it found, studies every day
+   (once a day or once every other day), and again, i would rather focus on making the app interesting - interesting
+   connections, or studies/protocols it can find or come up w based on my results"). Claimed 11 Nov.
+   - The game goes: weekly goals, points, levels, the focus, seasons, the stake, the treat, the game page. Kept: you
+     against everyone, and the card's stats against the studies as a plain "How you compare".
+   - The night bet: what it's based on, opened under it; "Something else…" with his own words.
+   - VO2 max: why none arrives.
+   - Interesting connections (lib/connect, SYNAPS's way) on Insights; research that comes up with studies and protocols
+     from his results, Reddit/X/forum experience and the not-so-average studies too.
