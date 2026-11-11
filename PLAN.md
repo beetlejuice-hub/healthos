@@ -3906,3 +3906,16 @@ both reads and the questions. Phases in that order; #152 RPE waits (owner).
      research started — from his data, the crowd, the edges — with its protocol, "Try it" starts the experiment. Tests:
      trends.test (planted falls and rises, the range, gaps; controls: flat noise, neither-way measures, too few days),
      e2e trends (new).
+
+208. [ ] **Ripples, why today, what makes a day, day lines** (owner, 11 Nov: "yea lets do this 4, as much as u can in one
+   session, go" — G, I, E and H of the Insights canvas). Claimed 11 Nov.
+   - Ripples: each night out (3+ drinks), hard session, short night (under 6 h) and late caffeine (100+ mg after
+     14:00) laid on top of each other — the day before to three days on, against his usual — HRV, resting heart, sleep,
+     focus, mood, energy; the average, the band, each one thin.
+   - Why today: today's focus (or mood, energy) from his usual, each thing about last night and yesterday pushing it up
+     or down by what it's gone with in his days (weighed together), against what he rated; the last 7 days expected
+     against rated.
+   - What makes a day, clearer: his best third of days against his worst on each thing, in a sentence and as two rows of
+     dots, sorted by how far apart.
+   - Day lines: each day a line through sleep, bedtime, drinks, caffeine, protein, steps, training to the day's rating;
+     best and worst thirds coloured, their middle days thick.
