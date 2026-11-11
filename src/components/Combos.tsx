@@ -36,25 +36,49 @@ function Pair({ c, lo, hi }: { c: Combo; lo: number; hi: number }) {
   );
 }
 
+/** Not clear: a row of the compact table — the four averages and how many days had both. */
+function Row({ c }: { c: Combo }) {
+  const A = FLAGS[c.a], B = FLAGS[c.b];
+  return (
+    <tr data-pair={`${c.a}:${c.b}`} data-verdict={c.verdict}>
+      <th scope="row">{cap(A.yes)} + {B.yes}</th>
+      <td>{c.cells[0][0].m.toFixed(1)}</td><td>{c.cells[1][0].m.toFixed(1)}</td><td>{c.cells[0][1].m.toFixed(1)}</td>
+      <td>{c.cells[1][1].m.toFixed(1)} <small>{c.cells[1][1].n} d</small></td>
+      <td className="cb-reads">{c.explainedBy ? "adds up, once the other is held still" : "adds up"}</td>
+    </tr>
+  );
+}
+
 export function Combos({ now }: { now: number }) {
   const { rows } = useDayTable(now);
   const [k, setK] = useState<OutcomeKey>("focus");
   const cs = useMemo(() => combos(rows, k), [rows, k]);
   if (!cs || !cs.length) return null;
-  const clear = cs.filter((c) => c.clear), rest = cs.filter((c) => !c.clear);
-  const vals = cs.flatMap((c) => [c.add, c.both, ...c.cells.flat().map((x) => x.m)]), lo = Math.min(...vals) - 0.5, hi = Math.max(...vals) + 0.2;
-  const shown = clear.length ? clear.slice(0, 3) : [];
+  const clear = cs.filter((c) => c.clear), rest = cs.filter((c) => !c.clear), name = OUTCOMES[k].name.toLowerCase();
+  const vals = clear.flatMap((c) => [c.add, c.both, ...c.cells.flat().map((x) => x.m)]), lo = Math.min(...vals, 10) - 0.5, hi = Math.max(...vals, 0) + 0.2;
+  const small = cs.filter((c) => c.cells[1][1].n < 10).length;
   return (
-    <section className="p w12 cb" id="two-things" aria-label="Two things together" data-outcome={k}>
-      <h2>Two things together <span>does one make the other worse — or soften it? · {cs.length} pairs with 4+ days each way</span></h2>
+    <section className="p w12 cb" id="two-things" aria-label="Two things together" data-outcome={k} data-clear={clear.length}>
+      <h2>Two things together <span>does one make the other worse?</span></h2>
+      {/* owner, 11 Nov, of the 15 grids: "dont really get this part" — what it's for, in one line */}
+      <p className="cb-what">Most things just add up: a short night costs a bit, drinks cost a bit, both cost both. This looks for pairs where the two <b>together</b> are clearly worse (or better) than that — like drinks hitting much harder after a late night.</p>
       <div className="iseg" role="group" aria-label="Judge a day by">{PICK.map((o) => <button key={o} type="button" aria-pressed={o === k} onClick={() => setK(o)}>{OUTCOMES[o].name}</button>)}</div>
-      <p className="cb-say">{clear.length ? clear.slice(0, 2).map((c) => c.say).join(" ") : `Every pair adds up about as you'd expect for ${OUTCOMES[k].name.toLowerCase()} — nothing makes another clearly worse or better.`}</p>
-      {shown.length > 0 && <div className="cb-list">{shown.map((c) => <Pair key={`${c.a}:${c.b}`} c={c} lo={lo} hi={hi} />)}</div>}
+      {clear.length ? <>
+        <p className="cb-say">{clear.slice(0, 2).map((c) => c.say).join(" ")}</p>
+        <div className="cb-list">{clear.slice(0, 3).map((c) => <Pair key={`${c.a}:${c.b}`} c={c} lo={lo} hi={hi} />)}</div>
+      </> : <div className="cb-none">
+        <b>Nothing yet for {name}.</b>
+        <span>{cs.length} pairs checked — every one adds up about as you'd expect.{small > cs.length / 2 ? " Most have under 10 days with both, so only a big effect would show; it gets sharper as days come in." : ""}</span>
+      </div>}
       {rest.length > 0 && <details className="cb-rest">
-        <summary><b>{clear.length ? "The rest add up about as you'd expect" : "Every pair"}</b> — {rest.slice(0, 3).map((c) => `${FLAGS[c.a].yes} + ${FLAGS[c.b].yes}`).join(", ")}{rest.length > 3 ? `, … (${rest.length})` : ""}</summary>
-        <div className="cb-list">{rest.map((c) => <Pair key={`${c.a}:${c.b}`} c={c} lo={lo} hi={hi} />)}</div>
+        <summary>{clear.length ? `The other ${rest.length} pairs add up about as you'd expect` : `See the ${rest.length} pairs`}</summary>
+        <div className="cb-scroll"><table className="cb-table">
+          <thead><tr><th scope="col">Pair</th><th scope="col">neither</th><th scope="col">only the 1st</th><th scope="col">only the 2nd</th><th scope="col">both</th><th scope="col">reads</th></tr></thead>
+          <tbody>{rest.map((c) => <Row key={`${c.a}:${c.b}`} c={c} />)}</tbody>
+        </table></div>
+        <p className="note-i">Your average {name} on days with neither, only the first, only the second, and both — by the evening and night before.</p>
       </details>}
-      <p className="note-i">Each pair splits your days four ways by the evening and night before. "Worse together" only when the days with both sit clearly below what the two alone add up to — after allowing for how many pairs were looked at. Goes with, not causes.</p>
+      <p className="note-i">"Worse together" only when the days with both sit clearly below what the other three squares predict — after allowing for how many pairs were looked at. Goes with, not causes.</p>
     </section>
   );
 }

@@ -10,6 +10,7 @@ import { nights } from "../lib/sleep";
 import { readiness } from "../lib/readiness";
 import { heartSigns, nightCheck } from "../lib/nightcheck";
 import { NightRows } from "./NightCheck";
+import { useBodyWatch } from "./useBodyWatch";
 import { useStore } from "../lib/store";
 import { localDay } from "../lib/time";
 
@@ -24,7 +25,9 @@ export function NightCheckAsk({ now }: { now: number }) {
     const r = readiness(day, nights(band.sleep, band.hr, band.rhr, band.hrv), rating, sets, now, { hrv: band.hrv, rhr: band.rhr });
     return r ? nightCheck(day, band, heartSigns(r)) : null;
   }, [band, day, rating, sets, now]);
-  if (!nc?.line) return null;
+  // the body watch card says it all on the mornings it shows (PLAN 210)
+  const watch = useBodyWatch(now);
+  if (!nc?.line || watch?.alert) return null;
   return (
     <section className="card nightask" aria-label="Last night's check">
       <h3>Last night's check</h3>

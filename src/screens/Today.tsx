@@ -24,6 +24,7 @@ import { atMinute, clock, dayLabel, localDay, MIN, addDays, quarterDown } from "
 import { go, OPEN_CARD, openCard } from "../lib/nav";
 import { morningAway, morningShown, nightShown } from "../lib/ai/morning";
 import { ForYou, type Ask } from "../components/ForYou";
+import { BodyWatch } from "../components/BodyWatch";
 import { NightCheckAsk } from "../components/NightCheckAsk";
 import { BreakOrDone, RateWorkout, useAutoFinish } from "../components/AutoFinish";
 import { BandAlarm } from "../components/BandAlarm";
@@ -218,6 +219,8 @@ export function Today() {
         {moment === "evening" && <EveningRead cafBed={cafBed} bed={bed} tier={tierOf(cafBed)} day={dayNumbers(s.entries, now)} rest={restDay(s.templates, s.workouts, now)} />}
         {moment === "evening" && <Tonight now={now} />}
       </NowCard>
+      {/* PLAN 210: when the five look like a body working on something — before the asks, not in their queue */}
+      <BodyWatch now={now} />
       <ForYou asks={asks} day={day} />
       {/* how you compare (PLAN 206; the game it sat in is gone: "simply dont wnat that complication") — after the check-in
           and For you, so Today A's order (owner, 28 Oct: the tiles, the log row, the check-in) stays */}

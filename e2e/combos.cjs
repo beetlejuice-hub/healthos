@@ -65,8 +65,16 @@ const day = (t) => { const d = new Date(t); return `${d.getFullYear()}-${String(
   check(`first pair: drinks × late caffeine, worse together (${await p.getAttribute('data-pair').catch(() => '')} · ${await p.getAttribute('data-verdict').catch(() => '')})`, await p.getAttribute('data-pair') === 'drinks:lateCaf' && await p.getAttribute('data-verdict') === 'worse together');
   check(`the 2×2: four squares, both outlined, lowest (${flat(await p.locator('.cb-grid').innerText().catch(() => '')).slice(0, 120)})`, await p.locator('.cb-sq').count() === 4 && await p.locator('.cb-sq.both.down2').count() === 1);
   const rest = cb.locator('.cb-rest');
-  check(`control: drinks × trained adds up, among the rest`, await rest.locator('[data-pair="drinks:trained"]').getAttribute('data-verdict') === 'adds up');
+  await rest.locator('summary').click();
+  check(`control: drinks × trained adds up, a row in the table`, await rest.locator('tr[data-pair="drinks:trained"]').getAttribute('data-verdict') === 'adds up');
+  check(`what it's for, in one line`, /This looks for pairs where the two together are clearly worse/.test(flat(await cb.locator('.cb-what').innerText())));
   await cb.screenshot({ path: OUT + 'combos-1280.png' });
+  // the owner's case (11 Nov: "dont really get this part"): nothing clear is one line, the pairs a table behind it
+  await cb.getByRole('button', { name: 'Mood' }).click(); await pg.waitForTimeout(300);
+  const none = flat(await cb.locator('.cb-none').innerText().catch(() => ''));
+  check(`mood (nothing planted): one line, no grids (${none.slice(0, 80)})`, /^Nothing yet for mood\. \d+ pairs checked — every one adds up about as you'd expect\./.test(none) && await cb.locator('.cb-p').count() === 0 && /See the \d+ pairs/.test(await cb.locator('.cb-rest summary').innerText()));
+  await cb.screenshot({ path: OUT + 'combos-none-1280.png' });
+  await cb.getByRole('button', { name: 'Focus' }).click(); await pg.waitForTimeout(300);
 
   await pg.goto(APP + '#ai'); await pg.waitForTimeout(1200);
   const nd = pg.getByRole('region', { name: 'New in your data' });
