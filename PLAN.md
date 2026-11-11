@@ -3951,3 +3951,20 @@ both reads and the questions. Phases in that order; #152 RPE waits (owner).
      0.22, where 0.8 / 0.4 sd land), and a row must move 0.08 to be news.
    - Known: with very tight noise (the e2e's made-up check-ins, sd ≈ 0.4) a chance 0.4 "together" can still reach clear;
      a 5 % false-discovery rate allows some. Real check-ins are noisier. e2e/combos.
+
+210. [ ] **More of your life in, sharper experiments** (owner, 11 Nov, after the web scan: "1 love (all) - i have ios ·
+   blood panel would be good ill do one in future · guess sounds good could make a low friction version of it ·
+   duckdb-wasm … for an ai … researching a cause for smthg, and it pulls all data related to X · letsgo"; and of the pairs
+   card: "dont really get this part"). Boards P–S of the Insights canvas. Claimed 11 Nov.
+   - Pairs card clearer: what it's for in one line; nothing clear → one line and a compact table, not 15 grids.
+   - Body watch: resting heart rate, HRV, skin temperature, breathing, blood oxygen against your usual — 3 or more off
+     → a card on Today, with what happened the last times the same showed in your days (logged feeling ill after?).
+   - Sleep regularity as a trend and a thing Connections can link (it's on the Sleep page; Windred 2023: regularity
+     went with mortality more than duration in 61k UK Biobank).
+   - Experiments: a one-tap guess at the start (helps / no change / hurts, skippable); at the end how sure it helped
+     and whether the guess was right; your gut's record.
+   - The AI's research, deep dive and "look into" notes get a data pack: every day's numbers on the things the topic is
+     about, not just the summary.
+   - Bring in: Aranet4 bedroom air (CSV from Aranet Home) and Google Maps Timeline (JSON from the iPhone app) — parsed
+     on the phone; nightly CO₂, time away from home, travel days, as things for Connections and What makes a day.
+   - Not now: phone screen time (no iPhone export), CGM, who-with, life in weeks, money. Blood panel when there's one.
