@@ -2566,3 +2566,13 @@ span.fd-score[data-band="none"] { background: none; min-width: 34px; }
 .bw-bar::after { content: ""; position: absolute; left: 50%; top: -2px; bottom: -2px; width: 1px; background: var(--c-dim); }
 .bw-bar i { position: absolute; top: 0; bottom: 0; border-radius: 4px; background: var(--c-dim); } .bw-rows li.off .bw-bar i { background: var(--warn); }
 .bw-track { margin: 0; padding: 10px 12px; border-radius: 12px; background: var(--c-card-2); font-size: 13.5px; line-height: 1.4; color: var(--c-ink); }
+
+/* PLAN 210 — your guess, how sure, your gut */
+.xp-guess { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding: 4px 10px 10px 40px; font-size: 13px; color: var(--c-ink-2); }
+.xp-guess button { min-height: 36px; padding: 0 14px; border: 0; border-radius: 18px; background: var(--c-card-2); color: var(--c-ink); font: 600 13px var(--f-bar); }
+.xp-gut { margin: 0; padding: 10px 12px; border-radius: 10px; background: var(--i-panel-2); font-size: 14px; color: var(--i-ink); }
+.xp-sure { display: grid; gap: 4px; margin: 6px 0; max-width: 420px; }
+.xp-sure-h { display: flex; justify-content: space-between; gap: 10px; font-size: 12.5px; color: var(--i-ink-2); } .xp-sure-h > span { white-space: nowrap; } .xp-sure-h b { text-align: right; } .xp-sure-h b { color: var(--i-ink); font-size: 14px; }
+.xp-sure-bar { position: relative; height: 10px; border-radius: 5px; background: var(--warn); overflow: hidden; } .xp-sure-bar i { position: absolute; right: 0; top: 0; bottom: 0; background: var(--ok); }
+.xp-sure-k { display: flex; justify-content: space-between; font-size: 11px; color: var(--i-dim); }
+.xp-guessed { color: var(--i-ink-2); } .xp-guessed b { color: var(--i-ink); }

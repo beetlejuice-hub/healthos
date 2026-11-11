@@ -17,6 +17,7 @@ import { LeadChart } from "./LeadChart";
 import { AskAbout } from "./AskAbout";
 import { aboutLead, leadGrade, leadRef, leadTest } from "../lib/ai/lead";
 import { startExperiment } from "../lib/ai/experiment";
+import { GuessFor } from "./ExperimentStrip";
 import { leadClaim } from "../lib/record";
 import { RecordLine, useKeepClaims, useRecord } from "./Record";
 import { FindingRow } from "./FindingRow";
@@ -108,7 +109,7 @@ export function LeadExtras({ x: { p, memo: m }, onShow }: { x: Pick<Scouted, "p"
       <div className="sacts">
         <button type="button" className="ibtn" aria-expanded={asking} onClick={() => setAsking(!asking)}>Ask why</button>
         {test && (running
-          ? <span className="ibtn running">Testing — see Experiments</span>
+          ? <><span className="ibtn running">Testing — see Experiments</span><GuessFor name={test.name} /></>
           : <button type="button" className="ibtn" onClick={() => startExperiment(test)} title={test.how}>Test it: {test.name.split(" — ")[0].toLowerCase()}, 14 days</button>)}
         <button type="button" className="ibtn" onClick={() => onShow({ key: `${p.id}:${Date.now()}`, lanes: lanesOf(p), days: p.days })}>Show on graph</button>
         <button type="button" className="ibtn" onClick={() => act.setScout({ ...memo, [p.id]: { first: m?.first ?? today, sign: p.sign, seen: true, dismissed: true } })}>Not interesting</button>

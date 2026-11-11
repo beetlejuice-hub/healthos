@@ -38,6 +38,7 @@ import { RESULT_WORDS, verdictLines, verdictsDue } from "../lib/ai/experiment";
 import { xpSkipped } from "../lib/ai/xpdays";
 import { ExperimentDays } from "./ExperimentStrip";
 import { judge } from "../lib/ai/apply";
+import { GUESS_WORDS, guessRight, gutRecord, type Outcome } from "../lib/ai/guess";
 import { dailyFacts } from "../lib/insights";
 import { addDays, atMinute, clock, dayLabel, localDay, minuteOfDay, stamp } from "../lib/time";
 import type { Supplement } from "../lib/types";
@@ -668,6 +669,10 @@ export function SuppResearch({ s }: { s: Supplement }) {
 
 /* ------------------------------------------------------------------ Insights: experiments */
 
+/** "96 % it helped", "not sure either way", "91 % it made it worse" — never 100 % (PLAN 210). */
+const pct = (p: number) => Math.min(99, Math.max(1, Math.round(p * 100)));
+const sureWords = (sure: number, good: string) => (sure >= 0.8 ? `${pct(sure)} % it ${good}` : sure <= 0.2 ? `${pct(1 - sure)} % it made it worse` : `not sure either way (${pct(sure)} % it ${good})`);
+
 const STATE_TEXT = { running: "running", "too-few": "not enough ratings to tell", better: "better", worse: "worse", "no-clear-change": "no clear change" } as const;
 
 export function Experiments() {
@@ -676,16 +681,27 @@ export function Experiments() {
   const today = localDay(Date.now());
   const days = useMemo(() => dailyFacts(entries, workouts, settings, addDays(today, -120), addDays(today, -1)), [entries, workouts, settings, today]);
   if (!xs.length) return null;
+  const final = (s: string): Outcome | null => (s === "better" || s === "worse" || s === "no-clear-change" ? s : null);
+  const gut = gutRecord(xs, (x) => final(judge(x, days, today).state));
   return (
     <section className="p w12" id="experiments">
       <h2>Experiments <span>protocols you chose to try · the 14 days before vs the days you did it, weekends accounted for · a day you didn't is left out (tap a square to change it)</span></h2>
+      {gut && <p className="xp-gut" data-right={gut.right} data-of={gut.of}>{gut.say}</p>}
       <div className="list">{xs.map((x) => {
-        const v = judge(x, days, today);
+        const v = judge(x, days, today), out = x.verdict?.state ?? final(v.state), right = guessRight(x.guess, out);
+        const good = x.measure === "stress" ? "eased" : "helped";
         return (
           <div key={x.id} className="li exp">
             <span><b>{x.name}</b><small>{x.how}</small>
               <ExperimentDays x={x} today={today} />
               <small>Day {Math.min(v.daysIn, x.days)} of {x.days}{xpSkipped(x).length ? ` · ${xpSkipped(x).length} left out` : ""} · {x.measure}: {v.before != null ? v.before.toFixed(1) : "–"} before → {v.during != null ? v.during.toFixed(1) : "–"} since ({v.n[0]} + {v.n[1]} rated days) · <b>{x.ended && v.state === "running" ? "ended early — too few days to tell" : STATE_TEXT[v.state]}</b>{v.ci ? ` (${v.diff! >= 0 ? "+" : ""}${v.diff!.toFixed(1)}, 95% ${v.ci[0].toFixed(1)} to ${v.ci[1].toFixed(1)})` : ""}</small>
+              {/* PLAN 210: how sure, once it's done (never mid-way, so it isn't judged early), and your guess against it */}
+              {out && v.sure != null && <span className="xp-sure" data-sure={Math.round(v.sure * 100)}>
+                <span className="xp-sure-h"><span>How sure</span><b>{sureWords(v.sure, good)}</b></span>
+                <span className="xp-sure-bar" aria-hidden="true"><i style={{ width: `${v.sure * 100}%` }} /></span>
+                <span className="xp-sure-k" aria-hidden="true"><span>worse</span><span>{good}</span></span>
+              </span>}
+              {x.guess && <small className="xp-guessed">You guessed <b>{GUESS_WORDS[x.guess]}</b>{right == null ? " — the result isn't in yet" : right ? " — ✓ right" : " — ✗ not this time"}</small>}
               {/* when it ended: the AI's words on the app's result, what next, the studies (PLAN 160) */}
               {x.verdict && <span className={`exp-v v-${x.verdict.state}`}><b className="exp-chip">{RESULT_WORDS[x.verdict.state]}</b> {x.verdict.text}
                 {x.verdict.next && <span className="exp-next"><b>Next:</b> {x.verdict.next}</span>}

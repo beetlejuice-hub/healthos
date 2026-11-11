@@ -97,6 +97,8 @@ export type AiState = {
   failed?: { at: number; task: string; error: string; message: string }[];
 };
 export type Experiment = { id: string; name: string; how: string; days: number; measure: string; start: string; ended?: string;
+  /** Your guess before it showed anything (PLAN 210; owner, 11 Nov: "guess sounds good … low friction"): one tap, skippable. */
+  guess?: "helps" | "same" | "hurts";
   /** Each morning's answer about the day before (PLAN 189): did you do it? A "no" day is left out and the experiment runs a day longer. */
   did?: Record<string, boolean>;
   /** When it ended (PLAN 160): the AI's words on the app's result, what to do next, studies it leaned on. */

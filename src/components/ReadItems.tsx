@@ -12,6 +12,7 @@ import { dailyFacts } from "../lib/insights";
 import { measureDays } from "../lib/ai/digestchart";
 import { useBand } from "../lib/band-client";
 import { startExperiment } from "../lib/ai/experiment";
+import { GuessFor } from "./ExperimentStrip";
 import { isSaved, toggleSaved } from "../lib/ai/saved";
 import { addNever, liftNever, neverList, saidNever, topicKey } from "../lib/ai/said";
 import type { DigestItem, DigestMeasure, Sure } from "../lib/ai/tasks";
@@ -60,7 +61,7 @@ export function ReadItems({ items, open, onOpen, tip, from, day }: { items: Dige
               starters={["Makes no sense to me", "I knew that", "For me it's the opposite", "What food or supplement helps with this?"]} />
             <div className="mr-acts">
               {i.protocol && (running.includes(i.protocol.name)
-                ? <p className="note">Running — see Insights → Experiments.</p>
+                ? <><p className="note">Running — see Insights → Experiments.</p><GuessFor name={i.protocol.name} /></>
                 : <button type="button" className="pill-btn pri" onClick={() => startExperiment(i.protocol!)}>Try it for {i.protocol.days} days</button>)}
               {/* PLAN 159: keep it past the next read — in the AI tab, and asked about in a couple of days if not tried */}
               <button type="button" className="pill-btn mr-save" aria-pressed={isSaved(saved, i)} onClick={() => act.setAi((a) => ({ saved: toggleSaved(a.saved, i, from, day, Date.now()) }))}>

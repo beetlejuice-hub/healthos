@@ -12,6 +12,7 @@ import { judge } from "../lib/ai/apply";
 import { dailyFacts } from "../lib/insights";
 import { addDays, dayLabel, localDay } from "../lib/time";
 import { go } from "../lib/nav";
+import { GUESS_WORDS, guessOpen, type Guess } from "../lib/ai/guess";
 
 export function ExperimentStrip({ now }: { now: number }) {
   const xs = useStore((s) => s.ai.experiments), entries = useStore((s) => s.entries), workouts = useStore((s) => s.workouts), settings = useStore((s) => s.settings);
@@ -32,10 +33,29 @@ export function ExperimentStrip({ now }: { now: number }) {
       {lines.map((l) => (
         <li key={l.id} data-done={l.done || undefined}>
           <button type="button" onClick={() => open(l.id, l.done)}><span aria-hidden="true">🧪</span><b>{l.text}</b><span className="xp-sub">{l.sub}</span><span className="chev" aria-hidden="true">›</span></button>
+          {/* PLAN 210 (owner, 11 Nov: "guess … low friction"): one tap in its first 3 days, or nothing */}
+          {(() => { const x = xs.find((y) => y.id === l.id); return x && guessOpen(x, today) ? <GuessRow x={x} /> : null; })()}
         </li>
       ))}
     </ul>
   );
+}
+
+/** Your guess: helps, no change, hurts — saved on a tap, skippable (it stops asking after day 3). */
+export function GuessRow({ x }: { x: Experiment }) {
+  const pick = (g: Guess) => act.setAi((a) => ({ experiments: a.experiments.map((y) => (y.id === x.id ? { ...y, guess: g } : y)) }));
+  return (
+    <div className="xp-guess" role="group" aria-label={`Your guess for ${x.name}`}>
+      <span>Your guess?</span>
+      {(Object.keys(GUESS_WORDS) as Guess[]).map((g) => <button key={g} type="button" onClick={() => pick(g)}>{GUESS_WORDS[g].charAt(0).toUpperCase() + GUESS_WORDS[g].slice(1)}</button>)}
+    </div>
+  );
+}
+
+/** Right after "Try it": the guess for the running experiment of that name, while it's still open. */
+export function GuessFor({ name }: { name: string }) {
+  const x = useStore((s) => s.ai.experiments.find((y) => y.name === name && !y.ended && !y.verdict));
+  return x && guessOpen(x, localDay(Date.now())) ? <GuessRow x={x} /> : null;
 }
 
 const atNoon = (d: string) => new Date(`${d}T12:00`).getTime();
@@ -86,6 +106,7 @@ export function ExperimentDid({ x, now }: { x: Experiment; now: number }) {
         </div>
       ))}
       <small>A day you didn't is left out, and it runs a day longer — {x.days} days means {x.days} done. Now to {xpLastDay(x)}.</small>
+      {guessOpen(x, today) && <GuessRow x={x} />}
     </section>
   );
 }

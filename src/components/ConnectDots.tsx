@@ -14,6 +14,7 @@ import { withBand } from "../lib/daysband";
 import { dailyFacts } from "../lib/insights";
 import { useStore } from "../lib/store";
 import { startExperiment } from "../lib/ai/experiment";
+import { GuessFor } from "./ExperimentStrip";
 import { dayLabel } from "../lib/time";
 import { addDays, localDay } from "../lib/time";
 
@@ -79,7 +80,7 @@ export function ConnectDots({ now }: { now: number }) {
             <p>{r.known}</p>
             {r.found.length > 0 && <p className="cd-src">{r.found.map((f) => <a key={f.source.url} href={f.source.url} target="_blank" rel="noreferrer">{f.source.title} ↗</a>)}</p>}
             {r.protocol && <div className="cd-proto"><span><b>Protocol:</b> {r.protocol.name} — {r.protocol.how} ({r.protocol.days} days; the app watches {r.protocol.measure})</span>
-              {running.includes(r.protocol.name) ? <small>Running — see Experiments.</small> : <button type="button" className="ibtn" onClick={() => startExperiment(r.protocol!)}>Try it for {r.protocol.days} days</button>}</div>}
+              {running.includes(r.protocol.name) ? <><small>Running — see Experiments.</small><GuessFor name={r.protocol.name} /></> : <button type="button" className="ibtn" onClick={() => startExperiment(r.protocol!)}>Try it for {r.protocol.days} days</button>}</div>}
           </article>))}</div>
       </div>}
       <p className="note-i">Each against your own recent level, so slow drifts don't count; days that are alike count as fewer; checked many at once and corrected for it (as the SYNAPS project does). Goes with, not causes.</p>

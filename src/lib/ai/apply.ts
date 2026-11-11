@@ -11,6 +11,7 @@ import type { DescribedItem } from "./tasks";
 import type { DayFacts } from "../insights";
 import type { Experiment } from "../store";
 import { ols, tCrit } from "../regress";
+import { pT } from "../connect";
 import { addDays } from "../time";
 import { xpCounted, xpEnd } from "./xpdays";
 
@@ -32,7 +33,9 @@ export function fromDescribed(it: DescribedItem, id: string, typed?: string): { 
   return { food, line: { food, count: Math.round((it.count ?? 1) * 4) / 4 || 1, unit: unit.name } };
 }
 
-export type Verdict = { state: "running" | "too-few" | "better" | "worse" | "no-clear-change"; daysIn: number; before: number | null; during: number | null; diff?: number; ci?: [number, number]; n: [number, number] };
+export type Verdict = { state: "running" | "too-few" | "better" | "worse" | "no-clear-change"; daysIn: number; before: number | null; during: number | null; diff?: number; ci?: [number, number]; n: [number, number];
+  /** How sure it went the good way (PLAN 210; owner, 11 Nov: "how sure"): from the same fit, the chance the true difference is on the good side (a flat prior: one-sided t). */
+  sure?: number };
 
 type Measure = "energy" | "mood" | "focus" | "stress" | "sleep";
 const MEASURES: Measure[] = ["energy", "mood", "focus", "stress", "sleep"];
@@ -64,5 +67,6 @@ export function judge(x: Experiment, days: DayFacts[], today: string): Verdict {
   const ci: [number, number] = [diff - half, diff + half];
   const good = m === "stress" ? -1 : 1;
   const state = going ? "running" : ci[0] > 0 ? (good > 0 ? "better" : "worse") : ci[1] < 0 ? (good > 0 ? "worse" : "better") : "no-clear-change";
-  return { ...base, state, diff, ci };
+  const t = fit.se[1] > 0 ? (good * diff) / fit.se[1] : 0, p = pT(Math.abs(t), fit.df), sure = t >= 0 ? 1 - p / 2 : p / 2;
+  return { ...base, state, diff, ci, sure };
 }

@@ -9,6 +9,7 @@ import { useState } from "react";
 import { act, useStore } from "../lib/store";
 import { useAiStatus } from "../lib/ai/client";
 import { startExperiment } from "../lib/ai/experiment";
+import { GuessFor } from "./ExperimentStrip";
 import { DIVE } from "../lib/ai/dive";
 import { dayLabel, atMinute } from "../lib/time";
 import { SourceLink } from "./SourceLink";
@@ -35,7 +36,7 @@ export function DeepDive({ onRepick }: { onRepick: (key: string, skip: string[])
         <ul className="dv-found">{d.found.map((f) => <li key={f.source.url + f.title}><b>{f.title}</b><p>{f.text}</p><SourceLink s={f.source} /></li>)}</ul></div>}
       <div className="dv-sec dv-answer"><small>The verdict <span className={`dv-sure s-${d.sure}`}>{SURE[d.sure]}</span></small><p>{d.verdict}</p></div>
       {d.experiment && <div className="dv-sec dv-x"><small>Try it on yourself</small><p><b>{d.experiment.name}</b> — {d.experiment.how} ({d.experiment.days} days; the app watches {d.experiment.measure})</p>
-        {running.includes(d.experiment.name) ? <p className="note">Running — see Insights → Experiments.</p>
+        {running.includes(d.experiment.name) ? <><p className="note">Running — see Insights → Experiments.</p><GuessFor name={d.experiment.name} /></>
           : <button type="button" className="pill-btn pri" onClick={() => startExperiment(d.experiment!)}>Try it for {d.experiment.days} days</button>}</div>}
       <div className="dv-acts">
         {left > 0 ? <button type="button" className="linkish" disabled={busy > 0} onClick={async () => { setErr(null); setErr(await onRepick(d.key, [...(d.skipped ?? []), d.topic])); }}>{busy > 0 ? "Working on it…" : `Pick another topic (${left} left this week)`}</button>
