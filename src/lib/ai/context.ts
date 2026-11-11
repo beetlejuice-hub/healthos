@@ -207,6 +207,8 @@ export type ContextInput = {
   lab?: string[];
   /** Connecting the dots (PLAN 206, lib/connect): every pair, lags 0–2, honest n, false-discovery corrected. */
   links?: string[];
+  /** What the app's own maths found (PLAN 214, lib/ai/found). */
+  found?: string[];
 };
 
 export function buildContext(input: ContextInput): string {
@@ -215,6 +217,7 @@ export function buildContext(input: ContextInput): string {
   const engines = moodEngines({ ...state, workouts: state.workouts ?? [] }, now);
   const eng = (engines.length ? `\n## Mood engines (tested numbers)\n${engines.map((l) => `- ${l}`).join("\n")}` : "")
     + (input.lab?.length ? `\n## Body lab — the app's own tested numbers, only what's clear or likely (goes with, not causes)\n${input.lab.map((l) => `- ${l}`).join("\n")}` : "")
+    + (input.found?.length ? `\n## What the app's own maths found (shown on Today and Insights — quote these numbers, never work your own; options, not orders)\n${input.found.map((l) => `- ${l}`).join("\n")}` : "")
     + (input.links?.length ? `\n## Connecting the dots — the app's own maths over 120 days (each pair the same day and 1–2 days on, against your recent level, days alike counted as fewer, corrected for checking many at once; goes with, not causes)\n${input.links.map((l) => `- ${l}`).join("\n")}` : "");
   if (input.slim) return `${base}${eng}\n${ASK_MORE}`;
   const extra = eng

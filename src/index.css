@@ -2624,3 +2624,8 @@ span.fd-score[data-band="none"] { background: none; min-width: 34px; }
 .bi-manual { display: grid; gap: 6px; padding: 10px 12px; border-radius: 12px; background: var(--c-card-2); }
 .bi-manual p { margin: 0; display: grid; grid-template-columns: 9em minmax(0, 1fr) auto; gap: 8px; align-items: center; font-size: 13px; }
 .bi-manual p.note { display: block; } .bi-manual code { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; }
+
+/* PLAN 214 — a stand-out opens its trend */
+button.vs-i { border: 0; text-align: left; font: inherit; cursor: pointer; width: 100%; }
+.vs-go { font-size: 12px; font-weight: 600; color: var(--gym); justify-self: start; }
+.tw-flash { box-shadow: 0 0 0 3px var(--gym) !important; transition: box-shadow .3s; }

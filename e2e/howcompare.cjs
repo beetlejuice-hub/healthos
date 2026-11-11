@@ -66,6 +66,15 @@ function world() {
   const st = (await c.locator('.vs-stand').innerText().catch(() => '')).replace(/\s+/g, ' ').trim();
   check(`you vs everyone: where you stand out (${st.slice(0, 140)})`, await c.locator('.vs-i.good').count() === 1 && /Where you stand out Resting heart 54 bpm lower than about 90 % of 92,457 Fitbit wearers \(average 65\)/i.test(st));
   check(`…where you're behind, with a fix (${st.slice(140, 400)})`, await c.locator('.vs-i.bad').count() === 1 && /Where you're behind Drinks 10 a week \(140 g\) 1\.3× the UK's low-risk line of 14 units \(112 g\) a week Fix: Under 112 g a week/i.test(st));
+  // PLAN 214 (owner, 11 Nov: "do 1, 2"): a stand-out opens the trend behind it…
+  await c.locator('.vs-i.bad[data-key="alc"]').click(); await pg.waitForTimeout(900);
+  check(`tapping "Drinks 10 a week" opens its trend, lit (${await pg.evaluate(() => location.hash)})`, (await pg.evaluate(() => location.hash)) === '#insights/week' && await pg.locator('[data-trend="drinks"].tw-flash').count() === 1 && await pg.locator('[data-trend="drinks"]').isVisible());
+  // …and the AI sees what the card says
+  await pg.goto(APP + '#settings'); await pg.waitForSelector('#ai');
+  await pg.getByRole('button', { name: 'What the AI sees about me' }).click();
+  const seen = await pg.locator('.ctx').innerText().catch(() => '');
+  check(`the AI sees the stand-outs and the fix (${(seen.match(/## What the app's own maths found[^\n]*\n(- [^\n]*\n?){1,3}/) || [''])[0].slice(0, 200)})`, /## What the app's own maths found/.test(seen) && /- Stands out against everyone: Resting heart 54 bpm — lower than about 90 % of 92,457 Fitbit wearers \(average 65\)\./.test(seen) && /- Behind against everyone: Drinks 10 a week \(140 g\) — 1\.3× the UK's low-risk line of 14 units \(112 g\) a week\. The app's fix: Under 112 g a week/.test(seen));
+  await pg.goto(APP + '#today'); await pg.waitForSelector('.t2-head'); await pg.waitForTimeout(800);
   const order = await pg.evaluate(() => { const w = document.querySelector('section.vsall'), f = document.querySelector('#feel'); return !!w && !!f && (f.compareDocumentPosition(w) & Node.DOCUMENT_POSITION_FOLLOWING) !== 0; });
   check('after the check-in (Today A\'s order kept)', order);
   const body = await pg.locator('main').innerText();

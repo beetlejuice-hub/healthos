@@ -4030,3 +4030,12 @@ both reads and the questions. Phases in that order; #152 RPE waits (owner).
 213. [x] **Places off** (owner, 11 Nov, after why: "forget. whats next"). Settings no longer shows Places and the app
    no longer asks the Worker for them. The Worker's /api/places, lib/placepoints, lib/timeline and places-client stay,
    unused, for if it's ever wanted (e2e/places kept, not in the run). Done 11 Nov.
+
+214. [x] **The AI uses what the app found; a stand-out opens its trend** (owner, 11 Nov: "do 1, 2"). Claimed and done 11 Nov.
+   - lib/ai/found: a section in every read's and the chat's context — "What the app's own maths found": the body watch
+     when it alerts (with its track record), where you stand out and where you're behind (with the fix), your worst pair
+     for focus and mood (with its fix), each finished experiment's result with how sure and the guess, the gut's record,
+     what's new this week, sleep regularity. The AI quotes them, never works its own. lib/vsnow holds How you compare's
+     numbers so the card and the AI say the same.
+   - How you compare: each stand-out is a button — Insights → its trend panel, brought into view and lit (rhr, asleep,
+     steps, vo2, drinks, protein, caffeine). Tests: found.test; e2e/howcompare (the tap, and Settings → What the AI sees).
