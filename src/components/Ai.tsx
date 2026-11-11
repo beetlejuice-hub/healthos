@@ -184,9 +184,10 @@ const makeResearch = (t: Topic) => attempt(`research:${t.key}:${localDay(Date.no
   const s = getState();
   if ((s.ai.researched ?? []).some((r) => r.day === localDay(Date.now()))) return null;
   // never a paper cited before (PLAN 194), here or in the reads
-  const r = await askAi({ task: "research", context: [researchContext(t, s.profile, s.ai.researched ?? []), ...citedBlock(s.ai.cited)].join("\n") });
+  // PLAN 210: it may look up your days on the topic first (the reads' look-ups), then search
+  const r = await askRead({ task: "research", context: [researchContext(t, s.profile, s.ai.researched ?? []), ...citedBlock(s.ai.cited)].join("\n") });
   if (!r.ok) return r;
-  const answer = { ...r.answer, found: dropCited(r.answer.found, getState().ai.cited) }, at = Date.now();
+  const { looked: _looked, ...got } = r.answer, answer = { ...got, found: dropCited(got.found, getState().ai.cited) }, at = Date.now();
   act.setAi((a) => ({ researched: keepResearch(a.researched ?? [], t, answer, r.costUsd, at), cited: keepCited(a.cited, answer.found.map((f) => f.source), at) }));
   return r;
 }, { onFail: keepFail("research") });

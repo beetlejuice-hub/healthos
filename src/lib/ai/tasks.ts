@@ -394,6 +394,7 @@ Task: the app's own research on ONE thing in their life (owner, 3 Nov: "Ai shoul
 - "found": the 1–3 sources you leaned on, each with what it found in one sentence and its real https link;
 - "sure": strong, moderate or weak.
 - "protocol" (when one fits — always for a topic from their own data): something to try on themselves the app can follow: name (under 40 characters), how (concrete, one or two sentences), days (7–28), measure (${EXPERIMENT_MEASURES.join(", ")}). An option, never an order; leave it out when nothing safe fits.
+Their own days first when the topic is from their data (owner, 11 Nov: "ai researching a cause for smthg … pulls all data related to X"): use the app's look-ups (compare, series, nights, day, find, sessions) to pull every day's numbers on the things the topic is about before you search, and put what they show in "forYou" with the numbers — at most 2 look-up rounds.
 Goes with, never causes, unless a trial showed it; no medical advice — dosing beyond the label or anything with a condition or medication in About me: say to check with a doctor or pharmacist. Never repeat a title listed under "Already researched", and never lean on one under "## Papers and pages already cited" — find others. Each "found" text names its design, size and year ("an RCT in 96 adults, 2024"); research in people, from the paper's own page (PubMed, the journal, a DOI), not a news story or a shop. A topic the app picked at random ("something random to learn about"): make it fun — the finding that would surprise them. "What people like me report trying" (owner, 10 Nov: "could check reddits, X threads, whatever"): the threads are the point — each one a "found" with its real link and "an anecdote" in its text — and at least one study besides. "Not-so-average research" (owner: "some of the not so average studies too"): a pilot, a small or new trial, a preprint or a surprising null — say "early" or "small" in "known", sure is weak or moderate.
 Answer with ONLY a JSON object, no prose:
 {"title":"","known":"","forYou":"","tip":"","found":[{"title":"","text":"","source":{"title":"","url":""}}],"sure":"strong|moderate|weak","protocol":{"name":"","how":"","days":14,"measure":"energy|mood|focus|stress|sleep|weight"}}`,
@@ -665,7 +666,7 @@ export type AiRequest =
   /** An experiment that ended (PLAN 160): the app's own numbers in the context; the AI adds what studies say and what next. */
   | { task: "verdict"; context: string }
   /** The app's own research on one topic from his data (PLAN 192): no look-up rounds, 3 searches at most. */
-  | { task: "research"; context: string };
+  | { task: "research"; context: string; turn?: ChatTurn[]; final?: boolean };
 
 export type AiAnswer<T extends Task> = T extends "describe" ? { items: DescribedItem[]; dropped: string[] } : T extends "supplement" ? SupplementAnswer : T extends "chat" ? ChatAnswer : T extends "questions" ? QuestionsAnswer : T extends "night" ? NightAnswer : T extends "review" ? ReviewAnswer : T extends "dive" ? DiveAnswer : T extends "research" ? ResearchAnswer : T extends "verdict" ? VerdictAnswer : DigestAnswer;
 

@@ -324,11 +324,27 @@ describe("/api/ai", () => {
     expect(body.answer.title).toBe(a.title);
     expect(body.answer.found).toHaveLength(1);
     expect(body.answer.found[0].source.checked).toBe(true);
-    expect((w.sent[0].body.tools as { name: string; max_uses: number }[])).toEqual([expect.objectContaining({ name: "web_search", max_uses: 2 })]);
+    // PLAN 210: the reads' look-ups beside 2 searches — its own days on the topic before it searches
+    const tools = w.sent[0].body.tools as { name: string; max_uses?: number }[];
+    expect(tools.map((t) => t.name).sort()).toEqual(["compare", "day", "find", "nights", "series", "sessions", "web_search"]);
+    expect(tools.find((t) => t.name === "web_search")?.max_uses).toBe(2);
     expect(w.sent[0].body.model).toBe("claude-sonnet-5-5");
     expect(JSON.stringify(w.sent[0].body.system)).toContain("the app's own research on ONE thing");
     const bad = world([{ text: JSON.stringify({ title: "", known: "" }) }]);
     expect((await handleAi(post({ task: "research", context: "c" }), env, bad.deps)).status).not.toBe(200);
+  });
+
+  it("research pulls your days on its topic first (PLAN 210; owner, 11 Nov: \"pulls all data related to X\"): a look-up goes back to the app, the next round answers", async () => {
+    const a = { title: "Do drinks cost you focus?", known: "Alcohol fragments the second half of the night.", forYou: "Focus 5.1 after drinks vs 6.8 without, over 40 days.", tip: "Nothing to change", sure: "moderate", found: [] };
+    const call = { type: "tool_use", id: "tu_1", name: "compare", input: { measure: "focus", thing: "drinks", when: "next_day", from: "2026-09-01", to: "2026-10-30" } };
+    const w = world([{ text: "", stop: "tool_use", content: [call] }, { text: JSON.stringify(a) }]);
+    const r1 = (await (await handleAi(post({ task: "research", context: "## The topic (the app's pick, from my data)\n- Drinks and focus" }), env, w.deps)).json()) as { answer: { calls: { name: string }[]; turn: unknown[] } };
+    expect(r1.answer.calls.map((c) => c.name)).toEqual(["compare"]);
+    const turn = [...r1.answer.turn, { role: "user", content: [{ type: "tool_result", tool_use_id: "tu_1", content: "Focus the next day with drinks vs without — with 5.1 over 14 days; without 6.8 over 26." }] }];
+    const r2 = (await (await handleAi(post({ task: "research", context: "## The topic (the app's pick, from my data)\n- Drinks and focus", turn, final: true }), env, w.deps)).json()) as { answer: { forYou: string } };
+    expect(r2.answer.forYou).toMatch(/5\.1 after drinks/);
+    expect(JSON.stringify(w.sent[1].body.messages)).toContain("with 5.1 over 14 days");
+    expect(JSON.stringify(w.sent[0].body.system)).toContain("pull every day's numbers on the things the topic is about");
   });
 
   it("night: the day is read back with web search (its study and thing to try need sources), from text, and checked", async () => {

@@ -105,7 +105,7 @@ function validate(b: AiRequest): string | null {
     case "review": return !["week", "month"].includes(b.kind) || ![b.from, b.to].every((d) => /^\d{4}-\d{2}-\d{2}$/.test(String(d))) ? "bad review" : long(b.context, 60000) ? "context too long" : null;
     case "dive": return long(b.context, 60000) ? "context too long" : badTurn(b.turn, READ_ROUNDS) ? "bad look-ups" : null;
     case "verdict": return long(b.context, 40000) ? "context too long" : null;
-    case "research": return long(b.context, 24000) ? "context too long" : null;
+    case "research": return long(b.context, 24000) ? "context too long" : badTurn(b.turn, READ_ROUNDS) ? "bad look-ups" : null;
     default: return "unknown task";
   }
 }
@@ -127,7 +127,8 @@ function messagesFor(b: AiRequest, today: string): Anthropic.Beta.BetaMessagePar
     case "night": return [{ role: "user", content: [{ type: "text", text: `Read back my day, ${b.day}.\n\nMy data:\n${b.context}`, cache_control: { type: "ephemeral" } }] }, ...((b.turn ?? []) as Anthropic.Beta.BetaMessageParam[])];
     case "review": return [{ role: "user", content: `Write my ${b.kind} read: ${b.from} to ${b.to}.\n\nMy data:\n${b.context}` }];
     case "verdict": return [{ role: "user", content: `My experiment ended. Give me its verdict.\n\n${b.context}` }];
-    case "research": return [{ role: "user", content: `Today is ${today}. Research this for me.\n\n${b.context}` }];
+    // PLAN 210: research looks up their days too (the reads' look-ups), its rounds after it as they came
+    case "research": return [{ role: "user", content: [{ type: "text", text: `Today is ${today}. Research this for me.\n\n${b.context}`, cache_control: { type: "ephemeral" } }] }, ...((b.turn ?? []) as Anthropic.Beta.BetaMessageParam[])];
     case "dive": return [{ role: "user", content: [{ type: "text", text: `Today is ${today}. Do this week's deep dive.\n\nMy data:\n${b.context}`, cache_control: { type: "ephemeral" } }] }, ...((b.turn ?? []) as Anthropic.Beta.BetaMessageParam[])];
   }
 }
@@ -164,7 +165,7 @@ export async function callModel(b: AiRequest, choice: ModelChoice, apiKey: strin
   let res: Anthropic.Beta.BetaMessage | null = null;
   // The chat's own tools (the app runs them) and web search for outside facts; the last round may not call any.
   // the reads may ask the app for exact numbers too (PLAN 160): its read-only look-ups, beside web search
-  const read = b.task === "digest" || b.task === "night" || b.task === "dive", final = (chat || read) && !!(b as { final?: boolean }).final;
+  const read = b.task === "digest" || b.task === "night" || b.task === "dive" || b.task === "research", final = (chat || read) && !!(b as { final?: boolean }).final;
   // strict: the API holds every argument to its schema — but it allows 24 optional fields across a request's strict
   // schemas, and propose has 28 (28 Oct: "Schemas contains too many optional parameters (28)" turned every chat message
   // down). propose goes non-strict: the app checks each one itself before it becomes a card (lib/ai/propose).
