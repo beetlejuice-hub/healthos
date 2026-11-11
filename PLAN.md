@@ -4026,3 +4026,7 @@ both reads and the questions. Phases in that order; #152 RPE waits (owner).
      Settings → Places: Overland's three steps and "Set up Overland" (the address and token to paste if it doesn't
      open); a Timeline file for the past (it never overwrites Overland's days). "Away from home (the day before)" took
      bedroom CO₂'s place in What makes a day. Tests: placepoints.test, worker band.test (key → posts → data), e2e/places.
+
+213. [x] **Places off** (owner, 11 Nov, after why: "forget. whats next"). Settings no longer shows Places and the app
+   no longer asks the Worker for them. The Worker's /api/places, lib/placepoints, lib/timeline and places-client stay,
+   unused, for if it's ever wanted (e2e/places kept, not in the run). Done 11 Nov.
