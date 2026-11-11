@@ -3887,3 +3887,12 @@ both reads and the questions. Phases in that order; #152 RPE waits (owner).
      5 a week (about every other day; the morning read has a study daily), $3.50 a month. Tests: research.test.
    - Not yet: the Insights redesign itself (canvas round 3: his colours, trend charts with every day and the average,
      clearer than E).
+
+207. [ ] **Insights: every trend, connections with what they started, the phone** (owner, 11 Nov, on round 3 of the
+   Insights canvas https://claude.ai/artifact/Qjg5CUfXJ9vwvwMTfYYhuA: "nice letsgo. build all"). Claimed 11 Nov.
+   - K, every trend: a panel per measure — each day a dot, the 7-day average as a line, which way it's heading and by
+     how much since the start of the range (30 days, 90 days, a year), getting better / slipping / steady counted at the
+     top. Insights' landing page.
+   - L, connecting the dots with what it started: the links (built in 206) and the research they led to, with protocols
+     to start.
+   - M, the phone: the same trends as compact rows, and the surest link.
