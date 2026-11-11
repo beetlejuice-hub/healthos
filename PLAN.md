@@ -3929,3 +3929,10 @@ both reads and the questions. Phases in that order; #152 RPE waits (owner).
      Insights → Findings, after the connections. Flat things (no variation) are left out of the rows and the lines.
      e2e/dayexplain. The ripple reads against all his other days, light drinking ones included, so a night out's HRV
      dip is smaller than the planted per-drink effect × 3 — that's right, it's against his usual, not against none.
+
+209. [ ] **Two things together, new in your data** (owner, 11 Nov: "3, 4" — of the next steps after 208: combinations,
+   and a weekly line when something becomes clear; boards N and O of the Insights canvas). Claimed 11 Nov.
+   - Two things together: pairs of yes/no things about the evening and night before split the days four ways; when the
+     days with both sit clearly away from what the two alone add up to — worse together, or one softens the other.
+   - New in your data: on the AI tab, what became clear, got stronger, or faded since a week ago (ripples, what makes a
+     day, pairs) — worked out in the app, no AI call; each line opens where it lives.
