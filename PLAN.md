@@ -3990,3 +3990,12 @@ both reads and the questions. Phases in that order; #152 RPE waits (owner).
        doc (no migration: docs takes any key). They feed Connections (bedroom CO₂, time away, travel, walking and
        cycling, a night away) and What makes a day (bedroom CO₂).
      - e2e: bodywatch, guess, bringin; combos extended.
+
+211. [ ] **Red and green, stand-outs and fixes** (owner, 11 Nov, of the pairs table: "visualize this, and use red green
+   colors rn i dont understand · like the you vs everyone, can make it more detailed, or add a couple outstanding items,
+   good and very bad, and fixes"). Boards T and U. Claimed 11 Nov.
+   - Pairs: each pair as three bars from a day with neither — only the first, only the second, both — green better,
+     red worse, a tick where both would land if they just added up; your worst pair (and which half costs more) and
+     your best on top.
+   - You vs everyone: your two strongest and two weakest against big studies and health guidelines (drinks a week,
+     protein per kg, caffeine), each weak one with a fix from a study; each bar with the average beside it.
