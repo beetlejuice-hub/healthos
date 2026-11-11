@@ -5,6 +5,7 @@
  */
 
 import { withBand, withHealth } from "../lib/daysband";
+import { NewInData } from "./NewInData";
 import { healthNow } from "../lib/health-client";
 import { SourceLink } from "./SourceLink";
 import { Fragment, useEffect, useMemo, useRef, useState } from "react";
@@ -586,6 +587,8 @@ export function AiScreen() {
           {earlier.map(dayFold)}
         </details>
       </div>}
+      {/* PLAN 209: what became clear in your days this week — no AI */}
+      <NewInData now={now} />
       <DeepDive onRepick={makeDive} />
       <WatchList now={now} />
       <SavedCard />

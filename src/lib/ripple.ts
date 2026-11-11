@@ -7,6 +7,7 @@
  * night out is day +1. Pure.
  */
 
+import { pT } from "./connect";
 import type { DayFacts } from "./insights";
 import { addDays } from "./time";
 
@@ -63,11 +64,20 @@ export function ripple(events: string[], s: Record<string, number>, measure: Rip
   const mean = RIPPLE.offsets.map((_, i) => { const c = col(i); return c.length >= 3 ? c.reduce((a, b) => a + b, 0) / c.length : null; });
   const lo = RIPPLE.offsets.map((_, i) => { const c = col(i); return c.length >= 3 ? c[Math.floor(c.length * 0.1)] : null; });
   const hi = RIPPLE.offsets.map((_, i) => { const c = col(i); return c.length >= 3 ? c[Math.ceil(c.length * 0.9) - 1] : null; });
-  // the peak: the biggest move from day 0 on; clear when its mean is 2 standard errors from 0
+  // the peak: the biggest move from day 0 on; clear when a t-test on it holds after counting that it was the biggest of
+  // four days looked at (Bonferroni: p × 4 < 0.05) — with few events, the biggest of four noisy days is often 2 SE out
+  // by chance (PLAN 209: five nights out with no effect read "HRV −2.3 ms at +2, clear")
   let peak: Ripple["peak"] = null, clear = false;
   for (let i = 1; i < RIPPLE.offsets.length; i++) { const v = mean[i]; if (v != null && (!peak || Math.abs(v) > Math.abs(peak.v))) peak = { at: RIPPLE.offsets[i], v }; }
-  if (peak) { const c = col(RIPPLE.offsets.indexOf(peak.at as never)), m = peak.v, sd = Math.sqrt(c.reduce((a, b) => a + (b - m) ** 2, 0) / Math.max(1, c.length - 1)); clear = Math.abs(m) > 2 * (sd / Math.sqrt(c.length)); }
+  if (peak) {
+    const c = col(RIPPLE.offsets.indexOf(peak.at as never)), m = peak.v, sd = Math.sqrt(c.reduce((a, b) => a + (b - m) ** 2, 0) / Math.max(1, c.length - 1));
+    clear = sd > 0 ? pT(m / (sd / Math.sqrt(c.length)), c.length - 1) * (RIPPLE.offsets.length - 1) < 0.05 : c.length >= RIPPLE.minEvents && m !== 0;
+  }
   const pi = peak ? RIPPLE.offsets.indexOf(peak.at as never) : -1;
   const back = peak && clear ? RIPPLE.offsets.findIndex((_, i) => i > pi && mean[i] != null && Math.abs(mean[i]!) < Math.abs(peak!.v) * 0.3) : -1;
   return { measure, n: each.length, mean, lo, hi, each, peak, clear, backAt: back >= 0 ? RIPPLE.offsets[back] : null };
 }
+
+/** The labels for each offset and a move in words (−7.1 ms, −25 min, −1.8). */
+export const RIPPLE_DAYS = ["before", "day 0", "+1", "+2", "+3"];
+export const rippleFmt = (m: RippleMeasure, v: number) => `${v > 0 ? "+" : "−"}${m === "asleep" ? `${Math.round(Math.abs(v) * 60)} min` : Math.abs(v) < 10 ? Math.abs(v).toFixed(1) : Math.round(Math.abs(v))}${m === "hrv" ? " ms" : m === "rhr" ? " bpm" : ""}`;

@@ -8,7 +8,16 @@
 
 import { FACTORS, OUTCOMES, type DayRow, type FactorKey, type OutcomeKey } from "./daytable";
 
-export const BEST = { minDays: 15, minEach: 5, apart: { strong: 0.8, some: 0.4 } } as const;
+/** How far apart, by rank (Cliff's delta: how often a best day had more of it than a worst day, minus how often less;
+ * 0 alike, ±1 no overlap) — a few extreme days can't swing it (PLAN 209: two 4-drink nights on good days took the old
+ * mean-over-spread measure from 0.77 to 0.23). 0.43 / 0.22 are where a shift of 0.8 / 0.4 standard deviations lands. */
+export const BEST = { minDays: 15, minEach: 5, apart: { strong: 0.43, some: 0.22 } } as const;
+/** Cliff's delta of a against b. */
+export function cliff(a: number[], b: number[]): number {
+  let gt = 0, lt = 0;
+  for (const x of a) for (const y of b) { if (x > y) gt++; else if (x < y) lt++; }
+  return (gt - lt) / (a.length * b.length || 1);
+}
 
 export type Contrast = { key: FactorKey; best: number; worst: number; bestVals: number[]; worstVals: number[]; apart: number; says: "strongly" | "some" | "not" };
 export type BestDays = { outcome: OutcomeKey; n: number; cut: { best: number; worst: number }; rows: Contrast[]; best: string; worst: string };
@@ -24,10 +33,9 @@ export function bestDays(rows: DayRow[], outcome: OutcomeKey): BestDays | null {
   for (const key of Object.keys(FACTORS) as FactorKey[]) {
     const bv = best.map((r) => r[key]).filter((v): v is number => v != null), wv = worst.map((r) => r[key]).filter((v): v is number => v != null);
     if (bv.length < BEST.minEach || wv.length < BEST.minEach) continue;
-    const all = rated.map((r) => r[key]).filter((v): v is number => v != null), m = mean(all), sd = Math.sqrt(mean(all.map((v) => (v - m) ** 2)));
     // yes/no things by their share, the rest by their middle day
     const b = FACTORS[key].binary ? mean(bv) : med(bv), w = FACTORS[key].binary ? mean(wv) : med(wv);
-    const apart = sd > 0 ? Math.abs(mean(bv) - mean(wv)) / sd : 0;
+    const apart = Math.abs(cliff(bv, wv));
     out.push({ key, best: b, worst: w, bestVals: bv, worstVals: wv, apart, says: apart >= BEST.apart.strong ? "strongly" : apart >= BEST.apart.some ? "some" : "not" });
   }
   out.sort((a, b) => b.apart - a.apart);

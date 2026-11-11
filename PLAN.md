@@ -3930,9 +3930,24 @@ both reads and the questions. Phases in that order; #152 RPE waits (owner).
      e2e/dayexplain. The ripple reads against all his other days, light drinking ones included, so a night out's HRV
      dip is smaller than the planted per-drink effect × 3 — that's right, it's against his usual, not against none.
 
-209. [ ] **Two things together, new in your data** (owner, 11 Nov: "3, 4" — of the next steps after 208: combinations,
+209. [x] **Two things together, new in your data** (owner, 11 Nov: "3, 4" — of the next steps after 208: combinations,
    and a weekly line when something becomes clear; boards N and O of the Insights canvas). Claimed 11 Nov.
    - Two things together: pairs of yes/no things about the evening and night before split the days four ways; when the
      days with both sit clearly away from what the two alone add up to — worse together, or one softens the other.
    - New in your data: on the AI tab, what became clear, got stronger, or faded since a week ago (ripples, what makes a
      day, pairs) — worked out in the app, no AI call; each line opens where it lives.
+   - Done 11 Nov. lib/combos: eight yes/no things (late to bed, drinks, a short night, late caffeine, trained, few steps,
+     little protein, a low-HRV morning; the last three against his median), every pair with 4+ days in each square; the
+     2×2 interaction against adding up, each square's own spread (Welch), BH at q ≤ 0.05 (stricter than connect's 0.1 —
+     a pair is noisier). A clear pair that shares a thing with a stronger one is worked out again with the stronger
+     one's other thing held still, at the same BH step, and dropped if it doesn't hold ("…about what the two add up to,
+     once late to bed is held still"). lib/newfindings: everything found with all days against the days up to a week
+     ago — New / Together / Stronger / Faded, at most 5. Two things together on Insights → Findings between What makes a
+     day and Ripples; New in your data at the top of the AI tab.
+   - Fixed on the way, each with a test that failed first: ripples called the biggest of four noisy days "clear" with few
+     events (five nights out, no effect: "HRV −2.3 ms at +2, clear") — now a t-test with the four days counted
+     (Bonferroni); what makes a day's "how far apart" was mean-over-spread, which two 4-drink nights on good days took
+     from 0.77 to 0.23 ("Drinks no longer sets your best focus days apart") — now by rank (Cliff's delta; cuts 0.43 /
+     0.22, where 0.8 / 0.4 sd land), and a row must move 0.08 to be news.
+   - Known: with very tight noise (the e2e's made-up check-ins, sd ≈ 0.4) a chance 0.4 "together" can still reach clear;
+     a 5 % false-discovery rate allows some. Real check-ins are noisier. e2e/combos.

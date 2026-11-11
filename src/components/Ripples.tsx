@@ -6,13 +6,11 @@
  */
 
 import { useMemo, useState } from "react";
-import { EVENTS, eventDays, MEASURES, ripple, RIPPLE, seriesOf, type EventKey, type Ripple, type RippleMeasure } from "../lib/ripple";
+import { EVENTS, eventDays, MEASURES, ripple, RIPPLE, RIPPLE_DAYS as DAYS, rippleFmt as fmt, seriesOf, type EventKey, type Ripple, type RippleMeasure } from "../lib/ripple";
 import { useDayTable } from "./useDayTable";
 
 // the biggest move in its own measure's terms: against where 8 in 10 fell at day before
 const spread = (r: Ripple) => Math.max(0.1, ...r.each.map((e) => Math.abs(e[0] ?? 0)));
-const DAYS = ["before", "day 0", "+1", "+2", "+3"];
-const fmt = (m: RippleMeasure, v: number) => `${v > 0 ? "+" : "−"}${m === "asleep" ? `${Math.round(Math.abs(v) * 60)} min` : Math.abs(v) < 10 ? Math.abs(v).toFixed(1) : Math.round(Math.abs(v))}${m === "hrv" ? " ms" : m === "rhr" ? " bpm" : ""}`;
 
 function Panel({ r }: { r: Ripple }) {
   const M = MEASURES[r.measure], vals = [...r.lo, ...r.hi, ...r.each.flat()].filter((v): v is number => v != null);
