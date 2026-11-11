@@ -28,6 +28,7 @@ import { NightCheckAsk } from "../components/NightCheckAsk";
 import { BreakOrDone, RateWorkout, useAutoFinish } from "../components/AutoFinish";
 import { BandAlarm } from "../components/BandAlarm";
 import { HowYouCompare } from "../components/HowYouCompare";
+import { WhyToday } from "../components/WhyToday";
 import { TipAsk } from "../components/TipAsk";
 import { WeekAsk } from "../components/WeekReport";
 import { WatchAsk, WatchDoneAsk, WatchOfferAsk } from "../components/Watching";
@@ -221,6 +222,8 @@ export function Today() {
       {/* how you compare (PLAN 206; the game it sat in is gone: "simply dont wnat that complication") — after the check-in
           and For you, so Today A's order (owner, 28 Oct: the tiles, the log row, the check-in) stays */}
       <HowYouCompare now={now} />
+      {/* PLAN 208: what last night and yesterday push today's focus toward, from your own days */}
+      <WhyToday now={now} />
       {/* owner, 28 Oct: "Now the today page feels too empty" · "I liked charts and connecting dots" — picked a pattern, with today on it */}
       <TodayPattern now={now} />
 

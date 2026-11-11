@@ -3907,7 +3907,7 @@ both reads and the questions. Phases in that order; #152 RPE waits (owner).
      trends.test (planted falls and rises, the range, gaps; controls: flat noise, neither-way measures, too few days),
      e2e trends (new).
 
-208. [ ] **Ripples, why today, what makes a day, day lines** (owner, 11 Nov: "yea lets do this 4, as much as u can in one
+208. [x] **Ripples, why today, what makes a day, day lines** (owner, 11 Nov: "yea lets do this 4, as much as u can in one
    session, go" — G, I, E and H of the Insights canvas). Claimed 11 Nov.
    - Ripples: each night out (3+ drinks), hard session, short night (under 6 h) and late caffeine (100+ mg after
      14:00) laid on top of each other — the day before to three days on, against his usual — HRV, resting heart, sleep,
@@ -3919,3 +3919,13 @@ both reads and the questions. Phases in that order; #152 RPE waits (owner).
      dots, sorted by how far apart.
    - Day lines: each day a line through sleep, bedtime, drinks, caffeine, protein, steps, training to the day's rating;
      best and worst thirds coloured, their middle days thick.
+   - Done 11 Nov. lib/daytable (a row a day: what came before it — last night's sleep and bedtime, yesterday's drinks,
+     late caffeine, protein, steps, training, the morning's HRV — beside how it went), lib/whytoday (ridge, λ 3, on his
+     standardized days before today; 21 days, each thing 14 seen / yes-no 5 each way), lib/bestdays (top and bottom
+     thirds; "far apart" at 0.8 sd, "somewhat" at 0.4), lib/ripple (event days lined up; his usual the median of the
+     ±14 days that weren't one or two days after one; clear at 2 SE; back when under 30 % of the peak). Pure; a planted
+     world in dayexplain.test (drinks lower next-morning HRV and next-day focus, training lifts mood) with random
+     controls. Why today sits on Today after How you compare; What makes a day (dots or day lines) and Ripples on
+     Insights → Findings, after the connections. Flat things (no variation) are left out of the rows and the lines.
+     e2e/dayexplain. The ripple reads against all his other days, light drinking ones included, so a night out's HRV
+     dip is smaller than the planted per-drink effect × 3 — that's right, it's against his usual, not against none.
