@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { HrMinute, SleepSession } from "./band";
-import { bars, clockH, eli5, evenings, FACTORS, facts, fellAsleep, goesWith, lowestHr, nights, regularity, suppFactors, usual, usualNightHr, weekendShift, type Evening, type Night } from "./sleep";
+import { bars, clockH, eli5, evenings, FACTORS, facts, fellAsleep, goesWith, lowestHr, nights, regularity, regularityByDay, suppFactors, usual, usualNightHr, weekendShift, type Evening, type Night } from "./sleep";
 import { rng } from "./bench";
 import { tagFactors } from "./lastnight";
 import { atMinute, addDays, MIN, HOUR } from "./time";
@@ -85,6 +85,13 @@ describe("regularity", () => {
     const ns = run(() => 23, 10).filter((_, k) => k % 2 === 0); // every other day: no pairs at all
     expect(regularity(ns)).toBeNull();
     expect(regularity(run(() => 23, 5))).toBeNull(); // 4 pairs
+  });
+  it("night by night (PLAN 210): steady for two weeks, then alternating — the 7-night score falls from 100 to 66.7", () => {
+    const ns = run((k) => (k < 14 ? 23 : k % 2 ? 25 : 23), 28), r = regularityByDay(ns), days = Object.keys(r).sort();
+    expect(r[ns[13].day]).toBeCloseTo(100, 1);
+    expect(r[days.at(-1)!]).toBeCloseTo(66.7, 1);
+    expect(r[ns[4].day]).toBeUndefined(); // 4 pairs in its window: none
+    expect(days[0]).toBe(ns[5].day);
   });
   it("weekend shift: Friday and Saturday an hour later", () => {
     const ns = run((k) => ([5, 6].includes(new Date(atMinute(addDays(EVE0, k), 720)).getDay()) ? 24 : 23), 21);

@@ -150,6 +150,8 @@ export function thingsFrom(days: DayFacts[], band: { rhr?: Record<string, number
     { key: "lateEat", name: "Eating after 21:00", unit: "", per: "eating after 21:00", role: "input", series: logged((d) => (d.lateEat ? 1 : 0)) },
     { key: "steps", name: "Steps", unit: "", per: "each 1,000 steps", role: "input", series: s((d) => (d.steps == null ? null : d.steps / 1000)) },
     { key: "bedLate", name: "Bedtime", unit: "", per: "each hour later to bed", role: "input", series: s((d) => d.bedLateH) },
+    // PLAN 210: how alike your last 7 nights were (lib/sleep regularityByDay)
+    { key: "regular", name: "Sleep regularity", unit: "", per: "each 10 points more regular sleep (last 7 nights)", role: "input", series: s((d) => (d.regular == null ? null : d.regular / 10)) },
     { key: "rain", name: "Rain", unit: "", per: "each 5 mm of rain", role: "input", series: s((d) => (d.rainMm == null ? null : d.rainMm / 5)) },
     { key: "daylight", name: "Daylight", unit: "", per: "each hour of daylight", role: "input", series: s((d) => d.daylightH) },
     { key: "asleep", name: "Sleep", unit: "h", per: "each hour asleep", role: "both", series: s((d) => (d.asleepMin == null ? null : d.asleepMin / 60)) },

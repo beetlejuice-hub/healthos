@@ -145,6 +145,8 @@ export type DayFacts = {
   walkKmh?: number | null;
   /** PLAN 188, the new signals: how many hours past your usual you went to bed that evening (the band's nights), and the
    * day's weather where you live (Open-Meteo: rain in mm, the day's high in °C, hours of daylight). */
+  /** Sleep regularity over the 7 nights ending this morning (PLAN 210, lib/sleep regularityByDay), 0–100. */
+  regular?: number | null;
   bedLateH?: number | null; rainMm?: number | null; tMax?: number | null; daylightH?: number | null;
 };
 

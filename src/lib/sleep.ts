@@ -131,6 +131,20 @@ export function regularity(ns: Night[]): { score: number; pairs: number } | null
   return pairs >= 5 ? { score: (200 * same) / tot - 100, pairs } : null;
 }
 
+/**
+ * Regularity night by night (PLAN 210; Windred 2023: in 61k UK Biobank, regular sleep went with lower mortality more than
+ * long sleep did): each morning's Sleep Regularity Index over the 7 nights ending that morning — a trend, and a thing
+ * Connections and What makes a day can link. Keyed by the morning's day; none under 5 pairs in the window.
+ */
+export function regularityByDay(ns: Night[], window = 7): Record<string, number> {
+  const out: Record<string, number> = {}, byDay = [...ns].sort((a, b) => a.day.localeCompare(b.day));
+  for (const n of byDay) {
+    const from = addDays(n.day, -(window - 1)), r = regularity(byDay.filter((m) => m.day >= from && m.day <= n.day));
+    if (r) out[n.day] = Math.round(r.score * 10) / 10;
+  }
+  return out;
+}
+
 /** Friday and Saturday nights against the rest: how much later the middle of your sleep falls, in minutes. Null if either side has under 2. */
 export function weekendShift(ns: Night[]): number | null {
   const mid = (n: Night) => clockH((n.onset + n.wake) / 2, n.eve) * 60;

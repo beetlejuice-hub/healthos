@@ -11,7 +11,7 @@ import { useMemo, useState } from "react";
 import { useBand } from "../lib/band-client";
 import { eveningInputs } from "../lib/eveninputs";
 import { dailyFacts } from "../lib/insights";
-import { clockH, evenings, nights } from "../lib/sleep";
+import { clockH, evenings, nights, regularityByDay } from "../lib/sleep";
 import { sleepScore } from "../lib/sleepscore";
 import { stepsByDay } from "../lib/steps";
 import { useStore } from "../lib/store";
@@ -73,7 +73,9 @@ export function TrendWall({ now }: { now: number }) {
       ns.forEach((x, i) => { score[x.day] = sleepScore(x, evs[i].rating, ns).score; asleep[x.day] = x.asleep / 60; bed[x.eve] = clockH(x.bed, x.eve); });
       const steps = Object.fromEntries([...stepsByDay(band.steps ?? [], band.hr, today).entries()].filter(([d, v]) => d < today && v > 0).map(([d, v]) => [d, v / 1000]));
       ms.push({ key: "score", name: "Sleep score", unit: "", better: 1, series: score }, { key: "asleep", name: "Asleep", unit: "", better: 1, series: asleep },
-        { key: "bed", name: "In bed", unit: "", better: -1, series: bed }, { key: "hrv", name: "HRV", unit: "ms", better: 1, series: band.hrv },
+        { key: "bed", name: "In bed", unit: "", better: -1, series: bed },
+        // PLAN 210: how alike the last 7 nights were, morning by morning (on the Sleep page as one number)
+        { key: "regular", name: "Sleep regularity", unit: "/100", better: 1, series: regularityByDay(ns) }, { key: "hrv", name: "HRV", unit: "ms", better: 1, series: band.hrv },
         { key: "rhr", name: "Resting heart", unit: "bpm", better: -1, series: band.rhr },
         { key: "vo2", name: "VO2 max", unit: "", better: 1, series: Object.fromEntries(Object.entries(band.vo2 ?? {}).map(([d, v]) => [d, v.v])) },
         { key: "steps", name: "Steps", unit: "", better: 1, series: steps });
