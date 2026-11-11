@@ -40,6 +40,7 @@ import { Experiments } from "../components/Ai";
 import type { GraphFocus } from "../components/MasterGraph";
 import { DOSE_MIN_DAYS, doseCompare } from "../lib/dose";
 import { ConnectDots } from "../components/ConnectDots";
+import { TrendWall } from "../components/TrendWall";
 import { currentKg } from "../lib/body";
 
 const f1 = (v: number) => v.toFixed(1);
@@ -190,6 +191,8 @@ export function Insights() {
       </header>
       {nothing && <div className="needs">Nothing logged yet. Log food, drinks and supplements for a few days and this fills in — or load sample data in Settings to see what it will look like.</div>}
       <Tip />
+      {/* PLAN 207: every trend first (owner, 11 Nov: "nice letsgo. build all") */}
+      {!nothing && <TrendWall now={now} />}
       {!nothing && <Glance now={now} trendDays={period} report={report} />}
       {!nothing && <div className="gl" data-sec="week"><Top days={gdays} /></div>}
       {!nothing && (cmp && shown === "timeline" ? <Compare data={data} band={band} now={now} logged={logged} />

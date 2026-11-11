@@ -3896,3 +3896,13 @@ both reads and the questions. Phases in that order; #152 RPE waits (owner).
    - L, connecting the dots with what it started: the links (built in 206) and the research they led to, with protocols
      to start.
    - M, the phone: the same trends as compact rows, and the surest link.
+   - Done 11 Nov. lib/trends (pure): each measure over 30 / 90 / 365 days — its days, the trailing 7-day average, and the
+     change along the straight line through every day; "moved" only when the slope is twice its standard error from
+     flat and the change is over a third of the day-to-day spread (the first version compared the first week's average
+     with the last and called noise a trend in 13 of 20 flat worlds — the control caught it). components/TrendWall on
+     Insights' landing: 16 measures (sleep score, asleep, in bed, HRV, resting heart, VO2 max, steps from the band;
+     weight, protein, calories, drinks, caffeine, mood, energy, focus; strength) — a panel each on the web, a compact row
+     on a phone; better / slipping / steady counted; the surest link under them, opening Findings. Findings (L): what the
+     research started — from his data, the crowd, the edges — with its protocol, "Try it" starts the experiment. Tests:
+     trends.test (planted falls and rises, the range, gaps; controls: flat noise, neither-way measures, too few days),
+     e2e trends (new).

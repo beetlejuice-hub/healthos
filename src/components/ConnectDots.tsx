@@ -13,6 +13,8 @@ import { connect, linkWords, thingsFrom, type Link, type Thing } from "../lib/co
 import { withBand } from "../lib/daysband";
 import { dailyFacts } from "../lib/insights";
 import { useStore } from "../lib/store";
+import { startExperiment } from "../lib/ai/experiment";
+import { dayLabel } from "../lib/time";
 import { addDays, localDay } from "../lib/time";
 
 const SHOW = 6;
@@ -46,6 +48,10 @@ export function ConnectDots({ now }: { now: number }) {
   const entries = useStore((s) => s.entries), workouts = useStore((s) => s.workouts), settings = useStore((s) => s.settings);
   const band = useBand().data, today = localDay(now);
   const [all, setAll] = useState(false);
+  // what the links (and the crowd, and the edges) started: the app's own research, newest first (PLAN 207, L)
+  const researched = useStore((s) => s.ai.researched), experiments = useStore((s) => s.ai.experiments);
+  const started = useMemo(() => (researched ?? []).filter((r) => r.area === "mine" || r.area === "crowd" || r.area === "edge").sort((a, b) => b.at - a.at).slice(0, 3), [researched]);
+  const running = useMemo(() => experiments.filter((x) => !x.ended).map((x) => x.name), [experiments]);
   const { things, links } = useMemo(() => {
     const days = withBand(dailyFacts(entries, workouts, settings, addDays(today, -120), addDays(today, -1)), band, today);
     const things = thingsFrom(days, band);
@@ -64,6 +70,18 @@ export function ConnectDots({ now }: { now: number }) {
             <small>{sure(l.q)} · {l.n} days, about {Math.round(l.nEff)} independent · range {Math.abs(l.lo) < Math.abs(l.hi) ? l.lo.toFixed(1) : l.hi.toFixed(1)} to {Math.abs(l.lo) < Math.abs(l.hi) ? l.hi.toFixed(1) : l.lo.toFixed(1)}</small>
           </li>))}</ul>}
       {links.length > SHOW && <button type="button" className="ibtn" onClick={() => setAll(!all)}>{all ? "Fewer" : `All ${links.length}`}</button>}
+      {started.length > 0 && <div className="cd-started" aria-label="What it started looking into">
+        <h3>What it started looking into <span>researched on its own, about every other day</span></h3>
+        <div className="cd-rs">{started.map((r) => (
+          <article key={`${r.key}${r.at}`} data-area={r.area}>
+            <small>{r.area === "mine" ? "From your data" : r.area === "crowd" ? "What people try · anecdotes" : "Unusual study · early"} · {r.sure} · {dayLabel(r.at)}</small>
+            <b>{r.title}</b>
+            <p>{r.known}</p>
+            {r.found.length > 0 && <p className="cd-src">{r.found.map((f) => <a key={f.source.url} href={f.source.url} target="_blank" rel="noreferrer">{f.source.title} ↗</a>)}</p>}
+            {r.protocol && <div className="cd-proto"><span><b>Protocol:</b> {r.protocol.name} — {r.protocol.how} ({r.protocol.days} days; the app watches {r.protocol.measure})</span>
+              {running.includes(r.protocol.name) ? <small>Running — see Experiments.</small> : <button type="button" className="ibtn" onClick={() => startExperiment(r.protocol!)}>Try it for {r.protocol.days} days</button>}</div>}
+          </article>))}</div>
+      </div>}
       <p className="note-i">Each against your own recent level, so slow drifts don't count; days that are alike count as fewer; checked many at once and corrected for it (as the SYNAPS project does). Goes with, not causes.</p>
     </section>
   );
