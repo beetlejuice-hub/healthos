@@ -18,7 +18,8 @@ import { NORMS, normalCdf } from "./norms";
 export const CARD = { vo2Sd: 8, rhrSd: 8, strSd: 1 } as const;
 
 export type StatKey = "END" | "HRT" | "SLP" | "PAC" | "STR";
-export type Stat = { key: StatKey; word: string; /** share of the study's people you're ahead of, 0–1 (own: of your own weeks) */ p: number | null; says: string; against: string; own: boolean };
+export type Stat = { key: StatKey; word: string; /** share of the study's people you're ahead of, 0–1 (own: of your own weeks) */ p: number | null; says: string; against: string; own: boolean;
+  /** The study's average, in words (PLAN 211: "more detailed"). */ avg?: string };
 export type CardIn = { vo2?: number | null; age?: number | null; sex?: Sex | null; rhr?: number | null; asleepMin?: number | null; steps?: number | null; strPerWeek?: number | null };
 
 /** "about 85 %", rounded to 5, between 5 and 95 (the tails of a rough curve say nothing exact). */
@@ -29,13 +30,13 @@ export function compareOf(c: CardIn): Stat[] {
   const sex = c.sex ?? "male", age = c.age && c.age >= 20 && c.age <= 90 ? c.age : null, who = sex === "female" ? "women" : "men";
   const decade = age ? `${who} ${Math.floor(age / 10) * 10}–${Math.floor(age / 10) * 10 + 9}` : who;
   return [
-    c.vo2 && age ? { key: "END", word: "Endurance", p: normalCdf((c.vo2 - vo2At(age, sex)) / CARD.vo2Sd), says: `VO2 max ${Math.round(c.vo2)}`, against: `healthy ${decade} (HUNT)`, own: false }
+    c.vo2 && age ? { key: "END", word: "Endurance", p: normalCdf((c.vo2 - vo2At(age, sex)) / CARD.vo2Sd), says: `VO2 max ${Math.round(c.vo2)}`, against: `healthy ${decade} (HUNT)`, own: false, avg: `average ${Math.round(vo2At(age, sex))}` }
       : { key: "END", word: "Endurance", p: null, says: c.vo2 ? "needs your age in Settings" : "needs VO2 max", against: "healthy people your age (HUNT)", own: false },
-    c.rhr && c.rhr > 25 ? { key: "HRT", word: "Resting heart", p: normalCdf((NORMS.rhr.mean - c.rhr) / CARD.rhrSd), says: `${Math.round(c.rhr)} bpm`, against: "92,457 Fitbit wearers", own: false }
+    c.rhr && c.rhr > 25 ? { key: "HRT", word: "Resting heart", p: normalCdf((NORMS.rhr.mean - c.rhr) / CARD.rhrSd), says: `${Math.round(c.rhr)} bpm`, against: "92,457 Fitbit wearers", own: false, avg: `average ${NORMS.rhr.mean}` }
       : { key: "HRT", word: "Resting heart", p: null, says: "needs the band", against: "92,457 Fitbit wearers", own: false },
-    c.asleepMin && c.asleepMin > 0 ? { key: "SLP", word: "Sleep", p: normalCdf((c.asleepMin - NORMS.sleep.mean) / NORMS.sleep.sd), says: `${hm(c.asleepMin)} a night`, against: "about 120,000 Fitbit wearers", own: false }
+    c.asleepMin && c.asleepMin > 0 ? { key: "SLP", word: "Sleep", p: normalCdf((c.asleepMin - NORMS.sleep.mean) / NORMS.sleep.sd), says: `${hm(c.asleepMin)} a night`, against: "about 120,000 Fitbit wearers", own: false, avg: `average ${hm(NORMS.sleep.mean)}` }
       : { key: "SLP", word: "Sleep", p: null, says: "needs the band", against: "about 120,000 Fitbit wearers", own: false },
-    c.steps && c.steps > 0 ? { key: "PAC", word: "Steps", p: normalCdf((c.steps - NORMS.steps.mean) / NORMS.steps.sd), says: `${(c.steps / 1000).toFixed(1)}k a day`, against: "717,527 people", own: false }
+    c.steps && c.steps > 0 ? { key: "PAC", word: "Steps", p: normalCdf((c.steps - NORMS.steps.mean) / NORMS.steps.sd), says: `${(c.steps / 1000).toFixed(1)}k a day`, against: "717,527 people", own: false, avg: `average ${(NORMS.steps.mean / 1000).toFixed(1)}k` }
       : { key: "PAC", word: "Steps", p: null, says: "needs steps", against: "717,527 people", own: false },
     c.strPerWeek != null ? { key: "STR", word: "Strength", p: normalCdf(c.strPerWeek / CARD.strSd), says: `${c.strPerWeek >= 0 ? "+" : "−"}${Math.abs(c.strPerWeek).toFixed(1)} % a week`, against: "your own trend", own: true }
       : { key: "STR", word: "Strength", p: null, says: "needs 3 sessions of a lift", against: "your own trend", own: true },

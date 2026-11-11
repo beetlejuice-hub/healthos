@@ -61,18 +61,19 @@ const day = (t) => { const d = new Date(t); return `${d.getFullYear()}-${String(
   await cb.waitFor({ timeout: 15000 }).catch(() => {});
   const say = flat(await cb.locator('.cb-say').innerText().catch(() => ''));
   check(`the sentence leads with the planted pair (${say})`, /^Drinks and late caffeine together: focus \d\.\d — 1\.\d lower than the two alone would add up to \(\d\.\d\)\./.test(say));
-  const p = cb.locator('.cb-list').first().locator('article').first();
-  check(`first pair: drinks × late caffeine, worse together (${await p.getAttribute('data-pair').catch(() => '')} · ${await p.getAttribute('data-verdict').catch(() => '')})`, await p.getAttribute('data-pair') === 'drinks:lateCaf' && await p.getAttribute('data-verdict') === 'worse together');
-  check(`the 2×2: four squares, both outlined, lowest (${flat(await p.locator('.cb-grid').innerText().catch(() => '')).slice(0, 120)})`, await p.locator('.cb-sq').count() === 4 && await p.locator('.cb-sq.both.down2').count() === 1);
-  const rest = cb.locator('.cb-rest');
-  await rest.locator('summary').click();
-  check(`control: drinks × trained adds up, a row in the table`, await rest.locator('tr[data-pair="drinks:trained"]').getAttribute('data-verdict') === 'adds up');
-  check(`what it's for, in one line`, /This looks for pairs where the two together are clearly worse/.test(flat(await cb.locator('.cb-what').innerText())));
+  const p = cb.locator('li.pb').first();
+  check(`first row: drinks + late caffeine, worse together (${await p.getAttribute('data-pair').catch(() => '')} · ${await p.getAttribute('data-verdict').catch(() => '')})`, await p.getAttribute('data-pair') === 'drinks:lateCaf' && await p.getAttribute('data-verdict') === 'worse together');
+  check(`its bars: both red, below the tick (${flat(await p.locator('.pb-row.both').innerText().catch(() => ''))})`, await p.locator('.pb-row.both .pb-track i.bad').count() === 1 && await p.locator('.pb-row.both em').count() === 1 && /both \d+ d −[12]\.\d/.test(flat(await p.locator('.pb-row.both').innerText())));
+  const worst = cb.locator('.cb-st.bad'), wt = flat(await worst.innerText().catch(() => ''));
+  check(`your worst pair, which half, and a fix (${wt})`, await worst.getAttribute('data-pair') === 'drinks:lateCaf' && /^Your worst pair Drinks \+ late caffeine: focus −\d\.\d against a day with neither \(\d+ days\)\. /i.test(wt) && /Fix: /.test(wt));
+  await cb.getByRole('button', { name: /See all \d+ pairs/ }).click(); await pg.waitForTimeout(200);
+  check(`control: drinks + trained adds up, in the full list`, await cb.locator('li[data-pair="drinks:trained"]').getAttribute('data-verdict') === 'adds up');
+  check(`what it's for, with the colours`, /The bars show your focus against a day with neither: green a better day, red a worse one\./.test(flat(await cb.locator('.cb-what').innerText())));
   await cb.screenshot({ path: OUT + 'combos-1280.png' });
-  // the owner's case (11 Nov: "dont really get this part"): nothing clear is one line, the pairs a table behind it
+  // nothing planted for mood: says so, no stand-outs
   await cb.getByRole('button', { name: 'Mood' }).click(); await pg.waitForTimeout(300);
-  const none = flat(await cb.locator('.cb-none').innerText().catch(() => ''));
-  check(`mood (nothing planted): one line, no grids (${none.slice(0, 80)})`, /^Nothing yet for mood\. \d+ pairs checked — every one adds up about as you'd expect\./.test(none) && await cb.locator('.cb-p').count() === 0 && /See the \d+ pairs/.test(await cb.locator('.cb-rest summary').innerText()));
+  const none = flat(await cb.locator('.cb-say').innerText().catch(() => ''));
+  check(`mood (nothing planted): no pair stands out (${none.slice(0, 90)})`, /^No pair is clearly worse \(or better\) together than its two halves for mood yet — \d+ checked\./.test(none) && await cb.locator('.cb-st').count() === 0);
   await cb.screenshot({ path: OUT + 'combos-none-1280.png' });
   await cb.getByRole('button', { name: 'Focus' }).click(); await pg.waitForTimeout(300);
 

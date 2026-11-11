@@ -3991,7 +3991,7 @@ both reads and the questions. Phases in that order; #152 RPE waits (owner).
        cycling, a night away) and What makes a day (bedroom CO₂).
      - e2e: bodywatch, guess, bringin; combos extended.
 
-211. [ ] **Red and green, stand-outs and fixes** (owner, 11 Nov, of the pairs table: "visualize this, and use red green
+211. [x] **Red and green, stand-outs and fixes** (owner, 11 Nov, of the pairs table: "visualize this, and use red green
    colors rn i dont understand · like the you vs everyone, can make it more detailed, or add a couple outstanding items,
    good and very bad, and fixes"). Boards T and U. Claimed 11 Nov.
    - Pairs: each pair as three bars from a day with neither — only the first, only the second, both — green better,
@@ -3999,3 +3999,12 @@ both reads and the questions. Phases in that order; #152 RPE waits (owner).
      your best on top.
    - You vs everyone: your two strongest and two weakest against big studies and health guidelines (drinks a week,
      protein per kg, caffeine), each weak one with a fix from a study; each bar with the average beside it.
+   - Done 11 Nov. Red and green as tokens (--good #4fc27a, --bad #f07a6a), on the pairs and How you compare's bars.
+     - Pairs (components/Combos): a row per pair, three bars from a day with neither, a dashed tick on "both" where they'd
+       add up; clear pairs first, then worst first; 5 shown, "See all N pairs". lib/combos standPairs: the worst and best
+       pair (0.3+ from neither), the halves alone, and a fix — "skip the other" when they're worse together or cost
+       alike, else the bigger half you choose (a low-HRV morning isn't a choice); "could be chance" under 6 days.
+     - You vs everyone (lib/vsfix — lib/standout was taken): the bars ahead of / behind 75 % and, over 14 days of 10+
+       logged, drinks a week (UK CMO 2016, 112 g), protein per kg (Morton 2018, 1.6 g/kg, with the grams to get there) and
+       caffeine (EFSA 2015, 400 mg); two strongest, two weakest, each weak one with a fix from a study (Reimers 2018,
+       Tasali 2022, Banach 2023, Helgerud 2007). The bars say the study's average beside your number.

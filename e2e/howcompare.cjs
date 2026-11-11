@@ -1,7 +1,8 @@
 // How you compare (PLAN 206; owner, 11 Nov: "i like the comparisons … the whole gamification idea is not that good"). The
 // week suite's six weeks with the band (resting heart rate 54 this morning, ~7 h 10 asleep a night). Tue 21:40 on Today,
 // where the game's week card was: resting heart ahead of about 90 % of 92,457 Fitbit wearers, sleep ahead of about 70 %;
-// endurance, steps and strength say what they need; "You vs everyone" under it. No game anywhere: no points, levels,
+// endurance, steps and strength say what they need; each bar with the study's average. "You vs everyone" under it (PLAN
+// 211): where you stand out (resting heart) and where you're behind (a beer every evening: 140 g a week) with a fix. No game anywhere: no points, levels,
 // focus or #game. Fits 320 and 390. Control: a new account without the band — no card.
 const { chromium, APP, OUT, handle, tables } = require('./harness.cjs');
 
@@ -60,8 +61,11 @@ function world() {
   const c = card(pg);
   const rows = (await c.locator('li').allInnerTexts()).map((t) => t.replace(/\s+/g, ' ').trim());
   check(`the rows (${JSON.stringify(rows)})`, JSON.stringify(rows) === JSON.stringify([
-    'Endurance needs VO2 max', 'Resting heart 54 bpm ahead of about 90 % · 92,457 Fitbit wearers', 'Sleep 7 h 10 a night ahead of about 70 % · about 120,000 Fitbit wearers', 'Steps needs steps', 'Strength needs 3 sessions of a lift']));
-  check(`you vs everyone (${await c.locator('.wk-vs').innerText().catch(() => '')})`, /^You vs everyone · resting heart rate 11 under the average of 92,457 Fitbit wearers$/.test((await c.locator('.wk-vs').innerText().catch(() => '')).replace(/\s+/g, ' ')));
+    'Endurance needs VO2 max', 'Resting heart 54 bpm · average 65 ahead of about 90 % · 92,457 Fitbit wearers', 'Sleep 7 h 10 a night · average 6 h 47 ahead of about 70 % · about 120,000 Fitbit wearers', 'Steps needs steps', 'Strength needs 3 sessions of a lift']));
+  // PLAN 211 (owner, 11 Nov: "add a couple outstanding items, good and very bad, and fixes"): a beer every evening is 140 g a week
+  const st = (await c.locator('.vs-stand').innerText().catch(() => '')).replace(/\s+/g, ' ').trim();
+  check(`you vs everyone: where you stand out (${st.slice(0, 140)})`, await c.locator('.vs-i.good').count() === 1 && /Where you stand out Resting heart 54 bpm lower than about 90 % of 92,457 Fitbit wearers \(average 65\)/i.test(st));
+  check(`…where you're behind, with a fix (${st.slice(140, 400)})`, await c.locator('.vs-i.bad').count() === 1 && /Where you're behind Drinks 10 a week \(140 g\) 1\.3× the UK's low-risk line of 14 units \(112 g\) a week Fix: Under 112 g a week/i.test(st));
   const order = await pg.evaluate(() => { const w = document.querySelector('section.vsall'), f = document.querySelector('#feel'); return !!w && !!f && (f.compareDocumentPosition(w) & Node.DOCUMENT_POSITION_FOLLOWING) !== 0; });
   check('after the check-in (Today A\'s order kept)', order);
   const body = await pg.locator('main').innerText();

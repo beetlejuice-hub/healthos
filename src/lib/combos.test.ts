@@ -4,7 +4,7 @@
 // New this week: nights out lower the next morning's HRV 10 ms; a week ago there were only 3 (too few to say), now 5 —
 // "New" ripple. Control: the same nights with no HRV effect — nothing new about it.
 import { describe, expect, it } from "vitest";
-import { combos } from "./combos";
+import { combos, standPairs } from "./combos";
 import { dayTable } from "./daytable";
 import type { DayFacts } from "./insights";
 import { newThisWeek } from "./newfindings";
@@ -71,6 +71,20 @@ function weekWorld(effect: boolean) {
   }
   return { days, band: { hrv, rhr: {} } };
 }
+
+describe("your worst pair and your best (PLAN 211)", () => {
+  it("late to bed + drinks is the worst; which half costs more, and the fix names it", () => {
+    const { worst } = standPairs(combos(dayTable(pairWorld(1), null), "focus")!);
+    expect(worst!.c.a + ":" + worst!.c.b).toBe("late:drinks");
+    expect(worst!.d).toBeLessThan(-1.5);
+    expect(worst!.say).toMatch(/^Late to bed \+ drinks: focus −\d\.\d against a day with neither \(\d+ days\)\. Alone, late to bed −0\.\d and drinks −0\.\d — together far more than the two\.$/);
+    expect(worst!.fix).toBe("On a day with one, skip the other — they cost far more together than apart.");
+  });
+  it("control: nothing planted and little noise — no worst, no best", () => {
+    const flat = pairWorld(3, true).map((d) => ({ ...d, focus: 6 }));
+    expect(standPairs(combos(dayTable(flat, null), "focus")!)).toEqual({ worst: null, best: null });
+  });
+});
 
 describe("new in your data this week (PLAN 209)", () => {
   it("a best-against-worst row near a cut doesn't flicker: two good-focus nights out this week aren't 'Faded'", () => {

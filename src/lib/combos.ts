@@ -94,3 +94,44 @@ export function combos(rows: DayRow[], outcome: OutcomeKey): Combo[] | null {
     return { ...c, q: qs[k], clear, verdict, say, ...(explained.has(k) ? { explainedBy: explained.get(k) } : {}) };
   }).sort((x, y) => +y.clear - +x.clear || Math.abs(y.inter) / (y.se || 1) - Math.abs(x.inter) / (x.se || 1));
 }
+
+/** Things you choose, so a fix can name them (a low-HRV morning isn't one). */
+const CHOSEN: Record<FlagKey, boolean> = { late: true, drinks: true, short: true, lateCaf: true, trained: true, fewSteps: true, lowProtein: true, lowHrv: false };
+export type StandPair = { c: Combo; d: number; say: string; fix?: string };
+export const PAIRS = { stand: 0.3, sure: 6 } as const;
+const sg = (v: number) => `${v >= 0 ? "+" : "−"}${Math.abs(v).toFixed(1)}`;
+
+/**
+ * Your worst pair and your best (PLAN 211; owner, 11 Nov: "add a couple outstanding items, good and very bad, and
+ * fixes"): the days with both against a day with neither — at least 0.3 apart — which half costs more on its own, and
+ * a fix that names the half you choose. Under 6 days with both it says it could be chance.
+ */
+export function standPairs(cs: Combo[]): { worst: StandPair | null; best: StandPair | null } {
+  const name = cs.length ? OUTCOMES[cs[0].outcome].name.toLowerCase() : "";
+  const d = (c: Combo) => c.cells[1][1].m - c.cells[0][0].m;
+  const by = [...cs].sort((a, b) => d(a) - d(b)), lo = by[0], hi = by[by.length - 1];
+  const few = (c: Combo) => (c.cells[1][1].n < PAIRS.sure ? ` Only ${c.cells[1][1].n} days with both — could be chance.` : "");
+  let worst: StandPair | null = null, best: StandPair | null = null;
+  if (lo && d(lo) <= -PAIRS.stand) {
+    const A = FLAGS[lo.a], B = FLAGS[lo.b], dA = lo.cells[1][0].m - lo.cells[0][0].m, dB = lo.cells[0][1].m - lo.cells[0][0].m;
+    const [big, small, dBig, dSmall] = dA <= dB ? [lo.a, lo.b, dA, dB] : [lo.b, lo.a, dB, dA];
+    // together far worse than its halves (a clear pair): skipping either spares most of it; else the bigger half
+    const together = lo.clear && lo.inter < 0, even = Math.abs(dA - dB) < 0.2;
+    const part = together ? `Alone, ${FLAGS[lo.a].yes} ${sg(dA)} and ${FLAGS[lo.b].yes} ${sg(dB)} — together far more than the two.`
+      : dBig > -0.15 ? "Neither costs much on its own — it's the two together."
+      : even ? `Each costs about the same on its own: ${FLAGS[lo.a].yes} ${sg(dA)}, ${FLAGS[lo.b].yes} ${sg(dB)}.`
+      : `Most of it is ${FLAGS[big].yes} — ${sg(dBig)} on its own; ${FLAGS[small].yes} alone ${sg(dSmall)}.`;
+    const can = [lo.a, lo.b].filter((f) => CHOSEN[f]);
+    const fix = !can.length ? undefined
+      : together || even ? (can.length === 2 ? `On a day with one, skip the other — they cost far more together than apart.` : `${cap(FLAGS[[lo.a, lo.b].find((f) => !CHOSEN[f])!].yes)} isn't a choice — on those days, ${FLAGS[can[0]].no} is the half you can change.`)
+      : CHOSEN[big] && dBig <= -0.15 ? `The bigger half is ${FLAGS[big].yes}: ${FLAGS[big].no} takes most of it away.`
+      : `${cap(FLAGS[big].yes)} isn't a choice — on those days, ${FLAGS[small].no} is the half you can change.`;
+    worst = { c: lo, d: d(lo), say: `${cap(A.yes)} + ${B.yes}: ${name} ${sg(d(lo))} against a day with neither (${lo.cells[1][1].n} days). ${part}${few(lo)}`, ...(fix ? { fix } : {}) };
+  }
+  if (hi && hi !== lo && d(hi) >= PAIRS.stand) {
+    const A = FLAGS[hi.a], B = FLAGS[hi.b];
+    best = { c: hi, d: d(hi), say: `${cap(A.yes)} + ${B.yes}: ${name} ${sg(d(hi))} against a day with neither (${hi.cells[1][1].n} days).${few(hi)}` };
+  }
+  return { worst, best };
+}
+const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);

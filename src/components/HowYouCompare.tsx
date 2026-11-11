@@ -11,6 +11,9 @@ import { useBand } from "../lib/band-client";
 import { compareOf, middle, pctWords } from "../lib/card";
 import { fitAge } from "../lib/fitage";
 import { vsBest } from "../lib/norms";
+import { standOut } from "../lib/vsfix";
+import { currentKg } from "../lib/body";
+import { useDayTable } from "./useDayTable";
 import { nights } from "../lib/sleep";
 import { stepsByDay } from "../lib/steps";
 import { useStore } from "../lib/store";
@@ -20,7 +23,8 @@ import type { LoggedSet } from "../lib/training";
 import type { EntryOf } from "../lib/types";
 
 export function HowYouCompare({ now }: { now: number }) {
-  const entries = useStore((s) => s.entries), age = useStore((s) => s.settings.age), sex = useStore((s) => s.settings.sex);
+  const entries = useStore((s) => s.entries), age = useStore((s) => s.settings.age), sex = useStore((s) => s.settings.sex), bodyKg = useStore((s) => s.settings.bodyKg);
+  const { days } = useDayTable(now);
   const band = useBand().data, today = localDay(now);
   const ns = useMemo(() => (band ? nights(band.sleep, band.hr, band.rhr, band.hrv) : []), [band]);
   const sets = useMemo(() => entries.filter((e): e is EntryOf<"set"> => e.kind === "set") as LoggedSet[], [entries]);
@@ -38,15 +42,23 @@ export function HowYouCompare({ now }: { now: number }) {
     const vs = band ? vsBest({ steps: steps.get(addDays(today, -1)) ?? null, sleepMin: night?.asleep ?? null, rhr: band.rhr[today] ?? null }) : null;
     return { stats, vs };
   }, [band, ns, sets, age, sex, today, now]);
+  // PLAN 211: the last 14 days of logging against the guidelines, and the bars — the two strongest and two weakest
+  const stand = useMemo(() => {
+    const two = days.filter((d) => d.day < today && d.day >= addDays(today, -14)), logged = two.filter((d) => d.logged), kg = currentKg(entries, bodyKg, now);
+    const pro = two.map((d) => d.proteinG).filter((v): v is number => v != null && v > 0);
+    const mean = (v: number[]) => (v.length ? v.reduce((a, b) => a + b, 0) / v.length : null);
+    return standOut(stats, { loggedDays: logged.length, drinksG: logged.length ? (logged.reduce((a, d) => a + d.alcoholG, 0) / logged.length) * 7 : null,
+      proteinGkg: pro.length >= 7 && kg ? mean(pro)! / kg : null, kg, caffeineMg: mean(logged.map((d) => d.caffeineMg)) });
+  }, [days, stats, entries, bodyKg, today, now]);
   const shown = stats.filter((s) => s.p != null);
-  if (!shown.length) return null;
+  if (!shown.length && !stand.good.length && !stand.bad.length) return null;
   return (
     <section className="card vsall" aria-label="How you compare">
       <h3>How you compare <span>this week, against big studies</span></h3>
       <ul>
         {stats.map((s) => (
           <li key={s.key} data-stat={s.key} className={s.p == null ? "none" : undefined}>
-            <span className="vs-w"><b>{s.word}</b>{s.p != null && <> <small>{s.says}</small></>}</span>
+            <span className="vs-w"><b>{s.word}</b>{s.p != null && <> <small>{s.says}{s.avg ? ` · ${s.avg}` : ""}</small></>}</span>
             {s.p != null
               ? <><span className="vs-bar" aria-hidden="true"><i style={{ width: `${Math.round(s.p * 100)}%` }} className={s.p >= 0.5 ? "up" : "down"} /><em /></span>
                 <span className="vs-p">{s.own ? (s.p >= 0.5 ? "gaining" : "slipping") : `ahead of ${pctWords(s.p)}`} <small>· {s.against}</small></span></>
@@ -54,7 +66,14 @@ export function HowYouCompare({ now }: { now: number }) {
           </li>
         ))}
       </ul>
-      {vs && <p className="wk-vs"><b>You vs everyone</b> · {vs}</p>}
+      {stand.good.length || stand.bad.length ? <div className="vs-stand" aria-label="You vs everyone">
+        <b className="vs-h">You vs everyone</b>
+        {stand.good.length > 0 && <><small className="vs-k good">Where you stand out</small>
+          {stand.good.map((i) => <div key={i.key} className="vs-i good" data-key={i.key}><b>{i.title}</b><span>{i.vs}</span></div>)}</>}
+        {stand.bad.length > 0 && <><small className="vs-k bad">Where you're behind</small>
+          {stand.bad.map((i) => <div key={i.key} className="vs-i bad" data-key={i.key}><b>{i.title}</b><span>{i.vs}</span>{i.fix && <span className="vs-fix"><b>Fix:</b> {i.fix}</span>}</div>)}</>}
+        <small className="note">Bars: this week. Drinks, protein, caffeine: the last 14 days. Fixes are options, not orders.</small>
+      </div> : vs && <p className="wk-vs"><b>You vs everyone</b> · {vs}</p>}
     </section>
   );
 }
