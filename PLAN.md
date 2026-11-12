@@ -4039,3 +4039,17 @@ both reads and the questions. Phases in that order; #152 RPE waits (owner).
      numbers so the card and the AI say the same.
    - How you compare: each stand-out is a button — Insights → its trend panel, brought into view and lit (rhr, asleep,
      steps, vo2, drinks, protein, caffeine). Tests: found.test; e2e/howcompare (the tap, and Settings → What the AI sees).
+
+215. [ ] **One morning read; late band data; red and green trends you can open** (owner, 12 Nov: "I got like 3 morning
+   reads today its weird idk if it works pls fix. also make sure app can handle back-logging data, since sometimes i dont
+   open app for a while and band data comes in late. also i really liked the red and green dots like todays data, can we
+   add this to insights main page? and if i click on a square like asleep or hrv, can it make it bigger and bit more
+   detailed so i can see how my data changed during the time period and see at what. date what score it was · do it").
+   Claimed 12 Nov.
+   - One read a day: the `ai` doc is merged key by key, so a device holding an older read put it back over today's and
+     the next device wrote another. A newer read now always wins the merge, and a device claims the day's read on the
+     server before writing it. Each read's writing is kept (when, which device) in Settings → AI.
+   - Late band data: the app re-reads the last 2 days (was 12 h), and the whole week when it's been away 6 h+; the
+     Worker re-reads nights 7 days back (was 3) and calories 7 (was 3).
+   - Every trend: each day's dot green when better than your usual for that range, red when worse, grey when typical;
+     tap a panel for it big — the usual band, dates, and any day tapped says its date and value against your usual.
