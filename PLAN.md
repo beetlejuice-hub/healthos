@@ -4040,7 +4040,7 @@ both reads and the questions. Phases in that order; #152 RPE waits (owner).
    - How you compare: each stand-out is a button — Insights → its trend panel, brought into view and lit (rhr, asleep,
      steps, vo2, drinks, protein, caffeine). Tests: found.test; e2e/howcompare (the tap, and Settings → What the AI sees).
 
-215. [ ] **One morning read; late band data; red and green trends you can open** (owner, 12 Nov: "I got like 3 morning
+215. [x] **One morning read; late band data; red and green trends you can open** (owner, 12 Nov: "I got like 3 morning
    reads today its weird idk if it works pls fix. also make sure app can handle back-logging data, since sometimes i dont
    open app for a while and band data comes in late. also i really liked the red and green dots like todays data, can we
    add this to insights main page? and if i click on a square like asleep or hrv, can it make it bigger and bit more
@@ -4053,3 +4053,17 @@ both reads and the questions. Phases in that order; #152 RPE waits (owner).
      Worker re-reads nights 7 days back (was 3) and calories 7 (was 3).
    - Every trend: each day's dot green when better than your usual for that range, red when worse, grey when typical;
      tap a panel for it big — the usual band, dates, and any day tapped says its date and value against your usual.
+   - Done 12 Nov. lib/ai/claim (mayWrite: no claim, ours, or one over 30 min old; newerRead) + claimStore (one insert
+     of `claim:<task>:<day>` in docs; on 23505 read it, take it over only when stale). writeDigest / writeNight (not a
+     forced "read it again") claim first — another device's claim is "elsewhere", tried again later, not shown as a
+     failure. sync mergePull keeps the newer digest and night read and joins `ai.wrote`; Settings → AI: "Morning read:
+     written 07:12 on iPhone" (and "written 3 times — …" if it ever is again). lib/band refreshFrom: the last 48 h, the
+     whole week after 6 h+ away; worker sleep and calories 7 days back. lib/trends: `usual` (quartiles), each day's
+     tone (toneOf); TrendWall dots green/red/grey, a panel opens components/TrendBig — the day readout (‹ ›, tap or drag
+     the chart, keys), the usual band and its middle, best and worst day, day by day (14, then all). Tests: claim.test,
+     sync.test (an old device's doc), band.test (48 h, 6 h away), trends.test (a planted good week green, a bad one red,
+     less-is-better flips, neither-way grey, noise about half typical); e2e/oneread (another device's claim → no second
+     read; one write, none on reload; Settings says where), e2e/trends (colours, open big, ‹, best day, chart tap, list,
+     Escape, phone). The fake Supabase now refuses a plain insert onto an existing key and does PATCH, like the real one.
+     Not checked: two real phones on the real account — Settings → AI will say where each read came from if it happens.
+

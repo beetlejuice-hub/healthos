@@ -96,6 +96,8 @@ export type AiState = {
   findingsDay?: string;
   /** Background calls that failed, newest last (22 Oct: the morning read didn't come, and nothing said why) — in Settings → AI. */
   failed?: { at: number; task: string; error: string; message: string }[];
+  /** Which device wrote each read (PLAN 215) — Settings → AI says where today's came from. */
+  wrote?: { task: string; day: string; at: number; device: string }[];
 };
 export type Experiment = { id: string; name: string; how: string; days: number; measure: string; start: string; ended?: string;
   /** Your guess before it showed anything (PLAN 210; owner, 11 Nov: "guess sounds good … low friction"): one tap, skippable. */

@@ -14,7 +14,7 @@ export type { BandData };
 export type BandStatus = { connected: boolean; needsReconnect: boolean; connectedAt: number | null; lastSync: number | null; latest: number | null; error: string | null; gapSec?: number | null;
   vo2Pull?: { at: number; days: number; points: number; sample?: string; error?: string } | null };
 /** "off": the server has no Google keys (503). null: not asked yet. `from`: the data held starts here. */
-type State = { status: BandStatus | "off" | null; data: BandData | null; from: number; loading: boolean; older: boolean };
+type State = { status: BandStatus | "off" | null; data: BandData | null; from: number; loading: boolean; older: boolean; loadedAt?: number };
 
 const DAY = 86_400_000;
 /** A week of minutes (~10k points, ~250 kB): what the graph opens on. Older weeks load when you scroll back. */
@@ -49,10 +49,10 @@ export async function refreshBand(now = Date.now()): Promise<void> {
     set({ status: pick(s) });
     if (!s.connected) { set({ data: null, from: 0 }); return; }
     set({ status: pick(await api<BandStatus>("sync", true)) });
-    const held = state.data ? { hr: state.data.hr, from: state.from } : null;
+    const held = state.data ? { hr: state.data.hr, from: state.from, loadedAt: state.loadedAt } : null;
     const from = refreshFrom(held, now, BAND_DAYS);
     const d = await api<BandData & BandStatus>(`data?from=${from}&to=${now + 60_000}`);
-    set({ status: pick(d), data: mergeBand(state.data, asData(d)), from: held ? state.from : from });
+    set({ status: pick(d), data: mergeBand(state.data, asData(d)), from: held ? state.from : from, loadedAt: now });
   } catch { /* offline or not set up: the card says so, the graph keeps what it had */ }
   finally { set({ loading: false }); settle(); }
 }

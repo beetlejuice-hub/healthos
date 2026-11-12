@@ -11,27 +11,52 @@ import { addDays } from "./time";
 export type Measure = { key: string; name: string; unit: string; /** +1 more is better, −1 less is better, 0 neither */ better: 1 | -1 | 0; series: Record<string, number> };
 export type Trend = {
   key: string; name: string; unit: string;
-  /** the range's days with a value, oldest first; `i` is the day's place in the range (0 = its first day) */
-  days: { day: string; i: number; v: number }[];
+  /**
+   * the range's days with a value, oldest first; `i` is the day's place in the range (0 = its first day). `tone` (PLAN
+   * 215; owner, 12 Nov: "i really liked the red and green dots"): better or worse than your usual — outside the middle
+   * half of your days in this range, on the side that's better for this measure — else typical; a measure with no
+   * better side is always typical.
+   */
+  days: { day: string; i: number; v: number; tone: DayTone }[];
+  /** Your usual over the range: the middle half of your days (`lo`–`hi`) and the middle day (`mid`). */
+  usual: { lo: number; mid: number; hi: number };
+  better: 1 | -1 | 0;
   /** the 7-day average (the days that have a value in the 7 ending that day), from the first day it exists */
   avg: { day: string; i: number; v: number }[];
   /** `delta`: the change along the line over the range */ first: number; now: number; delta: number; sd: number; lo: number; hi: number;
   moved: boolean; way: "up" | "down" | "flat"; tone: "better" | "worse" | "steady";
 };
 
+export type DayTone = "better" | "worse" | "typical";
+
+/** The value `q` of the way through sorted `xs` (0–1), between neighbours. */
+function quantile(xs: number[], q: number): number {
+  const s = [...xs].sort((a, b) => a - b), at = (s.length - 1) * q, lo = Math.floor(at);
+  return s[lo] + (s[Math.min(lo + 1, s.length - 1)] - s[lo]) * (at - lo);
+}
+
+/** Better, worse or typical against your usual (`trendOf` says how). */
+export function toneOf(v: number, usual: { lo: number; hi: number }, better: 1 | -1 | 0): DayTone {
+  if (better === 0 || usual.hi === usual.lo && v === usual.lo) return "typical";
+  const side = v > usual.hi ? 1 : v < usual.lo ? -1 : 0;
+  return side === 0 ? "typical" : side === better ? "better" : "worse";
+}
+
 export const TRENDS = { avgDays: 7, minDays: 5, moveSd: 0.35, ranges: [30, 90, 365] as const } as const;
 
 /** One measure over the `n` days ending `today`; null with fewer than TRENDS.minDays values in it. */
 export function trendOf(m: Measure, today: string, n: number): Trend | null {
-  const from = addDays(today, -(n - 1)), days: Trend["days"] = [], avg: Trend["avg"] = [];
+  const from = addDays(today, -(n - 1)), raw: { day: string; i: number; v: number }[] = [], avg: Trend["avg"] = [];
   for (let i = 0; i < n; i++) {
     const day = addDays(from, i), v = m.series[day];
-    if (v != null && Number.isFinite(v)) days.push({ day, i, v });
+    if (v != null && Number.isFinite(v)) raw.push({ day, i, v });
     const w: number[] = [];
     for (let k = 0; k < TRENDS.avgDays; k++) { const x = m.series[addDays(day, -k)]; if (x != null && Number.isFinite(x)) w.push(x); }
     if (w.length) avg.push({ day, i, v: w.reduce((a, b) => a + b, 0) / w.length });
   }
-  if (days.length < TRENDS.minDays || !avg.length) return null;
+  if (raw.length < TRENDS.minDays || !avg.length) return null;
+  const vs0 = raw.map((d) => d.v), usual = { lo: quantile(vs0, 0.25), mid: quantile(vs0, 0.5), hi: quantile(vs0, 0.75) };
+  const days: Trend["days"] = raw.map((d) => ({ ...d, tone: toneOf(d.v, usual, m.better) }));
   const vs = days.map((d) => d.v), mean = vs.reduce((a, b) => a + b, 0) / vs.length;
   const sd = Math.sqrt(vs.reduce((a, b) => a + (b - mean) ** 2, 0) / vs.length);
   // the change is the straight line through every day, not first week against last: two weeks' averages differ by
@@ -45,7 +70,7 @@ export function trendOf(m: Measure, today: string, n: number): Trend | null {
   const moved = Math.abs(slope) > 2 * se && (sd > 0 ? Math.abs(delta) > TRENDS.moveSd * sd : delta !== 0);
   const way = !moved ? "flat" : delta > 0 ? "up" : "down";
   const tone = !moved || m.better === 0 ? "steady" : (delta > 0 ? 1 : -1) === m.better ? "better" : "worse";
-  return { key: m.key, name: m.name, unit: m.unit, days, avg, first, now, delta, sd, lo: Math.min(...vs), hi: Math.max(...vs), moved, way, tone };
+  return { key: m.key, name: m.name, unit: m.unit, days, avg, usual, better: m.better, first, now, delta, sd, lo: Math.min(...vs), hi: Math.max(...vs), moved, way, tone };
 }
 
 /** How many are getting better, slipping, steady. */

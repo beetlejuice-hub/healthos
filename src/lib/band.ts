@@ -240,13 +240,17 @@ export function mergeBand(prev: BandData | null, got: BandData): BandData {
 }
 
 /**
- * Where a refresh starts loading: a week back the first time; after that only the last 12 hours (late uploads
- * fill in) or from an hour before the newest minute held, whichever is earlier — never before what's held.
+ * Where a refresh starts loading: a week back the first time; after that the last 2 days (late uploads fill in — a band
+ * that syncs to the phone a day late) or from an hour before the newest minute held, whichever is earlier; and the whole
+ * week again after 6 h or more without a load (PLAN 215; owner, 12 Nov: "sometimes i dont open app for a while and band
+ * data comes in late"). Never before what's held.
  */
-export function refreshFrom(held: { hr: HrMinute[]; from: number } | null, now: number, days = 7): number {
+export const REFRESH = { againH: 48, awayH: 6 } as const;
+export function refreshFrom(held: { hr: HrMinute[]; from: number; loadedAt?: number } | null, now: number, days = 7): number {
   if (!held) return now - days * 86_400_000;
+  if (held.loadedAt != null && now - held.loadedAt >= REFRESH.awayH * 3600_000) return Math.max(held.from, now - days * 86_400_000);
   const last = held.hr.at(-1)?.[0] ?? held.from;
-  return Math.max(held.from, Math.min(last - 3600_000, now - 12 * 3600_000));
+  return Math.max(held.from, Math.min(last - 3600_000, now - REFRESH.againH * 3600_000));
 }
 
 /** Last night's real bedtime and wake time: the main (non-nap) sleep that ended most recently before `now`. */

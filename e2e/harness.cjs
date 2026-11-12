@@ -25,6 +25,9 @@ async function handle(route) {
     const refreshed = url.searchParams.get('grant_type') === 'refresh_token' && b.refresh_token?.startsWith('r-') ? b.refresh_token.slice(2) : null;
     if (refreshed) { const email = Object.keys(users).find((k) => users[k] === refreshed); return json(200, { access_token: 'tok-' + refreshed, token_type: 'bearer', expires_in: 3600 * 24 * 365, expires_at: Math.floor(Date.now() / 1000) + 3600 * 24 * 365, refresh_token: 'r-' + refreshed, user: { id: refreshed, email, aud: 'authenticated', role: 'authenticated', app_metadata: {}, user_metadata: {}, created_at: '2026-09-29T00:00:00Z' } }); }
     const id = users[b.email];
+    // a suite's fresh sign-in is the same one device again: no read claimed yet (PLAN 215). e2e/oneread plants another
+    // device's claim after signing in.
+    if (id && b.password === 'secret123') for (const k of [...tables.docs.keys()]) if (k.startsWith(id + '|claim:')) tables.docs.delete(k);
     if (!id || b.password !== 'secret123') return json(400, { error: 'invalid_grant', error_description: 'Invalid login credentials', msg: 'Invalid login credentials', code: 'invalid_credentials' });
     return json(200, { access_token: 'tok-' + id, token_type: 'bearer', expires_in: 3600, expires_at: Math.floor(Date.now() / 1000) + 3600, refresh_token: 'r-' + id, user: { id, email: b.email, aud: 'authenticated', role: 'authenticated', app_metadata: {}, user_metadata: {}, created_at: '2026-09-29T00:00:00Z' } });
   }
@@ -34,10 +37,18 @@ async function handle(route) {
   if (tm) {
     const t = tables[tm[1]], uid = uidOf(req); if (!uid) return json(401, { message: 'no auth' });
     const keyCols = tm[1] === 'entries' ? ['user_id', 'id'] : ['user_id', 'key'];
-    if (m === 'POST') { for (const r of req.postDataJSON()) { if (r.user_id !== uid) return json(403, { message: 'RLS violation' }); t.set(keyCols.map(k => r[k]).join('|'), { ...r, updated_at: stamp() }); } return json(201, null); }
+    if (m === 'POST') {
+      // an upsert overwrites; a plain insert onto a key that's there is refused, as Postgres does (PLAN 215's claim)
+      const up = /merge-duplicates/.test(req.headers()['prefer'] || '');
+      const rs = [].concat(req.postDataJSON());
+      for (const r of rs) { if (r.user_id !== uid) return json(403, { message: 'RLS violation' }); if (!up && t.has(keyCols.map(k => r[k]).join('|'))) return json(409, { code: '23505', message: 'duplicate key value violates unique constraint' }); }
+      for (const r of rs) t.set(keyCols.map(k => r[k]).join('|'), { ...r, updated_at: stamp() });
+      return json(201, null);
+    }
     let rows = [...t.values()].filter(r => r.user_id === uid);
     for (const [k, v] of url.searchParams) { if (v.startsWith('gt.')) rows = rows.filter(r => r[k] > v.slice(3)); if (v.startsWith('eq.')) rows = rows.filter(r => String(r[k]) === v.slice(3)); if (v.startsWith('not.in.(')) { const l = v.slice(8, -1).split(','); rows = rows.filter(r => !l.includes(String(r[k]))); } }
     if (m === 'DELETE') { for (const r of rows) t.delete(keyCols.map(k => r[k]).join('|')); return json(204, null); }
+    if (m === 'PATCH') { const v = req.postDataJSON(); for (const r of rows) t.set(keyCols.map(k => r[k]).join('|'), { ...r, ...v, updated_at: stamp() }); return json(204, null); }
     rows.sort((a, b) => a.updated_at < b.updated_at ? -1 : 1);
     const off = +(url.searchParams.get('offset') || 0), lim = +(url.searchParams.get('limit') || 1e9);
     return json(200, rows.slice(off, off + lim));

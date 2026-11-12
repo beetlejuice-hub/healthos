@@ -77,7 +77,8 @@ const { chromium, APP, OUT, handle } = require('./harness.cjs');
   await pg.waitForFunction(() => /Nothing newer|New readings/.test(document.querySelector('.card.band')?.textContent ?? ''), null, { timeout: 15000 }).catch(() => {});
   check('Pull now with nothing new: says so, and what to do', /Nothing newer from Google yet — the band last sent at 12:58\. Open the Fitbit app/.test(await card.innerText()));
   const pullFrom = +new URLSearchParams(calls.filter((c) => c.op === 'data').at(-1).search).get('from');
-  check(`Pull now loads only the last hours, not the week again (from ${new Date(pullFrom).toTimeString().slice(0, 5)})`, Math.abs(pullFrom - (NOW - 12 * 3600_000)) < 120_000);
+  // the last 2 days again — a band that syncs late fills them in (PLAN 215) — not the week
+  check(`Pull now loads only the last 2 days, not the week again (from ${new Date(pullFrom).toString().slice(0, 21)})`, Math.abs(pullFrom - (NOW - 48 * 3600_000)) < 120_000);
   hr.push([NOW, 80, 78, 83]);
   await card.getByRole('button', { name: 'Pull now' }).click();
   await pg.waitForFunction(() => /New readings/.test(document.querySelector('.card.band')?.textContent ?? ''), null, { timeout: 15000 }).catch(() => {});

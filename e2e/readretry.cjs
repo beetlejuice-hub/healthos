@@ -79,7 +79,8 @@ const RATED = { id: 'sl', kind: 'sleep', at: NOW - H, rating: 7 };
   await until(async () => (await state(pg)) === 'failed');
   await until(async () => calls.length >= 4 && st.open === 0);
   // the reads in their own line, one at a time, the morning read first; the week read and the deep dive in the other (22 Oct)
-  check(`the morning read goes first; the reads one at a time; at most two calls at once (${calls.join(', ')}; ${st.most} at once, reads ${st.readsMost})`, calls[0] === 'digest' && st.readsMost === 1 && st.most <= 2 && ['review', 'dive', 'night'].every((t) => calls.includes(t)));
+  // — which may start a moment before it, while the morning read claims the day (PLAN 215)
+  check(`the morning read goes first; the reads one at a time; at most two calls at once (${calls.join(', ')}; ${st.most} at once, reads ${st.readsMost})`, calls.filter((c) => c === 'digest' || c === 'night')[0] === 'digest' && st.readsMost === 1 && st.most <= 2 && ['review', 'dive', 'night'].every((t) => calls.includes(t)));
   const t1 = await text(pg);
   check(`Today says it didn't come, why, and when it tries again (${t1.replace(/\n/g, ' · ')})`, /^Morning read\s+didn't come through\. The AI is busy — try again in a minute\. Trying again at 08:32\.\s*Try again$/i.test(t1));
   check(`fits the phone (${await pg.evaluate(() => document.documentElement.scrollWidth)} px)`, await pg.evaluate(() => document.documentElement.scrollWidth) <= 390);

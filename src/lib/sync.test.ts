@@ -53,6 +53,17 @@ describe("mergePull", () => {
     expect(m.supplements).toEqual([]);
   });
 
+  it("an older device's AI doc never puts yesterday's read back over today's (PLAN 215)", () => {
+    const today = { day: "2026-11-12", at: 2, greeting: "new", items: [] }, old = { day: "2026-11-11", at: 1, greeting: "old", items: [] };
+    const mine = { ...base, ai: { ...base.ai, digest: today, wrote: [{ task: "digest", day: "2026-11-12", at: 2, device: "iPhone" }] } } as State;
+    const m = mergePull(mine, [], [{ key: "ai", value: { digest: old, wrote: [{ task: "digest", day: "2026-11-11", at: 1, device: "Mac" }] }, updated_at: "x" }], []);
+    expect(m.ai.digest?.greeting).toBe("new");
+    expect(m.ai.wrote?.map((w) => w.device)).toEqual(["Mac", "iPhone"]);
+    // …and a newer one from the other device does replace it
+    const later = mergePull(mine, [], [{ key: "ai", value: { digest: { ...today, at: 3, greeting: "newer" } }, updated_at: "x" }], []);
+    expect(later.ai.digest?.greeting).toBe("newer");
+  });
+
   it("returns the same object when nothing changed", () => {
     expect(mergePull(base, [], [], [])).toBe(base);
   });

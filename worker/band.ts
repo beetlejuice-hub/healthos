@@ -227,7 +227,8 @@ export class BandHub {
       for (let d = KEEP_DAYS; d <= KEEP_DAYS + 60; d++) await this.storage.delete(`hr:${utcDay(now - d * DAY)}`);
     } catch (e) { errors.push(String((e as Error).message)); }
     try {
-      const fresh = readSleep(await this.list("sleep", sleepFilter(utcDay(now - back(3, 14) * DAY)), 25, errors));
+      // a week of nights each time (PLAN 215): a band that syncs to the phone days late still brings its nights in
+      const fresh = readSleep(await this.list("sleep", sleepFilter(utcDay(now - back(7, 14) * DAY)), 25, errors));
       const kept = (await this.storage.get<SleepSession[]>("sleep")) ?? [];
       const byId = new Map(kept.map((s) => [s.id, s]));
       for (const s of fresh) byId.set(s.id, s);
@@ -249,8 +250,8 @@ export class BandHub {
     } catch (e) { errors.push(String((e as Error).message)); }
     try {
       // Calories burned per local day (PLAN 83). Google allows 14 days a request: the first time 12 back to tomorrow (any
-      // time zone's today is inside), then the last 3 days again (today's grows; late syncs fill yesterday in).
-      const got = readDailyKcal(await this.dailyRollUp("total-calories", utcDay(now - back(3, 12) * DAY), utcDay(now + 2 * DAY), errors));
+      // time zone's today is inside), then the last 7 days again (today's grows; late syncs fill the days before in).
+      const got = readDailyKcal(await this.dailyRollUp("total-calories", utcDay(now - back(7, 12) * DAY), utcDay(now + 2 * DAY), errors));
       await this.storage.put("kcal", { ...((await this.storage.get<Record<string, number>>("kcal")) ?? {}), ...got });
     } catch (e) { errors.push(String((e as Error).message)); }
     for (const [type, name, key, field] of [["daily-resting-heart-rate", "daily_resting_heart_rate", "rhr", "beatsPerMinute"], ["daily-heart-rate-variability", "daily_heart_rate_variability", "hrv", undefined]] as const) {

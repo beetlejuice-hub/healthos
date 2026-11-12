@@ -64,6 +64,26 @@ const day = (t) => { const d = new Date(t); return `${d.getFullYear()}-${String(
   check(`weight: falling, better, "−… kg in 90 days" (${w})`, await panel('weight').getAttribute('data-tone') === 'better' && /↘ −[12]\.\d kg in 90 days/.test(w));
   check(`HRV rising, better; resting heart steady (${flat(await panel('hrv').innerText().catch(() => '')).slice(0, 50)} · ${flat(await panel('rhr').innerText().catch(() => '')).slice(0, 50)})`, await panel('hrv').getAttribute('data-tone') === 'better' && await panel('rhr').getAttribute('data-tone') === 'steady');
   check(`each day a dot (89: none weighed yet today), the average a line (${await panel('weight').locator('.tw-dot').count()} dots)`, await panel('weight').locator('.tw-dot').count() === 89 && await panel('weight').locator('.tw-avg').count() === 1);
+  // PLAN 215: red and green days, and a trend opened big
+  const g0 = await panel('hrv').locator('.tw-dot.better').count(), r0 = await panel('hrv').locator('.tw-dot.worse').count();
+  check(`HRV's days in green and red against your usual (${g0} green, ${r0} red of 90)`, g0 > 10 && r0 > 10 && g0 + r0 < 70);
+  check(`calories, neither way better: no red or green (${await panel('kcal').locator('.tw-dot.better, .tw-dot.worse').count()})`, await panel('kcal').locator('.tw-dot.better, .tw-dot.worse').count() === 0);
+  await panel('hrv').click(); await pg.waitForTimeout(300);
+  const big = pg.locator('[data-trend-big="hrv"]'), dayBox = big.getByTestId('trend-day');
+  check(`tap HRV: it opens big, on the last day (${flat(await dayBox.innerText().catch(() => ''))})`, await big.isVisible() && /Tue 10 Nov/.test(flat(await dayBox.innerText())) && new RegExp(`^.*${hrv['2026-11-10']}`).test(flat(await dayBox.innerText())));
+  await big.getByRole('button', { name: 'Day before' }).click();
+  check(`‹ the day before, with its value (${flat(await dayBox.innerText())})`, /9 Nov/.test(flat(await dayBox.innerText())) && flat(await dayBox.innerText()).includes(String(hrv['2026-11-09'])));
+  const inRange = Object.entries(hrv).filter(([d]) => d >= day(NOW - 90 * D)), top = Math.max(...inRange.map(([, v]) => v));
+  await big.getByRole('button', { name: /Best day/ }).click();
+  const bd = flat(await dayBox.innerText());
+  check(`best day: the highest HRV in the 90 days, said against your usual (${bd})`, bd.includes(String(top)) && /above your usual \d+ — better/.test(bd) && await dayBox.getAttribute('class').then((c) => /better/.test(c)));
+  const sv = big.locator('.tb-svg'), box = await sv.boundingBox();
+  await pg.mouse.click(box.x + box.width * 0.12, box.y + box.height / 2);
+  check(`tap the chart early on: an August/September day (${flat(await dayBox.innerText()).slice(0, 30)})`, /Aug|Sept?/.test(flat(await dayBox.innerText())));
+  check(`the list: day by day, newest first (${await big.locator('.tb-list li').count()})`, await big.locator('.tb-list li').count() === 14 && /10 Nov/.test(await big.locator('.tb-list li').first().innerText()));
+  await big.screenshot({ path: OUT + 'trends-big-1280.png' });
+  await pg.keyboard.press('Escape'); await pg.waitForTimeout(200);
+  check('Escape closes it', await big.count() === 0);
   const tally = flat(await wall.locator('.tw-tally').innerText());
   check(`the tally (${tally})`, /^\d+ getting better \d+ slipping \d+ steady$/.test(tally) && +tally.match(/^(\d+)/)[1] >= 2);
   await wall.getByRole('button', { name: 'Last 30 days' }).click(); await pg.waitForTimeout(300);
@@ -85,6 +105,10 @@ const day = (t) => { const d = new Date(t); return `${d.getFullYear()}-${String(
   check(`phone: compact rows (${areas})`, /"name svg ch" "now svg ch"/.test(areas) && await wall2.locator('.tw-foot').first().isHidden());
   check(`390: fits (${await pg.evaluate(() => document.documentElement.scrollWidth)} px)`, await pg.evaluate(() => document.documentElement.scrollWidth) <= 390);
   await wall2.screenshot({ path: OUT + 'trends-390.png' });
+  await wall2.locator('[data-trend="asleep"], [data-trend="hrv"]').first().click(); await pg.waitForTimeout(300);
+  const big2 = pg.locator('[data-trend-big]');
+  check(`phone: tapped, big, fits (${await pg.evaluate(() => document.documentElement.scrollWidth)} px)`, await big2.isVisible() && await pg.evaluate(() => document.documentElement.scrollWidth) <= 390);
+  await pg.screenshot({ path: OUT + 'trends-big-390.png' });
   await ctx.close();
   console.log('errors: ' + JSON.stringify(errs));
   check('no page errors', errs.length === 0);

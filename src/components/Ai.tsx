@@ -59,6 +59,7 @@ import { keepResearch, nextResearch, RESEARCH, researchContext, researchTopics, 
 import { onSyncSettled, syncSettled } from "../lib/session";
 import { WatchList } from "./Watching";
 import { byDay, foldLine } from "../lib/ai/thread";
+import { claimRead, thisDevice } from "../lib/ai/claimStore";
 
 const usd = (x: number) => (x < 0.1 ? `$${x.toFixed(3)}` : `$${x.toFixed(2)}`);
 const k = (n: number) => (n >= 1000 ? `${(n / 1000).toFixed(1)}k` : String(Math.round(n)));
@@ -74,7 +75,12 @@ const tried = new Set<string>();
 
 /** A failed background call, kept for Settings → AI (22 Oct: the morning read didn't come, and nothing said why). */
 const keepFail = (task: string) => (r: { error: string; message: string }) =>
-  act.setAi((a) => ({ failed: [...(a.failed ?? []), { at: Date.now(), task, error: r.error, message: r.message }].slice(-10) }));
+  r.error === ELSEWHERE.error ? undefined : act.setAi((a) => ({ failed: [...(a.failed ?? []), { at: Date.now(), task, error: r.error, message: r.message }].slice(-10) }));
+/** Another device claimed the day's read (lib/ai/claim): not a failure — tried again later, by when it has synced over. */
+const ELSEWHERE = { ok: false as const, error: "elsewhere", message: "being written on another device" };
+/** Which device wrote which read, kept for Settings → AI (PLAN 215: three morning reads, and nothing said where from). */
+const wrote = (task: "digest" | "night", day: string, at: number) => (a: { wrote?: { task: string; day: string; at: number; device: string }[] }) =>
+  ({ wrote: [...(a.wrote ?? []), { task, day, at, device: thisDevice() }].slice(-20) });
 
 /**
  * The morning read — one at a time with the other research calls, the first in line; a failed one is tried again
@@ -102,6 +108,8 @@ async function writeDigest(day: string) {
   const ai = getState().ai;
   // written already (another tick, or another device's synced read)
   if (ai.digest?.day === day && freshRead(ai.digest)) return null;
+  // one read a day, whichever device is first (PLAN 215)
+  if (!(await claimRead("digest", day))) return ELSEWHERE;
   // this morning's angle and kind of new thing, in turn (PLAN 132–133)
   // …and the band's night check or VO2 max when they have something to say (PLAN 52)
   // the app's strongest tested link not featured lately leads (PLAN 176; owner, 27 Oct: "more likely for graphs and connections")
@@ -123,6 +131,7 @@ async function writeDigest(day: string) {
   const items = withLead(fresh, lead), led = lead && items.some((i) => i.lead);
   const qs = keepNew(r.answer.questions ?? [], `${day}:m`);
   act.setAi((a) => ({
+    ...wrote("digest", day, at)(a),
     digest: { day, at, greeting: r.answer.greeting, ...checkDay(r.answer, true), items, ...(r.answer.looked ? { looked: r.answer.looked } : {}), ...(r.answer.unlinked?.length ? { unlinked: r.answer.unlinked } : {}) },
     discoveries: keepDiscovery(a.discoveries, disc, day, "morning", at),
     cited: keepCited(a.cited, [...items.map((i) => i.source), n?.source, disc?.source], at),
@@ -212,6 +221,7 @@ async function writeNight(day: string, force: boolean, auto = false) {
   // its three and its questions (PLAN 156–157): tonight's "try" kind, the question kinds, what this morning suggested
   const ai = getState().ai;
   if (!force && ai.night?.day === day) return null;
+  if (!force && !(await claimRead("night", day))) return ELSEWHERE;
   const follow = ai.digest && ai.digest.day === day ? ai.digest.items.filter((i) => i.type === "try" || i.type === "protocol").map((i) => `this morning's read: ${i.title}${i.tip ? ` — "${i.tip}"` : ""}`) : [];
   // the day's totals it's written from: when what's logged moves past them, the card says so (owner, 28 Oct: "i ate around
   // 1900 kcal (160 left), yet ai digest says i ate 650 something")
@@ -226,6 +236,7 @@ async function writeNight(day: string, force: boolean, auto = false) {
   const change = dropSaid(r.answer.change, [...said, ...adviceOf({ items }, "evening", at)], at, (c) => c.what, nv).kept;
   const disc = r.answer.discovery && dropCited([r.answer.discovery], now0.cited, before).length ? r.answer.discovery : null;
   act.setAi((a) => ({
+    ...wrote("night", day, at)(a),
     night: { ...r.answer, items, change, day, at, tot, redone, discovery: disc },
     discoveries: keepDiscovery(a.discoveries, disc, day, "evening", at),
     cited: keepCited(a.cited, [...items.map((i) => i.source), disc?.source], at),
@@ -755,6 +766,13 @@ export function AiSettings() {
         <span>The app researches your data on its own — what you take, eat, how you train, move, your heart: at most {RESEARCH.perWeek} a week, {usd(RESEARCH.monthUsd)} a month, none once the month is past half its {usd(budget)}{(ai.researched ?? []).length ? ` · this month ${usd(researchUsd(ai.researched ?? [], localDay(now.getTime())))}` : ""}</span></label>
       <label className="field">Research (the weekly deep dive, experiment verdicts, supplement look-ups)<select value={ai.models.research} onChange={(e) => pick("research", e.target.value as ModelChoice)}>{option("research")}</select></label>
       <p className="note">Estimate for a month with these: ≈ {usd(est.total)} — {est.measured ? `from your last ${est.measured} call${est.measured > 1 ? "s" : ""}` : "a first guess until you've used it"}. Past {usd(budget * SOFT_SHARE)} in a month the chat and the reads drop to {MODELS.haiku.label}, past {usd(budget)} everything does, until the 1st; hard stop at {cap} calls a day.</p>
+      {/* where today's reads came from (PLAN 215: three morning reads, and nothing said why) */}
+      {(() => {
+        const today = localDay(Date.now()), w = (ai.wrote ?? []).filter((x) => x.day === today);
+        const line = (task: string, name: string) => { const l = w.filter((x) => x.task === task); return l.length ? `${name}: ${l.length > 1 ? `written ${l.length} times — ` : "written "}${l.map((x) => `${clockOf(x.at)} on ${x.device}`).join(", ")}` : null; };
+        const ls = [line("digest", "Morning read"), line("night", "Evening read")].filter(Boolean);
+        return ls.length ? <p className="note" data-testid="reads-wrote">{ls.join(" · ")}</p> : null;
+      })()}
       {(recent.length > 0 || failed.length > 0) && <details className="ai-calls"><summary>Last calls — what each cost{failed.length ? `, and ${failed.length} that failed` : ""}</summary>
         {/* the ones that failed in among them, with why (22 Oct: the morning read didn't come, and nothing said why) */}
         <ul>{[...recent.map((c) => ({ at: c.at, c, f: null })), ...failed.map((f) => ({ at: f.at, c: null, f }))].sort((x, y) => y.at - x.at).slice(0, 12).map(({ at, c, f }) => c

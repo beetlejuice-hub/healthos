@@ -13,6 +13,7 @@
 import type { Entry } from "./types";
 import type { AiState, State } from "./store";
 import { MODELS_V, modelsNow } from "./ai/tasks";
+import { newerRead } from "./ai/claim";
 
 export const DOC_KEYS = ["foods", "drinks", "supplements", "templates", "workouts", "goals", "settings", "profile", "scout", "ai", "imports"] as const;
 export type DocKey = (typeof DOC_KEYS)[number];
@@ -70,6 +71,12 @@ export function mergePull(state: State, entries: EntryRow[], docs: DocRow[], pen
     next = { ...next, [key]: key === "goals" || key === "settings" || key === "profile" || key === "scout" || key === "ai" || key === "imports" ? { ...(next[key] as object), ...(d.value as object) } : d.value } as State;
     // an older device's AI doc: its model picks moved like this one's were (27 Oct, the reads on Sonnet)
     if (key === "ai") { const v = d.value as Partial<AiState>; next = { ...next, ai: { ...next.ai, models: modelsNow(next.ai.models, v.models ? v.modelsV : MODELS_V), modelsV: MODELS_V } }; }
+    // a device still holding an older read never puts it back over a newer one (PLAN 215: three morning reads in a day)
+    if (key === "ai") {
+      const was = state.ai, now = next.ai;
+      next = { ...next, ai: { ...now, digest: newerRead(was.digest, now.digest), night: newerRead(was.night, now.night),
+        wrote: [...new Map([...(was.wrote ?? []), ...(now.wrote ?? [])].map((w) => [`${w.task}${w.at}`, w])).values()].sort((a, b) => a.at - b.at).slice(-20) } };
+    }
   }
   return next;
 }

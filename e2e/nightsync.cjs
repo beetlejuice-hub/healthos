@@ -46,7 +46,7 @@ const NIGHT = { summary: 'ok', happened: [], notes: '', change: [], remember: []
     await pg.clock.setSystemTime(T('21:09'));
     if (resume) await pg.evaluate(() => { document.dispatchEvent(new Event('visibilitychange')); }); // the tab, left open since 18:00, comes back
     else { await pg.reload(); await pg.waitForSelector('.t2-status'); }
-    for (let i = 0; i < 80 && !calls.some((c) => c.task === 'night'); i++) await pg.waitForTimeout(100);
+    for (let i = 0; i < 150 && !calls.some((c) => c.task === "night"); i++) await pg.waitForTimeout(100);
     const sent = calls.find((c) => c.task === 'night'), tot = (sent?.context.match(/Totals, as the app counts them \(food and drinks\): ([\d,]+) kcal · P (\d+) g/) || []);
     return { ctx, pg, sent, tot };
   }

@@ -101,12 +101,17 @@ describe("steps (PLAN 66)", () => {
 
 describe("what the app holds", () => {
   const H = 3600_000, now = Date.UTC(2026, 9, 7, 16, 0);
-  it("first load: a week; then only the last 12 h, or from an hour before the newest minute if that's older", () => {
+  it("first load: a week; then the last 2 days, or from an hour before the newest minute if that's older", () => {
     expect(refreshFrom(null, now)).toBe(now - 7 * 86_400_000);
     const from = now - 7 * 86_400_000;
-    expect(refreshFrom({ hr: [[now - 5 * 60_000, 70, 70, 70]], from }, now)).toBe(now - 12 * H);
-    expect(refreshFrom({ hr: [[now - 20 * H, 70, 70, 70]], from }, now)).toBe(now - 21 * H);
+    expect(refreshFrom({ hr: [[now - 5 * 60_000, 70, 70, 70]], from }, now)).toBe(now - 48 * H);
+    expect(refreshFrom({ hr: [[now - 60 * H, 70, 70, 70]], from }, now)).toBe(now - 61 * H);
     expect(refreshFrom({ hr: [], from: now - 2 * H }, now)).toBe(now - 2 * H); // never before what's held
+  });
+  it("back after 6 h or more away: the whole week again, so days the band sent late are in (PLAN 215)", () => {
+    const from = now - 20 * 86_400_000;
+    expect(refreshFrom({ hr: [[now - 5 * 60_000, 70, 70, 70]], from, loadedAt: now - 7 * H }, now)).toBe(now - 7 * 86_400_000);
+    expect(refreshFrom({ hr: [[now - 5 * 60_000, 70, 70, 70]], from, loadedAt: now - H }, now)).toBe(now - 48 * H);
   });
   it("merging a new window keeps the old minutes and nights, replaces re-sent ones", () => {
     const n = (id: string, start: number) => ({ id, start, end: start + H, asleepMin: 50, awakeMin: 0, toFallAsleepMin: 0, nap: false, stageMin: {}, stages: [] });

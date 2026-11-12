@@ -43,4 +43,19 @@ describe("every trend", () => {
     const r = rng(4), ts = [trendOf(m("a", 1, series(90, (i) => i)), TODAY, 90)!, trendOf(m("b", 1, series(90, (i) => -i)), TODAY, 90)!, trendOf(m("c", 1, series(90, () => 5 + r() * 0.1)), TODAY, 90)!];
     expect(tally(ts)).toEqual({ better: 1, worse: 1, steady: 1 });
   });
+  it("red and green days (PLAN 215): outside the middle half of your days, on the better side green — a planted good week reads green, a bad one red", () => {
+    const r = rng(9), base = series(90, (i) => (i >= 70 && i < 77 ? 8.6 : i >= 80 && i < 87 ? 5.4 : 7 + (r() - 0.5) * 0.6));
+    const hrv = trendOf(m("asleep", 1, base), TODAY, 90)!;
+    const tone = (i: number) => hrv.days.find((d) => d.i === i)!.tone;
+    for (let i = 70; i < 77; i++) expect(tone(i)).toBe("better");
+    for (let i = 80; i < 87; i++) expect(tone(i)).toBe("worse");
+    expect(hrv.usual.mid).toBeCloseTo(7, 0);
+    // less is better: the same high week is red for resting heart
+    expect(trendOf(m("rhr", -1, base), TODAY, 90)!.days.find((d) => d.i === 72)!.tone).toBe("worse");
+    // neither way is better: never red or green
+    expect(trendOf(m("kcal", 0, base), TODAY, 90)!.days.every((d) => d.tone === "typical")).toBe(true);
+    // control: about half of plain noise sits in the middle half, the rest split both ways
+    const noise = trendOf(m("x", 1, series(90, () => r())), TODAY, 90)!, typ = noise.days.filter((d) => d.tone === "typical").length;
+    expect(typ).toBeGreaterThan(38); expect(typ).toBeLessThan(52);
+  });
 });
