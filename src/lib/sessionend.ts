@@ -41,3 +41,20 @@ export function howItEnded(w: Workout, o: { others: Workout[]; lastSet: number |
     : `You finished it at ${clock(at)}.`;
   return { by, at, auto: by !== "you" && by !== "next", noticed, line, words };
 }
+
+export type SessionPart = { name: string; start: number; end: number; cardio: boolean; /** cardio started, its end never saved */ noEnd?: true };
+
+/**
+ * A session in its parts (PLAN 217; owner, 13 Nov): lifting, then the cardio after it when that was started — each from
+ * its own start to its own end. Cardio that was never closed runs to the session's end (or is a moment long, when the
+ * session was closed before it) and says so. Anything else is one part. Pure.
+ */
+export function sessionParts(w: Workout): SessionPart[] {
+  const end = w.endedAt ?? w.startedAt;
+  if (w.kind === "cardio") return [{ name: w.cardio?.what || "Cardio", start: w.startedAt, end, cardio: true }];
+  const c = w.cardio;
+  if (c?.startedAt == null || c.done === false) return [{ name: w.template, start: w.startedAt, end, cardio: false }];
+  const cs = Math.min(Math.max(c.startedAt, w.startedAt), Math.max(end, c.startedAt));
+  const ce = c.done && c.at != null ? Math.max(cs, c.at) : Math.max(cs, end);
+  return [{ name: w.template, start: w.startedAt, end: cs, cardio: false }, { name: c.what || "Cardio", start: cs, end: ce, cardio: true, ...(c.done && c.at != null ? {} : { noEnd: true as const }) }];
+}

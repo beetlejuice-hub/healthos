@@ -1,6 +1,6 @@
 // PLAN 216 — how a session ended. Each way, kept or (for older ones) worked out; the control: one you finished yourself.
 import { describe, expect, it } from "vitest";
-import { howItEnded } from "./sessionend";
+import { howItEnded, sessionParts } from "./sessionend";
 import type { Workout } from "./types";
 
 const t = (h: number, m = 0) => new Date(2026, 10, 12, h, m).getTime();
@@ -22,5 +22,29 @@ describe("how a session ended (PLAN 216)", () => {
   it("control: you finished it — said plainly, not as the app's doing", () => {
     const e = howItEnded(cardio({}), { others: [], lastSet: null })!;
     expect([e.by, e.auto, e.words]).toEqual(["you", false, "You finished it at 18:42."]);
+  });
+});
+
+// PLAN 217 — a lifting session with cardio after, in its parts; the control: one without cardio stays one part
+describe("a session's parts (PLAN 217)", () => {
+  const lift = (o: Partial<Workout> = {}): Workout => ({ id: "l", template: "Upper A", startedAt: t(17), endedAt: t(18, 20), ...o });
+  it("lifting, then the cardio after it, each with its own times", () => {
+    expect(sessionParts(lift({ cardio: { what: "Stairmaster", startedAt: t(17, 40), done: true, at: t(18, 20) } }))).toEqual([
+      { name: "Upper A", start: t(17), end: t(17, 40), cardio: false },
+      { name: "Stairmaster", start: t(17, 40), end: t(18, 20), cardio: true },
+    ]);
+  });
+  it("cardio started and never closed: it runs to the session's end, said as unsaved", () => {
+    expect(sessionParts(lift({ endedAt: t(17, 32), cardio: { what: "Stairmaster", startedAt: t(17, 40) } }))).toEqual([
+      { name: "Upper A", start: t(17), end: t(17, 40), cardio: false },
+      { name: "Stairmaster", start: t(17, 40), end: t(17, 40), cardio: true, noEnd: true },
+    ]);
+    expect(sessionParts(lift({ cardio: { what: "Stairmaster", startedAt: t(17, 40) } }))[1]).toEqual({ name: "Stairmaster", start: t(17, 40), end: t(18, 20), cardio: true, noEnd: true });
+  });
+  it("control: no cardio, cardio planned but not started, skipped, or a cardio session: one part", () => {
+    expect(sessionParts(lift())).toEqual([{ name: "Upper A", start: t(17), end: t(18, 20), cardio: false }]);
+    expect(sessionParts(lift({ cardio: { what: "Stairmaster" } }))).toHaveLength(1);
+    expect(sessionParts(lift({ cardio: { what: "Stairmaster", done: false, at: t(18) } }))).toHaveLength(1);
+    expect(sessionParts(cardio({}))).toEqual([{ name: "Incline walk", start: t(18), end: t(18, 42), cardio: true }]);
   });
 });

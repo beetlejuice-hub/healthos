@@ -2687,3 +2687,8 @@ button.vs-i { border: 0; text-align: left; font: inherit; cursor: pointer; width
 .ss-did { display: grid; gap: 6px; font-size: 14px; color: var(--c-ink-2); } .ss-did p { margin: 0; line-height: 1.4; } .ss-did b { color: var(--c-ink); }
 .ss-note { display: grid; gap: 4px; font-size: 12.5px; color: var(--c-ink-2); }
 .ss-note textarea { padding: 10px; border-radius: 10px; border: 1px solid var(--c-track); background: var(--c-card-2); color: var(--c-ink); font: 15px var(--f-bar); resize: vertical; }
+/* PLAN 217: a session's parts — lifting, then the cardio after it — and their zones */
+.ss-span.cardio { fill: var(--hr, #ef7d6d); fill-opacity: .1; }
+.ss-times.cardio label { color: var(--c-ink-2); }
+.ss-parts { display: grid; gap: 10px; } .ss-part { display: grid; gap: 4px; } .ss-part p { margin: 0; font-size: 13.5px; color: var(--c-ink-2); } .ss-part b { color: var(--c-ink); }
+.ss-part.is-cardio > p > b { color: var(--hr, #ef7d6d); } .ss-part.all { padding-top: 8px; border-top: 1px solid var(--c-track); } .ss-part.all:first-child { padding-top: 0; border-top: 0; }

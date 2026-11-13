@@ -4086,8 +4086,14 @@ both reads and the questions. Phases in that order; #152 RPE waits (owner).
      finish is judged from the cardio's start (the walk over can't end it), and an auto-end marks that cardio done.
      Unit test fails without the fix; control: no cardio, or cardio done, still ends an hour after.
 
-217. [ ] **A session with cardio after: each part's time and heart-rate zones** (owner, 13 Nov: picked "session sheet on
+217. [x] **A session with cardio after: each part's time and heart-rate zones** (owner, 13 Nov: picked "session sheet on
    the bigger picture: cardio-after time and zones for lifting + cardio together"). Claimed 13 Nov.
    - The session sheet splits a lifting session with cardio after into its parts — lifting, then the cardio — shaded on
      the heart rate, each with its minutes, average and peak, and its zones; the whole session's zones under them.
    - The cardio's start and end to change there too (today's stairmaster was never closed: it has a start and no end).
+   - Done 13 Nov: lib/sessionend `sessionParts` (lifting, then the cardio from its own start to its own end; never closed →
+     runs to the session's end and says so). The sheet shades each part on the heart rate, lists each with its times,
+     minutes, average and peak and its zones, then the whole session's zones (one part: just the whole). "Stairmaster
+     from / to" + "Save cardio" closes it; a cardio end past the session's end moves the session's end there (kept as
+     `ended.was`). e2e/session: Push with a stairmaster after; Legs whose stairmaster was never closed, saved 15:30–15:55;
+     control: one without cardio after has no parts.

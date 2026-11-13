@@ -13,7 +13,9 @@ const at = (h, m = 0) => new Date(new Date(NOW - D).setHours(h, m, 0, 0)).getTim
 (async () => {
   const b = await chromium.launch(); const errs = [];
   const check = (label, ok) => { console.log((ok ? 'PASS ' : 'FAIL ') + label); if (!ok) process.exitCode = 1; };
-  const hr = []; for (let t = at(17, 40); t <= at(19, 30); t += MIN) hr.push([t, t >= at(18) && t < at(18, 42) ? 125 : 72, 70, 130]);
+  // PLAN 217: Push 14:00 with a stairmaster 14:30–14:52 (150 bpm); Legs whose stairmaster from 15:30 was never closed
+  const bpm = (t) => (t >= at(18) && t < at(18, 42) ? 125 : t >= at(14) && t < at(14, 30) ? 110 : t >= at(14, 30) && t < at(14, 52) ? 150 : t >= at(15, 30) && t < at(15, 55) ? 155 : 72);
+  const hr = []; for (let t = at(13, 50); t <= at(19, 30); t += MIN) { const v = bpm(t); hr.push([t, v, v - 5, v + 5]); }
   const rhr = {}; for (let i = 14; i >= 0; i--) { const d = new Date(NOW - i * D); rhr[`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`] = 55; }
   async function open(width) {
     tables.entries.clear(); tables.docs.clear();
@@ -37,12 +39,16 @@ const at = (h, m = 0) => new Date(new Date(NOW - D).setHours(h, m, 0, 0)).getTim
       s.settings = { ...(s.settings || {}), maxHr: 190 };
       s.workouts = [
         { id: 'up', template: 'Upper A', startedAt: t.u0, endedAt: t.uEnd },
+        { id: 'push', template: 'Push', startedAt: t.p0, endedAt: t.p1, cardio: { what: 'Stairmaster', startedAt: t.pc, done: true, at: t.p1 } },
+        { id: 'legs', template: 'Legs', startedAt: t.l0, endedAt: t.l1, autoEnded: undefined, ended: { by: 'idle', noticed: t.l1 + 3600000 }, cardio: { what: 'Stairmaster', startedAt: t.lc } },
         { id: 'own', template: 'Cardio', kind: 'cardio', startedAt: t.o0, endedAt: t.o1, cardio: { what: 'Bike', startedAt: t.o0, done: true, at: t.o1 } },
         { id: 'walk', template: 'Cardio', kind: 'cardio', startedAt: t.w0, endedAt: t.w1, autoEnded: true, ended: { by: 'heart', noticed: t.seen, line: 96 }, cardio: { what: 'Incline walk', startedAt: t.w0, done: true, at: t.w1 } },
       ];
-      s.entries = [0, 1, 2].map((i) => ({ id: 'b' + i, kind: 'set', at: t.u0 + (5 + i * 3) * 60000, workoutId: 'up', exercise: 'Bench press', kg: 60, reps: 8 }));
+      s.entries = [0, 1, 2].map((i) => ({ id: 'b' + i, kind: 'set', at: t.u0 + (5 + i * 3) * 60000, workoutId: 'up', exercise: 'Bench press', kg: 60, reps: 8 }))
+        .concat([0, 1].map((i) => ({ id: 'p' + i, kind: 'set', at: t.p0 + (10 + i * 10) * 60000, workoutId: 'push', exercise: 'Overhead press', kg: 40, reps: 8 })))
+        .concat([0, 1].map((i) => ({ id: 'l' + i, kind: 'set', at: t.l0 + (5 + i * 5) * 60000, workoutId: 'legs', exercise: 'Squat', kg: 80, reps: 6 })));
       localStorage.setItem(k, JSON.stringify(s));
-    }, [KEY, { u0: at(9), uEnd: at(9, 13), o0: at(12), o1: at(12, 30), w0: at(18), w1: at(18, 42), seen: at(21, 5) }]);
+    }, [KEY, { u0: at(9), uEnd: at(9, 13), o0: at(12), o1: at(12, 30), w0: at(18), w1: at(18, 42), seen: at(21, 5), p0: at(14), pc: at(14, 30), p1: at(14, 52), l0: at(15, 10), l1: at(15, 22), lc: at(15, 30) }]);
     await pg.goto(APP + '#workout'); await pg.reload(); await pg.waitForSelector('.cockpit'); await pg.waitForTimeout(800);
     return { ctx, pg };
   }
@@ -71,6 +77,28 @@ const at = (h, m = 0) => new Date(new Date(NOW - D).setHours(h, m, 0, 0)).getTim
   await pg.getByRole('button', { name: 'Close' }).click(); await pg.waitForTimeout(200);
   await row('own').click(); await pg.waitForTimeout(300);
   check(`control: one you finished yourself says so`, /You finished it at 12:30\./.test(await pg.getByRole('dialog').innerText()));
+  check(`control: a session with no cardio after is one part — no part rows, only the whole session`, await pg.getByRole('dialog').locator('.ss-part:not(.all)').count() === 0 && await pg.getByRole('dialog').locator('.ss-part.all').count() === 1);
+  await pg.getByRole('button', { name: 'Close' }).click(); await pg.waitForTimeout(200);
+
+  // PLAN 217: Push with a stairmaster after — each part, its times, its heart rate and zones
+  await row('push').click(); await pg.waitForTimeout(400);
+  let d = pg.getByRole('dialog');
+  const lift = flat(await d.locator('.ss-part[data-part="lifting"]').innerText().catch(() => '')), stair = flat(await d.locator('.ss-part[data-part="cardio"]').innerText().catch(() => ''));
+  check(`Push: lifting 14:00–14:30 (${lift.slice(0, 80)})`, /^Push 14:00–14:30 · 30 min · avg 110 · peak 115 bpm/.test(lift));
+  check(`Push: the stairmaster after 14:30–14:52, its heart rate and zones (${stair.slice(0, 120)})`, /^Stairmaster 14:30–14:52 · 22 min · avg 150 · peak 155 bpm/.test(stair) && /Z3 22 min/.test(stair));
+  check(`Push: both parts shaded on the heart rate, the whole session's zones under them`, await d.locator('.ss-span').count() === 2 && await d.locator('.ss-span.cardio').count() === 1 && /Whole session/.test(await d.locator('.ss-part.all').innerText()));
+  await d.screenshot({ path: OUT + 'session-parts-1280.png' });
+  await d.getByRole('button', { name: 'Close' }).click(); await pg.waitForTimeout(200);
+
+  // Legs: the stairmaster started 15:30, never closed (the workout ended at 15:22) — said; its end set to 15:55 → saved, the session reaches it
+  await row('legs').click(); await pg.waitForTimeout(400);
+  d = pg.getByRole('dialog');
+  check(`Legs: the unclosed stairmaster says so`, /Stairmaster started 15:30 — its end was never saved/.test(flat(await d.locator('.ss-part[data-part="cardio"]').innerText().catch(() => ''))));
+  const cg = d.getByRole('group', { name: 'Cardio after' });
+  await cg.locator('input[type=time]').nth(1).fill('15:55'); await cg.getByRole('button', { name: 'Save cardio' }).click(); await pg.waitForTimeout(300);
+  const legs = await pg.evaluate((k) => JSON.parse(localStorage.getItem(k)).workouts.find((w) => w.id === 'legs'), KEY);
+  const legsC = flat(await d.locator('.ss-part[data-part="cardio"]').innerText().catch(() => ''));
+  check(`Legs: the stairmaster saved 15:30–15:55 and the session reaches it (${legsC.slice(0, 80)})`, legs.cardio.done === true && legs.cardio.at === at(15, 55) && legs.endedAt === at(15, 55) && legs.ended.was === at(15, 22) && /^Stairmaster 15:30–15:55 · 25 min · avg 155/.test(legsC));
   await ctx.close();
 
   ({ ctx, pg } = await open(390));
