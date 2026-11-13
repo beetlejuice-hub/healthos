@@ -4067,3 +4067,11 @@ both reads and the questions. Phases in that order; #152 RPE waits (owner).
      Escape, phone). The fake Supabase now refuses a plain insert onto an existing key and does PATCH, like the real one.
      Not checked: two real phones on the real account — Settings → AI will say where each read came from if it happens.
 
+
+215. [ ] **Open a past session: what you did, its times, how it ended** (owner, 13 Nov: "on the latest workout session i
+   should be able to open it, change times, when it ended, and just look at what i did. nice simple ui for it. main thing
+   is i didnt end the cardio session and not sure when the app decided that its over"). Claimed 13 Nov.
+   - A session sheet from Workout → Recent (and Today's "how did it go"): start and end to change, the heart rate over it
+     with the working line and the end marked, the sets and cardio, the rating and note.
+   - How it ended, in words: you; your heart rate came down (when, and when the app noticed); the 3-hour cardio cap; an
+     hour after the last set; another workout started. Kept from now on; worked out for older ones.
