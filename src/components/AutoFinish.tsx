@@ -5,7 +5,8 @@
  * the minute it came down, with Undo. Shown on Today's running line and on the workout screen.
  */
 
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { SessionSheet } from "./SessionSheet";
 import { useBand } from "../lib/band-client";
 import { workoutEnding, type Ending } from "../lib/autofinish";
 import { maxHrOf } from "../lib/cardio";
@@ -24,13 +25,15 @@ export function useAutoFinish(w: Workout | undefined, now: number): Ending | nul
   const e = useMemo(() => {
     const max = maxHrOf(settings)?.bpm, rest = data ? restOf(data.rhr) : null;
     if (!w || w.endedAt != null || !data || !max || !rest) return null;
-    return workoutEnding(data.hr, { startedAt: w.startedAt, now, rest, max, resting: w.restUntil != null && w.restUntil > now, breakAt: w.breakAt ?? null, gapSec });
+    // cardio after the sets (PLAN 216): judged from when it started, so the walk over to it can't end the workout
+    const from = w.kind !== "cardio" && w.cardio?.startedAt != null && w.cardio.done == null ? w.cardio.startedAt : w.startedAt;
+    return workoutEnding(data.hr, { startedAt: from, now, rest, max, resting: w.restUntil != null && w.restUntil > now, breakAt: w.breakAt ?? null, gapSec });
   }, [w, data, settings, now, gapSec]);
   const doneAt = e?.kind === "done" ? e.at : null;
   useEffect(() => {
     if (!w || doneAt == null) return;
-    act.updateWorkout(w.id, { endedAt: doneAt, autoEnded: true, ...(w.kind === "cardio" ? { cardio: { what: w.cardio?.what || "Cardio", startedAt: w.startedAt, done: true, at: doneAt } } : {}) });
-    offerUndo([], `${w.template} finished at ${clock(doneAt)} — your heart rate came down`, undefined, () => act.updateWorkout(w.id, { endedAt: null, autoEnded: undefined, breakAt: doneAt }));
+    act.updateWorkout(w.id, { endedAt: doneAt, autoEnded: true, ended: { by: "heart", noticed: Date.now(), ...(e?.kind === "done" ? { line: e.threshold } : {}) }, ...(w.kind === "cardio" ? { cardio: { what: w.cardio?.what || "Cardio", startedAt: w.startedAt, done: true, at: doneAt } } : w.cardio?.startedAt != null && w.cardio.done == null ? { cardio: { ...w.cardio, done: true, at: doneAt } } : {}) });
+    offerUndo([], `${w.template} finished at ${clock(doneAt)} — your heart rate came down`, undefined, () => act.updateWorkout(w.id, { endedAt: null, autoEnded: undefined, ended: undefined, breakAt: doneAt, cardio: w.cardio }));
   }, [w?.id, doneAt]); // eslint-disable-line react-hooks/exhaustive-deps
   return e;
 }
@@ -55,11 +58,15 @@ export function BreakOrDone({ w, e }: { w: Workout; e: Ending | null }) {
  */
 export function RateWorkout({ now }: { now: number }) {
   const w = useStore((s) => [...s.workouts].reverse().find((x) => x.endedAt != null));
+  const [open, setOpen] = useState(false);
   if (!w || w.rating != null || w.endedAt == null || now - w.endedAt > 24 * 3_600_000) return null;
   return (
     <div className="card catchup rateworkout" role="region" aria-label="How the workout went">
       <h3>{w.template} <span>{clock(w.startedAt)}–{clock(w.endedAt)}{w.autoEnded ? " · finished by itself" : ""}</span></h3>
       <FeelSlider label="How did it go?" name="workout" value={undefined} word={workoutWord} color="var(--gym)" onChange={(v) => act.updateWorkout(w.id, { rating: v })} />
+      {/* PLAN 216: its times, how it ended, what you did, a comment */}
+      <button type="button" className="linkish" onClick={() => setOpen(true)}>Open the session ›</button>
+      {open && <SessionSheet id={w.id} onClose={() => setOpen(false)} />}
     </div>
   );
 }

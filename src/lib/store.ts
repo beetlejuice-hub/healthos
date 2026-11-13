@@ -362,16 +362,16 @@ export const act = {
   setImports(p: Partial<Imports>) { commit({ ...state, imports: { ...state.imports, ...p } }); },
   setAi(patch: Partial<AiState> | ((ai: AiState) => Partial<AiState>)) { const p = typeof patch === "function" ? patch(state.ai) : patch; commit({ ...state, ai: { ...state.ai, ...p } }); },
   setSettings(patch: Partial<Settings>) { commit({ ...state, settings: { ...state.settings, ...patch } }); },
-  /** Close forgotten workouts (lib/training tidyWorkouts). `force` closes any open one now. */
-  tidyWorkouts(now = Date.now(), force = false) {
+  /** Close forgotten workouts (lib/training tidyWorkouts). `force` closes any open one now; `starting`: because another starts (PLAN 216 says so on it). */
+  tidyWorkouts(now = Date.now(), force = false, starting = false) {
     const t = tidyWorkouts(state.workouts, state.entries.filter((e) => e.kind === "set").map((e) => ({ workoutId: (e as Extract<Entry, { kind: "set" }>).workoutId, at: e.at })), now, force);
     if (!t.end.length && !t.drop.length) return;
     const ends = new Map(t.end.map((x) => [x.id, x]));
-    commit({ ...state, workouts: state.workouts.filter((w) => !t.drop.includes(w.id)).map((w) => { const e = ends.get(w.id); return e ? { ...w, endedAt: e.at, ...(e.auto ? { autoEnded: true as const } : {}) } : w; }) });
+    commit({ ...state, workouts: state.workouts.filter((w) => !t.drop.includes(w.id)).map((w) => { const e = ends.get(w.id); return e ? { ...w, endedAt: e.at, ...(e.auto ? { autoEnded: true as const } : {}), ...(force && !starting ? {} : { ended: { by: e.by, noticed: now } }), ...(w.kind !== "cardio" && w.cardio?.startedAt != null && w.cardio.done == null ? { cardio: { ...w.cardio, done: true, at: e.at } } : {}) } : w; }) });
   },
   /** A cardio session of its own (PLAN 130): one tap, the timer starts. Any open workout ends first. */
   startCardio(what: string, at = Date.now()): Workout {
-    act.tidyWorkouts(at, true);
+    act.tidyWorkouts(at, true, true);
     const w: Workout = { id: newId(), template: "Cardio", kind: "cardio", startedAt: at, endedAt: null, cardio: { what, startedAt: at } };
     commit({ ...state, workouts: [...state.workouts, w] });
     return w;
@@ -382,7 +382,7 @@ export const act = {
   },
   /** `exercises`: a premade day that isn't in your split (lib/programs). */
   startWorkout(template: string, at = Date.now(), exercises?: Template["exercises"], cardio?: string): Workout {
-    act.tidyWorkouts(at, true);
+    act.tidyWorkouts(at, true, true);
     // The session gets its own copy of the plan, so adding or swapping an exercise today
     // never changes the saved split (and editing the split never changes a running session).
     const day = state.templates.find((t) => t.name === template);

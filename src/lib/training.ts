@@ -270,9 +270,9 @@ export const volume = (sets: { kg: number; reps: number; exercise?: string; warm
  * new workout closes the old one the same way).
  */
 export const AUTO_END = { afterLastSetMin: 60, emptyAfterMin: 30, coolDownMin: 2, cardioMaxMin: 180 };
-export type Tidy = { end: { id: string; at: number; auto?: true }[]; drop: string[] };
+export type Tidy = { end: { id: string; at: number; auto?: true; by: "timer" | "idle" | "next" }[]; drop: string[] };
 
-export function tidyWorkouts(workouts: { id: string; startedAt: number; endedAt: number | null; kind?: "cardio" }[], sets: { workoutId: string; at: number }[], now: number, force = false): Tidy {
+export function tidyWorkouts(workouts: { id: string; startedAt: number; endedAt: number | null; kind?: "cardio"; cardio?: { done?: boolean; at?: number; startedAt?: number } }[], sets: { workoutId: string; at: number }[], now: number, force = false): Tidy {
   const out: Tidy = { end: [], drop: [] };
   const open = workouts.filter((w) => w.endedAt === null).sort((a, b) => a.startedAt - b.startedAt);
   open.forEach((w, i) => {
@@ -280,14 +280,24 @@ export function tidyWorkouts(workouts: { id: string; startedAt: number; endedAt:
     // cardio has no sets: never dropped as empty (PLAN 130). Another start ends it now; a timer left running ends at 3 h.
     if (w.kind === "cardio") {
       const cap = w.startedAt + AUTO_END.cardioMaxMin * 60_000;
-      if (now > cap) out.end.push({ id: w.id, at: cap, auto: true });
-      else if (force || !newest) out.end.push({ id: w.id, at: now });
+      if (now > cap) out.end.push({ id: w.id, at: cap, auto: true, by: "timer" });
+      else if (force || !newest) out.end.push({ id: w.id, at: now, by: "next" });
       return;
     }
-    const last = sets.filter((s) => s.workoutId === w.id).reduce((m, s) => Math.max(m, s.at), -Infinity);
     const closeAll = force || !newest; // only one workout can be open
+    // PLAN 216 (owner, 13 Nov: the stairmaster after lifting "did not get logged"): cardio started after the sets and still
+    // running keeps the workout open on the cardio timer, not the hour-after-the-last-set rule
+    const c = w.cardio;
+    if (c?.startedAt != null && c.done == null) {
+      const cap = c.startedAt + AUTO_END.cardioMaxMin * 60_000;
+      if (now > cap) out.end.push({ id: w.id, at: cap, auto: true, by: "timer" });
+      else if (closeAll) out.end.push({ id: w.id, at: now, by: "next" });
+      return;
+    }
+    const setLast = sets.filter((s) => s.workoutId === w.id).reduce((m, s) => Math.max(m, s.at), -Infinity);
+    const last = c?.done != null && c.at != null ? Math.max(setLast, c.at) : setLast; // finished (or skipped) cardio counts as the last thing done
     if (Number.isFinite(last)) {
-      if (closeAll || now - last > AUTO_END.afterLastSetMin * 60_000) out.end.push({ id: w.id, at: Math.min(now, last + AUTO_END.coolDownMin * 60_000) });
+      if (closeAll || now - last > AUTO_END.afterLastSetMin * 60_000) out.end.push({ id: w.id, at: Math.min(now, last + AUTO_END.coolDownMin * 60_000), by: closeAll ? "next" : "idle" });
     } else if (closeAll || now - w.startedAt > AUTO_END.emptyAfterMin * 60_000) out.drop.push(w.id);
   });
   return out;

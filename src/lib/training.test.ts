@@ -63,7 +63,7 @@ describe("workouts that end themselves", () => {
   it("ends an hour after the last set, dated to the last set + 2 min", () => {
     const sets = [{ workoutId: "a", at: T + 10 * M }, { workoutId: "a", at: T + 55 * M }];
     expect(tidyWorkouts([w("a", T)], sets, T + 110 * M)).toEqual({ end: [], drop: [] });
-    expect(tidyWorkouts([w("a", T)], sets, T + 116 * M)).toEqual({ end: [{ id: "a", at: T + 57 * M }], drop: [] });
+    expect(tidyWorkouts([w("a", T)], sets, T + 116 * M)).toEqual({ end: [{ id: "a", at: T + 57 * M, by: "idle" }], drop: [] });
   });
   it("drops a workout that never got a set", () => {
     expect(tidyWorkouts([w("a", T)], [], T + 20 * M).drop).toEqual([]);
@@ -71,8 +71,18 @@ describe("workouts that end themselves", () => {
   });
   it("starting a new one closes the old one the same way", () => {
     const r = tidyWorkouts([w("a", T), w("b", T + 5 * M)], [{ workoutId: "a", at: T + 3 * M }], T + 6 * M);
-    expect(r).toEqual({ end: [{ id: "a", at: T + 5 * M }], drop: [] });
+    expect(r).toEqual({ end: [{ id: "a", at: T + 5 * M, by: "next" }], drop: [] });
     expect(tidyWorkouts([w("a", T)], [], T + M, true).drop).toEqual(["a"]);
+  });
+  // PLAN 216 (owner, 13 Nov: "i started todays stairmaster … it ended the workout before"): cardio after lifting runs on
+  it("a running cardio after the sets keeps the workout open, then ends on the cardio timer", () => {
+    const sets = [{ workoutId: "a", at: T + 30 * M }], lift = { ...w("a", T), cardio: { what: "Stairmaster", startedAt: T + 40 * M } };
+    expect(tidyWorkouts([lift], sets, T + 95 * M)).toEqual({ end: [], drop: [] });
+    expect(tidyWorkouts([lift], sets, T + 200 * M)).toEqual({ end: [], drop: [] });
+    expect(tidyWorkouts([lift], sets, T + 221 * M)).toEqual({ end: [{ id: "a", at: T + 220 * M, auto: true, by: "timer" }], drop: [] });
+    // control: the same sets with no cardio, or cardio already done, still end an hour after the last set
+    expect(tidyWorkouts([w("a", T)], sets, T + 95 * M).end).toEqual([{ id: "a", at: T + 32 * M, by: "idle" }]);
+    expect(tidyWorkouts([{ ...lift, cardio: { ...lift.cardio, done: true, at: T + 60 * M } }], sets, T + 125 * M).end).toEqual([{ id: "a", at: T + 62 * M, by: "idle" }]);
   });
   it("leaves finished workouts alone", () => {
     expect(tidyWorkouts([w("a", T, T + 60 * M)], [], T + 500 * M)).toEqual({ end: [], drop: [] });
@@ -81,10 +91,10 @@ describe("workouts that end themselves", () => {
   it("cardio is never dropped as empty; another start ends it now; a timer left running ends itself at 3 h, marked", () => {
     const c = { ...w("c", T), kind: "cardio" as const };
     expect(tidyWorkouts([c], [], T + 45 * M)).toEqual({ end: [], drop: [] });
-    expect(tidyWorkouts([c], [], T + 50 * M, true)).toEqual({ end: [{ id: "c", at: T + 50 * M }], drop: [] });
-    expect(tidyWorkouts([c, w("b", T + 41 * M)], [], T + 42 * M)).toEqual({ end: [{ id: "c", at: T + 42 * M }], drop: [] });
+    expect(tidyWorkouts([c], [], T + 50 * M, true)).toEqual({ end: [{ id: "c", at: T + 50 * M, by: "next" }], drop: [] });
+    expect(tidyWorkouts([c, w("b", T + 41 * M)], [], T + 42 * M)).toEqual({ end: [{ id: "c", at: T + 42 * M, by: "next" }], drop: [] });
     expect(tidyWorkouts([c], [], T + 179 * M)).toEqual({ end: [], drop: [] });
-    expect(tidyWorkouts([c], [], T + 400 * M)).toEqual({ end: [{ id: "c", at: T + 180 * M, auto: true }], drop: [] });
+    expect(tidyWorkouts([c], [], T + 400 * M)).toEqual({ end: [{ id: "c", at: T + 180 * M, auto: true, by: "timer" }], drop: [] });
   });
 });
 

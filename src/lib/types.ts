@@ -155,6 +155,10 @@ export type Workout = {
   /** Its timer was left running and it ended itself (lib/cardio CARDIO_MAX_MIN), or your heart rate came down and it
    * finished at that minute (lib/autofinish, PLAN 202). */
   autoEnded?: true;
+  /** How it ended, when not by you (PLAN 216): your heart rate came down (lib/autofinish; `line` the working rate,
+   * `noticed` when the app saw it — it looks only while open), the 3-hour cardio cap, an hour after the last set, or another
+   * workout started. Unset on older ones: lib/sessionend works it out. */
+  ended?: { by: "heart" | "timer" | "idle" | "next"; noticed?: number; line?: number; /** You moved the end (PLAN 216): where it was. */ was?: number };
   /** You said the drop in heart rate was a break (PLAN 202): that drop's start, so it isn't asked again. */
   breakAt?: number;
   /** How it went, 1–10 (PLAN 202; owner, 10 Nov: "Do a 1-10 slider for workouts"). */

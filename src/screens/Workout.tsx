@@ -1,3 +1,4 @@
+import { SessionSheet } from "../components/SessionSheet";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { act, newId, useStore } from "../lib/store";
 import { e1rm, exerciseHistory, isBest, isDumbbell, oneDumbbell, kgStep, stepKg, warmKg, warmsUp, mainMuscle, nextTemplate, restLeft, sessionPlan, sessionSummary, templateProblems, volume, type Suggestion } from "../lib/training";
@@ -57,6 +58,7 @@ function Pick() {
   const entries = useStore((s) => s.entries);
   const sets = useMemo(() => entries.filter((e): e is SetE => e.kind === "set"), [entries]);
   const [editing, setEditing] = useState<Template | "new" | null>(null);
+  const [open, setOpen] = useState<string | null>(null);
   const recent = [...workouts].filter((w) => w.endedAt).slice(-5).reverse(), now = Date.now();
   const band = useBand().data;
   const spans = useMemo(() => cardioSpans(workouts, Date.now()), [workouts]);
@@ -86,15 +88,17 @@ function Pick() {
       <StrengthCard sets={sets} now={now} className="tile strength" />
       <MuscleMap sets={sets} now={now} />
       <Premade templates={templates} />
+      {open && <SessionSheet id={open} onClose={() => setOpen(null)} />}
       {recent.length > 0 && (
         <div className="tile">
           <span className="k">Recent</span>
+          {/* PLAN 216: each opens — what you did, its times, how it ended, a comment */}
           <div className="plan">{recent.map((w) => {
             if (w.kind === "cardio") { const sp = spans.find((x) => x.workoutId === w.id && x.own), h = sp && band ? cardioHr(band.hr, sp.start, sp.end) : null;
-              return <div key={w.id}><span>{sp?.what ?? "Cardio"} · {dayLabel(w.startedAt)}{w.note ? <small className="wnote">“{w.note}”</small> : null}</span><span>{sp ? minutesOf(sp) : 0} min{h ? ` · avg ${h.avg} bpm` : ""}</span></div>; }
+              return <button type="button" key={w.id} className="rec-open" data-id={w.id} onClick={() => setOpen(w.id)}><span>{sp?.what ?? "Cardio"} · {dayLabel(w.startedAt)}{w.autoEnded ? <small className="wauto">ended by itself</small> : null}{w.note ? <small className="wnote">“{w.note}”</small> : null}</span><span>{sp ? minutesOf(sp) : 0} min{h ? ` · avg ${h.avg} bpm` : ""} ›</span></button>; }
             const ws = sets.filter((s) => s.workoutId === w.id);
             // each workout's heart-rate zones too, not only cardio's (PLAN 52; owner, 21 Oct: "3 per workout")
-            return <section key={w.id} className="rec-w"><div><span>{w.template} · {dayLabel(w.startedAt)}{w.note ? <small className="wnote">“{w.note}”</small> : null}</span><span>{ws.length} sets · {Math.round(volume(ws)).toLocaleString("en-GB")} kg</span></div>
+            return <section key={w.id} className="rec-w"><button type="button" className="rec-open" data-id={w.id} onClick={() => setOpen(w.id)}><span>{w.template} · {dayLabel(w.startedAt)}{w.autoEnded ? <small className="wauto">ended by itself</small> : null}{w.note ? <small className="wnote">“{w.note}”</small> : null}</span><span>{ws.length} sets · {Math.round(volume(ws)).toLocaleString("en-GB")} kg ›</span></button>
               {band && w.endedAt && <ZoneBar hr={band.hr} start={w.startedAt} end={w.endedAt} quiet />}</section>; })}</div>
         </div>
       )}

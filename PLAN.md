@@ -4068,10 +4068,20 @@ both reads and the questions. Phases in that order; #152 RPE waits (owner).
      Not checked: two real phones on the real account — Settings → AI will say where each read came from if it happens.
 
 
-215. [ ] **Open a past session: what you did, its times, how it ended** (owner, 13 Nov: "on the latest workout session i
+216. [x] **Open a past session: what you did, its times, how it ended** (owner, 13 Nov: "on the latest workout session i
    should be able to open it, change times, when it ended, and just look at what i did. nice simple ui for it. main thing
    is i didnt end the cardio session and not sure when the app decided that its over"). Claimed 13 Nov.
    - A session sheet from Workout → Recent (and Today's "how did it go"): start and end to change, the heart rate over it
      with the working line and the end marked, the sets and cardio, the rating and note.
    - How it ended, in words: you; your heart rate came down (when, and when the app noticed); the 3-hour cardio cap; an
      hour after the last set; another workout started. Kept from now on; worked out for older ones.
+   - Done 13 Nov: Workout → Recent rows open a session sheet (and "Open the session ›" under Today's rating): start and
+     end to change ("Save times"; a moved end keeps how it ended, with "You set the end to …"), how it ended in words, the
+     heart rate with the working line and the end, the sets and cardio, the rating, a comment. `Workout.ended` {by, noticed,
+     line, was} is written by the heart-rate finish and the tidy-up; lib/sessionend works it out for older ones.
+   - Done 13 Nov, the stairmaster (owner: "i started todays stairmaster but looks like it did not get logged and i hit
+     peak heart rate but it ended the workout before"): the hour-after-the-last-set rule ignored cardio started after the
+     sets, so it ended the workout back at the last set + 2 min, before the stairmaster. Now running cardio after lifting
+     keeps the workout open on the 3-hour cardio timer, finished cardio counts as the last thing done, the heart-rate
+     finish is judged from the cardio's start (the walk over can't end it), and an auto-end marks that cardio done.
+     Unit test fails without the fix; control: no cardio, or cardio done, still ends an hour after.

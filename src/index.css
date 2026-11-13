@@ -2670,3 +2670,20 @@ button.vs-i { border: 0; text-align: left; font: inherit; cursor: pointer; width
 .tb-list i { width: 8px; height: 8px; border-radius: 50%; background: var(--i-dim); } .tb-list i.better { background: var(--good); } .tb-list i.worse { background: var(--bad); }
 .tb-list b { font-variant-numeric: tabular-nums; }
 .tb-all { justify-self: start; }
+
+/* PLAN 216 — a past session, opened */
+.rec-open { display: flex; justify-content: space-between; gap: 10px; width: 100%; padding: 6px 0; border: 0; background: none; color: inherit; font: inherit; text-align: left; cursor: pointer; }
+.wauto { display: block; font-size: 11.5px; color: var(--warn); }
+.sheet.session { gap: 12px; padding-top: 14px; }
+.ss-head { display: grid; grid-template-columns: 1fr auto; gap: 2px 10px; align-items: center; } .ss-head b { font: 700 20px var(--f-cond); text-transform: uppercase; } .ss-head span { grid-row: 2; font-size: 13px; color: var(--c-ink-2); } .ss-head .x { grid-row: 1 / 3; grid-column: 2; }
+.ss-end-why { margin: 0; padding: 10px 12px; border-radius: 12px; background: var(--c-card-2); font-size: 14px; line-height: 1.45; color: var(--c-ink); } .ss-end-why b { display: block; font-size: 11.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--c-ink-2); }
+.ss-end-why.auto { box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--warn) 55%, transparent); } .ss-end-why.auto b { color: var(--warn); }
+.ss-times { display: grid; grid-template-columns: 1fr 1fr auto; gap: 8px; align-items: end; }
+.ss-times label { display: grid; gap: 4px; font-size: 12.5px; color: var(--c-ink-2); }
+.ss-times input { min-height: 44px; padding: 0 10px; border-radius: 10px; border: 1px solid var(--c-track); background: var(--c-card-2); color: var(--c-ink); font: 600 16px var(--f-bar); }
+.ss-hr { margin: 0; } .ss-hr svg { width: 100%; height: auto; display: block; }
+.ss-span { fill: var(--gym); fill-opacity: .08; } .ss-line { stroke: var(--c-ink-2); stroke-dasharray: 4 3; } .ss-hrl { fill: none; stroke: var(--hr, #ef7d6d); stroke-width: 1.8; stroke-linejoin: round; }
+.ss-end { stroke: var(--warn); stroke-width: 2; } .ss-t { fill: var(--c-ink-2); font: 10px var(--f-bar); } .ss-t.on { fill: var(--warn); font-weight: 600; }
+.ss-did { display: grid; gap: 6px; font-size: 14px; color: var(--c-ink-2); } .ss-did p { margin: 0; line-height: 1.4; } .ss-did b { color: var(--c-ink); }
+.ss-note { display: grid; gap: 4px; font-size: 12.5px; color: var(--c-ink-2); }
+.ss-note textarea { padding: 10px; border-radius: 10px; border: 1px solid var(--c-track); background: var(--c-card-2); color: var(--c-ink); font: 15px var(--f-bar); resize: vertical; }
