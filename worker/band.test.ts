@@ -355,6 +355,44 @@ describe("BandHub", () => {
     expect((rolls().at(-1)!.json!.range as { startTime: string }).startTime).toBe("2026-10-06T22:15:00Z");
   });
 
+  it("PLAN 218: each pull keeps the 5-minute windows (steps a minute, heart rate); the first goes over the 120 days held", async () => {
+    // a walk 08:00–08:15 at 115 steps a minute and 110 bpm (a reading every 15 s)
+    const w0 = Date.UTC(2026, 9, 7, 8), hr = Array.from({ length: 60 }, (_, i) => hrPoint(w0 + i * 15_000, 110));
+    const per = new Map(Array.from({ length: 15 }, (_, i) => [w0 + i * 60_000, 115] as [number, number]));
+    const { h, st, at } = setup(google({ hr, steps: per }));
+    // a day from September already held (minutes and steps): the backfill works it out once
+    const old = Date.UTC(2026, 8, 20, 9);
+    st.m.set("hr:2026-09-20", Array.from({ length: 10 }, (_, i) => [old + i * 60_000, 100 + i, 99, 101]));
+    st.m.set("steps:2026-09-20", [[old, 5, 500], [old + 5 * 60_000, 5, 100]]);
+    await connect(h); await h.alarm();
+    expect(st.m.get("cad:2026-10-07")).toEqual([[w0, 115, 110], [w0 + 5 * 60_000, 115, 110], [w0 + 10 * 60_000, 115, 110]]);
+    expect(st.m.get("cad:2026-09-20")).toEqual([[old, 100, 102]]);
+    expect(st.m.get("cad:v")).toBe(1);
+    // later pulls touch only the days pulled: September's is left as it is
+    st.m.set("cad:2026-09-20", [[old, 1, 1]]);
+    at(T0 + PULL_EVERY_MS); await h.alarm();
+    expect(st.m.get("cad:2026-09-20")).toEqual([[old, 1, 1]]);
+    expect(st.m.get("cad:2026-10-07")).toHaveLength(3);
+    expect((await status(h)).error).toBeNull();
+  });
+
+  it("PLAN 218: cardio serves the windows from `from` and each asked span's recovery, in order; disconnect clears them", async () => {
+    const { h, st } = setup();
+    await connect(h); await h.alarm();
+    const s = Date.UTC(2026, 9, 6, 17), mins: number[][] = [];
+    // 20 minutes at 150, then 150 → 128 → 120 → 112
+    for (let i = 0; i < 20; i++) mins.push([s + i * 60_000, 150, 148, 152]);
+    [128, 120, 112, 108, 106].forEach((v, i) => mins.push([s + (20 + i) * 60_000, v, v - 1, v + 1]));
+    st.m.set("hr:2026-10-06", mins);
+    st.m.set("cad:2026-10-05", [[Date.UTC(2026, 9, 5, 9), 112, 104]]);
+    st.m.set("cad:2026-10-06", [[Date.UTC(2026, 9, 6, 9), 114, 105]]);
+    const r = (await (await h.fetch(new Request(`https://band/cardio?from=${Date.UTC(2026, 9, 6)}&spans=${s}-${s + 20 * 60_000},x-1,${s - 86_400_000}-${s - 86_400_000 + 600_000}`))).json()) as { pairs: unknown[]; rec: unknown[] };
+    expect(r.pairs).toEqual([[Date.UTC(2026, 9, 6, 9), 114, 105]]);
+    expect(r.rec).toEqual([{ at: s + 19 * 60_000, peak: 150, then: 120, drop: 30 }, null]);
+    await h.fetch(post("disconnect"));
+    expect([...st.m.keys()].filter((k) => k.startsWith("cad:"))).toEqual([]);
+  });
+
   it("opening the app restarts the 15-minute pulls if their chain broke (PLAN 69)", async () => {
     const { h, st, at } = setup();
     await connect(h); await h.alarm();

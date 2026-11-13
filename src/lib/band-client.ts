@@ -7,6 +7,7 @@
 import { useSyncExternalStore } from "react";
 import { supabase } from "./supabase";
 import { mergeBand, refreshFrom, type BandData } from "./band";
+import type { CadPair, Recovery } from "./cadence";
 
 export type { BandData };
 /** `gapSec`: typical seconds between two heart-rate readings Google sends (null before there are enough). */
@@ -82,6 +83,18 @@ export async function loadBandBefore(t: number): Promise<void> {
     set({ data: mergeBand(state.data, asData(d)), from });
   } catch { /* offline: try again on the next scroll */ }
   finally { set({ older: false }); }
+}
+
+/**
+ * Cardio fitness (PLAN 218): the Worker's 5-minute windows (steps a minute and heart rate) from `from`, and the recovery
+ * after each cardio stretch asked for, in the same order (null where the minutes weren't there). Null when no band.
+ */
+export type CardioData = { pairs: CadPair[]; rec: (Recovery | null)[] };
+export async function fetchCardio(from: number, spans: { start: number; end: number }[]): Promise<CardioData | null> {
+  const s = state.status;
+  if (!s || s === "off" || !s.connected) return null;
+  const d = await api<Partial<CardioData>>(`cardio?from=${Math.round(from)}&spans=${spans.map((x) => `${Math.round(x.start)}-${Math.round(x.end)}`).join(",")}`);
+  return { pairs: d.pairs ?? [], rec: d.rec ?? [] };
 }
 
 /** Everything the server holds, for Export (PLAN 49: the testing session works from this file). */

@@ -5,7 +5,8 @@
  *    phone every ~15–30 min, so pulling faster gains nothing),
  *  - keeps heart rate per minute (avg/min/max, one bucket per UTC day, 120 days), sleep sessions with
  *    stages, daily resting heart rate and HRV, steps per 5 minutes (PLAN 66), and each night's skin temperature,
- *    breathing rate and blood oxygen, and each day's VO2 max (PLAN 52) — what the app draws.
+ *    breathing rate and blood oxygen, and each day's VO2 max (PLAN 52) — what the app draws — and each 5 minutes'
+ *    steps a minute with the heart rate in them (PLAN 218), kept 2 years.
  * Google's side: lib/band.ts (shapes from Google's own CLI).
  */
 
@@ -15,6 +16,7 @@ import {
   type HrMinute, type Page, type RollUpPage, type SleepSession, type StepBucket,
 } from "../src/lib/band";
 import type { Vo2Day } from "../src/lib/vo2";
+import { cadencePairs, recoveryOf, type CadPair } from "../src/lib/cadence";
 import { keepSamples, readPostWhy, type HealthSample } from "../src/lib/healthimport";
 import { POINTS, summarize, thin, type Pt } from "../src/lib/placepoints";
 import type { Places } from "../src/lib/timeline";
@@ -77,6 +79,8 @@ export const PULL_EVERY_MS = 15 * 60_000;
 export const PULL_GAP_MS = 20_000;
 const DAY = 86_400_000;
 const KEEP_DAYS = 120;
+/** PLAN 218: the 5-minute windows (lib/cadence) outlive the minutes they come from; spans asked for recovery at most. */
+export const CAD_KEEP_DAYS = 730, CAD_SPANS = 80;
 /** Nights sent with any data request (readiness: 4 weeks of usual ending a week ago, plus slack). */
 export const SLEEP_DAYS_SENT = 40;
 /**
@@ -215,9 +219,11 @@ export class BandHub {
     const first = prev.lastOk == null && prev.latest == null;
     const gap = prev.latest != null ? Math.ceil((now - prev.latest) / DAY) + 1 : 0;
     const back = (usual: number, most: number) => (first ? most : Math.min(most, Math.max(usual, gap)));
-    let latest = prev.latest, gapSec = prev.gapSec, stepsLatest = prev.stepsLatest;
+    let latest = prev.latest, gapSec = prev.gapSec, stepsLatest = prev.stepsLatest, touched = now;
     try {
-      const hr = readHeartRate(await this.list("heart-rate", sampleFilter("heart_rate", hrFrom(now, first, prev.latest)), 10000, errors));
+      const hrStart = hrFrom(now, first, prev.latest);
+      touched = Math.min(touched, hrStart);
+      const hr = readHeartRate(await this.list("heart-rate", sampleFilter("heart_rate", hrStart), 10000, errors));
       const byDay = new Map<string, HrMinute[]>();
       for (const m of perMinute(hr)) { const k = utcDay(m[0]); const a = byDay.get(k); if (a) a.push(m); else byDay.set(k, [m]); }
       for (const [day, mins] of byDay) await this.storage.put(`hr:${day}`, mergeMinutes((await this.storage.get<HrMinute[]>(`hr:${day}`)) ?? [], mins));
@@ -237,6 +243,7 @@ export class BandHub {
     try {
       // 5-minute windows; if Google won't give windows that small, hourly ones (still enough to say "you were walking").
       const from = stepsFrom(now, prev.stepsLatest);
+      touched = Math.min(touched, from);
       let got: StepBucket[] | null = null;
       for (const w of STEP_WINDOWS) {
         try { got = readSteps(await this.rollUp("steps", from, now, w, errors)); break; }
@@ -248,6 +255,14 @@ export class BandHub {
       if (got?.length) stepsLatest = Math.max(stepsLatest ?? 0, got[got.length - 1][0]);
       for (let d = KEEP_DAYS; d <= KEEP_DAYS + 60; d++) await this.storage.delete(`steps:${utcDay(now - d * DAY)}`);
     } catch (e) { errors.push(String((e as Error).message)); }
+    try {
+      // PLAN 218: the pulled days' 5-minute windows worked out again from all that's kept of them; the first time, the
+      // whole 120 days (a trend from day one); the ones past 2 years go
+      const backfill = !(await this.storage.get<number>("cad:v"));
+      for (let d = backfill ? now - KEEP_DAYS * DAY : touched; d <= now + DAY; d += DAY) await this.cadDay(utcDay(d));
+      if (backfill) await this.storage.put("cad:v", 1);
+      for (let d = CAD_KEEP_DAYS; d <= CAD_KEEP_DAYS + 30; d++) await this.storage.delete(`cad:${utcDay(now - d * DAY)}`);
+    } catch (e) { errors.push(`cadence: ${String((e as Error).message)}`); }
     try {
       // Calories burned per local day (PLAN 83). Google allows 14 days a request: the first time 12 back to tomorrow (any
       // time zone's today is inside), then the last 7 days again (today's grows; late syncs fill the days before in).
@@ -296,6 +311,13 @@ export class BandHub {
     const next: Sync = { lastRun: now, lastOk: errors.filter((e) => !/pages/.test(e)).length < 6 ? now : prev.lastOk, latest, ...(gapSec != null ? { gapSec } : {}), ...(stepsLatest != null ? { stepsLatest } : {}), ...(said.length ? { error: said.join("; ").slice(0, 300) } : {}) };
     await this.storage.put("sync", next);
     return next;
+  }
+
+  /** One UTC day's 5-minute windows, from its kept minutes and steps (none: nothing written — older keys stay as they are). */
+  private async cadDay(day: string): Promise<void> {
+    const hr = await this.storage.get<HrMinute[]>(`hr:${day}`), steps = await this.storage.get<StepBucket[]>(`steps:${day}`);
+    if (!hr?.length || !steps?.length) return;
+    await this.storage.put(`cad:${day}`, cadencePairs(hr, steps));
   }
 
   private async status() {
@@ -392,6 +414,22 @@ export class BandHub {
       return json({ hr, sleep, rhr: (await this.storage.get("rhr")) ?? {}, hrv: (await this.storage.get("hrv")) ?? {}, steps, kcal: (await this.storage.get("kcal")) ?? {},
         ...Object.fromEntries(await Promise.all(NIGHT_KEYS.map(async (k) => [k, (await this.storage.get(k)) ?? {}]))), ...(await this.status()) });
     }
+    // PLAN 218: the 5-minute windows from `from` (2 years at most), and each asked cardio stretch's recovery (from the
+    // minutes held: 120 days), in the order asked — `spans=start-end,start-end`
+    if (path === "cardio") {
+      const from = Math.max(Number(url.searchParams.get("from")) || this.now() - 84 * DAY, this.now() - CAD_KEEP_DAYS * DAY);
+      const pairs: CadPair[] = [];
+      for (let d = from - (from % DAY); d <= this.now() + DAY; d += DAY) for (const p of (await this.storage.get<CadPair[]>(`cad:${utcDay(d)}`)) ?? []) if (p[0] >= from) pairs.push(p);
+      const spans = (url.searchParams.get("spans") ?? "").split(",").slice(0, CAD_SPANS).map((x) => x.split("-").map(Number)).filter(([a, z]) => a > 0 && z > a);
+      const days = new Map<string, HrMinute[]>(), minutes = async (a: number, z: number) => {
+        const out: HrMinute[] = [];
+        for (let d = a - (a % DAY); d <= z; d += DAY) { const k = utcDay(d); if (!days.has(k)) days.set(k, (await this.storage.get<HrMinute[]>(`hr:${k}`)) ?? []); out.push(...days.get(k)!); }
+        return out;
+      };
+      const rec = [];
+      for (const [a, z] of spans) rec.push(recoveryOf(await minutes(a, z + 20 * 60_000), a, z));
+      return json({ pairs, rec });
+    }
     if (path === "wake") {
       const sleep = (await this.storage.get<SleepSession[]>("sleep")) ?? [];
       return json(wakeFor(sleep, url.searchParams.get("day") ?? "", Number(url.searchParams.get("tz") ?? 0)) ?? { wokeAt: null });
@@ -404,7 +442,8 @@ export class BandHub {
     if (path === "disconnect") {
       const a = await this.auth();
       if (a) await this.f(`https://oauth2.googleapis.com/revoke?token=${encodeURIComponent(a.refresh)}`, { method: "POST" }).catch(() => null);
-      for (const k of ["auth", "sync", "sleep", "rhr", "hrv", "kcal", "nag", "vo2:pull", ...NIGHT_KEYS]) await this.storage.delete(k);
+      for (const k of ["auth", "sync", "sleep", "rhr", "hrv", "kcal", "nag", "vo2:pull", "cad:v", ...NIGHT_KEYS]) await this.storage.delete(k);
+      for (let d = 0; d <= CAD_KEEP_DAYS; d++) await this.storage.delete(`cad:${utcDay(this.now() - d * DAY)}`);
       for (let d = 0; d <= KEEP_DAYS; d++) { await this.storage.delete(`hr:${utcDay(this.now() - d * DAY)}`); await this.storage.delete(`steps:${utcDay(this.now() - d * DAY)}`); }
       await this.storage.deleteAlarm();
       return json({ ok: true });

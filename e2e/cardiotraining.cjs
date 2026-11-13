@@ -35,7 +35,7 @@ for (let t = last - 30 * MIN; t < last + 70 * MIN; t += MIN) { const v = t >= la
 
   await seed(true);
   await pg.goto(APP + '#insights/training'); await pg.reload(); await pg.waitForSelector('.tp', { timeout: 15000 });
-  const card = pg.getByRole('region', { name: 'Cardio' });
+  const card = pg.getByRole('region', { name: 'Cardio', exact: true });
   await card.waitFor({ timeout: 8000 }).catch(() => {});
   await pg.waitForFunction(() => /avg 142 bpm/.test(document.querySelector('.tp-cardio')?.textContent || ''), null, { timeout: 8000 }).catch(() => {});
   const txt = (await card.innerText().catch(() => '')).replace(/\s+/g, ' ');
@@ -62,7 +62,7 @@ for (let t = last - 30 * MIN; t < last + 70 * MIN; t += MIN) { const v = t >= la
 
   // only cardio logged, no lifting yet: the page still shows it
   await seed(false); await pg.reload(); await pg.waitForSelector('.tp', { timeout: 15000 }).catch(() => {});
-  check('cardio only: the Training page shows the cardio card', await pg.getByRole('region', { name: 'Cardio' }).count() === 1);
+  check('cardio only: the Training page shows the cardio card', await pg.getByRole('region', { name: 'Cardio', exact: true }).count() === 1);
 
   console.log('errors:', JSON.stringify(errs));
   check('no page errors', errs.length === 0);

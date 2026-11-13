@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cardio fitness without typing</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600;700&family=Barlow+Condensed:wght@600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  /* HealthOS Insights ("instrument"): the app's own tokens, one dark world by choice */
+  --bg: #0a0c0e; --i-bg: #0d1012; --panel: #12171a; --panel-2: #171e22; --line: #222b2f; --line-2: #2c373c;
+  --ink: #dce3e5; --ink-2: #93a0a4; --dim: #5b676b;
+  --walk: #a8dcc0; --run: #9fc2ff; --stair: #ffd166; --hr: #ef7d6d; --vo2: #8fb3f5; --good: #4fc27a;
+  --sans: "IBM Plex Sans", system-ui, sans-serif; --mono: "IBM Plex Mono", ui-monospace, monospace; --cond: "Barlow Condensed", "Arial Narrow", sans-serif;
+  /* layout: a note on top, the data choice, then three phones side by side (wrap on narrow screens) */
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--sans); }
+.wrap { max-width: 1320px; margin: 0 auto; padding: 28px 18px 60px; display: grid; gap: 26px; }
+h1 { font: 700 30px/1.1 var(--cond); letter-spacing: .02em; text-transform: uppercase; margin: 0; text-wrap: balance; }
+.lede { max-width: 760px; color: var(--ink-2); font-size: 14.5px; line-height: 1.55; margin: 6px 0 0; }
+.lede b { color: var(--ink); font-weight: 600; }
+.k { font: 500 10px var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--ink-2); }
+.data { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 12px; }
+.opt { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 14px 16px; display: grid; gap: 8px; align-content: start; font-size: 13.5px; line-height: 1.5; color: var(--ink-2); }
+.opt h3 { margin: 0; font-size: 15px; color: var(--ink); display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; }
+.opt ul { margin: 0; padding-left: 18px; display: grid; gap: 3px; }
+.pick { font: 500 10px var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--i-bg); background: var(--good); border-radius: 3px; padding: 2px 6px; }
+.no { font: 500 10px var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--ink-2); border: 1px solid var(--line-2); border-radius: 3px; padding: 1px 6px; }
+.boards { display: flex; flex-wrap: wrap; gap: 26px; align-items: flex-start; }
+.board { display: grid; gap: 10px; width: 390px; max-width: 100%; }
+.board > header { display: grid; gap: 3px; }
+.board > header b { font: 700 22px var(--cond); letter-spacing: .03em; text-transform: uppercase; }
+.board > header span { font-size: 13px; color: var(--ink-2); line-height: 1.45; }
+.phone { width: 390px; max-width: 100%; background: var(--i-bg); border: 1px solid var(--line-2); border-radius: 30px; padding: 16px 12px 22px; display: grid; gap: 10px; }
+.phone .ttl { font-size: 13px; color: var(--ink-2); display: flex; justify-content: space-between; padding: 0 4px; }
+.phone .ttl b { color: var(--ink); font-weight: 600; }
+.p { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 12px 14px; display: grid; gap: 8px; min-width: 0; }
+.p .head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.note { font-size: 11.5px; color: var(--dim); line-height: 1.45; margin: 0; }
+.say { font-size: 13.5px; line-height: 1.45; margin: 0; color: var(--ink); }
+.say em { font-style: normal; color: var(--good); }
+svg { display: block; max-width: 100%; }
+svg text { font: 10px var(--mono); fill: var(--dim); }
+svg .ink { fill: var(--ink-2); }
+/* A: lane rows */
+.lane { all: unset; display: grid; grid-template-columns: 1fr 118px; gap: 2px 10px; align-items: center; padding: 9px 0; border-top: 1px solid var(--line); cursor: pointer; }
+.lane:first-of-type { border-top: 0; padding-top: 2px; }
+.lane:focus-visible { outline: 2px solid var(--ink-2); outline-offset: 3px; border-radius: 4px; }
+.lane .nm { font-size: 13px; font-weight: 600; display: flex; align-items: center; gap: 6px; }
+.lane .nm i { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+.lane .big { font: 600 22px var(--sans); font-variant-numeric: tabular-nums; letter-spacing: -.01em; }
+.lane .big small { font-size: 12px; color: var(--ink-2); font-weight: 500; letter-spacing: 0; margin-left: 3px; }
+.lane .sub { font-size: 12px; color: var(--ink-2); grid-column: 1; }
+.lane .spark { grid-row: 1 / span 3; grid-column: 2; }
+.chip { font: 500 11px var(--mono); padding: 1px 6px; border-radius: 3px; background: #4fc27a1f; color: var(--good); white-space: nowrap; }
+.chip.flat { background: #93a0a41a; color: var(--ink-2); }
+.lane[aria-expanded="true"] { background: var(--panel-2); margin: 0 -14px; padding-left: 14px; padding-right: 14px; }
+.detail { display: grid; gap: 8px; padding: 4px 0 10px; border-top: 1px dashed var(--line-2); }
+.tabs { display: flex; gap: 4px; flex-wrap: wrap; }
+.tabs button { background: none; border: 1px solid var(--line-2); color: var(--ink-2); border-radius: 14px; padding: 4px 10px; font: 500 12px var(--sans); cursor: pointer; }
+.tabs button[aria-pressed="true"] { background: var(--ink); color: var(--i-bg); border-color: var(--ink); }
+.mini { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
+.mini > div { display: grid; gap: 2px; }
+.mini b { font: 600 17px var(--sans); font-variant-numeric: tabular-nums; }
+.mini span { font-size: 11.5px; color: var(--ink-2); }
+.legend { display: flex; gap: 12px; flex-wrap: wrap; font-size: 11.5px; color: var(--ink-2); }
+.legend i { display: inline-block; width: 10px; height: 3px; border-radius: 2px; vertical-align: middle; margin-right: 5px; }
+.tag { font: 500 10px var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--i-bg); background: var(--ink); border-radius: 3px; padding: 2px 6px; justify-self: start; }
+.tag.rec { background: var(--good); }
+.open { font-size: 12px; color: var(--ink-2); }
+@media (prefers-reduced-motion: no-preference) { .detail { animation: in .18s ease-out; } @keyframes in { from { opacity: .4; transform: translateY(-3px); } } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="k">HealthOS · PLAN 218 · Insights › Training</div>
+    <h1>Cardio fitness, nothing typed</h1>
+    <p class="lede">Your band already counts steps every 5 minutes. Steps a minute say how hard you're going, so the app can compare
+      your heart rate <b>at the same step rate</b> week after week. If it's lower at the same pace, you're fitter. That works three ways:
+      <b>daily walking</b> (100–130 a minute, outside workouts), <b>running</b> (140+ or inside a Run) and <b>the stairmaster</b>
+      (inside a Stairmaster session). On top of that, <b>how fast your heart rate drops in the 2 minutes after cardio</b>, plus resting heart rate and VO2 max on the same weeks.
+      The numbers below are made-up examples with a known change built in.</p>
+  </header>
+
+  <section class="data" aria-label="Where the data lives">
+    <div class="opt">
+      <h3>1 · The Worker keeps each 5-minute window <span class="pick">my pick</span></h3>
+      <ul>
+        <li>For every 5 minutes with 40+ steps a minute: the time, steps a minute, the average heart rate. About 1 kB a day.</li>
+        <li>Worked out on each pull, and once over the 120 days the Worker holds now. That's a trend back to mid-July from day one.</li>
+        <li>Kept 2 years, so long trends outlive the 120 days of minutes.</li>
+        <li>Recovery after cardio is worked out from the minutes the Worker holds. The app just asks for it.</li>
+      </ul>
+    </div>
+    <div class="opt">
+      <h3>2 · Save a summary on each workout <span class="no">not this</span></h3>
+      <ul>
+        <li>Each session's heart rate at its step rate and its recovery are saved on the workout, with a one-time backfill through older weeks.</li>
+        <li>Daily walking isn't a session, so it would be left out entirely. That's the lane with the most data.</li>
+        <li>Recomputing after a fix means rewriting every workout.</li>
+      </ul>
+    </div>
+  </section>
+
+  <div class="boards">
+    <section class="board" aria-label="Direction A">
+      <header><b>A · A row per lane</b><span>One card. Each lane is a row: its number at a fixed step rate, the change, 12 weekly dots. Tap a row to see why: the clouds and the two lines. <span style="color:var(--ink)">Clickable.</span></span></header>
+      <div class="phone" id="A"></div>
+    </section>
+    <section class="board" aria-label="Direction B">
+      <header><b>B · Same weeks, stacked</b><span>Five small charts on one shared row of weeks: walking, stairmaster, recovery, resting HR, VO2 max. One line on top says what moved most.</span></header>
+      <div class="phone" id="B"></div>
+    </section>
+    <section class="board" aria-label="Direction C">
+      <header><b>C · The proof first</b><span>Opens on the cloud itself: every 5 minutes of walking, then against now, with each one's line. The gap at 115 is the answer. Lanes as tabs.</span></header>
+      <div class="phone" id="C"></div>
+    </section>
+  </div>
+  <p class="note" style="max-width:760px">Default if you don't pick: A, with C's cloud as what a row opens. Stairmaster with your hands on the rails can count few steps. Then that lane shows only recovery and says why.</p>
+</div>
+
+<script>
+// ---- example data, a known change planted: walking −8 bpm at 115/min over 12 weeks, stairmaster −7, recovery +7 ----
+let seed = 218; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647; const gauss = () => { let s = 0; for (let i = 0; i < 6; i++) s += rnd(); return (s - 3) * 1.41; };
+const WEEKS = ["24 Aug","31 Aug","7 Sep","14 Sep","21 Sep","28 Sep","5 Oct","12 Oct","19 Oct","26 Oct","2 Nov","9 Nov"];
+const lin = (a, b) => WEEKS.map((_, i) => a + (b - a) * i / (WEEKS.length - 1));
+const noisy = (arr, sd, d = 0) => arr.map((v) => +(v + gauss() * sd).toFixed(d));
+const walk = noisy(lin(112, 104), 1.2), stair = noisy(lin(158, 151), 2), rhr = noisy(lin(61, 58), .6), vo2 = noisy(lin(42.0, 43.6), .25, 1);
+const run = [null,null,null,null,null,null,null,166,null,163,161,null];
+const rec = []; WEEKS.forEach((w, i) => { for (let k = 0; k < 2; k++) rec.push({ i: i + k * .45, v: Math.round(27 + 7 * i / 11 + gauss() * 2.5) }); });
+const cloud = (week0, n) => Array.from({ length: n }, () => { const x = 100 + rnd() * 30; return { x, y: (112 - 8 * week0 / 11) + .45 * (x - 115) + gauss() * 3.2 }; });
+const before = [...cloud(0, 30), ...cloud(1, 30), ...cloud(2, 30)], after = [...cloud(9, 30), ...cloud(10, 30), ...cloud(11, 30)];
+const fit = (pts) => { const mx = pts.reduce((a, p) => a + p.x, 0) / pts.length, my = pts.reduce((a, p) => a + p.y, 0) / pts.length; const b = pts.reduce((a, p) => a + (p.x - mx) * (p.y - my), 0) / pts.reduce((a, p) => a + (p.x - mx) ** 2, 0); return (x) => my + b * (x - mx); };
+const fb = fit(before), fa = fit(after);
+const r0 = (v) => Math.round(v);
+
+// ---- drawing helpers ----
+const E = (h) => { const t = document.createElement("template"); t.innerHTML = h.trim(); return t.content.firstElementChild; };
+function spark(vals, color, w = 118, h = 40, opts = {}) {
+  const have = vals.map((v, i) => [i, v]).filter(([, v]) => v != null), ys = have.map(([, v]) => v);
+  const lo = Math.min(...ys), hi = Math.max(...ys), pad = (hi - lo) * .15 || 1, a = lo - pad, b = hi + pad;
+  const X = (i) => 4 + i * (w - 8) / (vals.length - 1), Y = (v) => h - 4 - (v - a) / (b - a) * (h - 8);
+  const n = have.length, mx = have.reduce((s, [i]) => s + i, 0) / n, my = ys.reduce((s, v) => s + v, 0) / n;
+  const sl = have.reduce((s, [i, v]) => s + (i - mx) * (v - my), 0) / (have.reduce((s, [i]) => s + (i - mx) ** 2, 0) || 1);
+  const L = (i) => my + sl * (i - mx), [i0] = have[0], [i1] = have[n - 1];
+  return `<svg class="spark" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" aria-hidden="true">
+    ${n > 2 && !opts.noLine ? `<line x1="${X(i0)}" y1="${Y(L(i0))}" x2="${X(i1)}" y2="${Y(L(i1))}" stroke="${color}" stroke-opacity=".45" stroke-dasharray="3 3" stroke-width="1.2"/>` : ""}
+    ${have.map(([i, v], k) => `<circle cx="${X(i)}" cy="${Y(v)}" r="${k === n - 1 ? 3.6 : 2.1}" fill="${color}" fill-opacity="${k === n - 1 ? 1 : .8}"/>`).join("")}</svg>`;
+}
+function weekChart(vals, color, { w = 340, h = 70, unit = "", d = 0, label }) {
+  const have = vals.map((v, i) => [i, v]).filter(([, v]) => v != null), ys = have.map(([, v]) => v);
+  const lo = Math.min(...ys), hi = Math.max(...ys), pad = (hi - lo) * .2 || 1, a = lo - pad, b = hi + pad, x0 = 4, x1 = w - 40;
+  const X = (i) => x0 + i * (x1 - x0) / (WEEKS.length - 1), Y = (v) => h - 6 - (v - a) / (b - a) * (h - 14);
+  const last = have.at(-1), first = have[0];
+  return `<svg width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" role="img" aria-label="${label}">
+    <line x1="${x0}" x2="${x1}" y1="${Y(first[1])}" y2="${Y(first[1])}" stroke="var(--line-2)" stroke-dasharray="2 3"/>
+    <polyline fill="none" stroke="${color}" stroke-width="1.6" points="${have.map(([i, v]) => `${X(i)},${Y(v)}`).join(" ")}"/>
+    ${have.map(([i, v]) => `<circle cx="${X(i)}" cy="${Y(v)}" r="2.2" fill="${color}"/>`).join("")}
+    <text x="${x1 + 6}" y="${Y(last[1]) + 4}" style="fill:${color};font-weight:500">${last[1].toFixed(d)}${unit}</text>
+    <text x="${x1 + 6}" y="${Y(first[1]) + 4}">${first[1].toFixed(d)}</text></svg>`;
+}
+function scatter(w = 340, h = 190) {
+  const x0 = 30, x1 = w - 8, y0 = 8, y1 = h - 22, X = (x) => x0 + (x - 100) / 30 * (x1 - x0), Y = (y) => y1 - (y - 92) / 34 * (y1 - y0);
+  const ticksY = [95, 105, 115, 125], ticksX = [100, 110, 120, 130];
+  const gap = fb(115) - fa(115);
+  return `<svg width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" role="img" aria-label="Heart rate against steps a minute: late August against now; at 115 a minute about ${r0(gap)} beats lower now">
+    ${ticksY.map((t) => `<line x1="${x0}" x2="${x1}" y1="${Y(t)}" y2="${Y(t)}" stroke="var(--line)"/><text x="${x0 - 5}" y="${Y(t) + 3}" text-anchor="end">${t}</text>`).join("")}
+    ${ticksX.map((t) => `<text x="${X(t)}" y="${h - 6}" text-anchor="middle">${t}</text>`).join("")}
+    <line x1="${X(115)}" x2="${X(115)}" y1="${y0}" y2="${y1}" stroke="var(--ink-2)" stroke-dasharray="2 3"/>
+    ${before.map((p) => `<circle cx="${X(p.x)}" cy="${Y(p.y)}" r="2" fill="#93a0a4" fill-opacity=".45"/>`).join("")}
+    ${after.map((p) => `<circle cx="${X(p.x)}" cy="${Y(p.y)}" r="2" fill="var(--walk)" fill-opacity=".75"/>`).join("")}
+    <line x1="${X(100)}" y1="${Y(fb(100))}" x2="${X(130)}" y2="${Y(fb(130))}" stroke="#c4ccce" stroke-width="1.6"/>
+    <line x1="${X(100)}" y1="${Y(fa(100))}" x2="${X(130)}" y2="${Y(fa(130))}" stroke="var(--walk)" stroke-width="2"/>
+    <line x1="${X(115) + 5}" x2="${X(115) + 5}" y1="${Y(fb(115))}" y2="${Y(fa(115))}" stroke="var(--good)" stroke-width="2"/>
+    <text x="${X(115) + 9}" y="${(Y(fb(115)) + Y(fa(115))) / 2 + 3}" style="fill:var(--good);font-weight:500">−${r0(gap)} bpm</text>
+    <text x="${x1}" y="${y0 + 4}" text-anchor="end" class="ink">bpm · steps a minute →</text></svg>`;
+}
+function recDots(w = 340, h = 90) {
+  const x0 = 4, x1 = w - 30, X = (i) => x0 + i / 11.5 * (x1 - x0), Y = (v) => h - 8 - (v - 18) / 22 * (h - 16);
+  return `<svg width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" role="img" aria-label="Heart rate drop in the 2 minutes after each cardio session">
+    ${[20, 30, 40].map((t) => `<line x1="${x0}" x2="${x1}" y1="${Y(t)}" y2="${Y(t)}" stroke="var(--line)"/><text x="${x1 + 4}" y="${Y(t) + 3}">${t}</text>`).join("")}
+    ${rec.map((p) => `<circle cx="${X(p.i)}" cy="${Y(p.v)}" r="2.6" fill="var(--stair)"/>`).join("")}
+    <line x1="${X(0)}" y1="${Y(27)}" x2="${X(11.4)}" y2="${Y(34)}" stroke="var(--stair)" stroke-opacity=".6" stroke-dasharray="3 3" stroke-width="1.4"/></svg>`;
+}
+
+// ---- A ----
+const lanes = [
+  { id: "walk", nm: "Daily walking", color: "var(--walk)", vals: walk, at: 115, unit: "steps a minute", n: "312 × 5 min" },
+  { id: "stair", nm: "Stairmaster", color: "var(--stair)", vals: stair, at: 88, unit: "steps a minute", n: "19 sessions" },
+  { id: "run", nm: "Running", color: "var(--run)", vals: run, at: 160, unit: "steps a minute", n: "3 runs" },
+];
+function laneRow(l) {
+  const have = l.vals.filter((v) => v != null), a = have[0], b = have.at(-1), weeks = have.length;
+  const chip = weeks < 4 ? `<span class="chip flat">${weeks} of 4 weeks</span>` : `<span class="chip">${r0(b - a)} bpm · fitter</span>`;
+  return `<button class="lane" type="button" aria-expanded="false" data-lane="${l.id}">
+    <span class="nm"><i style="background:${l.color}"></i>${l.nm}</span>
+    ${spark(l.vals, l.color, 118, 40, { noLine: weeks < 4 })}
+    <span class="big">${r0(b)}<small>bpm at ${l.at}/min</small></span>
+    <span class="sub">${weeks < 4 ? `${l.n}, too few weeks yet` : `${r0(a)} → ${r0(b)} since 24 Aug`} ${chip}</span></button>`;
+}
+function detailFor(id) {
+  if (id === "walk") return `<div class="detail"><span class="open">Each dot is 5 minutes of walking. Grey: late August. Green: the last 3 weeks.</span>${scatter()}
+    <p class="say">At 115 steps a minute your heart now beats <em>about ${r0(fb(115) - fa(115))} times a minute less</em> than in August. Walking faster doesn't explain it: both lines are read at the same step rate.</p>
+    <p class="note">Outside workouts, 100–130 a minute, the first 5 minutes of each walk left out (the heart is still catching up). One line per week, read at 115. Goes with fitter; heat, caffeine and a short night push it up.</p></div>`;
+  if (id === "stair") return `<div class="detail">${weekChart(stair, "var(--stair)", { label: "Stairmaster: heart rate at 88 steps a minute, each week", unit: "" })}
+    <p class="say">On the stairmaster at 88 steps a minute: <em>${r0(stair[0])} → ${r0(stair.at(-1))} bpm</em> since 24 Aug.</p>
+    <p class="note">Steps a minute stands in for the level. Only 5-minute windows inside a Stairmaster session, after its first 5 minutes.</p></div>`;
+  if (id === "run") return `<div class="detail"><p class="say">3 runs so far. A trend needs runs in 4 different weeks.</p><p class="note">Runs: 140+ steps a minute outside workouts, or inside a Run session.</p></div>`;
+  return `<div class="detail"><span class="open">Each dot is one cardio session: how far your heart rate fell in the 2 minutes after you stopped.</span>${recDots()}
+    <p class="say">After cardio your heart now drops <em>about 34 beats in 2 minutes</em>. It was 27 in August. A faster drop goes with fitter (Cole 1999).</p>
+    <p class="note">"Stopped" is where your heart rate actually came off the effort, not when you tapped Save, so a forgotten Stop doesn't matter.</p></div>`;
+}
+function renderA() {
+  const el = document.getElementById("A");
+  el.innerHTML = `<div class="ttl"><b>Training</b><span>Insights</span></div>
+  <div class="p" style="opacity:.55"><span class="k">Cardio</span><div style="font-size:12px;color:var(--ink-2)">94 min this week · 3 sessions · usual 80 min a week</div></div>
+  <div class="p" id="A-card"><div class="head"><span class="k">Cardio fitness</span><span class="note">12 weeks</span></div>
+    <p class="say">Walking at 115 steps a minute: <b>${r0(walk[0])} → ${r0(walk.at(-1))} bpm</b> since 24 Aug. <em>Lower is fitter.</em></p>
+    <div id="A-lanes">${lanes.map(laneRow).join("")}
+    <button class="lane" type="button" aria-expanded="false" data-lane="rec"><span class="nm"><i style="background:var(--stair)"></i>Recovery after cardio</span>${spark(rec.map((p) => p.v), "var(--stair)")}
+      <span class="big">34<small>bpm drop in 2 min</small></span><span class="sub">27 → 34 since 24 Aug <span class="chip">+7 · fitter</span></span></button></div>
+    <div class="mini" style="border-top:1px solid var(--line);padding-top:10px">
+      <div><span>Resting heart rate</span><b>${r0(rhr.at(-1))} bpm</b>${spark(rhr, "var(--hr)", 150, 26)}</div>
+      <div><span>VO2 max (band)</span><b>${vo2.at(-1).toFixed(1)}</b>${spark(vo2, "var(--vo2)", 150, 26)}</div></div>
+    <p class="note">From the band's steps and heart rate. Nothing typed. Tap a row for how it's worked out.</p></div>`;
+  el.querySelectorAll(".lane").forEach((b) => b.addEventListener("click", () => {
+    const open = b.getAttribute("aria-expanded") === "true";
+    el.querySelectorAll(".lane").forEach((x) => { x.setAttribute("aria-expanded", "false"); if (x.nextElementSibling?.classList.contains("detail")) x.nextElementSibling.remove(); });
+    if (!open) { b.setAttribute("aria-expanded", "true"); b.after(E(detailFor(b.dataset.lane))); }
+  }));
+  el.querySelector('[data-lane="walk"]').click(); // opens on the walking row, so the picture shows the detail too
+}
+
+// ---- B ----
+function renderB() {
+  const el = document.getElementById("B");
+  const row = (k, vals, color, opt) => `<div style="display:grid;gap:2px"><span class="k" style="color:${color}">${k}</span>${weekChart(vals, color, { w: 338, h: 52, ...opt })}</div>`;
+  const recWeek = WEEKS.map((_, i) => { const r = rec.filter((p) => Math.floor(p.i) === i); return r.length ? r.reduce((a, p) => a + p.v, 0) / r.length : null; });
+  el.innerHTML = `<div class="ttl"><b>Training</b><span>Insights</span></div>
+  <div class="p"><div class="head"><span class="k">Cardio fitness · same weeks</span><span class="note">lower is fitter, except recovery and VO2</span></div>
+    <p class="say">Most moved: <em>walking −${r0(walk[0] - walk.at(-1))} bpm</em> at 115 steps a minute. Resting heart rate and VO2 max went the same way.</p>
+    ${row("Walking · bpm at 115/min", walk, "var(--walk)", { label: "Walking heart rate at 115 steps a minute" })}
+    ${row("Stairmaster · bpm at 88/min", stair, "var(--stair)", { label: "Stairmaster heart rate at 88 steps a minute" })}
+    ${row("Recovery · drop in 2 min", recWeek, "var(--good)", { label: "Heart rate drop after cardio, weekly" })}
+    ${row("Resting heart rate", rhr, "var(--hr)", { label: "Resting heart rate, weekly" })}
+    ${row("VO2 max · band", vo2, "var(--vo2)", { d: 1, label: "VO2 max, weekly" })}
+    <div style="display:flex;justify-content:space-between" class="note"><span>24 Aug</span><span>5 Oct</span><span>this week</span></div>
+    <p class="note">Running: 3 runs, needs 4 weeks before it gets a row.</p></div>`;
+}
+
+// ---- C ----
+function renderC() {
+  const el = document.getElementById("C");
+  el.innerHTML = `<div class="ttl"><b>Training</b><span>Insights</span></div>
+  <div class="p"><div class="head"><span class="k">Cardio fitness</span></div>
+    <div class="tabs" role="group" aria-label="Lane"><button type="button" aria-pressed="true">Walking</button><button type="button" aria-pressed="false">Stairmaster</button><button type="button" aria-pressed="false">Running · 3</button><button type="button" aria-pressed="false">Recovery</button></div>
+    <p class="say" style="font-size:17px;line-height:1.35">Same pace, <em>${r0(fb(115) - fa(115))} beats a minute lower</em> than in August.</p>
+    ${scatter()}
+    <div class="legend"><span><i style="background:#c4ccce"></i>24 Aug – 13 Sep</span><span><i style="background:var(--walk)"></i>26 Oct – now</span></div>
+    <div class="mini" style="border-top:1px solid var(--line);padding-top:10px">
+      <div><span>Recovery after cardio</span><b>34 bpm</b><span>in 2 min · was 27</span></div>
+      <div><span>Resting · VO2 max</span><b>${r0(rhr.at(-1))} · ${vo2.at(-1).toFixed(1)}</b><span>was ${r0(rhr[0])} · ${vo2[0].toFixed(1)}</span></div></div>
+    <p class="note">Each dot: 5 minutes of walking outside workouts. Lines: the first 3 weeks and the last 3.</p></div>`;
+}
+renderA(); renderB(); renderC();
+</script>
+</body>
+</html>

@@ -4101,6 +4101,23 @@ both reads and the questions. Phases in that order; #152 RPE waits (owner).
 218. [ ] **Cardio fitness without typing: stairmaster, running and daily walking** (owner, 13 Nov: "we can make a better
    cardio tracker … seeing how my cardio and fitness changes on steps, running"; typing floors or level after a session:
    "scrap this idea if thats the only way"; daily steps: yes, too). Nothing typed — effort comes from the band's steps.
+   Claimed 13 Nov. Canvas https://claude.ai/artifact/XWxrKaAGkLJtTzZKyeuQF8 — A a row per lane (tap: the clouds), B the
+   same weeks stacked, C the proof first; data: the Worker keeps each 5-minute window (my pick) vs a summary per workout.
+   Building A with the Worker's windows while he picks.
+   - Done 13 Nov (A, while he picks). lib/cadence (shared with the Worker): each 5-minute step window with 40+ steps a
+     minute and 3+ heart-rate minutes → [start, steps a minute, bpm]; recovery = the drop from the effort's last minute
+     (the last at 90 % of the session's high, up to 10 min past the saved end, then the highest of it and the 2 before)
+     to 2 minutes later — so a forgotten Stop or the heart-rate finish doesn't move it. Worker: `cad:<day>` worked out on
+     each pull for the days pulled, once over the 120 days held (`cad:v`), kept 2 years; `GET /api/band/cardio?from&spans`
+     → the windows and each span's recovery. lib/cardiofit: lanes (walking 100–130 outside workouts and 10 min after;
+     running 140+ or inside a Run phase; the stairmaster inside a Stairmaster phase), a bout's first window left out, each
+     week read at the lane's median step rate along one slope fitted within weeks, the line through the weeks said only
+     when it moved 2+ bpm at p < 0.05 (slopeTest); recovery the same over sessions; resting HR and VO2 max weekly.
+     components/CardioFit on Training under Cardio: a row per lane, tap → the first 3 weeks' windows against the last 3.
+     Tests: cardiofit.test (planted −8 bpm found in 28+ of 30 seeds; none planted → "same" in 36+ of 40; walking faster
+     over the weeks isn't read as less fit; lanes; recovery with a late, early or missing end), worker band.test (pull,
+     backfill once, the endpoint, disconnect), e2e/cardiofit. Not checked: his real band — whether Google's 5-minute
+     step windows line up with the minutes, and whether the stairmaster counts steps with hands on the rails.
    - Heart rate at the same step rate: the band's 5-minute step buckets give the cadence (steps a minute); the heart
      rate in the same 5 minutes against it. Lower heart rate at the same cadence over weeks goes with fitter. Three
      lanes: daily brisk walking (about 100–130 a minute, outside workouts), running (140+ a minute, or inside a Run

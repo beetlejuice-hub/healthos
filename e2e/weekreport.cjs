@@ -79,7 +79,7 @@ function world() {
       && await pg.getByRole('region', { name: 'Lifts' }).getByRole('img').count() === 4);
     const ham = pg.locator('.wk-mrow', { hasText: 'Hamstrings' });
     check(`${width}: hamstrings 0 sets, flagged (${(await ham.innerText()).replace(/\s+/g, ' ')})`, await ham.getAttribute('data-low') !== null && /Hamstrings 0$/.test((await ham.innerText()).replace(/\s+/g, ' ').trim()) && await pg.locator('.wk-mrow', { hasText: 'Quads' }).getAttribute('data-low') !== null);
-    const cardio = (await pg.getByRole('region', { name: 'Cardio' }).innerText()).replace(/\s+/g, ' ');
+    const cardio = (await pg.getByRole('region', { name: 'Cardio', exact: true }).innerText()).replace(/\s+/g, ' ');
     check(`${width}: cardio by zone: 0 the week before, 30 min, mostly zone 2 (${cardio})`, /19–25 Oct 0 min/.test(cardio) && /26 Oct – 1 Nov 30 min/.test(cardio) && /\+30 minutes on the week before; most in zone 2/.test(cardio)
       && await pg.locator('.wk-zbar').nth(1).locator('i').count() === 2 && !/no heart rate/.test(cardio));
     const fit = (await pg.getByRole('region', { name: 'Fitness' }).innerText()).replace(/\s+/g, ' ');

@@ -2692,3 +2692,29 @@ button.vs-i { border: 0; text-align: left; font: inherit; cursor: pointer; width
 .ss-times.cardio label { color: var(--c-ink-2); }
 .ss-parts { display: grid; gap: 10px; } .ss-part { display: grid; gap: 4px; } .ss-part p { margin: 0; font-size: 13.5px; color: var(--c-ink-2); } .ss-part b { color: var(--c-ink); }
 .ss-part.is-cardio > p > b { color: var(--hr, #ef7d6d); } .ss-part.all { padding-top: 8px; border-top: 1px solid var(--c-track); } .ss-part.all:first-child { padding-top: 0; border-top: 0; }
+
+/* PLAN 218: cardio fitness without typing (canvas A — a row per lane) */
+.tp .cf { gap: 8px; }
+.cf-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.cf-say { margin: 0; font-size: 13.5px; line-height: 1.45; color: var(--i-ink); }
+.cf-rows { display: grid; }
+.cf-row { all: unset; box-sizing: border-box; display: grid; grid-template-columns: minmax(0, 1fr) 118px; gap: 2px 10px; align-items: center; padding: 9px 0; border-top: 1px solid var(--i-line); cursor: pointer; }
+.cf-row:first-child { border-top: 0; }
+.cf-row:focus-visible { outline: 2px solid var(--i-ink-2); outline-offset: 2px; border-radius: 4px; }
+.cf-row[aria-expanded="true"] { background: var(--i-panel-2); margin: 0 -14px; padding-left: 14px; padding-right: 14px; }
+.cf-nm { font-size: 13px; font-weight: 600; display: flex; align-items: center; gap: 6px; }
+.cf-nm i { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+.cf-big { font: 600 22px var(--f-plex); font-variant-numeric: tabular-nums; }
+.cf-big small { font-size: 12px; color: var(--i-ink-2); font-weight: 500; margin-left: 4px; }
+.cf-sub { font-size: 12px; color: var(--i-ink-2); }
+.cf-spark { grid-row: 1 / span 3; grid-column: 2; }
+.cf-chip { font: 500 11px var(--f-mono); padding: 1px 6px; border-radius: 3px; background: #93a0a41a; color: var(--i-ink-2); white-space: nowrap; }
+.cf-chip.good { background: #4fc27a1f; color: var(--sh-g); }
+.cf-detail { display: grid; gap: 8px; padding: 6px 0 12px; border-top: 1px dashed var(--i-line-2); }
+.cf-gap { fill: var(--sh-g); font-weight: 500; }
+.cf-mini { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; border-top: 1px solid var(--i-line); padding-top: 10px; }
+.cf-mini > div { display: grid; gap: 2px; min-width: 0; }
+.cf-mini span { font-size: 11.5px; color: var(--i-ink-2); }
+.cf-mini b { font: 600 17px var(--f-plex); font-variant-numeric: tabular-nums; }
+.cf-mini svg { max-width: 100%; }
+.cf-gap { paint-order: stroke; stroke: var(--i-panel); stroke-width: 4px; stroke-linejoin: round; }
