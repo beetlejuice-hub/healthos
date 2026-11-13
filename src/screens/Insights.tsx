@@ -40,6 +40,7 @@ import { Experiments } from "../components/Ai";
 import type { GraphFocus } from "../components/MasterGraph";
 import { DOSE_MIN_DAYS, doseCompare } from "../lib/dose";
 import { ConnectDots } from "../components/ConnectDots";
+import { LinkMapCard, LookAt } from "../components/LinkMap";
 import { TrendWall } from "../components/TrendWall";
 import { BestDays } from "../components/BestDays";
 import { Ripples } from "../components/Ripples";
@@ -196,6 +197,8 @@ export function Insights() {
       <Tip />
       {/* PLAN 207: every trend first (owner, 11 Nov: "nice letsgo. build all") */}
       {!nothing && <TrendWall now={now} />}
+      {/* renovation part 3: the outcome that's slipping, and what goes with it */}
+      {!nothing && <LookAt now={now} />}
       {!nothing && <Glance now={now} trendDays={period} report={report} />}
       {!nothing && <div className="gl" data-sec="week"><Top days={gdays} /></div>}
       {!nothing && (cmp && shown === "timeline" ? <Compare data={data} band={band} now={now} logged={logged} />
@@ -204,7 +207,7 @@ export function Insights() {
       {!nothing && <MindPage data={data} band={band} now={now} entries={s.entries} halfLifeMin={s.settings.halfLifeMin} days={gdays} period={period} />}
       {!nothing && <Mind days={gdays} now={now} period={period} />}
       {!nothing && <Connections days={gdays} />}
-      {!nothing && <div data-sec="connections" className="sec-wrap"><ConnectDots now={now} /><BestDays now={now} /><Combos now={now} /><Ripples now={now} /><OneList report={report} items={scouted} onShow={showOnGraph} /></div>}
+      {!nothing && <div data-sec="connections" className="sec-wrap"><LinkMapCard now={now} /><ConnectDots now={now} /><BestDays now={now} /><Combos now={now} /><Ripples now={now} /><OneList report={report} items={scouted} onShow={showOnGraph} /></div>}
       {!nothing && <BodyLab band={band} entries={s.entries} now={now} active={shown === "lab" || !shown} />}
       {!nothing && <SleepNights data={data} band={band} now={now} entries={s.entries} halfLifeMin={s.settings.halfLifeMin} />}
       {!nothing && <Body days={gdays} period={period} now={now} bandNights={bandNights} />}

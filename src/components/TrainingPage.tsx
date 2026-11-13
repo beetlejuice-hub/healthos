@@ -17,7 +17,14 @@ import { historyOf, repsOf, smartNext } from "../lib/progress";
 import { equipOf } from "../lib/exsearch";
 import { StrengthCard } from "./StrengthCard";
 import { CardioCard } from "./CardioCard";
-import { CardioFit } from "./CardioFit";
+import { CardioFit, useCardioFit } from "./CardioFit";
+import { FitnessTop, NextCard, type NextCardio, type NextLift } from "./FitnessTop";
+import { cardioAnswer, cardioShort, recoveryAnswer, strengthAnswer, weightAnswer } from "../lib/fitness";
+import { overallStrength } from "../lib/strength";
+import { bodyDays, weightTrend } from "../lib/tdee";
+import { cardioSpans, cardioWeeks, kindOf } from "../lib/cardio";
+import { currentKg } from "../lib/body";
+import { addDays, localDay } from "../lib/time";
 import { clock, dayLabel } from "../lib/time";
 import type { EntryOf } from "../lib/types";
 import type { HrMinute } from "../lib/band";
@@ -50,29 +57,45 @@ export function TrainingPage({ now }: { now: number }) {
   const facts = useMemo(() => sessionFacts(ss, entries, ns), [ss, entries, ns]);
   // C: every workout (cardio too) is left out of your usual heart rate, and the hour after it
   const spans = useMemo(() => workouts.flatMap((x) => (x.endedAt ? [{ start: x.startedAt, end: x.endedAt }] : [])), [workouts]);
-  // cardio only so far (PLAN 146): its card alone
-  if (!ss.length) return <div className="tp" ref={ref} data-sec="training"><CardioCard now={now} hr={band?.hr ?? NO_HR} /><CardioFit now={now} w={w} /></div>;
+  // Renovation part 1 (canvas A): "Getting fitter?" — four answers on the same 12 weeks — then what's next
+  const fit = useCardioFit(now);
+  const overall = useMemo(() => overallStrength(sets, now), [sets, now]);
+  const weight = useMemo(() => {
+    const today = localDay(now), from = addDays(today, -83), days = bodyDays(entries, from, today), t = weightTrend(days);
+    const t0 = new Date(`${from}T12:00:00`).getTime();
+    return weightAnswer(t, 84, days.flatMap((d, i): [number, number][] => (d.kg == null ? [] : [[t0 + i * 86_400_000, d.kg]])));
+  }, [entries, now]);
+  const answers = useMemo(() => [strengthAnswer(overall), cardioAnswer(fit?.lanes ?? []), recoveryAnswer(fit?.rec ?? { pts: [], trend: null, last: null }), weight], [overall, fit, weight]);
+  const cardioNext = useMemo((): NextCardio | null => {
+    const done = cardioSpans(workouts, now).filter((x) => !x.running), c = cardioShort(cardioWeeks(done, currentKg(entries, 0, now) || null, now, 4));
+    if (!c) return null;
+    const kinds = new Map<string, number>();
+    for (const x of done.filter((x) => x.start >= now - 28 * 86_400_000)) { const k = kindOf(x.what)?.name; if (k) kinds.set(k, (kinds.get(k) ?? 0) + 1); }
+    return { ...c, kind: [...kinds.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] ?? null };
+  }, [workouts, entries, now]);
+  const since = fit ? dayLabel(fit.from).replace(/^\w+ /, "") : null;
+  // cardio only so far (PLAN 146): its cards, with the answers and next on top
+  if (!ss.length) return <div className="tp" ref={ref} data-sec="training"><FitnessTop answers={answers} since={since} /><NextCard lift={null} cardio={cardioNext} /><CardioCard now={now} hr={band?.hr ?? NO_HR} /><CardioFit fit={fit} w={w} now={now} /></div>;
   // what's next: the template after the last one done, its first lift as last time said (double progression)
   const next = nextTemplate(templates, workouts), first = next?.exercises[0];
   const lastOf = first ? [...ss].reverse().find((s) => s.sets.some((x) => x.exercise === first.name && !x.warmup)) : undefined;
   const sug = first && lastOf ? smartNext(historyOf(sets, first.name), repsOf(first), kgStep(first.name, sets.filter((x) => x.exercise === first.name && !x.warmup).map((x) => x.kg), equipOf(first.name) === "dumbbell")) : null;
+  const nextLift: NextLift | null = next ? { name: next.name, line: sug && first ? `${first.name} ${first.sets} × ${sug.reps} at ${sug.kg} kg` : first?.name ?? null } : null;
   const tiles: [string, string, string][] = [
     ["Sessions", String(week.sessions), week.usualSessions != null ? `usual ${fmtN(week.usualSessions)} a week` : "this week"],
     ["Working sets", String(week.workingSets), week.usualSets != null ? `usual ${fmtN(week.usualSets)} a week` : "this week"],
     ["Strength", week.pct != null ? `${sgn(week.pct)} %` : "–", week.pct != null ? "against your trend" : "no session this week yet"],
-    ["Next", next?.name ?? "–", sug && first ? `${first.name} ${first.sets} × ${sug.reps} at ${sug.kg} kg` : first ? first.name : ""],
   ];
   return (
     <div className="tp" ref={ref} data-sec="training">
+      <FitnessTop answers={answers} since={since} />
+      <NextCard lift={nextLift} cardio={cardioNext} />
       <section className="sl-p tp-week" aria-label="This week">
         <span className="cmp-k">This week · from {dayLabel(week.from)}</span>
         <div className="tp-tiles">{tiles.map(([k, v, sub]) => <div key={k} className="tp-tile" data-k={k}><span className="k">{k}</span><b>{v}</b><small>{sub}</small></div>)}</div>
       </section>
       {/* PLAN 143: one line for overall strength — every lift against itself */}
-      <StrengthCard sets={sets} now={now} className="sl-p tp-strength" />
-      <CardioCard now={now} hr={band?.hr ?? NO_HR} />
-      {/* PLAN 218: fitness from the band's steps — walking, the stairmaster, running, recovery */}
-      <CardioFit now={now} w={wide ? Math.min(w, 640) : w} />
+      <div id="tp-strength"><StrengthCard sets={sets} now={now} className="sl-p tp-strength" /></div>
       {lifts.length > 0 && (() => {
         // each card's chart drawn to its own width (a phone card is ~170 px; drawn wider and shrunk, its labels were 7 px)
         const cols = wide ? Math.min(4, lifts.length) : 2, cardW = (w - 12 * (cols - 1)) / cols;
@@ -85,8 +108,15 @@ export function TrainingPage({ now }: { now: number }) {
         {muscles.length > 0 && <Muscles rows={muscles} />}
       </div>
       {strength.length > 0 && <MuscleStrengthRows rows={strength} />}
-      <StrongSessions ss={ss} facts={facts} supplements={supplements} w={w} wide={wide} />
-      <TrainingAfter ss={ss} ns={ns} entries={entries} hr={band?.hr ?? NO_HR} spans={spans} now={now} w={w} wide={wide} band={!!band} />
+      <CardioCard now={now} hr={band?.hr ?? NO_HR} />
+      {/* PLAN 218: fitness from the band's steps — walking, the stairmaster, running, recovery */}
+      <CardioFit fit={fit} w={wide ? Math.min(w, 640) : w} now={now} />
+      {/* folded (renovation part 1): what goes with a strong session, and what training goes with afterwards */}
+      <details className="tp-more">
+        <summary>What goes with a strong session · what training goes with afterwards</summary>
+        <StrongSessions ss={ss} facts={facts} supplements={supplements} w={w} wide={wide} />
+        <TrainingAfter ss={ss} ns={ns} entries={entries} hr={band?.hr ?? NO_HR} spans={spans} now={now} w={w} wide={wide} band={!!band} />
+      </details>
     </div>
   );
 }

@@ -73,7 +73,7 @@ function world() {
   await pg.getByRole('button', { name: 'Sign in' }).click(); await pg.waitForSelector('text=Settings');
   await pg.evaluate((w) => { const k = 'healthos.v1:u-test', s = JSON.parse(localStorage.getItem(k) || '{}'); s.entries = w.entries; s.workouts = w.workouts;
     s.supplements = [{ id: 'crea', name: 'Creatine', dose: '5 g', slot: 'morning', at: 480, active: true }]; localStorage.setItem(k, JSON.stringify(s)); }, w);
-  await pg.goto(APP + '#insights/training'); await pg.reload(); await pg.waitForSelector('.tp-b', { timeout: 15000 });
+  await pg.goto(APP + '#insights/training'); await pg.reload(); await pg.locator('.tp-more > summary').click({ timeout: 15000 }); await pg.waitForSelector('.tp-b', { timeout: 15000 });
   // the band's 12 weeks arrive in pieces; the words settle once the nights are in
   await pg.waitForFunction(() => /under 6 h 30/.test(document.querySelector('.tp-bwords .mp-big')?.textContent ?? ''), null, { timeout: 15000 }).catch(() => {});
   const words = await pg.locator('.tp-bwords .mp-big').innerText();

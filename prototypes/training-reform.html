@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Training, renovated</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600;700&family=Barlow+Condensed:wght@600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  /* HealthOS Insights ("instrument"), the app's own tokens; one dark world by choice */
+  --bg: #0a0c0e; --i-bg: #0d1012; --panel: #12171a; --panel-2: #171e22; --line: #222b2f; --line-2: #2c373c;
+  --ink: #dce3e5; --ink-2: #93a0a4; --dim: #5b676b;
+  --gym: #ffd166; --walk: #a8dcc0; --rec: #4fc27a; --wt: #8fb3c9; --hr: #ef7d6d; --warn: #f0b27a;
+  --sans: "IBM Plex Sans", system-ui, sans-serif; --mono: "IBM Plex Mono", ui-monospace, monospace; --cond: "Barlow Condensed", "Arial Narrow", sans-serif;
+  /* layout: the idea, three phones side by side, then the page order */
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--sans); }
+.wrap { max-width: 1320px; margin: 0 auto; padding: 28px 18px 60px; display: grid; gap: 26px; }
+h1 { font: 700 30px/1.1 var(--cond); letter-spacing: .02em; text-transform: uppercase; margin: 0; text-wrap: balance; }
+h2 { font: 700 22px var(--cond); letter-spacing: .03em; text-transform: uppercase; margin: 0; }
+.lede { max-width: 780px; color: var(--ink-2); font-size: 14.5px; line-height: 1.55; margin: 6px 0 0; }
+.lede b { color: var(--ink); font-weight: 600; }
+.k { font: 500 10px var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--ink-2); }
+.boards { display: flex; flex-wrap: wrap; gap: 26px; align-items: flex-start; }
+.board { display: grid; gap: 10px; width: 390px; max-width: 100%; }
+.board > header { display: grid; gap: 3px; }
+.board > header b { font: 700 22px var(--cond); letter-spacing: .03em; text-transform: uppercase; }
+.board > header span { font-size: 13px; color: var(--ink-2); line-height: 1.45; }
+.phone { width: 390px; max-width: 100%; background: var(--i-bg); border: 1px solid var(--line-2); border-radius: 30px; padding: 16px 12px 22px; display: grid; gap: 10px; }
+.ttl { font-size: 13px; color: var(--ink-2); display: flex; justify-content: space-between; padding: 0 4px; }
+.ttl b { color: var(--ink); font-weight: 600; font-size: 15px; }
+.p { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 12px 14px; display: grid; gap: 8px; min-width: 0; }
+.p.ghost { opacity: .5; }
+.note { font-size: 11.5px; color: var(--dim); line-height: 1.45; margin: 0; }
+.say { font-size: 13.5px; line-height: 1.5; margin: 0; }
+.say em { font-style: normal; color: var(--rec); }
+.say .num { font-variant-numeric: tabular-nums; font-weight: 600; }
+svg { display: block; max-width: 100%; }
+svg text { font: 10px var(--mono); fill: var(--dim); }
+/* A: the four tiles */
+.tiles { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.tile { all: unset; box-sizing: border-box; background: var(--panel-2); border: 1px solid var(--line); border-radius: 7px; padding: 10px 10px 8px; display: grid; gap: 3px; cursor: pointer; }
+.tile:focus-visible { outline: 2px solid var(--ink-2); outline-offset: 2px; }
+.tile[aria-pressed="true"] { border-color: var(--ink-2); }
+.tile .nm { font: 500 10px var(--mono); letter-spacing: .07em; text-transform: uppercase; color: var(--ink-2); display: flex; gap: 6px; align-items: center; }
+.tile .nm i { width: 7px; height: 7px; border-radius: 50%; display: inline-block; }
+.tile b { font: 600 22px var(--sans); font-variant-numeric: tabular-nums; letter-spacing: -.01em; }
+.tile .w { font-size: 12px; color: var(--rec); }
+.tile .w.flat { color: var(--ink-2); }
+.next { display: grid; gap: 6px; }
+.next .row { display: grid; grid-template-columns: 1fr auto; gap: 8px; align-items: center; padding: 8px 0; border-top: 1px solid var(--line); }
+.next .row:first-of-type { border-top: 0; padding-top: 0; }
+.next .row b { font-size: 14px; }
+.next .row span { font-size: 12px; color: var(--ink-2); display: block; }
+.btn { background: var(--gym); color: #1a1406; border: 0; border-radius: 7px; padding: 7px 11px; font: 600 12.5px var(--sans); cursor: pointer; white-space: nowrap; }
+.btn.alt { background: none; color: var(--ink); border: 1px solid var(--line-2); }
+.fold { font-size: 13px; color: var(--ink-2); display: flex; justify-content: space-between; }
+.legend { display: flex; gap: 10px; flex-wrap: wrap; font-size: 11.5px; color: var(--ink-2); }
+.legend button { all: unset; cursor: pointer; display: inline-flex; gap: 5px; align-items: center; }
+.legend i { width: 10px; height: 3px; border-radius: 2px; display: inline-block; }
+.legend button[aria-pressed="false"] { opacity: .35; }
+.order { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px; }
+.order ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; font-size: 13.5px; color: var(--ink-2); line-height: 1.45; }
+.order li b { color: var(--ink); font-weight: 600; }
+.tag { display: inline-block; font: 500 10px var(--mono); letter-spacing: .06em; text-transform: uppercase; border-radius: 3px; padding: 1px 5px; margin-left: 4px; }
+.tag.new { background: #4fc27a26; color: var(--rec); }
+.tag.fold { background: #93a0a41f; color: var(--ink-2); }
+.tag.move { background: #f0b27a24; color: var(--warn); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="k">HealthOS · Renovation, part 1 · Insights › Training</div>
+    <h1>Training: am I getting fitter, and what next</h1>
+    <p class="lede">Today Training is <b>ten cards of data</b>, and you have to put the story together yourself. The renovation makes the top
+      answer one question across <b>strength, cardio fitness, recovery and weight</b>, all on the same 12 weeks, and then say <b>what to do next</b>.
+      The cards you like stay below it, in the same order as the question. Three directions for the top. The numbers are made-up examples.</p>
+  </header>
+
+  <div class="boards">
+    <section class="board" aria-label="Direction A">
+      <header><b>A · Four tiles, then next</b><span>The four answers as tiles, each tile on the same 12 weeks. Tap one to jump to its card. Then "Next": the session after this one and the cardio you're short this week, each with Start. <span style="color:var(--ink)">Clickable.</span></span></header>
+      <div class="phone" id="A"></div>
+    </section>
+    <section class="board" aria-label="Direction B">
+      <header><b>B · One timeline</b><span>All four on one chart, each as change since the start, so up is always better. Your sessions are ticks along the bottom: lifting in yellow, cardio in green. Tap a legend item to hide that line.</span></header>
+      <div class="phone" id="B"></div>
+    </section>
+    <section class="board" aria-label="Direction C">
+      <header><b>C · The paragraph</b><span>The 12 weeks written out in two sentences, with the numbers in them, then next steps as a list with buttons. The most "just tell me" of the three.</span></header>
+      <div class="phone" id="C"></div>
+    </section>
+  </div>
+
+  <section style="display:grid;gap:12px">
+    <h2>The page, top to bottom (any direction)</h2>
+    <div class="order">
+      <div class="p"><span class="k">Answer and next</span><ol>
+        <li><b>Getting fitter?</b> A, B or C <span class="tag new">new</span></li>
+        <li><b>Next</b>: the next session's first lift, cardio short this week <span class="tag new">new</span></li>
+        <li><b>This week</b>: sessions, working sets <span class="tag move">smaller</span></li></ol></div>
+      <div class="p"><span class="k">The detail, in the question's order</span><ol>
+        <li><b>Strength</b>: overall line, your 4 lifts, recent sessions, muscles</li>
+        <li><b>Cardio</b>: minutes a week, pace and distance</li>
+        <li><b>Cardio fitness</b>: walking, stairmaster, running, recovery</li>
+        <li><b>Weight</b>: the trend line from Food &amp; body, small <span class="tag new">here too</span></li></ol></div>
+      <div class="p"><span class="k">Folded, one tap away</span><ol>
+        <li><b>What goes with a strong session</b> <span class="tag fold">folded</span></li>
+        <li><b>What training goes with afterwards</b> <span class="tag fold">folded</span></li>
+        <li><b>Muscle strength rows</b> merged into the muscles card <span class="tag fold">merged</span></li></ol></div>
+    </div>
+    <p class="note" style="max-width:780px">My pick is A: the four answers are visible without reading, and each tile leads somewhere. B is the prettiest, but four lines on one phone chart get busy. C works as the line under A's tiles. Workout's home screen gets the same Next card.</p>
+  </section>
+</div>
+
+<script>
+let seed = 7; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647, g = () => { let s = 0; for (let i = 0; i < 6; i++) s += rnd(); return (s - 3) * 1.41; };
+const N = 12, lin = (a, b, sd, d = 1) => Array.from({ length: N }, (_, i) => +(a + (b - a) * i / (N - 1) + g() * sd).toFixed(d));
+const strength = lin(100, 104.5, .6), walk = lin(112, 104, 1.2), rec = lin(26, 33, 1.2), kg = lin(84.2, 82.1, .25);
+const fitEnds = (v) => { const mx = (N - 1) / 2, my = v.reduce((a, x) => a + x, 0) / N, b = v.reduce((a, x, i) => a + (i - mx) * (x - my), 0) / v.reduce((a, _, i) => a + (i - mx) ** 2, 0); return [my - b * mx, my + b * mx]; };
+const [s0, s1] = fitEnds(strength), [w0, w1] = fitEnds(walk), [r0_, r1] = fitEnds(rec), [k0, k1] = fitEnds(kg);
+const E = (h) => { const t = document.createElement("template"); t.innerHTML = h.trim(); return t.content.firstElementChild; };
+function spark(vals, color, w = 150, h = 30) {
+  const lo = Math.min(...vals), hi = Math.max(...vals), p = (hi - lo) * .15 || 1, a = lo - p, b = hi + p;
+  const X = (i) => 3 + i * (w - 6) / (N - 1), Y = (v) => h - 3 - (v - a) / (b - a) * (h - 6);
+  return `<svg width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" aria-hidden="true"><polyline fill="none" stroke="${color}" stroke-width="1.5" points="${vals.map((v, i) => `${X(i)},${Y(v)}`).join(" ")}"/><circle cx="${X(N - 1)}" cy="${Y(vals.at(-1))}" r="3" fill="${color}"/></svg>`;
+}
+const tiles = [
+  { id: "s", nm: "Strength", c: "var(--gym)", big: `+${(s1 - s0).toFixed(1)} %`, w: "stronger", v: strength, card: "Overall strength · 4 lifts · +1.1 % a week across 14 lifts" },
+  { id: "c", nm: "Cardio fitness", c: "var(--walk)", big: `−${Math.round(w0 - w1)} bpm`, w: "at the same walking pace", v: walk.map((x) => -x), card: "Walking at 115 steps a minute: 112 → 104 bpm since 24 Aug" },
+  { id: "r", nm: "Recovery", c: "var(--rec)", big: `+${Math.round(r1 - r0_)} bpm`, w: "faster drop after cardio", v: rec, card: "After cardio your heart rate falls 26 → 33 bpm in 2 minutes" },
+  { id: "k", nm: "Weight", c: "var(--wt)", big: `−${(k0 - k1).toFixed(1)} kg`, w: "about −0.2 kg a week", v: kg.map((x) => -x), card: "84.2 → 82.1 kg on the trend line, 31 weigh-ins" },
+];
+const nextCard = (btn = true) => `<div class="p next"><span class="k">Next</span>
+  <div class="row"><div><b>Push + Quads</b><span>Squat 3 × 6 at 105 kg · last time 102.5 × 6</span></div>${btn ? '<button class="btn" type="button">Start</button>' : ""}</div>
+  <div class="row"><div><b>25 min cardio</b><span>55 of your usual 80 min this week · the stairmaster did most</span></div>${btn ? '<button class="btn alt" type="button">Stairmaster</button>' : ""}</div></div>`;
+function renderA() {
+  const el = document.getElementById("A");
+  el.innerHTML = `<div class="ttl"><b>Training</b><span>12 weeks</span></div>
+  <div class="p"><div style="display:flex;justify-content:space-between;align-items:baseline"><span class="k">Getting fitter?</span><span class="note">since 24 Aug</span></div>
+    <p class="say">Yes on all four: <em>stronger, fitter on walks, recovering faster, lighter.</em></p>
+    <div class="tiles">${tiles.map((t) => `<button class="tile" type="button" aria-pressed="false" data-t="${t.id}"><span class="nm"><i style="background:${t.c}"></i>${t.nm}</span><b>${t.big}</b><span class="w">${t.w}</span>${spark(t.v, t.c)}</button>`).join("")}</div></div>
+  ${nextCard()}
+  <div class="p" id="A-jump"><span class="k">This week · from Mon 9 Nov</span><div class="note">2 sessions · usual 3 &nbsp;·&nbsp; 24 working sets · usual 33</div></div>
+  ${tiles.map((t) => `<div class="p ghost" data-card="${t.id}"><span class="k">${t.nm}</span><div class="note">${t.card}</div></div>`).join("")}
+  <div class="p"><div class="fold"><span>What goes with a strong session · what training goes with after</span><span>›</span></div></div>`;
+  el.querySelectorAll(".tile").forEach((b) => b.addEventListener("click", () => {
+    el.querySelectorAll(".tile").forEach((x) => x.setAttribute("aria-pressed", "false")); b.setAttribute("aria-pressed", "true");
+    el.querySelectorAll("[data-card]").forEach((c) => c.classList.toggle("ghost", c.dataset.card !== b.dataset.t));
+    el.querySelector(`[data-card="${b.dataset.t}"]`).scrollIntoView({ block: "nearest", behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
+  }));
+}
+function renderB() {
+  const el = document.getElementById("B");
+  // each as % better than its start: strength %, walking bpm drop %, recovery % rise, weight % lost
+  const lines = [
+    { nm: "Strength", c: "var(--gym)", v: strength.map((x) => x - 100) },
+    { nm: "Walking HR", c: "var(--walk)", v: walk.map((x) => (walk[0] - x) / walk[0] * 100) },
+    { nm: "Recovery", c: "var(--rec)", v: rec.map((x) => (x - rec[0]) / rec[0] * 100 / 5) },
+    { nm: "Weight", c: "var(--wt)", v: kg.map((x) => (kg[0] - x) / kg[0] * 100) },
+  ];
+  const on = lines.map(() => true);
+  const draw = () => {
+    const w = 340, h = 200, x0 = 4, x1 = w - 34, y0 = 10, y1 = h - 34, all = lines.flatMap((l, i) => on[i] ? l.v : []), hi = Math.max(6, ...all), lo = Math.min(-1, ...all);
+    const X = (i) => x0 + i * (x1 - x0) / (N - 1), Y = (v) => y1 - (v - lo) / (hi - lo) * (y1 - y0);
+    const ticks = []; for (let d = 0; d < 84; d += 3.5) ticks.push(d);
+    return `<svg width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" role="img" aria-label="Strength, walking heart rate, recovery and weight as change since 24 Aug; up is better">
+      <line x1="${x0}" x2="${x1}" y1="${Y(0)}" y2="${Y(0)}" stroke="var(--line-2)" stroke-dasharray="2 3"/><text x="${x1 + 4}" y="${Y(0) + 3}">start</text>
+      <text x="${x1 + 30}" y="${Y(hi) + 8}" text-anchor="end">better ↑</text>
+      ${lines.map((l, i) => on[i] ? `<polyline fill="none" stroke="${l.c}" stroke-width="2" points="${l.v.map((v, k) => `${X(k)},${Y(v)}`).join(" ")}"/><circle cx="${X(N - 1)}" cy="${Y(l.v.at(-1))}" r="3" fill="${l.c}"/>` : "").join("")}
+      ${ticks.map((d, i) => `<rect x="${x0 + d / 83 * (x1 - x0)}" y="${h - 26}" width="2" height="8" fill="${i % 3 === 2 ? "var(--rec)" : "var(--gym)"}"/>`).join("")}
+      <text x="${x0}" y="${h - 6}">24 Aug</text><text x="${x1}" y="${h - 6}" text-anchor="end">this week</text></svg>`;
+  };
+  const paint = () => {
+    el.innerHTML = `<div class="ttl"><b>Training</b><span>12 weeks</span></div>
+    <div class="p"><span class="k">Getting fitter? · change since 24 Aug</span>
+      <p class="say">All four went the right way. Strength moved most steadily: <span class="num">+4.5 %</span>.</p>
+      <div id="B-chart">${draw()}</div>
+      <div class="legend">${lines.map((l, i) => `<button type="button" aria-pressed="${on[i]}" data-i="${i}"><i style="background:${l.c}"></i>${l.nm}</button>`).join("")}</div>
+      <p class="note">Ticks: each session, lifting yellow, cardio green. Recovery drawn at a fifth of its % so it fits.</p></div>
+    ${nextCard()}
+    <div class="p ghost"><span class="k">This week · Strength · Cardio · Cardio fitness · Weight</span><div class="note">the detail cards, as in the order below</div></div>`;
+    el.querySelectorAll(".legend button").forEach((b) => b.addEventListener("click", () => { on[+b.dataset.i] = !on[+b.dataset.i]; paint(); }));
+  };
+  paint();
+}
+function renderC() {
+  const el = document.getElementById("C");
+  el.innerHTML = `<div class="ttl"><b>Training</b><span>12 weeks</span></div>
+  <div class="p"><span class="k">The last 12 weeks</span>
+    <p class="say" style="font-size:16px;line-height:1.5">You're <em>stronger</em> (<span class="num">+4.5 %</span>, squat leading), <em>fitter</em> on walks (<span class="num">8 bpm</span> lower at the same pace), your heart <em>recovers faster</em> after cardio (<span class="num">26 → 33</span>) and you're <span class="num">2.1 kg</span> lighter.</p>
+    <p class="say" style="color:var(--ink-2)">One thing slipping: bench has been flat for 3 weeks.</p></div>
+  <div class="p next"><span class="k">Next</span>
+    <div class="row"><div><b>1 · Push + Quads tomorrow</b><span>Squat 3 × 6 at 105 kg</span></div><button class="btn" type="button">Start</button></div>
+    <div class="row"><div><b>2 · 25 min of cardio</b><span>to reach your usual 80 this week</span></div><button class="btn alt" type="button">Stairmaster</button></div>
+    <div class="row"><div><b>3 · Bench: try 3 × 8 at 85</b><span>a rep range change after 3 flat weeks</span></div><button class="btn alt" type="button">Note it</button></div></div>
+  <div class="p ghost"><span class="k">This week · Strength · Cardio · Cardio fitness · Weight</span><div class="note">the detail cards</div></div>`;
+}
+renderA(); renderB(); renderC();
+</script>
+</body>
+</html>

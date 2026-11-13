@@ -2718,3 +2718,68 @@ button.vs-i { border: 0; text-align: left; font: inherit; cursor: pointer; width
 .cf-mini b { font: 600 17px var(--f-plex); font-variant-numeric: tabular-nums; }
 .cf-mini svg { max-width: 100%; }
 .cf-gap { paint-order: stroke; stroke: var(--i-panel); stroke-width: 4px; stroke-linejoin: round; }
+
+/* Renovation part 1: the top of Training — "Getting fitter?" and "Next" (canvas A) */
+.tp-week .tp-tiles { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.ft-say { margin: 0; font-size: 14px; line-height: 1.45; color: var(--i-ink); }
+.ft-tiles { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+@media (max-width: 700px) { .ft-tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.ft-tile { all: unset; box-sizing: border-box; min-width: 0; background: var(--i-panel-2); border: 1px solid var(--i-line); border-radius: 7px; padding: 10px 10px 8px; display: grid; gap: 3px; cursor: pointer; }
+.ft-tile:hover { border-color: var(--i-line-2); }
+.ft-tile:focus-visible { outline: 2px solid var(--i-ink-2); outline-offset: 2px; }
+.ft-nm { font: 500 10px var(--f-mono); letter-spacing: .07em; text-transform: uppercase; color: var(--i-ink-2); display: flex; gap: 6px; align-items: center; }
+.ft-nm i { width: 7px; height: 7px; border-radius: 50%; flex: none; }
+.ft-tile b { font: 600 22px var(--f-plex); font-variant-numeric: tabular-nums; color: var(--i-ink); }
+.ft-w { font-size: 12px; line-height: 1.3; color: var(--i-ink-2); overflow-wrap: anywhere; }
+.ft-tile.good .ft-w { color: var(--sh-g); }
+.ft-line { width: 100%; }
+.ft-next { gap: 6px; }
+.ft-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 8px 0 0; border-top: 1px solid var(--i-line); }
+.ft-next .cmp-k + .ft-row { border-top: 0; padding-top: 0; }
+.ft-row b { font-size: 14px; color: var(--i-ink); }
+.ft-row span { display: block; font-size: 12px; color: var(--i-ink-2); }
+.ft-btn { background: var(--gym); color: #1a1406; border: 0; border-radius: 7px; padding: 8px 12px; font: 600 13px var(--f-plex); white-space: nowrap; min-height: 36px; }
+.ft-btn.alt { background: none; color: var(--i-ink); border: 1px solid var(--i-line-2); }
+.tp-more { display: grid; gap: 12px; }
+.tp-more > summary { cursor: pointer; list-style: none; background: var(--i-panel); border: 1px solid var(--i-line); border-radius: 8px; padding: 12px 14px; font-size: 13px; color: var(--i-ink-2); display: flex; justify-content: space-between; gap: 8px; }
+.tp-more > summary::-webkit-details-marker { display: none; }
+.tp-more > summary::after { content: "›"; transition: transform .15s; }
+.tp-more[open] > summary::after { transform: rotate(90deg); }
+.tp-more[open] { gap: 12px; }
+.tp-more > :not(summary) { margin-top: 12px; }
+.ft-tile { grid-template-rows: auto auto 1fr auto; } .ft-line { align-self: end; margin-top: 4px; }
+
+/* Renovation part 3: what goes with what, as a map (canvas A, with every outcome's bars listed) */
+.la-say { margin: 0; font-size: 14.5px; line-height: 1.5; color: var(--i-ink); max-width: 70ch; }
+.lm { display: grid; gap: 10px; }
+.lm-w { height: 0; }
+.lm-svg { overflow: visible; }
+.lm-svg text { font: 11.5px var(--f-plex); fill: var(--i-ink); }
+.lm-node { cursor: pointer; }
+.lm-node rect { fill: var(--i-panel-2); stroke: var(--i-line-2); }
+.lm-node.on rect { stroke: var(--i-ink-2); stroke-width: 1.5; }
+.lm-node.dim { opacity: .35; }
+.lm-node:focus-visible { outline: none; }
+.lm-node:focus-visible rect { stroke: var(--i-ink); stroke-width: 2; }
+.lm-edge { fill: none; stroke-opacity: .75; transition: opacity .15s; }
+.lm-edge.good { stroke: var(--sh-g); } .lm-edge.bad { stroke: var(--sh-r); }
+.lm-edge.dim { opacity: .08; }
+.lm-svg .lm-lag, .lm-lag { font: 10px var(--f-mono); fill: var(--i-dim); color: var(--i-dim); }
+.lm-svg .lm-worse, .lm-worse { fill: var(--sh-r); color: var(--sh-r); }
+.lm-svg .lm-better, .lm-better { fill: var(--sh-g); color: var(--sh-g); }
+.lm-legend { display: flex; gap: 14px; flex-wrap: wrap; font-size: 11.5px; color: var(--i-ink-2); }
+.lm-legend i { display: inline-block; width: 14px; height: 3px; border-radius: 2px; vertical-align: middle; margin-right: 5px; }
+.lm-legend i.good { background: var(--sh-g); } .lm-legend i.bad { background: var(--sh-r); }
+.lm-list { margin: 0; padding: 0; list-style: none; display: grid; gap: 6px; font-size: 13.5px; line-height: 1.45; }
+.lm-list li { padding-left: 12px; border-left: 3px solid var(--i-line-2); }
+.lm-list li.good { border-color: var(--sh-g); } .lm-list li.bad { border-color: var(--sh-r); }
+.lm-h3 { margin: 8px 0 0; font: 500 10px var(--f-mono); letter-spacing: .08em; text-transform: uppercase; color: var(--i-ink-2); }
+.lm-bars { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 340px), 1fr)); gap: 14px 24px; }
+.lm-out { display: grid; gap: 4px; min-width: 0; }
+.lm-out > b { font-size: 13.5px; font-weight: 600; color: var(--i-ink); }
+.lm-out svg text.lm-name { font: 12px var(--f-plex); fill: var(--i-ink); }
+.lm-zero { stroke: var(--i-line-2); }
+.lm-range { stroke-width: 2; stroke-opacity: .5; } .lm-range.good { stroke: var(--sh-g); } .lm-range.bad { stroke: var(--sh-r); }
+.lm-dot.good { fill: var(--sh-g); } .lm-dot.bad { fill: var(--sh-r); }
+.lm-on-line { paint-order: stroke; stroke: var(--i-panel); stroke-width: 4px; stroke-linejoin: round; }
+.lm-out > div > b { font-size: 13.5px; font-weight: 600; color: var(--i-ink); }

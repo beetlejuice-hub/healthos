@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>What goes with what, as a map</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600;700&family=Barlow+Condensed:wght@600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  /* HealthOS Insights ("instrument"), the app's own tokens; one dark world by choice */
+  --bg: #0a0c0e; --i-bg: #0d1012; --panel: #12171a; --panel-2: #171e22; --line: #222b2f; --line-2: #2c373c;
+  --ink: #dce3e5; --ink-2: #93a0a4; --dim: #5b676b; --good: #4fc27a; --bad: #f07a6a; --gym: #ffd166;
+  --sans: "IBM Plex Sans", system-ui, sans-serif; --mono: "IBM Plex Mono", ui-monospace, monospace; --cond: "Barlow Condensed", "Arial Narrow", sans-serif;
+  /* layout: the idea, three phones, then where it lives */
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--sans); }
+.wrap { max-width: 1320px; margin: 0 auto; padding: 28px 18px 60px; display: grid; gap: 26px; }
+h1 { font: 700 30px/1.1 var(--cond); letter-spacing: .02em; text-transform: uppercase; margin: 0; text-wrap: balance; }
+.lede { max-width: 780px; color: var(--ink-2); font-size: 14.5px; line-height: 1.55; margin: 6px 0 0; }
+.lede b { color: var(--ink); font-weight: 600; }
+.k { font: 500 10px var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--ink-2); }
+.boards { display: flex; flex-wrap: wrap; gap: 26px; align-items: flex-start; }
+.board { display: grid; gap: 10px; width: 390px; max-width: 100%; }
+.board > header { display: grid; gap: 3px; }
+.board > header b { font: 700 22px var(--cond); letter-spacing: .03em; text-transform: uppercase; }
+.board > header span { font-size: 13px; color: var(--ink-2); line-height: 1.45; }
+.phone { width: 390px; max-width: 100%; background: var(--i-bg); border: 1px solid var(--line-2); border-radius: 30px; padding: 16px 12px 22px; display: grid; gap: 10px; }
+.ttl { font-size: 13px; color: var(--ink-2); display: flex; justify-content: space-between; padding: 0 4px; }
+.ttl b { color: var(--ink); font-weight: 600; font-size: 15px; }
+.p { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 12px 14px; display: grid; gap: 8px; min-width: 0; }
+.note { font-size: 11.5px; color: var(--dim); line-height: 1.45; margin: 0; }
+.say { font-size: 13.5px; line-height: 1.5; margin: 0; }
+.say b { font-weight: 600; }
+svg { display: block; max-width: 100%; }
+svg text { font: 11px var(--sans); fill: var(--ink); }
+svg .lag { font: 9.5px var(--mono); fill: var(--dim); }
+svg .node { cursor: pointer; }
+svg .node rect { fill: var(--panel-2); stroke: var(--line-2); }
+svg .node.on rect { stroke: var(--ink-2); }
+svg .node.dim { opacity: .35; }
+svg .edge { fill: none; transition: opacity .15s; }
+svg .edge.dim { opacity: .08; }
+.chips { display: flex; gap: 5px; flex-wrap: wrap; }
+.chips button { background: none; border: 1px solid var(--line-2); color: var(--ink-2); border-radius: 14px; padding: 4px 10px; font: 500 12px var(--sans); cursor: pointer; }
+.chips button[aria-pressed="true"] { background: var(--ink); color: var(--i-bg); border-color: var(--ink); }
+.legend { display: flex; gap: 12px; flex-wrap: wrap; font-size: 11.5px; color: var(--ink-2); }
+.legend i { display: inline-block; width: 14px; height: 3px; border-radius: 2px; vertical-align: middle; margin-right: 5px; }
+.list { margin: 0; padding: 0; list-style: none; display: grid; gap: 6px; font-size: 13px; line-height: 1.45; }
+.list li { padding-left: 12px; border-left: 3px solid var(--line-2); }
+.list li.good { border-color: var(--good); } .list li.bad { border-color: var(--bad); }
+.trend { font: 500 10.5px var(--mono); }
+.trend.down { color: var(--bad); } .trend.up { color: var(--good); } .trend.flat { color: var(--dim); }
+.where { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px; }
+.where ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; font-size: 13.5px; color: var(--ink-2); line-height: 1.45; }
+.where b { color: var(--ink); font-weight: 600; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="k">HealthOS · Renovation, part 3 · Insights</div>
+    <h1>What goes with what, as a map</h1>
+    <p class="lede">The app already finds links between what you do and how you are: <b>drinks → lower HRV the next day</b>, <b>later bedtime → less energy</b>.
+      They hold up against chance (the false-discovery check), but they sit in Findings as a list of sentences. Drawn as a map, you can see at a glance what touches what.
+      Each outcome shows its own trend, so the map can say <b>what to look at</b>: an outcome that's slipping, and the things you do that go with it.
+      The links below are made-up examples in your data's shape.</p>
+  </header>
+
+  <div class="boards">
+    <section class="board" aria-label="Direction A">
+      <header><b>A · Two columns</b><span>What you do on the left, how you are on the right. A line is a link: green goes with better, red with worse, thicker is stronger, "+1d" means the next day. Tap a node to see only its links, in words. <span style="color:var(--ink)">Clickable.</span></span></header>
+      <div class="phone" id="A"></div>
+    </section>
+    <section class="board" aria-label="Direction B">
+      <header><b>B · Pick an outcome</b><span>One outcome at a time. Each input is a bar for how much it moves it, with its 90% range. The plainest to read and the most "lab".</span></header>
+      <div class="phone" id="B"></div>
+    </section>
+    <section class="board" aria-label="Direction C">
+      <header><b>C · The web</b><span>Everything as a web, each node sized by how many links it has. Good on a laptop, crowded on a phone.</span></header>
+      <div class="phone" id="C"></div>
+    </section>
+  </div>
+
+  <section class="where">
+    <div class="p"><span class="k">Where it goes</span><ol>
+      <li><b>Insights' landing</b>: under every trend, "What to look at", the slipping outcome and what goes with it, with the map one tap away.</li>
+      <li><b>Findings</b>: the map on top of the links it draws; each link still opens its days as dots.</li></ol></div>
+    <div class="p"><span class="k">My pick</span><ol>
+      <li><b>A</b>, with B's bars as what tapping an outcome opens.</li>
+      <li>C on wide screens only, later, if you like the map.</li></ol></div>
+  </section>
+</div>
+
+<script>
+const IN = [["drinks","Drinks"],["lateCaf","Caffeine after 14:00"],["bedLate","Later bedtime"],["asleep","Sleep"],["steps","Steps"],["trained","Training"],["rain","Rain"]];
+const OUT = [["hrv","HRV","down","slipping"],["energy","Energy","up","better"],["mood","Mood","flat","steady"],["sleepRating","Your sleep rating","flat","steady"],["rhr","Resting heart rate","up","better"]];
+// [from, to, lag, rho (signed by better/worse for the outcome: + goes with better), words, effect in the outcome's SD, lo, hi]
+const L = [
+  ["drinks","hrv",1,-.42,"Each drink goes with HRV 3.4 ms lower the next day",-.45,-.62,-.28],
+  ["drinks","mood",1,-.25,"Each drink goes with mood 0.4 lower the next day",-.3,-.5,-.1],
+  ["lateCaf","sleepRating",0,-.28,"Each 100 mg of caffeine after 14:00 goes with your sleep rating 0.3 lower that night",-.28,-.46,-.1],
+  ["bedLate","energy",1,-.33,"Each hour later to bed goes with energy 0.5 lower the next day",-.35,-.52,-.18],
+  ["bedLate","hrv",1,-.22,"Each hour later to bed goes with HRV 2.1 ms lower the next day",-.2,-.36,-.04],
+  ["asleep","energy",0,.36,"Each hour asleep goes with energy 0.6 higher",.38,.2,.56],
+  ["asleep","rhr",1,.24,"Each hour asleep goes with resting heart rate 1.1 bpm lower the next day",.22,.06,.38],
+  ["steps","mood",0,.2,"Each 1,000 steps goes with mood 0.1 higher",.18,.04,.32],
+  ["trained","mood",1,.27,"A training day goes with mood 0.3 higher the next day",.26,.1,.42],
+  ["rain","mood",0,-.15,"Each 5 mm of rain goes with mood 0.1 lower",-.14,-.27,-.01],
+];
+const nm = new Map([...IN, ...OUT].map(([k, n]) => [k, n]));
+function mapSvg(sel, w = 340) {
+  const rowI = 30, rowO = 42, top = 14, h = Math.max(IN.length * rowI, OUT.length * rowO) + top * 2, bw = 118;
+  const yi = (k) => top + IN.findIndex((x) => x[0] === k) * rowI + 11, yo = (k) => top + OUT.findIndex((x) => x[0] === k) * rowO + 14;
+  const on = (l) => !sel || l[0] === sel || l[1] === sel;
+  const edges = L.map((l) => { const a = yi(l[0]), b = yo(l[1]), x0 = bw + 2, x1 = w - bw - 2, mx = (x0 + x1) / 2;
+    return `<path class="edge${on(l) ? "" : " dim"}" d="M${x0} ${a} C${mx} ${a}, ${mx} ${b}, ${x1} ${b}" stroke="${l[3] > 0 ? "var(--good)" : "var(--bad)"}" stroke-width="${1 + Math.abs(l[3]) * 9}" stroke-opacity=".75"/>
+      ${on(l) && sel ? `<text class="lag" x="${mx}" y="${(a + b) / 2 - 4}" text-anchor="middle">${l[2] ? `+${l[2]}d` : "same day"}</text>` : ""}`; }).join("");
+  const linked = (k) => !sel || k === sel || L.some((l) => (l[0] === sel && l[1] === k) || (l[1] === sel && l[0] === k));
+  const nodes = IN.map(([k, n]) => `<g class="node${k === sel ? " on" : linked(k) ? "" : " dim"}" data-k="${k}" tabindex="0" role="button" aria-label="${n}"><rect x="0" y="${yi(k) - 11}" width="${bw}" height="22" rx="5"/><text x="8" y="${yi(k) + 4}">${n}</text></g>`).join("")
+    + OUT.map(([k, n, t, tw]) => `<g class="node${k === sel ? " on" : linked(k) ? "" : " dim"}" data-k="${k}" tabindex="0" role="button" aria-label="${n}, ${tw}"><rect x="${w - bw}" y="${yo(k) - 14}" width="${bw}" height="30" rx="5"/><text x="${w - bw + 8}" y="${yo(k) - 1}">${n}</text><text x="${w - bw + 8}" y="${yo(k) + 11}" class="lag" style="fill:${t === "down" ? "var(--bad)" : t === "up" ? "var(--good)" : "var(--dim)"}">${t === "down" ? "↘" : t === "up" ? "↗" : "→"} ${tw}</text></g>`).join("");
+  return `<svg width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" role="img" aria-label="What you do on the left, how you are on the right, each link a line">${edges}${nodes}</svg>`;
+}
+function renderA(sel = null) {
+  const el = document.getElementById("A"), mine = L.filter((l) => !sel || l[0] === sel || l[1] === sel).sort((a, b) => Math.abs(b[3]) - Math.abs(a[3]));
+  el.innerHTML = `<div class="ttl"><b>Insights</b><span>120 days</span></div>
+  <div class="p"><span class="k">What to look at</span>
+    <p class="say"><b>HRV is slipping</b> (52 → 47 ms since August). Two things you do go with lower HRV the next day: <b>drinks</b> and <b>later bedtimes</b>. You've had more drinks this month than last.</p></div>
+  <div class="p"><div style="display:flex;justify-content:space-between;align-items:baseline"><span class="k">What goes with what</span><span class="note">${L.length} links that hold</span></div>
+    ${mapSvg(sel)}
+    <div class="legend"><span><i style="background:var(--good)"></i>goes with better</span><span><i style="background:var(--bad)"></i>goes with worse</span><span>thicker = stronger</span></div>
+    <ul class="list">${mine.slice(0, sel ? 9 : 3).map((l) => `<li class="${l[3] > 0 ? "good" : "bad"}">${l[4]}.</li>`).join("")}</ul>
+    <p class="note">${sel ? `Only ${nm.get(sel)}'s links. Tap it again for all.` : "The three strongest. Tap any box for only its links."} "Goes with", not "causes": a test on you says which.</p></div>`;
+  el.querySelectorAll(".node").forEach((g) => { const go = () => renderA(sel === g.dataset.k ? null : g.dataset.k); g.addEventListener("click", go); g.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); go(); } }); });
+}
+function renderB(sel = "hrv") {
+  const el = document.getElementById("B"), mine = L.filter((l) => l[1] === sel).sort((a, b) => a[5] - b[5]);
+  const w = 340, row = 30, h = Math.max(1, mine.length) * row + 26, x0 = 128, x1 = w - 8, X = (v) => x0 + (v + .8) / 1.6 * (x1 - x0);
+  const o = OUT.find((x) => x[0] === sel);
+  el.innerHTML = `<div class="ttl"><b>Insights</b><span>120 days</span></div>
+  <div class="p"><span class="k">What moves…</span>
+    <div class="chips" role="group" aria-label="Outcome">${OUT.map(([k, n]) => `<button type="button" aria-pressed="${k === sel}" data-k="${k}">${n}</button>`).join("")}</div>
+    <p class="say"><b>${o[1]}</b> <span class="trend ${o[2]}">${o[2] === "down" ? "↘" : o[2] === "up" ? "↗" : "→"} ${o[3]}</span></p>
+    ${mine.length ? `<svg width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" role="img" aria-label="How much each thing you do moves ${o[1]}, with its 90% range">
+      <line x1="${X(0)}" x2="${X(0)}" y1="0" y2="${h - 18}" stroke="var(--line-2)"/>
+      ${mine.map((l, i) => { const y = 12 + i * row, good = l[3] > 0; return `<text x="0" y="${y + 4}">${nm.get(l[0])}${l[2] ? ` <tspan class="lag">+${l[2]}d</tspan>` : ""}</text>
+        <line x1="${X(l[6])}" x2="${X(l[7])}" y1="${y}" y2="${y}" stroke="${good ? "var(--good)" : "var(--bad)"}" stroke-width="2" stroke-opacity=".5"/>
+        <circle cx="${X(l[5])}" cy="${y}" r="5" fill="${good ? "var(--good)" : "var(--bad)"}"/>`; }).join("")}
+      <text x="${X(-.6)}" y="${h - 4}" class="lag" text-anchor="middle">worse</text><text x="${X(.6)}" y="${h - 4}" class="lag" text-anchor="middle">better</text></svg>` : `<p class="note">Nothing goes with it clearly yet.</p>`}
+    <ul class="list">${mine.map((l) => `<li class="${l[3] > 0 ? "good" : "bad"}">${l[4]}.</li>`).join("")}</ul>
+    <p class="note">A dot is how far one more of it moves ${/^[A-Z]+$/.test(o[1]) ? o[1] : o[1].toLowerCase()}, in its usual day-to-day spread; the bar is the 90% range.</p></div>`;
+  el.querySelectorAll(".chips button").forEach((b) => b.addEventListener("click", () => renderB(b.dataset.k)));
+}
+function renderC() {
+  const el = document.getElementById("C"), w = 340, h = 360, cx = w / 2, cy = h / 2;
+  const all = [...IN.map(([k, n]) => ({ k, n, side: 0 })), ...OUT.map(([k, n]) => ({ k, n, side: 1 }))];
+  const deg = (k) => L.filter((l) => l[0] === k || l[1] === k).length;
+  all.forEach((d, i) => { const a = (i / all.length) * Math.PI * 2 - Math.PI / 2, r = d.side ? 70 : 140; d.x = cx + Math.cos(a) * r * (d.side ? 1 : .95); d.y = cy + Math.sin(a) * r; });
+  const at = new Map(all.map((d) => [d.k, d]));
+  el.innerHTML = `<div class="ttl"><b>Insights</b><span>120 days</span></div>
+  <div class="p"><span class="k">The web · ${L.length} links</span>
+    <svg width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" role="img" aria-label="Every link as a web">
+      ${L.map((l) => { const a = at.get(l[0]), b = at.get(l[1]); return `<line x1="${a.x}" y1="${a.y}" x2="${b.x}" y2="${b.y}" stroke="${l[3] > 0 ? "var(--good)" : "var(--bad)"}" stroke-width="${1 + Math.abs(l[3]) * 7}" stroke-opacity=".6"/>`; }).join("")}
+      ${all.map((d) => `<circle cx="${d.x}" cy="${d.y}" r="${5 + deg(d.k) * 2.4}" fill="${d.side ? "#dce3e5" : "#5b676b"}"/><text x="${d.x}" y="${d.y + 5 + 8 + deg(d.k) * 2.4}" text-anchor="middle" style="font-size:10px">${d.n}</text>`).join("")}
+    </svg>
+    <p class="note">Light: how you are. Grey: what you do. Bigger: more links.</p></div>`;
+}
+renderA(); renderB(); renderC();
+</script>
+</body>
+</html>

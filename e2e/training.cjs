@@ -58,7 +58,9 @@ function world() {
     if (vw < 500) {
       const tile = async (k) => (await pg.locator(`.tp-tile[data-k="${k}"]`).innerText()).replace(/\s+/g, ' ');
       check(`this week (Mon–Wed, 2 sessions): "${await tile('Sessions')}", "${await tile('Working sets')}"`, /^SESSIONS 2 usual 3 a week$/i.test(await tile('Sessions')) && /^WORKING SETS 12 usual 18 a week$/i.test(await tile('Working sets')));
-      check(`next in the rotation, with last time's sets (${await tile('Next')})`, /^NEXT (Push|Pull|Legs) \w[\w ]+ 3 × 5 at \d+(\.5)? kg$/i.test(await tile('Next')));
+      // renovation part 1: Next is its own card now, over This week, with Start
+      const nx = (await pg.getByRole('region', { name: 'Next', exact: true }).innerText().catch(() => '')).replace(/\s+/g, ' ').trim();
+      check(`next in the rotation, with last time's sets (${nx})`, /^NEXT (Push|Pull|Legs) \w[\w ]+ 3 × 5 at \d+(\.5)? kg Start/i.test(nx));
       const lifts = await pg.locator('.tp-lift').evaluateAll((els) => els.map((e) => [e.dataset.lift, e.querySelector('.tp-gain').textContent]));
       check(`four most-trained lifts, each "+N kg in 12 weeks" (${lifts.map((l) => l.join(': ')).join(' · ')})`, lifts.length === 4 && lifts.every((l) => /^\+\d+\.\d kg in 1[12] weeks$/.test(l[1])));
       const bench = lifts.find((l) => l[0] === 'Bench press');

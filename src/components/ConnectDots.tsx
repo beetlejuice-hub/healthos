@@ -8,15 +8,12 @@
  */
 
 import { useMemo, useState } from "react";
-import { useBand } from "../lib/band-client";
-import { connect, linkWords, thingsFrom, type Link, type Thing } from "../lib/connect";
-import { withBand, withImports } from "../lib/daysband";
-import { dailyFacts } from "../lib/insights";
+import { linkWords, type Link, type Thing } from "../lib/connect";
+import { useLinks } from "./useLinks";
 import { useStore } from "../lib/store";
 import { startExperiment } from "../lib/ai/experiment";
 import { GuessFor } from "./ExperimentStrip";
 import { dayLabel } from "../lib/time";
-import { addDays, localDay } from "../lib/time";
 
 const SHOW = 6;
 const sure = (q: number) => (q < 0.01 ? "very sure" : q < 0.05 ? "fairly sure" : "worth watching");
@@ -46,18 +43,12 @@ function Dots({ l, by }: { l: Link; by: Map<string, Thing> }) {
 }
 
 export function ConnectDots({ now }: { now: number }) {
-  const entries = useStore((s) => s.entries), workouts = useStore((s) => s.workouts), settings = useStore((s) => s.settings), imports = useStore((s) => s.imports);
-  const band = useBand().data, today = localDay(now);
   const [all, setAll] = useState(false);
   // what the links (and the crowd, and the edges) started: the app's own research, newest first (PLAN 207, L)
   const researched = useStore((s) => s.ai.researched), experiments = useStore((s) => s.ai.experiments);
   const started = useMemo(() => (researched ?? []).filter((r) => r.area === "mine" || r.area === "crowd" || r.area === "edge").sort((a, b) => b.at - a.at).slice(0, 3), [researched]);
   const running = useMemo(() => experiments.filter((x) => !x.ended).map((x) => x.name), [experiments]);
-  const { things, links } = useMemo(() => {
-    const days = withImports(withBand(dailyFacts(entries, workouts, settings, addDays(today, -120), addDays(today, -1)), band, today), imports);
-    const things = thingsFrom(days, band);
-    return { things, links: connect(things) };
-  }, [entries, workouts, settings, band, today, imports]);
+  const { things, links } = useLinks(now);
   const by = useMemo(() => new Map(things.map((t) => [t.key, t])), [things]);
   return (
     <section className="p w12 cd" id="connect-dots" aria-label="Connecting the dots">

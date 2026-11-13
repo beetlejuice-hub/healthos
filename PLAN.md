@@ -4131,3 +4131,32 @@ both reads and the questions. Phases in that order; #152 RPE waits (owner).
      through loadBandBefore. Decide on the canvas first.
    - Where: the Training page's cardio card ("Cardio fitness"), a line per lane with its weekly points and a sentence
      ("walking at 110 steps a minute: 112 → 104 bpm since September").
+
+219. [ ] **Renovation part 1: Training — am I getting fitter, and what next** (owner, 13 Nov, to "where to start the
+   renovation": "do 1 then 3"). PLAN 200's rule: every screen ends in what to do. Claimed 13 Nov.
+   - Canvas https://claude.ai/artifact/22RwbazHKnkrymyErPbs2M — A four tiles then next, B one timeline, C the paragraph;
+     the page order under any of them.
+   - Done 13 Nov (A, while he picks). lib/fitness: strength (lib/strength's verdict), cardio fitness (PLAN 218, walking
+     first), recovery, weight (lib/tdee's trend over 12 weeks, clear past twice its error; lighter reads as good, heavier is
+     said plainly, never red) — each "good"/"bad" only when its engine says the move is clear; the line over them; the
+     cardio short of the 3 weeks before (10+ min). components/FitnessTop on top of Training: "Getting fitter?" with the
+     four tiles (up drawn as better; a tap goes to its card, weight to Food & body), then "Next": the session after the
+     last with its first lift as last time said (Start starts it), and the cardio short this week (its most-done kind
+     starts it). This week's tiles lose Next; strength, lifts, sessions and muscles, then cardio and cardio fitness;
+     "what goes with a strong session" and "what training goes with afterwards" folded. Tests: fitness.test, e2e
+     trainingtop (planted 12 weeks: yes on all four, each tile's number, Next, the order, the fold, the taps, Start),
+     training / trainingb / trainingc moved to the new places. Not done: muscle strength rows merged into muscles.
+
+220. [ ] **Renovation part 3: what goes with what, as a map** (owner, 13 Nov: "do 1 then 3"; on the canvas
+   https://claude.ai/artifact/XNYC53seNTzsyppYBbs7SG: "i like A, b is okay but i want these things listed nit mme
+   picking · c is hard to read"). Claimed 13 Nov.
+   - Done 13 Nov. lib/linkmap: lib/connect's links as two columns (outcomes most linked first, inputs at the weighted
+     middle of theirs, so fewer lines cross), good when they go with the better side; each outcome's own trend
+     (lib/trends, 90 days); what to look at — the slipping outcome with the most going against it, those things, and
+     which moved that way lately (the last 30 days against the 30 before, by half their spread: a quarter called noise a
+     change a third of the time); every outcome's links as effects on one scale (one usual spread of the input, in the
+     outcome's), + better, with 90 % ranges. components/LinkMap: the map on top of Findings (tap a box: only its links,
+     in words), every outcome's bars listed under it (no picking), and "What to look at" under every trend on the
+     landing. Tests: linkmap.test (sides, order, a planted HRV slide found with drinks more lately, noise not called a
+     change in 36+ of 40), e2e linkmap (planted drinks → next-day focus with focus slipping and more drinks lately;
+     control random: no map, nothing to look at).

@@ -82,7 +82,7 @@ function world() {
     await pg.fill('input[type=email]', 'lukacsarnold9+healthtest@gmail.com'); await pg.fill('input[type=password]', 'secret123');
     await pg.getByRole('button', { name: 'Sign in' }).click(); await pg.waitForSelector('text=Settings');
     await pg.evaluate((x) => { const k = 'healthos.v1:u-test', s = JSON.parse(localStorage.getItem(k) || '{}'); s.entries = x.entries; s.workouts = x.workouts; s.templates = x.templates; localStorage.setItem(k, JSON.stringify(s)); }, { ...w, templates });
-    await pg.goto(APP + '#insights/training'); await pg.reload(); await pg.waitForSelector('.tp-c', { timeout: 15000 });
+    await pg.goto(APP + '#insights/training'); await pg.reload(); await pg.locator('.tp-more > summary').click({ timeout: 15000 }); await pg.waitForSelector('.tp-c', { timeout: 15000 });
     // the band's 12 weeks arrive in pieces; the grid settles once the nights are in
     await pg.waitForFunction(() => +document.querySelector('.tp-c')?.dataset.days >= 80, null, { timeout: 20000 }).catch(() => {});
     await pg.waitForTimeout(500);

@@ -18,7 +18,9 @@ const COLOR: Record<Lane | "rec", string> = { walk: "var(--ok)", stair: "var(--g
 const r0 = Math.round;
 const dm = (t: number) => dayLabel(t).replace(/^\w+ /, "");
 
-export function CardioFit({ now, w }: { now: number; w: number }) {
+/** The card's numbers, fetched once for the page (the four tiles on top use them too). Null while there's no band. */
+export type CardioFitData = { from: number; lanes: LaneTrend[]; rec: ReturnType<typeof recoveryTrend>; rhr: { week: number; v: number }[]; vo2: { week: number; v: number }[] };
+export function useCardioFit(now: number): CardioFitData | null {
   const band = useBand(), workouts = useStore((s) => s.workouts);
   const connected = !!band.status && band.status !== "off" && band.status.connected;
   const from = firstWeek(now);
@@ -41,13 +43,18 @@ export function CardioFit({ now, w }: { now: number; w: number }) {
   const rec = useMemo(() => recoveryTrend(got ? spans.flatMap((s, i): RecPoint[] => (got.rec[i] ? [{ start: s.start, what: s.what, rec: got.rec[i]! }] : [])) : [], now), [got, spans, now]);
   const rhr = useMemo(() => weekly(band.data?.rhr, now), [band.data, now]);
   const vo2 = useMemo(() => weekly(band.data?.vo2, now), [band.data, now]);
+  return useMemo(() => (connected && got ? { from, lanes, rec, rhr, vo2 } : null), [connected, got, from, lanes, rec, rhr, vo2]);
+}
+
+export function CardioFit({ fit, w, now }: { fit: CardioFitData | null; w: number; now: number }) {
   const [open, setOpen] = useState<Lane | "rec" | null>(null);
-  if (!connected || !got) return null;
+  if (!fit) return null;
+  const { from, lanes, rec, rhr, vo2 } = fit;
   const lead = lanes.find((t) => t.lane === "walk" && t.trend) ?? lanes.find((t) => t.trend) ?? lanes[0];
   const cw = Math.max(240, w - 30);
   const toggle = (k: Lane | "rec") => setOpen(open === k ? null : k);
   return (
-    <section className="sl-p cf" aria-label="Cardio fitness" data-lanes={lanes.map((t) => t.lane).join(" ")}>
+    <section className="sl-p cf" id="tp-cardiofit" aria-label="Cardio fitness" data-lanes={lanes.map((t) => t.lane).join(" ")}>
       <div className="cf-head"><span className="cmp-k">Cardio fitness</span><span className="sl-note">{FIT.weeks} weeks · from the band's steps</span></div>
       {lead ? <p className="cf-say">{laneLine(lead)}</p>
         : !rec.pts.length && <p className="cf-say">Nothing to compare yet. It needs walks of 10 minutes or more with the band on, or a stairmaster or a run.</p>}

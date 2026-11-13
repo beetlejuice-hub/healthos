@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Today, Workout and Sleep, renovated</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Barlow+Condensed:wght@600;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  /* HealthOS's own two looks: Today/Workout in black and yellow (Barlow), Insights' instrument (IBM Plex) */
+  --bg: #08090a; --k-bg: #0f1012; --tile: #1a1c20; --tile-2: #23262b; --btn: #2d3036; --ink: #f3f3f1; --ink-2: #a2a4a9; --dim: #6f7278;
+  --gym: #ffd166; --caf: #f0b27a; --ok: #a8dcc0; --good: #4fc27a; --bad: #f07a6a; --hr: #ef7d6d; --supp: #c7a8f0; --mood: #68c3e0;
+  --i-bg: #0d1012; --i-panel: #12171a; --i-line: #222b2f; --i-ink: #dce3e5; --i-ink-2: #93a0a4; --i-dim: #5b676b;
+  --bar: "Barlow", system-ui, sans-serif; --cond: "Barlow Condensed", "Arial Narrow", sans-serif; --plex: "IBM Plex Sans", system-ui, sans-serif; --mono: "IBM Plex Mono", ui-monospace, monospace;
+  /* layout: a section per screen, two phones each, the why under them */
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--bar); }
+.wrap { max-width: 1320px; margin: 0 auto; padding: 28px 18px 70px; display: grid; gap: 40px; }
+h1 { font: 700 32px/1.05 var(--cond); letter-spacing: .02em; text-transform: uppercase; margin: 0; text-wrap: balance; }
+h2 { font: 700 26px var(--cond); letter-spacing: .03em; text-transform: uppercase; margin: 0; }
+.lede { max-width: 780px; color: var(--ink-2); font-size: 15px; line-height: 1.55; margin: 6px 0 0; }
+.lede b { color: var(--ink); }
+.k { font: 600 11px var(--bar); letter-spacing: .1em; text-transform: uppercase; color: var(--ink-2); }
+.part { display: grid; gap: 14px; }
+.part > p { margin: 0; max-width: 780px; color: var(--ink-2); font-size: 14px; line-height: 1.5; }
+.boards { display: flex; flex-wrap: wrap; gap: 26px; align-items: flex-start; }
+.board { display: grid; gap: 10px; width: 390px; max-width: 100%; }
+.board > header b { font: 700 21px var(--cond); letter-spacing: .03em; text-transform: uppercase; display: block; }
+.board > header span { font-size: 13.5px; color: var(--ink-2); line-height: 1.45; }
+.phone { width: 390px; max-width: 100%; background: var(--k-bg); border: 1px solid #2a2d33; border-radius: 30px; padding: 16px 12px 20px; display: grid; gap: 10px; align-content: start; }
+.phone.ins { background: var(--i-bg); font-family: var(--plex); color: var(--i-ink); }
+.top { display: flex; justify-content: space-between; align-items: flex-end; padding: 0 4px; }
+.top small { font: 600 12px var(--bar); color: var(--ink-2); letter-spacing: .06em; text-transform: uppercase; }
+.top b { font: 700 34px/1 var(--cond); text-transform: uppercase; }
+.card { background: var(--tile); border-radius: 18px; padding: 14px; display: grid; gap: 10px; }
+.card.hero { background: linear-gradient(160deg, #2a2412, #1a1c20 60%); border: 1px solid #ffd16633; }
+.say { margin: 0; font-size: 16px; line-height: 1.4; }
+.say em { font-style: normal; color: var(--gym); }
+.row { display: grid; grid-template-columns: 1fr auto; gap: 10px; align-items: center; }
+.row b { font-size: 15px; font-weight: 600; } .row span { display: block; font-size: 13px; color: var(--ink-2); }
+.btn { background: var(--gym); color: #1a1406; border: 0; border-radius: 12px; padding: 9px 14px; font: 700 14px var(--bar); white-space: nowrap; cursor: pointer; }
+.btn.alt { background: var(--btn); color: var(--ink); }
+.btn.big { font: 700 22px var(--cond); letter-spacing: .04em; padding: 14px; width: 100%; text-transform: uppercase; }
+.chips { display: flex; gap: 6px; flex-wrap: wrap; }
+.chip { background: var(--tile-2); border-radius: 10px; padding: 7px 10px; font-size: 13px; font-weight: 600; }
+.fold { display: flex; justify-content: space-between; font-size: 14px; color: var(--ink-2); padding: 12px 14px; background: var(--tile); border-radius: 14px; }
+.note { font-size: 12px; color: var(--dim); line-height: 1.45; margin: 0; }
+svg { display: block; max-width: 100%; }
+svg text { font: 10.5px var(--bar); fill: var(--ink-2); }
+.ins svg text { font: 10px var(--mono); fill: var(--i-dim); }
+.big { font: 700 44px/1 var(--cond); }
+.tl { display: grid; grid-template-columns: 46px 14px 1fr; gap: 0 8px; }
+.tl .t { font: 600 13px var(--bar); color: var(--ink-2); text-align: right; padding-top: 10px; font-variant-numeric: tabular-nums; }
+.tl .dot { position: relative; } .tl .dot::before { content: ""; position: absolute; left: 6px; top: 0; bottom: 0; width: 2px; background: #2d3036; }
+.tl .dot i { position: absolute; left: 2px; top: 13px; width: 10px; height: 10px; border-radius: 50%; background: var(--btn); }
+.tl .dot i.done { background: var(--good); } .tl .dot i.now { background: var(--gym); box-shadow: 0 0 0 4px #ffd16633; }
+.tl .ev { padding: 6px 0; } .tl .ev b { font-size: 15px; } .tl .ev span { display: block; font-size: 12.5px; color: var(--ink-2); }
+.tl .ev.ghost { opacity: .55; }
+.nowline { grid-column: 1 / -1; height: 2px; background: var(--gym); margin: 4px 0; position: relative; }
+.nowline::after { content: "now 08:00"; position: absolute; right: 0; top: -16px; font: 700 11px var(--bar); color: var(--gym); }
+.wk { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; }
+.wk div { background: var(--tile-2); border-radius: 10px; padding: 8px 4px; text-align: center; display: grid; gap: 3px; font-size: 11.5px; color: var(--ink-2); }
+.wk div b { font: 700 15px var(--cond); color: var(--ink); }
+.wk div.done { background: #4fc27a22; } .wk div.today { outline: 2px solid var(--gym); }
+.set { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.set div { background: var(--tile-2); border-radius: 14px; padding: 10px; text-align: center; }
+.set b { font: 700 40px/1 var(--cond); display: block; } .set span { font-size: 12px; color: var(--ink-2); }
+.panel { background: var(--i-panel); border: 1px solid var(--i-line); border-radius: 8px; padding: 12px 14px; display: grid; gap: 8px; }
+.ik { font: 500 10px var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--i-ink-2); }
+.isay { margin: 0; font-size: 14px; line-height: 1.5; } .isay b { font-weight: 600; } .isay em { font-style: normal; color: var(--good); }
+.why { margin: 0; padding: 0; list-style: none; display: grid; gap: 5px; font-size: 13px; }
+.why li { display: flex; justify-content: space-between; gap: 10px; border-bottom: 1px solid var(--i-line); padding-bottom: 5px; }
+.why .m { font: 500 12px var(--mono); } .m.bad { color: var(--bad); } .m.good { color: var(--good); }
+.pick { font-size: 13px; color: var(--ink-2); max-width: 780px; margin: 0; }
+.pick b { color: var(--ink); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="k">HealthOS · Renovation, the next parts</div>
+    <h1>Today, Workout and Sleep</h1>
+    <p class="lede">Same rule as Training and the map: <b>each screen leads with what matters now and ends in what to do</b>, and the rest folds away.
+      Two directions per screen, in the app's own looks. The numbers are made-up examples.</p>
+  </header>
+
+  <section class="part">
+    <h2>Today</h2>
+    <p>Today is ten cards long now: the tiles, the night bet, How now, For you, How you compare, Why today, a pattern, a lead. Most mornings you need three of them.</p>
+    <div class="boards">
+      <section class="board"><header><b>A · The morning brief</b><span>One card says the night and the day in two lines, then the three things to do now, each one tap. Everything else sits behind "More about today".</span></header>
+        <div class="phone">
+          <div class="top"><div><small>Wed 21 Oct · 08:00</small><br><b>Today</b></div><small>Settings</small></div>
+          <div class="card hero"><span class="k" style="color:var(--gym)">Good morning</span>
+            <p class="say">Slept <em>7 h 30</em>, score <em>88</em>, better than it bet. HRV 50, a little over your usual. <em>A good day for the heavy squat.</em></p>
+            <p class="note">Focus may dip this afternoon: 126 mg of caffeine after 14:00 yesterday.</p></div>
+          <div class="card"><span class="k">Now</span>
+            <div class="row"><div><b>Morning stack</b><span>Creatine, D3, black cumin · due 08:00</span></div><button class="btn" type="button">Took all</button></div>
+            <div class="row"><div><b>How do you feel?</b><span>Energy, mood, focus, stress · last yesterday 12:40</span></div><button class="btn alt" type="button">Check in</button></div>
+            <div class="row"><div><b>Push + Quads</b><span>Squat 3 × 6 at 105 kg · +20 min stairmaster</span></div><button class="btn alt" type="button">Start</button></div></div>
+          <div class="chips"><span class="chip">☕ Coffee</span><span class="chip">🍽 Food</span><span class="chip">🥤 Drink</span><span class="chip">⚖ Weigh</span></div>
+          <div class="card" style="grid-template-columns:repeat(3,1fr);gap:6px;text-align:center"><div><b style="font:700 22px var(--cond)">2,600</b><span class="note" style="display:block">kcal left</span></div><div><b style="font:700 22px var(--cond)">0 g</b><span class="note" style="display:block">of 160 protein</span></div><div><b style="font:700 22px var(--cond)">0 / 5</b><span class="note" style="display:block">stack</span></div></div>
+          <div class="fold"><span>More about today: why today, how you compare, a pattern, a lead</span><span>›</span></div>
+        </div></section>
+      <section class="board"><header><b>B · The day as a line</b><span>Today as a timeline: what happened, the now line, what's still to come (stack, lunch, training, the caffeine cut-off, bedtime). Each future item can be done right there. Cards drop in only when there's something new.</span></header>
+        <div class="phone">
+          <div class="top"><div><small>Wed 21 Oct</small><br><b>Today</b></div><small>88 · slept 7 h 30</small></div>
+          <div class="card"><div class="tl">
+            <div class="t">23:30</div><div class="dot"><i class="done"></i></div><div class="ev"><b>In bed</b><span>asleep in 27 min · score 88, it bet 78</span></div>
+            <div class="t">07:12</div><div class="dot"><i class="done"></i></div><div class="ev"><b>Up</b><span>HRV 50 · resting 53</span></div>
+            <div class="t">07:40</div><div class="dot"><i class="done"></i></div><div class="ev"><b>Coffee</b><span>90 mg · out of you by 17:00</span></div>
+            <div class="nowline"></div>
+            <div class="t">08:00</div><div class="dot"><i class="now"></i></div><div class="ev"><b>Stack</b><span>Creatine, D3, black cumin</span><button class="btn" type="button" style="margin-top:6px">Took all</button></div>
+            <div class="t">13:00</div><div class="dot"><i></i></div><div class="ev ghost"><b>Lunch</b><span>you usually eat 55 g of protein here</span></div>
+            <div class="t">14:00</div><div class="dot"><i></i></div><div class="ev ghost"><b>Last caffeine</b><span>for a 23:30 bedtime</span></div>
+            <div class="t">17:30</div><div class="dot"><i></i></div><div class="ev ghost"><b>Push + Quads</b><span>squat 3 × 6 at 105 kg · stairmaster after</span></div>
+            <div class="t">23:15</div><div class="dot"><i></i></div><div class="ev ghost"><b>Wind down</b><span>your best nights start by 23:30</span></div>
+          </div></div>
+          <div class="card"><span class="k">New since yesterday</span><p class="say" style="font-size:15px">Caffeine after 14:00 now clearly goes with a worse sleep rating, 20 of 24 times.</p></div>
+        </div></section>
+    </div>
+    <p class="pick"><b>My pick: A.</b> It's the shortest path from opening the app to done. B is the most different, but it needs the app to guess your day's plan, which it can learn from your logs.</p>
+  </section>
+
+  <section class="part">
+    <h2>Workout</h2>
+    <p>The Workout home shows all three days in full, then six cardio buttons, the week, strength, muscles and premade programs. Most of that is Training's job now.</p>
+    <div class="boards">
+      <section class="board"><header><b>A · Just today's session</b><span>Only what's next, big, with the target for each lift. The other days become one row of chips. Cardio is one row. Stats live on Training.</span></header>
+        <div class="phone">
+          <div class="top"><b>Workout</b><small>3-day split</small></div>
+          <div class="card hero"><span class="k" style="color:var(--gym)">Up next · day 1</span>
+            <b style="font:700 34px/1 var(--cond);text-transform:uppercase">Push + Quads</b>
+            <span class="note" style="font-size:13px">6 exercises · 18 sets · about 40 min · then 20 min stairmaster</span>
+            <div style="display:grid;gap:6px;font-size:14.5px">
+              <div class="row"><span style="color:var(--ink);font-size:14.5px">Squat</span><b>105 × 6 <small style="color:var(--good)">+2.5</small></b></div>
+              <div class="row"><span style="color:var(--ink);font-size:14.5px">DB bench press</span><b>32 × 10</b></div>
+              <div class="row"><span style="color:var(--ink);font-size:14.5px">DB shoulder press</span><b>22 × 9 <small style="color:var(--good)">+1 rep</small></b></div>
+              <div class="row"><span style="color:var(--ink);font-size:14.5px">+ 3 more</span><span>leg ext, lateral raise, pushdown</span></div></div>
+            <button class="btn big" type="button">Start</button>
+            <p class="note">You slept well and HRV is up: a good day to push the squat.</p></div>
+          <div class="chips"><span class="chip">Day 2 · Pull + Hams</span><span class="chip">Day 3 · Mixed</span><span class="chip">Quick workout</span></div>
+          <div class="card"><span class="k">Cardio · one tap starts the timer</span><div class="chips"><span class="chip">▶ Stairmaster</span><span class="chip">▶ Incline walk</span><span class="chip">▶ Run</span><span class="chip">more…</span></div></div>
+          <div class="fold"><span>This week · strength · muscles → Training</span><span>›</span></div>
+        </div></section>
+      <section class="board"><header><b>B · The week as a plan</b><span>The week across the top: done, today, planned. Tap a day to move a session. Below it, the session for the selected day. It shows the rhythm, so a missed day is visible without any red.</span></header>
+        <div class="phone">
+          <div class="top"><b>Workout</b><small>this week · 2 of 4</small></div>
+          <div class="wk"><div class="done">Mon<b>Push</b>✓</div><div class="done">Tue<b>Stair</b>✓</div><div class="today">Wed<b>Pull</b>today</div><div>Thu<b>—</b>rest</div><div>Fri<b>Mixed</b></div><div>Sat<b>Cardio</b></div><div>Sun<b>—</b></div></div>
+          <div class="card"><span class="k">Wednesday · Pull + Hamstrings</span>
+            <div class="set"><div><b>4</b><span>exercises after RDL</span></div><div><b>~45</b><span>minutes with the walk</span></div></div>
+            <div class="row"><div><b>Romanian deadlift</b><span>100 × 8 last time, all 3 sets clean</span></div><b style="color:var(--good)">102.5 × 8</b></div>
+            <button class="btn big" type="button">Start</button></div>
+          <div class="card"><span class="k">This week so far</span><p class="say" style="font-size:15px">24 working sets of your usual 33 · 55 of 80 cardio minutes. Wednesday and Friday get you there.</p></div>
+        </div></section>
+    </div>
+    <p class="pick"><b>My pick: A</b>, with B's week strip as a thin row above it.</p>
+  </section>
+
+  <section class="part">
+    <h2>Sleep</h2>
+    <p>Sleep has the most panels of any page (evening, stages, heart rate asleep, that night, what was different, typical night, regularity, what goes with it). It reads like a report; it could read like an answer.</p>
+    <div class="boards">
+      <section class="board"><header><b>A · Last night, one picture</b><span>The night as one strip: stages, heart rate and the score's parts on one clock. Under it, what was different from your usual night and why, in plain lines. The weekly panels fold under "Your sleep over time".</span></header>
+        <div class="phone ins">
+          <div class="top" style="font-family:var(--plex)"><b style="font:600 22px var(--plex)">Sleep</b><small style="font-family:var(--plex)">Tue → Wed</small></div>
+          <div class="panel"><span class="ik">Last night · 88</span>
+            <svg id="hyp" width="340" height="130" viewBox="0 0 340 130" role="img" aria-label="Last night's stages and heart rate"></svg>
+            <p class="isay">7 h 30 asleep, in bed 23:30. <b>Deep sleep was long</b> and your heart rate came down fast: <em>a good night</em>.</p></div>
+          <div class="panel"><span class="ik">What was different</span>
+            <ul class="why"><li><span>Asleep 27 min after bed</span><span class="m">usual 28</span></li><li><span>Deep sleep 1 h 42</span><span class="m good">+24 min</span></li><li><span>Lowest heart rate 48</span><span class="m good">−3</span></li><li><span>Caffeine after 14:00, 126 mg</span><span class="m bad">yet still fine</span></li></ul></div>
+          <div class="panel"><span class="ik">Tonight</span><p class="isay">In bed by <b>23:30</b> keeps your week regular. No caffeine after 14:00 (you have 90 mg left in you at 23:00).</p></div>
+          <div class="fold" style="background:var(--i-panel);font-family:var(--plex);font-size:13px"><span>Your sleep over time · stages · regularity · what goes with it</span><span>›</span></div>
+        </div></section>
+      <section class="board"><header><b>B · Your nights as a wall</b><span>Every night of the last 60 as a bar: when you slept, how long, its colour the score. Patterns jump out (late weekends, short Mondays). Tap a night for its strip from A.</span></header>
+        <div class="phone ins">
+          <div class="top" style="font-family:var(--plex)"><b style="font:600 22px var(--plex)">Sleep</b><small style="font-family:var(--plex)">60 nights</small></div>
+          <div class="panel"><span class="ik">Your nights · bars from bedtime to waking</span>
+            <svg id="wall" width="340" height="250" viewBox="0 0 340 250" role="img" aria-label="Sixty nights as bars from bedtime to waking, coloured by score"></svg>
+            <p class="isay">Weekends start <b>1 h 10 later</b> and score <b>9 lower</b>. Your best 10 nights all started before 23:45.</p></div>
+          <div class="panel"><span class="ik">Tonight</span><p class="isay">Bed by <b>23:30</b>, like your best nights.</p></div>
+        </div></section>
+    </div>
+    <p class="pick"><b>My pick: A for the morning, B as the second view.</b> The wall is the one picture that shows habits; the strip answers "how was last night".</p>
+  </section>
+</div>
+
+<script>
+// A: stages as blocks plus the heart rate line, 23:30 → 07:12
+(function () {
+  const s = document.getElementById("hyp"), W = 340, x0 = 30, x1 = W - 6, T0 = 23.5, T1 = 31.2, X = (h) => x0 + (h - T0) / (T1 - T0) * (x1 - x0);
+  const lv = { awake: 10, rem: 30, light: 50, deep: 70 }, col = { awake: "#f07a6a", rem: "#68c3e0", light: "#5b7fa8", deep: "#2c4f8c" };
+  const st = [["awake", 23.5, 23.95], ["light", 23.95, 24.6], ["deep", 24.6, 25.6], ["light", 25.6, 26.2], ["rem", 26.2, 26.6], ["deep", 26.6, 27.3], ["light", 27.3, 28.2], ["rem", 28.2, 28.8], ["light", 28.8, 29.6], ["rem", 29.6, 30.4], ["light", 30.4, 31], ["awake", 31, 31.2]];
+  let h = Object.entries(lv).map(([k, y]) => `<text x="0" y="${y + 4}">${k}</text>`).join("");
+  h += st.map(([k, a, b]) => `<rect x="${X(a)}" y="${lv[k] - 6}" width="${X(b) - X(a)}" height="12" rx="2" fill="${col[k]}"/>`).join("");
+  let pts = ""; for (let t = T0; t <= T1; t += .1) { const v = 64 - 14 * Math.sin(Math.min(1, (t - T0) / 4) * Math.PI / 2) + 3 * Math.sin(t * 3) + (t > 30.8 ? 10 : 0); pts += `${X(t)},${126 - (v - 44) * 1.6} `; }
+  h += `<polyline points="${pts}" fill="none" stroke="#ef7d6d" stroke-width="1.4"/><text x="${x1}" y="96" text-anchor="end" style="fill:#ef7d6d">heart rate · low 48</text>`;
+  h += `<text x="${x0}" y="128">23:30</text><text x="${x1}" y="128" text-anchor="end">07:12</text>`;
+  s.innerHTML = h;
+})();
+// B: 60 nights, bedtime → wake, colour by score
+(function () {
+  const s = document.getElementById("wall"), W = 340, H = 250, x0 = 24, x1 = W - 4, T0 = 21.5, T1 = 33, X = (h) => x0 + (h - T0) / (T1 - T0) * (x1 - x0);
+  let seed = 9; const r = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+  let h = [22, 24, 26, 28, 30, 32].map((t) => `<line x1="${X(t)}" x2="${X(t)}" y1="0" y2="${H - 14}" stroke="#222b2f"/><text x="${X(t)}" y="${H - 2}" text-anchor="middle">${String(t % 24).padStart(2, "0")}:00</text>`).join("");
+  for (let i = 0; i < 60; i++) {
+    const wd = (i + 3) % 7, wkend = wd === 5 || wd === 6, bed = 23.2 + (wkend ? 1.2 : 0) + (r() - .5) * .9, len = 7.3 - (wkend ? .4 : 0) + (r() - .5) * 1.2;
+    const score = Math.round(84 - (wkend ? 9 : 0) - Math.abs(bed - 23.3) * 4 + (r() - .5) * 8), c = score >= 85 ? "#4fc27a" : score >= 75 ? "#9fc2ff" : score >= 65 ? "#e9b949" : "#f07a6a";
+    const y = 4 + i * 3.8; h += `<rect x="${X(bed)}" y="${y}" width="${X(bed + len) - X(bed)}" height="2.8" rx="1.4" fill="${c}"/>`;
+  }
+  h += `<text x="0" y="10">60</text><text x="0" y="${H - 18}">last</text>`;
+  s.innerHTML = h;
+})();
+</script>
+</body>
+</html>
