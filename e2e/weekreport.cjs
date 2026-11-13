@@ -56,6 +56,7 @@ function world() {
     await pg.goto(APP);
     await pg.fill('input[type=email]', 'lukacsarnold9+healthtest@gmail.com'); await pg.fill('input[type=password]', 'secret123');
     await pg.getByRole('button', { name: 'Sign in' }).click(); await pg.waitForSelector('text=Settings');
+  await pg.evaluate(() => localStorage.setItem('healthos.ui.wmore', '1')); // the Workout home's fold, open
     await pg.evaluate(([k, w, split]) => { const s = JSON.parse(localStorage.getItem(k) || '{}'); s.entries = w.entries; s.workouts = w.workouts; s.templates = split; s.settings = { ...s.settings, maxHr: 190 }; localStorage.setItem(k, JSON.stringify(s)); }, [KEY, w, SPLIT]);
     const st = () => pg.evaluate((k) => JSON.parse(localStorage.getItem(k) || '{}'), KEY);
     const fits = async (where) => { const sw = await pg.evaluate(() => document.documentElement.scrollWidth); check(`${width}: ${where} fits (${sw} px)`, sw <= width); };

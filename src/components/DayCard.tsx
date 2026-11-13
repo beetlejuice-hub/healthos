@@ -8,14 +8,17 @@ import { repsLabel } from "../lib/progress";
 import { dayStats } from "../lib/training";
 import { dayLabel } from "../lib/time";
 import type { Template } from "../lib/types";
+import type { Target } from "../lib/workouthome";
 
 type Props = {
   t: Template; dayNo: number; next: boolean; lastAt: number | null;
   sug: { exercise: string; kg: number; reps: number } | null;
   onEdit: () => void; onStart: () => void;
+  /** the renovated home (canvas A): every lift's target for today, and a line from this morning's readiness */
+  targets?: Target[]; ready?: string | null;
 };
 
-export function DayCard({ t, dayNo, next, lastAt, sug, onEdit, onStart }: Props) {
+export function DayCard({ t, dayNo, next, lastAt, sug, onEdit, onStart, targets, ready }: Props) {
   const s = dayStats(t);
   return (
     <section className={`dcard${next ? " next" : ""}`} aria-label={t.name}>
@@ -32,16 +35,19 @@ export function DayCard({ t, dayNo, next, lastAt, sug, onEdit, onStart }: Props)
       {!next && t.exercises.length > 0 && <p className="dex">{t.exercises.map((e) => e.name).join(" · ")}</p>}
       {next && t.exercises.length > 0 && (
         <ol className="dlist">
-          {t.exercises.map((e, k) => <li key={k}><span>{e.name}</span><b>{e.sets} × {e.reps === 1 ? "hold" : repsLabel(e)}</b></li>)}
+          {t.exercises.map((e, k) => { const g = targets?.[k]; return g?.kg != null
+            ? <li key={k} className="dtarget" title={g.reason ?? undefined}><span>{e.name}<small>{g.plan}</small></span><b>{g.kg} × {g.reps}{g.change && <em>{g.change}</em>}</b></li>
+            : <li key={k}><span>{e.name}</span><b>{e.sets} × {e.reps === 1 ? "hold" : repsLabel(e)}</b></li>; })}
         </ol>
       )}
       <footer>
         <span className="dlast">
           {lastAt ? `Last: ${dayLabel(lastAt)}` : "Not done yet"}
-          {next && sug && <><br /><b>{sug.exercise} today: {sug.kg} kg × {sug.reps}</b></>}
+          {next && sug && !targets?.some((g) => g.kg != null) && <><br /><b>{sug.exercise} today: {sug.kg} kg × {sug.reps}</b></>}
         </span>
         <button type="button" className={next ? "go" : "go alt"} onClick={onStart}>Start</button>
       </footer>
+      {next && ready && <p className="dready">{ready}</p>}
     </section>
   );
 }

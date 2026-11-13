@@ -4160,3 +4160,14 @@ both reads and the questions. Phases in that order; #152 RPE waits (owner).
      landing. Tests: linkmap.test (sides, order, a planted HRV slide found with drinks more lately, noise not called a
      change in 36+ of 40), e2e linkmap (planted drinks → next-day focus with focus slipping and more drinks lately;
      control random: no map, nothing to look at).
+
+221. [ ] **Renovation: Today, Workout and Sleep — A, A, A** (owner, 13 Nov, on
+   https://claude.ai/artifact/HLqpvYqyrUoW3hwV8n9cUC: "A A A · Can adjust and make more detailed/look better as u see it.
+   ure a partner so u decide too. MAke theese better and smarter and start building them"). Claimed 13 Nov.
+   - Workout, done 13 Nov: the week as a thin row on top (lib/workouthome weekStrip: Monday to Sunday, what was done,
+     today marked); the day up next big with every lift's target for today and what changed since last time (targetsFor:
+     lib/progress smartNext per exercise, "+2.5 kg" / "+1 rep" against last time's top set) and a line from this
+     morning's readiness (readyLine: push / as planned / no need to chase a best / take it easier — never "don't train");
+     the other days, Quick workout and + New day as chips (a day's chip opens its card); cardio one row; Recent; the
+     week, strength, muscles and premade programs folded, a fold left open staying open. Tests: workouthome.test, e2e
+     workouthome; workout, workoutpick, plan, strength, muscles, weekreport, workoutplus moved to the chips and the fold.

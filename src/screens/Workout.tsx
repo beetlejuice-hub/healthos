@@ -29,10 +29,16 @@ import { readRoute } from "../lib/nav";
 import { BreakOrDone, useAutoFinish } from "../components/AutoFinish";
 import { FeelSlider } from "../components/FeelSlider";
 import { workoutWord } from "../lib/workoutfeel";
+import { readyLine, targetsFor, weekStrip } from "../lib/workouthome";
+import { nights } from "../lib/sleep";
+import { readiness } from "../lib/readiness";
+import { localDay } from "../lib/time";
 
 type SetE = EntryOf<"set">;
 /** One tap for cardio when none was planned. */
 const CARDIO = CARDIO_CHIPS;
+/** Whether the Workout home's fold (this week, strength, muscles, premade) was left open. */
+const MORE_KEY = "healthos.ui.wmore";
 
 /** The last session's sets of an exercise, before a given workout. */
 function lastSets(sets: SetE[], exercise: string, notWorkout?: string): SetE[] {
@@ -62,32 +68,48 @@ function Pick() {
   const recent = [...workouts].filter((w) => w.endedAt).slice(-5).reverse(), now = Date.now();
   const band = useBand().data;
   const spans = useMemo(() => cardioSpans(workouts, Date.now()), [workouts]);
-  const next = nextTemplate(templates, workouts);
-  // The day that's due comes first; the rest keep your order.
-  const ordered = next ? [next, ...templates.filter((t) => t.id !== next.id)] : templates;
+  const next = nextTemplate(templates, workouts) ?? templates[0];
+  // renovated (canvas A, "just today's session"): the week as a thin row, the day up next big with every lift's target,
+  // the other days as chips (tap: its card), cardio one row, recent sessions; the rest folded
+  const [other, setOther] = useState<string | null>(null);
+  const [moreOpen] = useState(() => { try { return localStorage.getItem(MORE_KEY) === "1"; } catch { return false; } });
+  const strip = useMemo(() => weekStrip(workouts, now), [workouts, now]);
+  const targets = useMemo(() => (next ? targetsFor(next, sets) : []), [next, sets]);
+  const ready = useMemo(() => {
+    if (!band) return null;
+    const today = localDay(now), ns = nights(band.sleep, band.hr, band.rhr, band.hrv);
+    if (!ns.some((x) => x.day === today)) return null;
+    const rating = entries.find((e) => e.kind === "sleep" && localDay(e.at) === today && e.rating != null) as { rating?: number } | undefined;
+    return readyLine(readiness(today, ns, rating?.rating, sets, now, { hrv: band.hrv, rhr: band.rhr }));
+  }, [band, entries, sets, now]);
+  const card = (t: Template, isNext: boolean) => {
+    const last = [...workouts].reverse().find((w) => w.template === t.name && w.endedAt);
+    const first = t.exercises[0], sug = first ? smartNext(historyOf(sets, first.name), repsOf(first), kgStep(first.name, sets.filter((s) => s.exercise === first.name && !s.warmup).map((s) => s.kg), equipOf(first.name) === "dumbbell")) : null;
+    return <DayCard key={t.id} t={t} dayNo={templates.indexOf(t) + 1} next={isNext} lastAt={last?.startedAt ?? null}
+      sug={sug ? { exercise: first.name, kg: sug.kg, reps: sug.reps } : null} onEdit={() => setEditing(t)} onStart={() => act.startWorkout(t.name)}
+      {...(isNext ? { targets, ready } : {})} />;
+  };
   if (editing) return <TemplateEditor t={editing === "new" ? null : editing} onClose={() => setEditing(null)} />;
+  const rest = templates.filter((t) => t.id !== next?.id), shown = rest.find((t) => t.id === other);
   return (
     <div className="cockpit">
       <div className="top"><h1>Workout</h1><div className="meta">{templates.length}-day split</div></div>
-      {ordered.map((t) => {
-        const last = [...workouts].reverse().find((w) => w.template === t.name && w.endedAt);
-        const first = t.exercises[0], sug = first ? smartNext(historyOf(sets, first.name), repsOf(first), kgStep(first.name, sets.filter((s) => s.exercise === first.name && !s.warmup).map((s) => s.kg), equipOf(first.name) === "dumbbell")) : null;
-        return <DayCard key={t.id} t={t} dayNo={templates.indexOf(t) + 1} next={t === next} lastAt={last?.startedAt ?? null}
-          sug={sug ? { exercise: first.name, kg: sug.kg, reps: sug.reps } : null} onEdit={() => setEditing(t)} onStart={() => act.startWorkout(t.name)} />;
-      })}
-      <div className="grid2">
-        <button type="button" className="kbtn" onClick={() => setEditing("new")}>+ New day</button>
-        <button type="button" className="kbtn" onClick={() => act.startWorkout("Quick workout")}>Quick workout</button>
+      <div className="wstrip" aria-label="This week">{strip.map((d) => (
+        <div key={d.dow} className={`${d.labels.length ? "done" : ""}${d.today ? " today" : ""}`} data-dow={d.dow}>
+          <span>{d.dow}</span><b>{d.labels[0] ?? (d.past ? "–" : "")}</b>{d.labels.length > 1 && <small>+{d.labels.length - 1}</small>}
+        </div>))}</div>
+      {next && card(next, true)}
+      <div className="dchips" aria-label="Other days">
+        {rest.map((t) => <button type="button" key={t.id} aria-expanded={other === t.id} onClick={() => setOther(other === t.id ? null : t.id)}>Day {templates.indexOf(t) + 1} · {t.name}</button>)}
+        <button type="button" onClick={() => act.startWorkout("Quick workout")}>Quick workout</button>
+        <button type="button" onClick={() => setEditing("new")}>+ New day</button>
       </div>
+      {shown && card(shown, false)}
       {/* PLAN 130 (owner, 20 Oct: "a button that i press and it strts w timer"): one tap starts it */}
       <div className="tile cardio-start">
         <span className="k">Cardio · one tap starts the timer</span>
         <div className="picks" aria-label="Start cardio">{CARDIO.map((c) => <button type="button" key={c} onClick={() => act.startCardio(c)}>▶ {c}</button>)}</div>
       </div>
-      <WeekEntry now={now} />
-      <StrengthCard sets={sets} now={now} className="tile strength" />
-      <MuscleMap sets={sets} now={now} />
-      <Premade templates={templates} />
       {open && <SessionSheet id={open} onClose={() => setOpen(null)} />}
       {recent.length > 0 && (
         <div className="tile">
@@ -102,6 +124,14 @@ function Pick() {
               {band && w.endedAt && <ZoneBar hr={band.hr} start={w.startedAt} end={w.endedAt} quiet />}</section>; })}</div>
         </div>
       )}
+      {/* remembered: left open, it opens open next time */}
+      <details className="wmore" open={moreOpen} onToggle={(e) => { const o = (e.currentTarget as HTMLDetailsElement).open; try { localStorage.setItem(MORE_KEY, o ? "1" : "0"); } catch { /* private mode */ } }}>
+        <summary>This week · strength · muscles · premade programs</summary>
+        <WeekEntry now={now} />
+        <StrengthCard sets={sets} now={now} className="tile strength" />
+        <MuscleMap sets={sets} now={now} />
+        <Premade templates={templates} />
+      </details>
     </div>
   );
 }

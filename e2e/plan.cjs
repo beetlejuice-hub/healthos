@@ -22,9 +22,11 @@ const STARTER = [
   await pg.goto(APP);
   await pg.fill('input[type=email]', 'lukacsarnold9+healthtest@gmail.com'); await pg.fill('input[type=password]', 'secret123');
   await pg.getByRole('button', { name: 'Sign in' }).click(); await pg.waitForSelector('text=Settings');
+  await pg.evaluate(() => localStorage.setItem('healthos.ui.wmore', '1')); // the Workout home's fold, open
   const st = () => pg.evaluate(() => JSON.parse(localStorage.getItem('healthos.v1:u-test') || '{}'));
   await pg.goto(APP + '#workout'); await pg.waitForSelector('text=Premade workouts'); await pg.waitForTimeout(1200);
-  const days = () => pg.locator('.dcard h2').allTextContents();
+  // the renovated Workout home: the day up next as the big card, the others as chips
+  const days = async () => [...await pg.locator('.dcard.next h2').allTextContents(), ...(await pg.locator('.dchips button').allTextContents()).filter((t) => /^Day \d+ · /.test(t)).map((t) => t.replace(/^Day \d+ · /, ''))];
   // Owner, 6 Oct: the starter split "should be replaced w the saved workouts".
   check(`an untouched starter split from the server shows as his plan (${(await days()).join(', ')})`, JSON.stringify(await days()) === '["Push + Quads","Pull + Hamstrings","Mixed"]');
   await pg.reload(); await pg.waitForSelector('text=Premade workouts'); await pg.waitForTimeout(600);

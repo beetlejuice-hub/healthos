@@ -93,6 +93,8 @@ const { chromium, APP, OUT, handle } = require('./harness.cjs');
   await pg.getByRole('button', { name: 'Save day' }).click(); await pg.waitForTimeout(150);
   const day = (await pg.evaluate(() => JSON.parse(localStorage.getItem('healthos.v1:u-test') || '{}'))).templates.find((t) => t.name === 'Back day');
   check(`saved as the exercises you have: ${day && day.exercises.map((e) => e.name).join(', ')}`, !!day && day.exercises.map((e) => e.name).join('|') === 'Pull-ups|Wrist curl');
+  // a day that isn't up next is a chip now: open its card, then Start
+  if (await pg.locator('.dchips button', { hasText: 'Back day' }).count()) await pg.locator('.dchips button', { hasText: 'Back day' }).click();
   await pg.locator('.dcard', { hasText: 'Back day' }).getByRole('button', { name: 'Start' }).click(); await pg.waitForTimeout(200);
   await pg.locator('.tile.plan').getByRole('button', { name: '+ Cardio' }).click();
   await pg.locator('.addcardio').getByRole('button', { name: 'Bike' }).click(); await pg.waitForTimeout(150);

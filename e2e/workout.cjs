@@ -15,8 +15,9 @@ const { chromium, APP, OUT, handle } = require('./harness.cjs');
   await pg.fill('input[type=email]', 'lukacsarnold9+healthtest@gmail.com'); await pg.fill('input[type=password]', 'secret123');
   await pg.getByRole('button', { name: 'Sign in' }).click(); await pg.waitForSelector('text=Settings');
   await pg.goto(APP + '#workout'); await pg.waitForTimeout(200);
-  const tiles = () => pg.locator('.dcard h2').allTextContents();
-  const listOf = async (name) => { const c = pg.locator('.dcard', { hasText: name }); return (await c.locator('.dlist li span').count()) ? (await c.locator('.dlist li span').allInnerTexts()).join(' · ') : c.locator('.dex').innerText(); };
+  // the renovated home: the day up next is the big card, the other days are chips (canvas A)
+  const tiles = async () => [...await pg.locator('.dcard.next h2').allTextContents(), ...(await pg.locator('.dchips button').allTextContents()).filter((t) => /^Day \d+ · /.test(t)).map((t) => t.replace(/^Day \d+ · /, ''))];
+  const listOf = async (name) => { if (!(await pg.locator('.dcard', { hasText: name }).count())) await pg.locator('.dchips button', { hasText: name }).first().click(); const c = pg.locator('.dcard', { hasText: name }); return (await c.locator('.dlist li span').count()) ? (await c.locator('.dlist li span').allInnerTexts()).join(' · ') : c.locator('.dex').innerText(); };
 
   check('new account: starts on the owner\'s plan, Push + Quads up next', JSON.stringify(await tiles()) === '["Push + Quads","Pull + Hamstrings","Mixed"]' && await pg.locator('.dcard.next').count() === 1);
 
@@ -74,6 +75,7 @@ const { chromium, APP, OUT, handle } = require('./harness.cjs');
   check('a quick workout doesn\'t break the rotation', (await tiles())[0] === 'Pull + Hamstrings');
 
   // Delete a day.
+  if (!(await pg.locator('.dcard').filter({ hasText: 'Arms' }).count())) await pg.locator('.dchips button', { hasText: 'Arms' }).click(); // a chip now
   await pg.locator('.dcard').filter({ hasText: 'Arms' }).getByRole('button', { name: /^Edit/ }).click();
   await pg.getByRole('button', { name: 'Delete this day' }).click(); await pg.waitForTimeout(100);
   check('day deleted', !(await tiles()).includes('Arms'));
