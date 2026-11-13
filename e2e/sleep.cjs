@@ -71,6 +71,7 @@ function world(seed = 5) {
     await pg.goto(APP);
     await pg.fill('input[type=email]', 'lukacsarnold9+healthtest@gmail.com'); await pg.fill('input[type=password]', 'secret123');
     await pg.getByRole('button', { name: 'Sign in' }).click(); await pg.waitForSelector('text=Settings');
+  await pg.evaluate(() => localStorage.setItem('healthos.ui.smore', '1')); await pg.reload(); await pg.waitForSelector('nav.tabs'); // Sleep's \"over time\", open
     await pg.evaluate((w) => { const k = 'healthos.v1:u-test', s = JSON.parse(localStorage.getItem(k) || '{}'); s.entries = w.entries; s.workouts = w.workouts; localStorage.setItem(k, JSON.stringify(s)); }, w);
     await pg.goto(APP + '#insights/sleep'); await pg.reload();
     await pg.waitForSelector('.sl[data-nights]');
@@ -150,7 +151,7 @@ function world(seed = 5) {
   const sw = await pg.evaluate(() => document.documentElement.scrollWidth);
   check(`phone: nothing wider than the screen (${sw})`, sw <= 390);
   const yNums = (await pg.locator('.sl .sl-nums').boundingBox()).y, yChart = (await pg.locator('.sl .sl-chart').boundingBox()).y;
-  check('phone: the numbers and what was different come before the chart', yNums < yChart);
+  check('phone: the night in one line, then its picture, then the numbers (Sleep A, 13 Nov)', yChart < yNums && await pg.locator('.sl-head').count() === 1);
   check('phone: the log keeps one number per night, with naps marked', await pg.locator('.sl .sl-colh').count() === 1 && await pg.locator('.sl .sl-nap').count() >= 1);
   // since PLAN 88 every measure, scrolling sideways inside the card (was 6 that fit)
   check('phone: the grid has every measure and scrolls inside its card', await pg.locator('.sl .sl-mh').count() === 10 && (await pg.locator('.sl .sl-mscroll').boundingBox()).width <= 370 && await pg.evaluate(() => document.documentElement.scrollWidth) <= 390);

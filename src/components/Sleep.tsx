@@ -20,6 +20,12 @@ import { shortOf, standout, type Standout } from "../lib/standout";
 import { NightWords } from "./NightWords";
 import { nightLabel, tagFactors, tagsComing } from "../lib/lastnight";
 import { useStore } from "../lib/store";
+import { bestBedtime, nightRows } from "../lib/nightrows";
+import { caffeineDoses } from "../lib/insights";
+import { caffeineAt } from "../lib/caffeine";
+import { tonightsBed } from "../lib/caffeine-sleep";
+/** Whether the Sleep page's "over time" fold was left open (renovation, Sleep A). */
+const SMORE_KEY = "healthos.ui.smore";
 
 const ST = { awake: "#eef1f2", restless: "#b9c4cf", rem: "#7fadf0", light: "#4f86dc", deep: "#2f5cc0" } as const;
 /** The same stages as text: the dark blues are fills, too dark to read as words on the panel. */
@@ -50,6 +56,11 @@ export function SleepNights({ data, band, now, entries, halfLifeMin }: { data: L
   const si = Math.max(0, ns.findIndex((n) => n.id === selId) >= 0 ? ns.findIndex((n) => n.id === selId) : ns.length - 1);
   // Measured from the first render (useWidth only looks on mount), so the box is there before the band's data is.
   const [ref, w] = useWidth<HTMLDivElement>();
+  const settings = useStore((x) => x.settings);
+  const [moreOpen] = useState(() => { try { return localStorage.getItem(SMORE_KEY) === "1"; } catch { return false; } });
+  // tonight (Sleep A): the bedtime your best nights started by, and the caffeine that would still be in you then
+  const best = useMemo(() => bestBedtime(ns, scores.map((x) => x.score)), [ns, scores]);
+  const bed = tonightsBed(now, settings.bedMinute), cafBed = Math.round(caffeineAt(caffeineDoses(entries).filter((d) => d.at <= now), bed, halfLifeMin));
   if (!band) return <div className="sl" ref={ref} hidden />;
   if (!ns.length) return <div className="sl" data-sec="sleep" ref={ref}><div className="sl-empty">No nights from your band in these {span} days yet. Wear it to bed and they show up here the next morning.</div></div>;
   const wide = w >= 760, n = ns[si], e = evs[si];
@@ -64,9 +75,19 @@ export function SleepNights({ data, band, now, entries, halfLifeMin }: { data: L
         </div>
       </div>
       <LastNight n={n} e={e} ns={ns} band={band} data={data} wide={wide} w={w} score={scores[si]} />
-      <Minis ns={ns.slice(-14)} scores={scores.slice(-14).map((x) => x.score)} whats={whats.slice(-14)} sel={n.id} onSel={setSel} w={w} />
-      <NightLog ns={ns} evs={evs} sel={n} onSel={setSel} wide={wide} w={w} workouts={data.workouts} meals={data.meals} />
-      <GoesWith ns={ns} evs={evs} wide={wide} w={w} factors={factors} />
+      {si === ns.length - 1 && (best || cafBed >= 30) && (
+        <section className="sl-p sl-tonight" aria-label="Tonight">
+          <span className="cmp-k">Tonight</span>
+          <p>{best && <>Your best nights started by <b>{best}</b>. </>}{cafBed >= 30 ? <>About <b>{Math.round(cafBed / 10) * 10} mg</b> of caffeine will still be in you at {clock(bed)}.</> : <>No caffeine left in you by {clock(bed)}.</>}</p>
+        </section>
+      )}
+      {/* renovation (Sleep A): the nights over time fold away; left open, it opens open next time */}
+      <details className="sl-over" open={moreOpen} onToggle={(ev) => { const o = (ev.currentTarget as HTMLDetailsElement).open; try { localStorage.setItem(SMORE_KEY, o ? "1" : "0"); } catch { /* private mode */ } }}>
+        <summary>Your sleep over time: the last nights, each night as a strip, regularity, what goes with it</summary>
+        <Minis ns={ns.slice(-14)} scores={scores.slice(-14).map((x) => x.score)} whats={whats.slice(-14)} sel={n.id} onSel={setSel} w={w} />
+        <NightLog ns={ns} evs={evs} sel={n} onSel={setSel} wide={wide} w={w} workouts={data.workouts} meals={data.meals} />
+        <GoesWith ns={ns} evs={evs} wide={wide} w={w} factors={factors} />
+      </details>
     </div>
   );
 }
@@ -79,6 +100,8 @@ function LastNight({ n, e, ns, band, data, wide, w, score }: { n: Night; e: Even
   const cw = wide ? w - 360 - 12 : w;
   return (
     <section className="sl-b" aria-label="The night in depth">
+      {/* Sleep A: the night in one line, then its picture, then the numbers */}
+      <p className="sl-head" data-score={score.score}><b>{score.score}</b> <span className={`zw ${score.score >= 80 ? "ideal" : score.score >= 60 ? "fair" : "poor"}`}>{score.word}</span> · {dur(n.asleep)} asleep, in bed {clock(n.bed)}{(() => { const so = standout(n, e, ns, score); return so ? <> · <em>{so.label}</em></> : null; })()}</p>
       <div className={`sl-b-grid${wide ? " wide" : ""}`}>
         <div className="sl-p sl-chart"><NightChart n={n} ns={ns} band={band} data={data} w={cw - 2} wide={wide} /></div>
         <div className="sl-p sl-nums">
@@ -86,6 +109,7 @@ function LastNight({ n, e, ns, band, data, wide, w, score }: { n: Night; e: Even
           <SleepScore s={score} />
           <div className="sl-asleep"><b>{dur(n.asleep)}</b> <span>asleep · {dur((n.up - n.bed) / MIN)} in bed · {Math.round((n.asleep / ((n.up - n.bed) / MIN)) * 100)} % of it asleep</span></div>
           <NightMore n={n} />
+          <Rows n={n} ns={ns} />
           <div className="sl-facts">
             <span className="cmp-k">What was different</span>
             {said.length ? said.map((s) => <p key={s}>{s}</p>) : <p>Nothing stood out against your other {others.length} nights.</p>}
@@ -185,6 +209,20 @@ function NightWhat({ n, e, ns, score }: { n: Night; e: Evening; ns: Night[]; sco
   const so = useMemo(() => standout(n, e, ns, score), [n, e, ns, score]);
   if (!so) return null;
   return <p className="sl-what" data-what={so.id}><span className="k">That night</span><b>{so.label}</b>{so.also && <span className="also">and {so.also}</span>}</p>;
+}
+
+/** Last night against your usual, a row a measure (Sleep A): this night, your usual, the change in better / worse colours. */
+function Rows({ n, ns }: { n: Night; ns: Night[] }) {
+  const rows = useMemo(() => nightRows(n, ns), [n, ns]);
+  if (!rows?.length) return null;
+  return (
+    <div className="sl-rows" aria-label="Against your usual">
+      <span className="cmp-k">Against your usual</span>
+      <table><tbody>{rows.map((r) => (
+        <tr key={r.key} data-row={r.key} data-tone={r.tone}><th scope="row">{r.name}</th><td>{r.value}<small>usual {r.usual}</small></td><td className={`d ${r.tone}`}>{r.delta ?? "–"}</td></tr>
+      ))}</tbody></table>
+    </div>
+  );
 }
 
 /** What the score's parts don't hold: the nap that day, when the heart rate bottomed out, this morning's resting rate. */

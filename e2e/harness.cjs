@@ -59,7 +59,8 @@ async function handle(route) {
 /** Rate a feeling on the How now? slider the way a finger does: one tap at that value's spot on the track. */
 async function rate(pg, name, v) {
   const t = pg.locator(`#feel [role=slider][data-name="${name}"]`);
-  await t.scrollIntoViewIfNeeded();
+  // to the middle of the screen: "if needed" leaves it under the sticky tab bar at the bottom, and the click lands there
+  await t.evaluate((el) => el.scrollIntoView({ block: 'center' }));
   const b = await t.boundingBox();
   await pg.mouse.click(b.x + ((v - 1) / 9) * b.width, b.y + b.height / 2);
 }

@@ -15,6 +15,7 @@ const { chromium, APP, OUT, handle, forYou, openCard } = require('./harness.cjs'
   await pg.goto(APP);
   await pg.fill('input[type=email]', 'lukacsarnold9+healthtest@gmail.com'); await pg.fill('input[type=password]', 'secret123');
   await pg.getByRole('button', { name: 'Sign in' }).click(); await pg.waitForSelector('text=Settings');
+  await pg.evaluate(() => localStorage.setItem('healthos.ui.tmore', '1')); await pg.reload(); await pg.waitForSelector('nav.tabs'); // Today's \"More about today\", open
 
   await pg.goto(APP + '#today'); await pg.waitForTimeout(200);
   check('Today shows the six one-tap buttons', JSON.stringify(await pg.locator('.t2-pad button b').allInnerTexts()) === '["Coffee","Food","Drink","Stack","Feel","Weigh"]');

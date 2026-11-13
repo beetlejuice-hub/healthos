@@ -17,7 +17,7 @@ const { chromium, APP, OUT, handle } = require('./harness.cjs');
   await pg.goto(APP);
   await pg.fill('input[type=email]', 'lukacsarnold9+healthtest@gmail.com'); await pg.fill('input[type=password]', 'secret123');
   await pg.getByRole('button', { name: 'Sign in' }).click(); await pg.waitForSelector('text=Settings');
-  await pg.evaluate(() => localStorage.setItem('healthos.ui.wmore', '1')); // the Workout home's fold, open
+  await pg.evaluate(() => localStorage.setItem('healthos.ui.wmore', '1')); await pg.reload(); await pg.waitForSelector('nav.tabs'); // the Workout home's fold, open
   const KEY = 'healthos.v1:u-test', st = async () => { await pg.waitForTimeout(300); return pg.evaluate((k) => JSON.parse(localStorage.getItem(k) || '{}'), KEY); };
   await pg.evaluate(([k, T, D]) => {
     const s = JSON.parse(localStorage.getItem(k) || '{}'), entries = [], workouts = [];

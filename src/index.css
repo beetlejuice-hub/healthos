@@ -1345,7 +1345,7 @@ a { color: inherit; }
 .sl-empty { border: 1px dashed var(--i-line-2); border-radius: 8px; padding: 18px 16px; color: var(--i-ink-2); font-size: 13.5px; }
 .sl-b-grid { display: grid; gap: 12px; grid-template-columns: minmax(0, 1fr); }
 .sl-b-grid.wide { grid-template-columns: minmax(0, 1fr) 360px; }
-.sl-b-grid:not(.wide) .sl-nums { order: -1; }
+.sl-b-grid:not(.wide) .sl-nums { order: 0; } /* Sleep A: the picture first on a phone, under the one-line head */
 .sl-chart { overflow: hidden; }
 .sl-tag { font: 500 11px var(--f-plex); paint-order: stroke; stroke: var(--i-panel); stroke-width: 3px; }
 .sl-mark { stroke: var(--i-dim); stroke-dasharray: 3 3; }
@@ -2803,3 +2803,48 @@ button.vs-i { border: 0; text-align: left; font: inherit; cursor: pointer; width
 .wmore > summary::after { content: "›"; transition: transform .15s; }
 .wmore[open] > summary::after { transform: rotate(90deg); }
 .wmore > :not(summary) { margin-top: 12px; }
+
+/* Today renovated (canvas A, "the morning brief") */
+.card.brief { display: grid; gap: 8px; background: linear-gradient(160deg, color-mix(in srgb, var(--gym) 14%, var(--c-card)), var(--c-card) 62%); border: 1px solid color-mix(in srgb, var(--gym) 22%, transparent); }
+.brief-k { font: 700 11px var(--f-bar); letter-spacing: .12em; text-transform: uppercase; color: var(--gym); }
+.brief-say { margin: 0; font-size: 17px; line-height: 1.4; color: var(--c-ink); }
+.brief-watch { margin: 0; font-size: 13.5px; line-height: 1.4; color: var(--c-ink-2); }
+.brief-now { display: grid; border-top: 1px solid color-mix(in srgb, var(--c-ink) 10%, transparent); }
+.brief-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 10px 0 0; }
+.brief-row + .brief-row { border-top: 1px solid color-mix(in srgb, var(--c-ink) 7%, transparent); margin-top: 10px; }
+.brief-row b { font-size: 15px; font-weight: 600; display: block; }
+.brief-row span { font-size: 13px; color: var(--c-ink-2); }
+.brief-row .pill-btn { min-height: 40px; }
+.t2-more { display: grid; }
+.t2-more > summary { cursor: pointer; list-style: none; background: var(--c-card); border-radius: 16px; padding: 14px 16px; font-size: 14px; color: var(--c-ink-2); display: flex; justify-content: space-between; gap: 10px; }
+.t2-more > summary::-webkit-details-marker { display: none; }
+.t2-more > summary::after { content: "›"; transition: transform .15s; }
+.t2-more[open] > summary::after { transform: rotate(90deg); }
+.t2-more > :not(summary) { margin-top: 12px; }
+
+/* Sleep renovated (canvas A, "last night, one picture") */
+.sl-rows { display: grid; gap: 6px; }
+.sl-rows table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.sl-rows th { text-align: left; font-weight: 500; color: var(--i-ink); padding: 5px 6px 5px 0; }
+.sl-rows td { padding: 5px 0 5px 8px; text-align: right; font-variant-numeric: tabular-nums; color: var(--i-ink); white-space: nowrap; }
+.sl-rows td.u { color: var(--i-dim); font: 11.5px var(--f-mono); }
+.sl-rows td.d { font: 500 12px var(--f-mono); color: var(--i-ink-2); }
+.sl-rows td.d.better { color: var(--sh-g); } .sl-rows td.d.worse { color: var(--sh-r); }
+.sl-rows tr + tr { border-top: 1px solid var(--i-line); }
+.sl-tonight { padding: 12px 14px; display: grid; gap: 6px; }
+.sl-tonight p { margin: 0; font-size: 14px; line-height: 1.5; color: var(--i-ink); }
+.sl-over { display: grid; }
+.sl-over > summary { cursor: pointer; list-style: none; background: var(--i-panel); border: 1px solid var(--i-line); border-radius: 8px; padding: 12px 14px; font-size: 13px; color: var(--i-ink-2); display: flex; justify-content: space-between; gap: 10px; }
+.sl-over > summary::-webkit-details-marker { display: none; }
+.sl-over > summary::after { content: "›"; transition: transform .15s; }
+.sl-over[open] > summary::after { transform: rotate(90deg); }
+.sl-over > :not(summary) { margin-top: 12px; }
+.sl-head { margin: 0 0 10px; font-size: 14.5px; line-height: 1.5; color: var(--i-ink-2); }
+.sl-head b { font: 600 26px var(--f-plex); color: var(--i-ink); vertical-align: -2px; }
+.sl-head em { font-style: normal; color: var(--i-ink); }
+.inst .sl-rows th, .sl-rows th { font: 500 13px var(--f-plex); letter-spacing: 0; text-transform: none; color: var(--i-ink); border: 0; white-space: normal; }
+.sl-rows td small { display: block; font: 11px var(--f-mono); color: var(--i-dim); }
+.sl-rows td.d { vertical-align: top; padding-top: 6px; }
+.brief-row { min-height: 50px; } .brief-row.done span { color: var(--ok); }
+.brief-acts { display: flex; gap: 6px; }
+.brief-row.done .pill-btn:disabled { opacity: .5; }

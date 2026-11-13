@@ -36,6 +36,7 @@ const day = (t) => { const d = new Date(t); return `${d.getFullYear()}-${String(
     await pg.goto(APP);
     await pg.fill('input[type=email]', 'lukacsarnold9+healthtest@gmail.com'); await pg.fill('input[type=password]', 'secret123');
     await pg.getByRole('button', { name: 'Sign in' }).click(); await pg.waitForSelector('text=Settings');
+  await pg.evaluate(() => localStorage.setItem('healthos.ui.tmore', '1')); await pg.reload(); await pg.waitForSelector('nav.tabs'); // Today's \"More about today\", open
     await pg.evaluate(([k, now, D, w]) => {
       const s = JSON.parse(localStorage.getItem(k) || '{}'); s.entries = []; s.workouts = []; s.supplements = []; s.scout = {};
       for (let i = 121; i >= 1; i--) {

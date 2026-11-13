@@ -50,6 +50,7 @@ function world() {
     await pg.goto(APP);
     await pg.fill('input[type=email]', 'lukacsarnold9+healthtest@gmail.com'); await pg.fill('input[type=password]', 'secret123');
     await pg.getByRole('button', { name: 'Sign in' }).click(); await pg.waitForSelector('text=Settings');
+  await pg.evaluate(() => localStorage.setItem('healthos.ui.tmore', '1')); await pg.reload(); await pg.waitForSelector('nav.tabs'); // Today's \"More about today\", open
     await pg.evaluate(([k, w]) => { const s = JSON.parse(localStorage.getItem(k) || '{}'); s.entries = w ? w.entries : []; s.workouts = w ? w.workouts : []; s.supplements = w ? w.supplements : []; s.goals = { ...(s.goals || {}), kcal: 2400, p: 140, c: 250, f: 80 }; localStorage.setItem(k, JSON.stringify(s)); }, [KEY, w]);
     await pg.goto(APP + '#today'); await pg.reload(); await pg.waitForSelector('.t2-head'); await pg.waitForTimeout(1500);
     return { ctx, pg };

@@ -36,6 +36,7 @@ function world(planted) {
     await pg.goto(APP);
     await pg.fill('input[type=email]', 'lukacsarnold9+healthtest@gmail.com'); await pg.fill('input[type=password]', 'secret123');
     await pg.getByRole('button', { name: 'Sign in' }).click(); await pg.waitForSelector('text=Settings');
+  await pg.evaluate(() => localStorage.setItem('healthos.ui.tmore', '1')); await pg.reload(); await pg.waitForSelector('nav.tabs'); // Today's \"More about today\", open
     await pg.evaluate(([k, entries]) => { const s = JSON.parse(localStorage.getItem(k) || '{}'); s.entries = entries; s.workouts = []; s.ai = { ...(s.ai || {}), watches: [] }; localStorage.setItem(k, JSON.stringify(s)); }, [KEY, entries]);
     await pg.goto(APP + '#today'); await pg.reload(); await pg.waitForSelector('.t2-status');
     return { ctx, pg };

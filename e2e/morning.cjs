@@ -14,7 +14,7 @@ const { chromium, APP, OUT, handle, forYou } = require('./harness.cjs');
   await pg.getByRole('button', { name: 'Sign in' }).click(); await pg.waitForSelector('text=Settings');
 
   await pg.goto(APP + '#today'); await pg.waitForTimeout(200);
-  check('Today asks for a morning weigh-in', await pg.getByText('Morning weigh-in').count() === 1);
+  check('Today asks for a morning weigh-in', await pg.getByText('Morning weigh-in').count() >= 1); // the stack moved to the brief: it's also "next: Morning weigh-in" now
   await forYou(pg, '.weighin'); await pg.getByLabel('Weight in kg').fill('80.4'); await pg.getByRole('button', { name: 'Log kg' }).click(); await pg.waitForTimeout(150);
   check('weighing in clears it, with undo', await pg.getByText('Morning weigh-in').count() === 0 && await pg.getByRole('status').filter({ hasText: 'Logged 80.4 kg' }).count() === 1);
   await pg.screenshot({ path: OUT + 'morning-today.png' });

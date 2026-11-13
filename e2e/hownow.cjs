@@ -18,8 +18,9 @@ const { chromium, APP, OUT, handle, rate } = require('./harness.cjs');
   const feels = async () => ((await local()).entries || []).filter((e) => e.kind === 'feel');
 
   // 13:00 — the first check-in: top of Today, a tap per feeling.
-  const box = await pg.locator('#feel').boundingBox();
-  check(`How now? sits near the top of Today, under the tiles and the log row (y ${box && Math.round(box.y)})`, box && box.y < 320); // Today A (28 Oct): the tiles, then the log row, then the check-in
+  // Today A (28 Oct): the tiles, then the log row, then the check-in — under the brief now (13 Nov, canvas A: the brief first)
+  const box = await pg.locator('#feel').boundingBox(), pad = await pg.locator('.t2-pad').boundingBox(), brief = await pg.locator('.brief').boundingBox().catch(() => null);
+  check(`How now? sits right under the brief, the tiles and the log row (y ${box && Math.round(box.y)}, log row ends ${pad && Math.round(pad.y + pad.height)})`, box && pad && box.y > pad.y && box.y - (pad.y + pad.height) < 260 && (!brief || brief.y < pad.y));
   await rate(pg, 'mood', 4);
   await rate(pg, 'stress', 7);
   await pg.waitForTimeout(250);

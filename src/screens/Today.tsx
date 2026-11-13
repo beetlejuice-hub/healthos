@@ -53,6 +53,9 @@ import { dayNumbers, momentOf } from "../lib/moment";
 import { restDay } from "../lib/programs";
 import { balance } from "../lib/burn";
 import { useBand } from "../lib/band-client";
+import { Brief, type BriefStack } from "../components/Brief";
+/** Whether Today's "More about today" was left open. */
+const TMORE_KEY = "healthos.ui.tmore";
 
 /**
  * The current time, re-read on every render and re-rendered every `ms` while open. Read fresh
@@ -151,6 +154,9 @@ export function Today() {
         </div>
     </div>
   );
+  // the stack that's due leads Today's brief (renovation, canvas A) — and so isn't asked again in For you
+  const lead = due.find((it): it is Extract<(typeof due)[number], { kind: "supp-due" | "supp-missed" }> => it.kind === "supp-due" || it.kind === "supp-missed") ?? null;
+  const briefStack: BriefStack | null = lead ? { title: lead.title, body: lead.body, many: lead.suppIds.length > 1, onTook: () => answer(lead.suppIds, "taken", lead.slot), onPick: () => openCard("stack") } : null;
   const dueAsk = (it: (typeof due)[number]): Ask => ({ key: `due:${it.id}`, name: shortTitle(it.title), node: dueNode(it) });
   const later = (it: (typeof due)[number]) => it.kind === "weight" || it.kind === "food";
   // One ask at a time, in this order (owner, 28 Oct, review part 1: "one at a time"; picked A): your own tip when a
@@ -164,7 +170,7 @@ export function Today() {
     // a low check-in: the watch about that feeling first, your data and the studies with it (Watching phase 3)
     { key: "watchoffer", name: "your own fix", node: <WatchOfferAsk now={now} /> },
     { key: "tip", name: "your own tip", node: <TipAsk now={now} /> },
-    ...due.filter((it) => !later(it)).map(dueAsk),
+    ...due.filter((it) => !later(it) && it !== lead).map(dueAsk),
     { key: "week", name: "your week", node: <WeekAsk now={now} />, read: true },
     ...(mrShown ? [{ key: "morning", name: "morning read", node: <MorningRead />, read: true, away: morningAway(ai.digest, now) }] : []),
     ...(nrShown ? [{ key: "night", name: "your day, read back", node: <NightRead />, read: true }] : []),
@@ -190,6 +196,7 @@ export function Today() {
   ];
   const tile = (t: string) => setOpened((o) => (o === t ? null : t));
   const close = () => setOpened(null);
+  const [moreOpen] = useState(() => { try { return localStorage.getItem(TMORE_KEY) === "1"; } catch { return false; } });
 
   // Today A (owner, 28 Oct, review part 1): the tiles (a tap opens the card under them) → the log buttons → the Now card
   // (the check-in) → "For you", one ask at a time → what the data says, and "Noticed something?" at the bottom
@@ -200,6 +207,8 @@ export function Today() {
         <a href="#settings">Settings</a>
       </div>
       <BandAlarm now={now} />
+      {/* renovation (canvas A, "the morning brief"): last night, one thing to watch, what to do now */}
+      <Brief now={now} moment={moment} cafBed={cafBed} bed={bed} stack={briefStack} />
 
       <Status kcal={totals.kcal} goalKcal={s.goals.kcal} protein={totals.p} goalP={s.goals.p} cafNow={cafNow} rising={cafComing >= 10} cafBed={cafBed} bed={bed} stack={stack} opened={opened} onTile={tile} />
       {opened === "stack" && <Stack now={now} onClose={close} />}
@@ -222,16 +231,18 @@ export function Today() {
       {/* PLAN 210: when the five look like a body working on something — before the asks, not in their queue */}
       <BodyWatch now={now} />
       <ForYou asks={asks} day={day} />
-      {/* how you compare (PLAN 206; the game it sat in is gone: "simply dont wnat that complication") — after the check-in
-          and For you, so Today A's order (owner, 28 Oct: the tiles, the log row, the check-in) stays */}
-      <HowYouCompare now={now} />
-      {/* PLAN 208: what last night and yesterday push today's focus toward, from your own days */}
-      <WhyToday now={now} />
-      {/* owner, 28 Oct: "Now the today page feels too empty" · "I liked charts and connecting dots" — picked a pattern, with today on it */}
-      <TodayPattern now={now} />
-
       {foodDay && <FoodDay day={foodDay} onClose={() => setFoodDay(null)} />}
-      <FromYourData now={now} />
+      {/* renovation (canvas A): the reading part of Today folds away; left open, it opens open next time */}
+      <details className="t2-more" open={moreOpen} onToggle={(e) => { const o = (e.currentTarget as HTMLDetailsElement).open; try { localStorage.setItem(TMORE_KEY, o ? "1" : "0"); } catch { /* private mode */ } }}>
+        <summary>More about today: why today, how you compare, a pattern, a lead</summary>
+        {/* how you compare (PLAN 206; the game it sat in is gone: "simply dont wnat that complication") */}
+        <HowYouCompare now={now} />
+        {/* PLAN 208: what last night and yesterday push today's focus toward, from your own days */}
+        <WhyToday now={now} />
+        {/* owner, 28 Oct: "Now the today page feels too empty" · "I liked charts and connecting dots" — picked a pattern, with today on it */}
+        <TodayPattern now={now} />
+        <FromYourData now={now} />
+      </details>
       <NoticeBox />
     </div>
   );

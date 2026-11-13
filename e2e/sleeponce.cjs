@@ -17,7 +17,7 @@ const { chromium, APP, OUT, handle } = require('./harness.cjs');
   await pg.getByRole('button', { name: 'Sign in' }).click(); await pg.waitForSelector('text=Settings');
   const saved = async (k) => (await pg.evaluate(() => JSON.parse(localStorage.getItem('healthos.v1:u-test') || '{}'))).entries?.filter((e) => e.kind === k) ?? [];
   const sl = (n) => pg.locator(`#feel [role=slider][data-name="${n}"]`);
-  const tap = async (n, v) => { const bb = await sl(n).boundingBox(); await pg.mouse.click(bb.x + ((v - 1) / 9) * bb.width, bb.y + bb.height / 2); await pg.waitForTimeout(200); };
+  const tap = async (n, v) => { await sl(n).evaluate((el) => el.scrollIntoView({ block: 'center' })); const bb = await sl(n).boundingBox(); await pg.mouse.click(bb.x + ((v - 1) / 9) * bb.width, bb.y + bb.height / 2); await pg.waitForTimeout(200); };
 
   // 07:30: the morning card asks about last night, and how you feel.
   check('morning: the card asks about last night', await sl('sleep').count() === 1);

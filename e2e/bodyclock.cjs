@@ -47,6 +47,7 @@ function world(plant) {
     await pg.goto(APP);
     await pg.fill('input[type=email]', 'lukacsarnold9+healthtest@gmail.com'); await pg.fill('input[type=password]', 'secret123');
     await pg.getByRole('button', { name: 'Sign in' }).click(); await pg.waitForSelector('text=Settings');
+  await pg.evaluate(() => localStorage.setItem('healthos.ui.tmore', '1')); await pg.reload(); await pg.waitForSelector('nav.tabs'); // Today's \"More about today\", open
     await pg.evaluate((es) => { const k = 'healthos.v1:u-test', s = JSON.parse(localStorage.getItem(k) || '{}'); s.entries = es; s.workouts = []; localStorage.setItem(k, JSON.stringify(s)); }, w.entries);
     await pg.goto(APP + '#insights/lab'); await pg.reload();
     await pg.waitForFunction(() => +(document.querySelector('.bl')?.dataset.nights ?? 0) >= 28, null, { timeout: 20000 }).catch(() => {});

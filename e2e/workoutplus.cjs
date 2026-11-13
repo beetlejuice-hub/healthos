@@ -16,7 +16,7 @@ const { chromium, APP, OUT, handle } = require('./harness.cjs');
   await pg.goto(APP);
   await pg.fill('input[type=email]', 'lukacsarnold9+healthtest@gmail.com'); await pg.fill('input[type=password]', 'secret123');
   await pg.getByRole('button', { name: 'Sign in' }).click(); await pg.waitForSelector('text=Settings');
-  await pg.evaluate(() => localStorage.setItem('healthos.ui.wmore', '1')); // the Workout home's fold, open
+  await pg.evaluate(() => localStorage.setItem('healthos.ui.wmore', '1')); await pg.reload(); await pg.waitForSelector('nav.tabs'); // the Workout home's fold, open
   const st = () => pg.evaluate(() => JSON.parse(localStorage.getItem('healthos.v1:u-test') || '{}'));
   // Last week's push day: bench 60 × 8, 62.5 × 6.
   await pg.evaluate(() => { const k = 'healthos.v1:u-test', s = JSON.parse(localStorage.getItem(k) || '{}'), t = new Date('2026-09-25T18:00:00').getTime();

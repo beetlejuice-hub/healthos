@@ -4171,3 +4171,21 @@ both reads and the questions. Phases in that order; #152 RPE waits (owner).
      the other days, Quick workout and + New day as chips (a day's chip opens its card); cardio one row; Recent; the
      week, strength, muscles and premade programs folded, a fold left open staying open. Tests: workouthome.test, e2e
      workouthome; workout, workoutpick, plan, strength, muscles, weekreport, workoutplus moved to the chips and the fold.
+   - Today, done 13 Nov: the brief leads Today (components/Brief, lib/brief) — last night (asleep, its score), HRV
+     against your usual (the median of the 28 mornings before; within 5 % "your usual"), readiness; by evening that's old
+     news, so then the bedtime; one thing to watch (caffeine still in you at bedtime from 50 mg); what to do now: the
+     stack that's due (Took all, Pick…) — lifted out of For you so it isn't asked twice — a check-in 4 hours on (scrolls to
+     it), the session up next with its first lift's target (Start). A row that's done stays, done, the same height: a
+     vanishing row moved the page under a finger and the next tap started a workout (found by e2e simple). Why today, How
+     you compare, the pattern and From your data fold under "More about today", remembered. Tests: brief.test, e2e
+     brief (sample band: the line, the rows, Took all doesn't move Start, Check in, the fold, evening); today2, morning,
+     hownow, and the fold's suites moved. The shared slider tap in e2e (harness rate) now centres the slider first —
+     "if needed" left it under the tab bar once Today grew.
+   - Sleep, done 13 Nov: the night in one line (score, its word, asleep, bedtime, what stood out), its picture before the
+     numbers on a phone, last night against your usual row by row (lib/nightrows: asleep, to fall asleep, deep, REM,
+     awake, lowest heart rate, bedtime — better / worse past half its usual spread and a floor), "Tonight": the bedtime
+     your best nights started by (the latest among your top quarter, up to the quarter hour) and the caffeine still in you
+     then; the last nights, the nightly strips, regularity and what goes with sleep folded, remembered. Tests:
+     nightrows.test, e2e brief (Sleep part); the Sleep suites open the fold.
+   - Not yet: the score's eight bars behind a tap on a phone (suites read them; next pass), Sleep B (the wall) as the
+     second view.

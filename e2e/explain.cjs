@@ -32,6 +32,7 @@ function world() {
   await pg.goto(APP);
   await pg.fill('input[type=email]', 'lukacsarnold9+healthtest@gmail.com'); await pg.fill('input[type=password]', 'secret123');
   await pg.getByRole('button', { name: 'Sign in' }).click(); await pg.waitForSelector('text=Settings');
+  await pg.evaluate(() => localStorage.setItem('healthos.ui.smore', '1')); await pg.reload(); await pg.waitForSelector('nav.tabs'); // Sleep's \"over time\", open
   await pg.evaluate((now) => { const k = 'healthos.v1:u-test', s = JSON.parse(localStorage.getItem(k) || '{}');
     s.entries = [{ id: 'c1', kind: 'drink', at: now - 6 * 3600e3, name: 'Coffee', ml: 250, caffeineMg: 95, alcoholG: 0, kcal: 2 }, { id: 'f1', kind: 'feel', at: now - 3 * 3600e3, mood: 6, energy: 6 }];
     localStorage.setItem(k, JSON.stringify(s)); }, NOW);

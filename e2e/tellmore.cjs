@@ -46,11 +46,12 @@ function world() {
   await pg.goto(APP);
   await pg.fill('input[type=email]', 'lukacsarnold9+healthtest@gmail.com'); await pg.fill('input[type=password]', 'secret123');
   await pg.getByRole('button', { name: 'Sign in' }).click(); await pg.waitForSelector('text=Settings');
+  await pg.evaluate(() => localStorage.setItem('healthos.ui.smore', '1')); await pg.reload(); await pg.waitForSelector('nav.tabs'); // Sleep's \"over time\", open
   await pg.evaluate(() => { const k = 'healthos.v1:u-test', s = JSON.parse(localStorage.getItem(k) || '{}'); s.entries = []; s.workouts = []; localStorage.setItem(k, JSON.stringify(s)); });
   await pg.reload(); await pg.waitForSelector('#feel');
   const saved = async (k) => { await pg.waitForTimeout(350); return (await pg.evaluate(() => JSON.parse(localStorage.getItem('healthos.v1:u-test') || '{}'))).entries?.filter((e) => e.kind === k) ?? []; };
   const sl = (n) => pg.locator(`#feel [role=slider][data-name="${n}"]`);
-  const tap = async (n, v) => { const bb = await sl(n).boundingBox(); await pg.mouse.click(bb.x + ((v - 1) / 9) * bb.width, bb.y + bb.height / 2); await pg.waitForTimeout(200); };
+  const tap = async (n, v) => { await sl(n).evaluate((el) => el.scrollIntoView({ block: "center" })); const bb = await sl(n).boundingBox(); await pg.mouse.click(bb.x + ((v - 1) / 9) * bb.width, bb.y + bb.height / 2); await pg.waitForTimeout(200); };
   const chip = (name) => pg.getByRole('group', { name: 'Last night' }).getByRole('button', { name, exact: true });
 
   // ---- 07:30: the card stays small until you answer; rate last night, then what it held
@@ -134,6 +135,7 @@ function world() {
   await p2.evaluate((es) => { const k = 'healthos.v1:u-test', s = JSON.parse(localStorage.getItem(k) || '{}'); s.entries = es; s.workouts = []; localStorage.setItem(k, JSON.stringify(s)); }, w.entries);
   const cell = (sel, fn, o) => p2.locator(`${sel} .sl-cell`).evaluateAll((els, [fn, o]) => { const e = els.find((x) => x.getAttribute('aria-label')?.startsWith(`${fn} and ${o}:`)); return e ? [e.dataset.sure, e.dataset.toward, e.textContent] : null; }, [fn, o]);
   const rowN = (sel, name) => p2.locator(`${sel} .sl-mf`).evaluateAll((els, name) => { const e = els.find((x) => x.firstChild.textContent === name); const m = e?.querySelector('small')?.textContent.match(/(\d+) vs (\d+)/); return m ? +m[1] + +m[2] : null; }, name);
+  await p2.evaluate(() => localStorage.setItem('healthos.ui.smore', '1')); // Sleep's "over time", open
   await p2.goto(APP + '#insights/sleep'); await p2.reload(); await p2.waitForSelector('.sl[data-nights]');
   await p2.waitForFunction(() => +document.querySelector('.sl')?.dataset.nights >= 25, null, { timeout: 15000 }).catch(() => {});
   await p2.waitForTimeout(300);

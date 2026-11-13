@@ -83,22 +83,25 @@ const { chromium, APP, OUT, handle } = require('./harness.cjs');
   const visible = () => pg.locator('.fy-item').evaluateAll((els) => els.filter((e) => e.offsetParent !== null).length);
   const c1 = await count(), nxt = await fy.locator('.fy-foot .fy-next').innerText().catch(() => '');
   const total = +((c1.match(/of (\d+)/) || [])[1] || 0);
-  check(`one ask at a time, counted, the next one named (${c1} · ${nxt})`, /^For you · 1 of \d+$/.test(c1) && total >= 3 && await visible() === 1 && /^next: Running low: Saffron$/.test(nxt) && /^next: \S/.test(nxt));
-  check(`the first is the missed morning stack (${(await cur.innerText()).split('\n')[0]})`, /Morning stack/.test(await cur.innerText()));
+  check(`one ask at a time, counted, the next one named (${c1} · ${nxt})`, /^For you · 1 of \d+$/.test(c1) && total >= 2 && await visible() === 1 && /^next: \S/.test(nxt));
+  // the renovated Today (13 Nov, canvas A): the stack that's due leads the brief, and isn't asked again in For you
+  const brow = pg.locator('.brief-row[data-row="stack"]');
+  check(`the missed morning stack leads the brief, For you starts after it (${(await brow.innerText().catch(() => '')).split('\n')[0]} · ${(await cur.innerText()).split('\n')[0]})`, /Morning stack/.test(await brow.innerText().catch(() => '')) && !/Morning stack/.test(await cur.innerText()) && /Saffron/.test(await cur.innerText()));
   // "Pick…" on a due stack opens the Stack card under the tiles, at its list
   // from further down the page, as on a phone with more on it: the card opens up top and the page goes to it
   await pg.setViewportSize({ width: 390, height: 600 }); await pg.evaluate(() => window.scrollTo(0, document.body.scrollHeight)); await pg.waitForTimeout(100);
-  await cur.getByRole('button', { name: 'Pick…' }).click(); await pg.waitForTimeout(700);
+  await brow.getByRole('button', { name: 'Pick…' }).click(); await pg.waitForTimeout(700);
   const top = await pg.locator('#stack').evaluate((el) => Math.round(el.getBoundingClientRect().top)).catch(() => null);
   check(`"Pick…" opens the Stack card under the tiles, at its list, and shows it (top at ${top} px)`, await pg.locator('#stack.open .stack-row').count() > 0 && await under('stack') && top != null && top >= -2 && top < 300);
   await pg.setViewportSize({ width: 390, height: 844 });
   await tap('stack');
   check('the check-in is not repeated as a "Rate it" ask', !/How was today|Rate it/.test(await fy.evaluate((e) => e.textContent)));
   const before = await tile(pg, 'Stack');
-  await cur.getByRole('button', { name: 'Took all' }).click(); await pg.waitForTimeout(200);
+  await brow.getByRole('button', { name: 'Took all' }).click(); await pg.waitForTimeout(200);
   check(`ticking the stack moves its number (${before.replace(/\s+/g, ' ')} → ${(await tile(pg, 'Stack')).replace(/\s+/g, ' ')})`, /Stack\s*0\s*\/\s*3/i.test(before) && /Stack\s*2\s*\/\s*3/i.test(await tile(pg, 'Stack')));
-  const n = total - 1; // the stack is answered: one fewer still open
-  check(`…and the one after it comes up (${await count()})`, await count() === `For you · 1 of ${n}` && await visible() === 1 && /Saffron/.test(await cur.innerText()));
+  check(`…the brief says it's taken, in place (${(await brow.innerText()).replace(/\s+/g, ' ')})`, /✓ Taken/.test(await brow.innerText()));
+  const n = total; // the stack wasn't one of For you's
+  check(`…and For you is as it was (${await count()})`, await count() === `For you · 1 of ${n}` && await visible() === 1 && /Saffron/.test(await cur.innerText()));
   // a cycle (owner, 28 Oct: "i should be able to cycle through it - rn i said skip to a couple items and they disappeared")
   const k2 = await cur.getAttribute('data-key'), key = () => cur.getAttribute('data-key');
   await fy.locator('.fy-skip').click(); await pg.waitForTimeout(150);

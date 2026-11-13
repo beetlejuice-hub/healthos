@@ -12,7 +12,7 @@ const { chromium, APP, OUT, handle } = require('./harness.cjs');
   await pg.goto(APP);
   await pg.fill('input[type=email]', 'lukacsarnold9+healthtest@gmail.com'); await pg.fill('input[type=password]', 'secret123');
   await pg.getByRole('button', { name: 'Sign in' }).click(); await pg.waitForSelector('text=Settings');
-  await pg.evaluate(() => localStorage.setItem('healthos.ui.wmore', '1')); // the Workout home's fold, open
+  await pg.evaluate(() => localStorage.setItem('healthos.ui.wmore', '1')); await pg.reload(); await pg.waitForSelector('nav.tabs'); // the Workout home's fold, open
   await pg.goto(APP + '#workout'); await pg.waitForTimeout(200);
   check('empty: says it fills in once you train', /Log a workout and your muscles fill in here/.test(await pg.locator('.mm').innerText()));
   const fillOf = (name) => pg.locator(`.mm-fig path[aria-label^="${name}:"]`).first().getAttribute('fill');

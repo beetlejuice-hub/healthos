@@ -16,6 +16,7 @@ const { chromium, APP, OUT, handle, openFindings } = require('./harness.cjs');
     await pg.goto(APP);
     await pg.fill('input[type=email]', 'lukacsarnold9+healthtest@gmail.com'); await pg.fill('input[type=password]', 'secret123');
     await pg.getByRole('button', { name: 'Sign in' }).click(); await pg.waitForSelector('text=Settings');
+  await pg.evaluate(() => localStorage.setItem('healthos.ui.tmore', '1')); await pg.reload(); await pg.waitForSelector('nav.tabs'); // Today's \"More about today\", open
     if (name === 'phone') {
       await pg.goto(APP + '#insights'); await pg.waitForTimeout(300);
       await pg.goto(APP + '#today'); await pg.waitForTimeout(300);

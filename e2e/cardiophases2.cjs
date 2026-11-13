@@ -21,6 +21,7 @@ const RUNS = [run('r1', 10, 24, 2), run('r2', 7, 23, 2), run('r3', 4, 22.5, 2), 
   await pg.goto(APP);
   await pg.fill('input[type=email]', 'lukacsarnold9+healthtest@gmail.com'); await pg.fill('input[type=password]', 'secret123');
   await pg.getByRole('button', { name: 'Sign in' }).click(); await pg.waitForSelector('text=Settings');
+  await pg.evaluate(() => localStorage.setItem('healthos.ui.tmore', '1')); await pg.reload(); await pg.waitForSelector('nav.tabs'); // Today's \"More about today\", open
   const st = async () => { await pg.waitForTimeout(300); return pg.evaluate((k) => JSON.parse(localStorage.getItem(k) || '{}'), KEY); };
   await pg.waitForLoadState('networkidle');
   await pg.evaluate(([k, ws]) => { const s = JSON.parse(localStorage.getItem(k) || '{}'); s.workouts = ws; s.entries = [{ id: 'kg', kind: 'weight', at: new Date('2026-11-03T07:00:00').getTime(), kg: 80 }]; localStorage.setItem(k, JSON.stringify(s)); }, [KEY, RUNS]);

@@ -14,6 +14,7 @@ const { chromium, APP, OUT, handle } = require('./harness.cjs');
     await pg.goto(APP);
     await pg.fill('input[type=email]', 'lukacsarnold9+healthtest@gmail.com'); await pg.fill('input[type=password]', 'secret123');
     await pg.getByRole('button', { name: 'Sign in' }).click(); await pg.waitForSelector('text=Settings');
+  await pg.evaluate(() => localStorage.setItem('healthos.ui.smore', '1')); await pg.reload(); await pg.waitForSelector('nav.tabs'); // Sleep's \"over time\", open
     if (name === 'phone') {
       await pg.goto(APP + '#insights'); await pg.waitForTimeout(300);
       check('empty account: no Sleep or Intake panels', await pg.locator('.gl-sleep, .gl-kcal, .gl-weight').count() === 0);

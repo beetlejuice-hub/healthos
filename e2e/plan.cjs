@@ -22,7 +22,7 @@ const STARTER = [
   await pg.goto(APP);
   await pg.fill('input[type=email]', 'lukacsarnold9+healthtest@gmail.com'); await pg.fill('input[type=password]', 'secret123');
   await pg.getByRole('button', { name: 'Sign in' }).click(); await pg.waitForSelector('text=Settings');
-  await pg.evaluate(() => localStorage.setItem('healthos.ui.wmore', '1')); // the Workout home's fold, open
+  await pg.evaluate(() => localStorage.setItem('healthos.ui.wmore', '1')); await pg.reload(); await pg.waitForSelector('nav.tabs'); // the Workout home's fold, open
   const st = () => pg.evaluate(() => JSON.parse(localStorage.getItem('healthos.v1:u-test') || '{}'));
   await pg.goto(APP + '#workout'); await pg.waitForSelector('text=Premade workouts'); await pg.waitForTimeout(1200);
   // the renovated Workout home: the day up next as the big card, the others as chips
