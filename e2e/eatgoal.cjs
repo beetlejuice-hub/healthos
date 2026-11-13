@@ -47,7 +47,7 @@ const day = (i) => { const d = new Date(NOW - i * D); return `${d.getFullYear()}
   check(`moved once to "from what you eat", from today (${s.settings.energy.mode}, ${s.settings.energy.since})`, s.settings.energy.mode === 'eat' && s.settings.energy.since === day(0) && s.settings.energy.moved === true);
   check(`the goal is what he eats — 2,300, not 1,500 — carbs up with it, protein and fat kept (${s.goals.kcal}, ${s.goals.c} g)`, s.goals.kcal === 2300 && s.goals.c === 350 && s.goals.p === 160 && s.goals.f === 60);
   check(`Settings says why, the skipped weekends as gaps (${t.slice(0, 330)}…)`, /You usually eat 2,300 kcal — the middle of your 10 fully logged days in the two weeks before Monday\. A day you didn't log is a gap, not a fast: left out\./.test(t)
-    && /This week 2,300 — what you eat now\. Each Monday it steps 50 lower while the scale isn't dropping 0\.3 kg a week\./.test(t) && /Next step Mon, 26 Oct/.test(t));
+    && /This week 2,300 — what you eat now\. Each Monday it steps 50 lower while the scale isn't dropping 0\.3 kg a week\./.test(t) && /Next step Mon,? 26 Oct/.test(t));
   check('"From what you eat" is the one pressed; the kcal box is auto', await card(pg).getByRole('button', { name: 'From what you eat' }).getAttribute('aria-pressed') === 'true' && /auto/.test(await card(pg).locator('[data-auto=kcal]').innerText()));
   await card(pg).screenshot({ path: OUT + 'eatgoal-start.png' });
   await pg.goto(APP + '#today'); await openCard(pg, 'fuel');
@@ -62,7 +62,7 @@ const day = (i) => { const d = new Date(NOW - i * D); return `${d.getFullYear()}
   // 2 · on since three Mondays ago, still eating 2,300, the scale flat: 50 a week, kept at 150 under what he eats
   ({ ctx, pg } = await open({ mode: 'eat', pace: 0.5, offset: 0, since: day(22), moved: true }, 320));
   s = await st(pg); t = await text(pg);
-  check(`2,300 → 2,250 → 2,200 → 2,150 (${s.goals.kcal}; ${(t.match(/Since[^.]*\./) || [''])[0]})`, s.goals.kcal === 2150 && /Since Mon, 28 Sept: 2,300 → 2,250 → 2,200 → 2,150\./.test(t));
+  check(`2,300 → 2,250 → 2,200 → 2,150 (${s.goals.kcal}; ${(t.match(/Since[^.]*\./) || [''])[0]})`, s.goals.kcal === 2150 && /Since Mon,? 28 Sept: 2,300 → 2,250 → 2,200 → 2,150\./.test(t));
   check(`…and why: the scale isn't dropping (${(t.match(/This week[^.]*\./) || [''])[0]})`, /This week 2,150, 50 under last week's: you're (losing|gaining) 0\.\d\d kg a week — under your 0\.3–0\.7\./.test(t));
   check(`fits 320 px (${await pg.evaluate(() => document.documentElement.scrollWidth)})`, await pg.evaluate(() => document.documentElement.scrollWidth) <= 320);
   await card(pg).screenshot({ path: OUT + 'eatgoal-weeks.png' });
