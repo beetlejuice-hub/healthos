@@ -4097,3 +4097,20 @@ both reads and the questions. Phases in that order; #152 RPE waits (owner).
      from / to" + "Save cardio" closes it; a cardio end past the session's end moves the session's end there (kept as
      `ended.was`). e2e/session: Push with a stairmaster after; Legs whose stairmaster was never closed, saved 15:30–15:55;
      control: one without cardio after has no parts.
+
+218. [ ] **Cardio fitness without typing: stairmaster, running and daily walking** (owner, 13 Nov: "we can make a better
+   cardio tracker … seeing how my cardio and fitness changes on steps, running"; typing floors or level after a session:
+   "scrap this idea if thats the only way"; daily steps: yes, too). Nothing typed — effort comes from the band's steps.
+   - Heart rate at the same step rate: the band's 5-minute step buckets give the cadence (steps a minute); the heart
+     rate in the same 5 minutes against it. Lower heart rate at the same cadence over weeks goes with fitter. Three
+     lanes: daily brisk walking (about 100–130 a minute, outside workouts), running (140+ a minute, or inside a Run
+     session), the stairmaster (buckets inside a Stairmaster session). Compare like with like: within cadence bands, or
+     a fitted line of heart rate on cadence per week, read at one fixed cadence.
+   - Heart-rate recovery after each cardio session: the drop in the 2 minutes after it ends (Cole 1999, NEJM: a slow
+     drop goes with lower fitness). Effort matters less here, so it works for the stairmaster with no number typed.
+   - Next to them: resting heart rate and the band's VO2 max (already on Heart), on the same weeks.
+   - Data: the app holds a week of minutes; the Worker keeps 120 days. Either a Worker summary per day (cadence-band
+     heart rates, kept small and past 120 days), or per-session summaries saved on the workout plus a one-time backfill
+     through loadBandBefore. Decide on the canvas first.
+   - Where: the Training page's cardio card ("Cardio fitness"), a line per lane with its weekly points and a sentence
+     ("walking at 110 steps a minute: 112 → 104 bpm since September").
