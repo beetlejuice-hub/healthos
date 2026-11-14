@@ -1,6 +1,6 @@
 // Today → the two-week check-in (owner, 6 Oct): his ±150 kcal rule, from weekly-average weight and lifts,
 // offered as one tap that changes the calorie goal — and then quiet for two weeks.
-const { chromium, APP, OUT, handle, forYou } = require('./harness.cjs');
+const { chromium, APP, OUT, handle, forYou, seed: seedState } = require('./harness.cjs');
 
 (async () => {
   const b = await chromium.launch(); const errs = [];
@@ -48,11 +48,13 @@ const { chromium, APP, OUT, handle, forYou } = require('./harness.cjs');
   // PLAN 134 (owner, 20 Oct: "My weight going up could be muscle too, the creatin hitting plus im back at gym"): two weeks
   // on, the scale up 0.2 a week — but creatine started 10 days ago. The cut is held and says why; still his to make.
   await pg.clock.fastForward(14 * 864e5); await seed(28, 0.2);
-  await pg.evaluate(() => { const k = 'healthos.v1:u-test', s = JSON.parse(localStorage.getItem(k)), now = Date.now();
+  // through the harness's seed, which lets the app's first sync settle before anything is tapped (item 18: the cut was
+  // being saved over by that sync)
+  await seedState(pg, APP + '#today', () => { const k = 'healthos.v1:u-test', s = JSON.parse(localStorage.getItem(k)), now = Date.now();
     s.supplements = [...(s.supplements || []).filter((x) => x.id !== 'creatine'), { id: 'creatine', name: 'Creatine', dose: '5 g', slot: 'morning', at: 480, active: true }];
-    s.entries.push(...[10, 9, 8, 6, 4, 2, 1].map((d) => ({ id: 'cr' + d, kind: 'supp', at: now - d * 864e5, suppId: 'creatine', status: 'taken', slot: 'morning' })));
+    s.entries = [...s.entries.filter((e) => !String(e.id).startsWith('cr')), ...[10, 9, 8, 6, 4, 2, 1].map((d) => ({ id: 'cr' + d, kind: 'supp', at: now - d * 864e5, suppId: 'creatine', status: 'taken', slot: 'morning' }))];
     localStorage.setItem(k, JSON.stringify(s)); });
-  await pg.reload(); await pg.waitForLoadState('networkidle'); await pg.waitForTimeout(600); await forYou(pg, 'checkin');
+  await pg.waitForTimeout(600); await forYou(pg, 'checkin');
   const t3 = (await card.innerText().catch(() => '')).replace(/\s+/g, ' ');
   check(`creatine 10 days in, the scale up: the cut is held, and says why (${t3.slice(0, 220)}…)`, /gaining about 0\.\d\d kg a week, under 0\.3 — but creatine started .* holds 1–2 kg of water/.test(t3) && /keep 2,450 kcal/i.test(t3));
   check('…still his call: "Cut 150 anyway" next to Keep', await card.getByRole('button', { name: 'Cut 150 anyway' }).count() === 1 && await card.getByRole('button', { name: 'Keep 2,450' }).count() === 1);
