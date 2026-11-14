@@ -24,6 +24,14 @@ describe("reminder plan", () => {
     ]);
   });
 
+  it("your week (item 12, 14 Nov): Sundays at 19:00, opening the story; not other days; switched off", () => {
+    const quiet = { ...DEFAULT_NOTIFY, checkins: false, supps: false, weigh: false, winddown: false };
+    const st = (rs: Reminder[]) => rs.filter((r) => r.tag === "story").map((r) => `${new Date(r.at).getDay()} ${new Date(r.at).getHours()}:${String(new Date(r.at).getMinutes()).padStart(2, "0")} ${r.url}`);
+    expect(st(plan(ctx(T(3, 10), [], quiet)))).toEqual(["0 19:00 /#today/story"]); // Sat 3 Oct: Sunday the 4th is in the 48 h
+    expect(st(plan(ctx(T(1, 10), [], quiet)))).toEqual([]);
+    expect(st(plan(ctx(T(3, 10), [], { ...quiet, story: false })))).toEqual([]);
+  });
+
   it("wind down (item 9, 14 Nov): 30 min before bed, with the caffeine left then; a bedtime after midnight; switched off", () => {
     const quiet = { ...DEFAULT_NOTIFY, checkins: false, supps: false, weigh: false };
     const wd = (rs: Reminder[]) => rs.filter((r) => r.tag === "winddown").map((r) => `${new Date(r.at).getDate()} ${String(new Date(r.at).getHours()).padStart(2, "0")}:${String(new Date(r.at).getMinutes()).padStart(2, "0")} ${r.body}`);

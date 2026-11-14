@@ -18,7 +18,8 @@ import { caffeineDoses } from "../insights";
 export type Reminder = { at: number; title: string; body: string; url: string; tag: string };
 /** `slump` (PLAN 177): 15 minutes before your afternoon dip, once your check-ins show one — off unless you turn it on. */
 /** `winddown` (owner, 14 Nov, item 9 of the open list): 30 minutes before bedtime — on unless turned off. */
-export type NotifyPrefs = { checkins: boolean; supps: boolean; weigh: boolean; slump?: boolean; winddown?: boolean };
+/** `story` (item 12, 14 Nov): Sunday 19:00, your week in six cards — on unless turned off. */
+export type NotifyPrefs = { checkins: boolean; supps: boolean; weigh: boolean; slump?: boolean; winddown?: boolean; story?: boolean };
 export const DEFAULT_NOTIFY: NotifyPrefs = { checkins: true, supps: true, weigh: true };
 
 export const PLAN = {
@@ -35,6 +36,7 @@ export const PLAN = {
   slumpEarly: 15,
   /** The wind-down comes this long before bedtime (the quiet starts 15 minutes before it). */
   windDown: 30,
+  storyAt: 19 * 60,
   /** …and says the caffeine still in you at bedtime from this much. */
   windCafMg: 30,
   mergeMin: 30,
@@ -69,6 +71,9 @@ export function plan(c: Ctx): Reminder[] {
     }
 
     if (c.prefs.weigh && !todays.some((e) => e.kind === "weight")) add(PLAN.weighAt, { title: "Morning weigh-in", body: "Before food, after the toilet, same as always.", url: "/#today", tag: "weigh" });
+
+    // the Sunday story, 19:00
+    if (c.prefs.story !== false && new Date(at(12 * 60)).getDay() === 0) add(PLAN.storyAt, { title: "Your week", body: "Six cards, a minute: strength, cardio, sleep, what went with what, and one thing to try.", url: "/#today/story", tag: "story" });
 
     // wind down: 30 minutes before bedtime (a bedtime after midnight is the evening before's), with the caffeine left then
     if (c.prefs.winddown !== false) {

@@ -141,7 +141,8 @@ function world(seed = 5) {
   check('tapping another cell opens it', (await pg.locator('.sl .sl-open').getAttribute('data-factor')) === 'trained' && (await pg.locator('.sl .sl-open').getAttribute('data-outcome')) === 'deep');
   await pg.locator('.sl .sl-c').screenshot({ path: OUT + 'sleep-c-laptop.png' });
   // Owner, 9 Oct ("do 2"): with the band's nights the old rating / caffeine panels only repeated this page.
-  check('the old rating and caffeine panels are gone with the band, and so is the header\'s period (the page has its own nights)', await pg.locator('.gl-caf, .gl-sleep').count() === 0 && await pg.locator('[aria-label="Period for the charts"]').count() === 0);
+  // since 14 Nov (item 2) Sleep shares Body with Mind, whose charts use the header's period: it stays
+  check('the old rating and caffeine panels are gone with the band', await pg.locator('.gl-caf, .gl-sleep').count() === 0);
   await pg.goto(APP + '#insights/intake'); await pg.waitForTimeout(300);
   check(`drinks per week moved to Food & body (${(await pg.locator('[data-sec="intake"] .gl-drinks').innerText().catch(() => '')).split('\n').slice(0, 3).join(' · ')})`, await pg.locator('[data-sec="intake"] .gl-drinks').isVisible());
   await ctx.close();

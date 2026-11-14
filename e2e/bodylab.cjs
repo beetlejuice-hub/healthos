@@ -68,18 +68,20 @@ function world(plant) {
   // 1 · planted
   const w = world(true);
   let { ctx, pg } = await open(w, 390);
-  check(`the Body lab tab is there (${await pg.locator('.secbar button').allInnerTexts().then((t) => t.join(' | ').replace(/\n/g, ' '))})`, await pg.locator('.secbar button', { hasText: 'Body lab' }).count() === 1);
+  // five pages since 14 Nov (item 2): Body lab is a section of Lab, a chip there
+  check(`the Lab page is there, Body lab a chip in it (${await pg.locator('.secbar button').allInnerTexts().then((t) => t.join(' | ').replace(/\n/g, ' '))} · ${await pg.locator('.secparts button').allInnerTexts().then((t) => t.join(' | '))})`, await pg.locator('.secbar button', { hasText: 'Lab' }).count() === 1 && await pg.locator('.secparts button', { hasText: 'Body lab' }).count() === 1);
   // one page at a time (owner, 8 Oct): the Body lab tab showed every other page above it, ~30,000 px (found 28 Oct)
-  const others = await pg.evaluate(() => [...document.querySelectorAll('.inst [data-sec]:not([data-sec="lab"])')].filter((e) => e.getBoundingClientRect().height > 0).map((e) => e.dataset.sec));
-  check(`the Body lab tab shows only the lab (${[...new Set(others)].join(', ') || 'nothing else'})`, others.length === 0);
+  const others = await pg.evaluate(() => [...document.querySelectorAll('.inst [data-sec]')].filter((e) => !['connections', 'lab', 'timeline', 'data'].includes(e.dataset.sec) && e.getBoundingClientRect().height > 0).map((e) => e.dataset.sec));
+  check(`the Lab page shows only Lab's sections (${[...new Set(others)].join(', ') || 'nothing else'})`, others.length === 0);
   // …and every page does, so a page added later without its line in index.css's one-page rule shows up here
   const leaks = await pg.evaluate(async () => {
+    const GROUP = { week: ['week'], body: ['sleep', 'heart', 'mind'], intake: ['intake'], training: ['training'], lab: ['connections', 'lab', 'timeline', 'data'] }; // item 2 (14 Nov): five pages
     const out = [];
     for (const b of [...document.querySelectorAll('.secbar button')]) {
       b.click(); await new Promise((r) => setTimeout(r, 150));
       const tab = document.querySelector('.inst').dataset.tab;
       const shown = [...new Set([...document.querySelectorAll('.inst [data-sec]')].filter((e) => e.getBoundingClientRect().height > 0).map((e) => e.dataset.sec))];
-      if (shown.some((x) => x !== tab)) out.push(`${tab}: ${shown.join('+')}`);
+      if (shown.some((x) => !(GROUP[tab] || [tab]).includes(x))) out.push(`${tab}: ${shown.join('+')}`);
     }
     document.querySelector('.secbar button:last-child')?.click();
     return out;

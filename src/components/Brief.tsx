@@ -22,7 +22,8 @@ import type { EntryOf } from "../lib/types";
 
 export type BriefStack = { title: string; body: string; many: boolean; onTook: () => void; onPick: () => void };
 
-export function Brief({ now, moment, cafBed, bed, stack, widget }: { now: number; moment: Moment; cafBed: number; bed: number; stack: BriefStack | null;
+export function Brief({ now, moment, cafBed, bed, stack, widget, onStory }: { now: number; moment: Moment; cafBed: number; bed: number; stack: BriefStack | null;
+  /** the Sunday story is there (item 12): its row opens it */ onStory?: () => void;
   /** what the lock-screen widget needs besides what's here (item 10, 14 Nov) */ widget?: { stack: { taken: number; total: number }; doses: Dose[]; halfLifeMin: number } }) {
   const band = useBand().data, entries = useStore((s) => s.entries), workouts = useStore((s) => s.workouts), templates = useStore((s) => s.templates);
   const today = localDay(now);
@@ -58,13 +59,15 @@ export function Brief({ now, moment, cafBed, bed, stack, widget }: { now: number
   const [asked] = useState(() => ({ feel: feelDue, stack: stack ? { title: stack.title, body: stack.body, many: stack.many } : null }));
   const [took, setTook] = useState(false);
   const feel = feelDue || asked.feel, stackDone = !stack && asked.stack ? asked.stack : took && stack ? stack : null;
-  if (!line && !watch && !stack && !stackDone && !feel && !next) return null;
+  if (!line && !watch && !stack && !stackDone && !feel && !next && !onStory) return null;
   return (
     <section className="card brief" aria-label="Your brief">
       <span className="brief-k">{GREET[moment]}</span>
       {line && <p className="brief-say">{line}</p>}
       {watch && <p className="brief-watch">{watch}</p>}
-      {(stack || stackDone || feel || next) && <div className="brief-now">
+      {(stack || stackDone || feel || next || onStory) && <div className="brief-now">
+        {onStory && <div className="brief-row" data-row="story"><div><b>Your week</b><span>the week in six cards, a minute</span></div>
+          <button type="button" className="pill-btn pri" onClick={onStory}>Open</button></div>}
         {/* taken: the same row, its buttons kept (disabled) so nothing under it moves */}
         {(stackDone ?? stack) && (() => { const r = (stackDone ?? stack)!, done = !!stackDone; return (
           <div className={`brief-row${done ? " done" : ""}`} data-row="stack"><div><b>{r.title}</b><span>{done ? "✓ Taken" : r.body}</span></div>

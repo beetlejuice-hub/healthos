@@ -114,6 +114,7 @@ function world({ seed = 7, everyMin = 1 } = {}) {
   const dt = await day.innerText().catch(async () => (await day.textContent()) ?? '');
   check(`one day: the workout named with its peak and the way back (${(dt.match(/Push day · peak[^\n]*?min/) || [''])[0]})`, /Push day · peak \d{3}back to usual in \d+ min/.test(dt));
   check(`one day: lowest asleep marked, "now 16:30", coffee and check-ins on top (${(dt.match(/lowest \d+ at \d\d:\d\d/) || [''])[0]})`, /lowest \d+ at 0\d:\d\d/.test(dt) && /now 16:30/.test(dt) && await day.locator('circle[fill="var(--caf)"]').count() === 2 && await day.locator('rect[stroke="#d55181"]').count() === 2);
+  await day.evaluate((el) => el.scrollIntoView({ block: 'center' })); await pg.waitForTimeout(150); // under the sticky tabs otherwise (Heart is in Body since 14 Nov)
   const box = await day.boundingBox();
   await pg.mouse.move(box.x + box.width * (14.5 / 24) * 0.96, box.y + 150); await pg.waitForTimeout(150);
   const tip = await pg.locator('.hp-tip').innerText().catch(() => '');

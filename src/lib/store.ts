@@ -134,7 +134,7 @@ export type Settings = {
   /** A lock-screen widget key was made (item 10, 14 Nov): the app leaves its snapshot on the server while it's open. */
   widget?: boolean;
   /** Which reminders to send, once notifications are on (Settings → Notifications). */
-  notify?: { checkins: boolean; supps: boolean; weigh: boolean; slump?: boolean; winddown?: boolean };
+  notify?: { checkins: boolean; supps: boolean; weigh: boolean; slump?: boolean; winddown?: boolean; story?: boolean };
   /** Two-week check-ins answered (lib/checkin): when, the rate then, and the calorie goal before/after. */
   checkins?: { at: number; lossPerWeek: number; kcalBefore: number; kcalAfter: number }[];
   /** The calorie goal set by hand, or from what you burn at a pace (lib/energy). Unset: by hand. */

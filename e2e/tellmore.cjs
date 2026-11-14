@@ -5,7 +5,7 @@
 // "Last night" chips and your own word; nothing asked at 00:30. Part 2: 30 fake nights from the band with last night's tags
 // each morning (the first 4 mornings untagged — before you were asked). Planted: nights "out with friends" → 70 min less
 // sleep and mood −1.5 the next day; "worked late" ticked at random does nothing; "with gf" on 3 nights isn't a row yet.
-const { chromium, APP, OUT, handle } = require('./harness.cjs');
+const { seed, chromium, APP, OUT, handle } = require('./harness.cjs');
 
 const MIN = 60_000, HOUR = 3_600_000;
 function rng(seed) {
@@ -132,7 +132,9 @@ function world() {
   await p2.goto(APP);
   await p2.fill('input[type=email]', 'lukacsarnold9+healthtest@gmail.com'); await p2.fill('input[type=password]', 'secret123');
   await p2.getByRole('button', { name: 'Sign in' }).click(); await p2.waitForSelector('text=Settings');
-  await p2.evaluate((es) => { const k = 'healthos.v1:u-test', s = JSON.parse(localStorage.getItem(k) || '{}'); s.entries = es; s.workouts = []; localStorage.setItem(k, JSON.stringify(s)); }, w.entries);
+  // through the harness's seed: a raw write can be saved over by the app's first sync (item 18: flaky)
+  await seed(p2, APP + '#insights/sleep', (es) => { const k = 'healthos.v1:u-test', s = JSON.parse(localStorage.getItem(k) || '{}'); s.entries = es; s.workouts = []; localStorage.setItem(k, JSON.stringify(s));
+    localStorage.setItem('healthos.ui.smore', '1'); localStorage.setItem('healthos.ui.sscore', '1'); }, w.entries);
   const cell = (sel, fn, o) => p2.locator(`${sel} .sl-cell`).evaluateAll((els, [fn, o]) => { const e = els.find((x) => x.getAttribute('aria-label')?.startsWith(`${fn} and ${o}:`)); return e ? [e.dataset.sure, e.dataset.toward, e.textContent] : null; }, [fn, o]);
   const rowN = (sel, name) => p2.locator(`${sel} .sl-mf`).evaluateAll((els, name) => { const e = els.find((x) => x.firstChild.textContent === name); const m = e?.querySelector('small')?.textContent.match(/(\d+) vs (\d+)/); return m ? +m[1] + +m[2] : null; }, name);
   await p2.evaluate(() => localStorage.setItem('healthos.ui.smore', '1') || localStorage.setItem('healthos.ui.sscore', '1')); // Sleep's "over time", open

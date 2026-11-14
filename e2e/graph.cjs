@@ -62,7 +62,7 @@ const { chromium, APP, OUT, handle } = require('./harness.cjs');
     await pg.locator('.master').screenshot({ path: OUT + `graph-30d-${vw}.png` });
     await pg.getByRole('button', { name: '3D', exact: true }).click(); await pg.waitForTimeout(150);
     // Overview: tap near its left edge → the window jumps back toward the start.
-    const ov = pg.locator('.mg-overview'), ob = await ov.boundingBox();
+    const ov = pg.locator('.mg-overview'); await ov.evaluate((el) => el.scrollIntoView({ block: 'center' })); await pg.waitForTimeout(150); const ob = await ov.boundingBox();
     const before = Number((await ov.getAttribute('data-window')).split(',')[0]);
     await pg.mouse.click(ob.x + LEFT + 10, ob.y + ob.height / 2); await pg.waitForTimeout(150);
     const after = Number((await ov.getAttribute('data-window')).split(',')[0]);

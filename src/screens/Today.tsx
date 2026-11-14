@@ -54,6 +54,7 @@ import { restDay } from "../lib/programs";
 import { balance } from "../lib/burn";
 import { useBand } from "../lib/band-client";
 import { Brief, type BriefStack } from "../components/Brief";
+import { useWeekStory, WeekStory } from "../components/WeekStory";
 /** Whether Today's "More about today" was left open. */
 const TMORE_KEY = "healthos.ui.tmore";
 
@@ -197,6 +198,8 @@ export function Today() {
   ];
   const tile = (t: string) => setOpened((o) => (o === t ? null : t));
   const close = () => setOpened(null);
+  const story = useWeekStory(now);
+  const [storyOpen, setStoryOpen] = useState(() => typeof location !== "undefined" && location.hash === "#today/story");
   const [moreOpen] = useState(() => { try { return localStorage.getItem(TMORE_KEY) === "1"; } catch { return false; } });
 
   // Today A (owner, 28 Oct, review part 1): the tiles (a tap opens the card under them) → the log buttons → the Now card
@@ -209,7 +212,9 @@ export function Today() {
       </div>
       <BandAlarm now={now} />
       {/* renovation (canvas A, "the morning brief"): last night, one thing to watch, what to do now */}
-      <Brief now={now} moment={moment} cafBed={cafBed} bed={bed} stack={briefStack} widget={widgetIn} />
+      <Brief now={now} moment={moment} cafBed={cafBed} bed={bed} stack={briefStack} widget={widgetIn} onStory={story.length >= 2 ? () => setStoryOpen(true) : undefined} />
+      {/* the Sunday story (item 12): full screen, from the brief or the Sunday push (#today/story) */}
+      {storyOpen && story.length >= 2 && <WeekStory cards={story} onClose={() => { setStoryOpen(false); if (location.hash === "#today/story") history.replaceState(null, "", "#today"); }} />}
 
       <Status kcal={totals.kcal} goalKcal={s.goals.kcal} protein={totals.p} goalP={s.goals.p} cafNow={cafNow} rising={cafComing >= 10} cafBed={cafBed} bed={bed} stack={stack} opened={opened} onTile={tile} />
       {opened === "stack" && <Stack now={now} onClose={close} />}

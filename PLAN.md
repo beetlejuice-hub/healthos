@@ -4215,3 +4215,18 @@ both reads and the questions. Phases in that order; #152 RPE waits (owner).
    - Not verified: Scriptable on the real phone (the script's API is Scriptable's documented one). Still failing: e2e
      checkin — its raw-storage creatine seed is replaced by the first sync after "Cut 150 anyway" (the handler runs; the
      state reverts); the app isn't at fault, the suite needs to add creatine through the app.
+   - Done 14 Nov: **15** lib/usage + usage-client — on this phone only, each named card counted as seen (half on screen
+     a second, once a visit) and used (a tap in it, a fold opened); Settings → What you use: the most used, and "never
+     touched" (seen 10+ times over 2 weeks, never used). Nothing removed by itself. **14** waits for his word.
+     **Canvas** https://claude.ai/artifact/XsZti37mimSykHoAWk7fJU (2: A five tabs / B trends as the hub; 12: A full-screen
+     cards / B one page) — A and A built while he picks. **12** lib/weekstory + components/WeekStory: Sunday from 18:00
+     to the end of Monday, "Your week" in Today's brief opens up to six full-screen cards (the week, strength, cardio and
+     zone 2, sleep with the best night and weekends against weekdays, the strongest link, one thing to try — "Start it"
+     starts it as an experiment); tap right for the next, left for back; a Sunday 19:00 push opens it (#today/story),
+     switchable. **2** Insights in five: Trends, Body (sleep, heart, mind), Fuel, Training, Lab (findings, body lab, the
+     timeline, data); inside Body and Lab a chip a section; the old pages' names open the right page at the right section
+     (#insights/sleep → Body at Sleep), jumps stop below the sticky tabs. Found on the way: "What to look at" showed on
+     every Insights page (it had no data-sec) — now on Trends only. Tests: usage, weekstory, plan (the Sunday push),
+     e2e usage, story, and glance, phone, bodylab, heart, heartpage, sleep, graph, compare moved to five pages.
+     Also found: the small nightly cards on Sleep let a long "that night" run past the card (it showed once Mind shared a
+     page with Sleep) — clipped now, the full text on hover; and tellmore's second page seeds through the harness now.

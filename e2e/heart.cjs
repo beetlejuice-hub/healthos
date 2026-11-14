@@ -123,7 +123,7 @@ function world({ days, everyMin = 1, seed = 1 }) {
   // C: after every coffee, after a workout.
   await pg.goto(APP + '#insights/heart'); await pg.waitForTimeout(600);
   const card = pg.locator('#ins-heart .he-card');
-  check('the Heart page is in the sidebar and shows the card', await pg.locator('.secbar button', { hasText: 'Heart' }).count() === 1 && await card.isVisible());
+  check('Heart is a section of Body, a chip, and shows the card', await pg.locator('.secparts button', { hasText: 'Heart' }).count() === 1 && await card.isVisible()); // a section of Body since 14 Nov
   const ct = await card.innerText();
   const nCof = +((ct.match(/(\d+) coffees over/) || [])[1] || 0);
   check(`card: the planted coffee effect found, in "goes with" words (${(ct.match(/\d+ coffees over[^\n]+/) || [])[0]})`, nCof >= 8 && /Coffee goes with \+\d\.\d bpm 30–90 min after, against the same hours on days without\. How sure: (clear|likely)\./.test(ct));

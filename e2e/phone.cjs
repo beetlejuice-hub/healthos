@@ -31,7 +31,7 @@ const visibleSecs = (pg) => pg.evaluate(() => [...new Set([...document.querySele
       // (in the same tab) are — they must still get a tab.
       await pg.evaluate(() => { const k = 'healthos.v1:u-test', s = JSON.parse(localStorage.getItem(k) || '{}'); s.entries = [0, 1, 2].map((d) => ({ id: 'c' + d, kind: 'drink', at: Date.now() - d * 864e5 - 36e5, name: 'Coffee', ml: 250, caffeineMg: 95, alcoholG: 0, kcal: 2 })); localStorage.setItem(k, JSON.stringify(s)); });
       await pg.goto(APP + '#insights'); await pg.reload(); await pg.waitForTimeout(800);
-      if (await pg.locator('.secbar button', { hasText: 'Findings' }).count()) { await pg.locator('.secbar button', { hasText: 'Findings' }).click(); await pg.waitForTimeout(300); }
+      if (await pg.locator('.secbar button', { hasText: 'Lab' }).count()) { await pg.locator('.secbar button', { hasText: 'Lab' }).click(); await pg.waitForTimeout(300); }
       check('coffee only: "still checking" is on screen or one tab away', await pg.locator('#findings .checking').isVisible());
     }
     if (name === 'phone') { await pg.goto(APP + '#settings'); await pg.getByRole('button', { name: /Load sample/ }).click(); await pg.waitForTimeout(300); }
@@ -42,31 +42,38 @@ const visibleSecs = (pg) => pg.evaluate(() => [...new Set([...document.querySele
       const bar = await pg.locator('.secbar').boundingBox();
       check(`laptop: pages in a sidebar on the left (${Math.round(bar.x)},${Math.round(bar.width)}×${Math.round(bar.height)})`, bar.x < 10 && bar.width < 240 && bar.height > 400);
       check('laptop: opens on Overview only', JSON.stringify(await visibleSecs(pg)) === '["week"]');
-      for (const [label, sec] of [['Timeline', 'timeline'], ['Sleep', 'sleep'], ['Findings', 'connections'], ['Data', 'data']]) {
+      // five pages since 14 Nov (item 2): each shows only its own sections
+      for (const [label, tab, secs] of [['Body', 'body', ['sleep', 'heart', 'mind']], ['Lab', 'lab', ['connections', 'lab', 'timeline', 'data']], ['Fuel', 'intake', ['intake']]]) {
         await pg.locator('.secbar button', { hasText: label }).first().click(); await pg.waitForTimeout(300);
-        check(`laptop: ${label} shows only its page, #insights/${sec}`, JSON.stringify(await visibleSecs(pg)) === JSON.stringify([sec]) && await pg.evaluate(() => location.hash) === `#insights/${sec}`);
+        const seen = await visibleSecs(pg);
+        check(`laptop: ${label} shows only its sections (${seen.join(', ')}), #insights/${tab}`, seen.length > 0 && seen.every((x) => secs.includes(x)) && await pg.evaluate(() => location.hash) === `#insights/${tab}`);
       }
       check('laptop: the sidebar shows live numbers (Training "N this wk")', /\d+ this wk/.test(await pg.locator('.secbar').innerText()));
     } else {
       check('phone: opens on Overview only', JSON.stringify(await visibleSecs(pg)) === '["week"]');
-      check('phone: Overview is the current tab', (await pg.locator('.secbar button[aria-current="page"] > span').innerText()).trim() === 'Overview');
+      check('phone: Trends is the current tab', (await pg.locator('.secbar button[aria-current="page"] > span').innerText()).trim() === 'Trends');
       check('phone: no "Try" tab (the cards are in This week)', await pg.locator('.secbar button:visible', { hasText: 'Try' }).count() === 0);
-      for (const [label, sec] of [['Timeline', 'timeline'], ['Mind', 'mind'], ['Findings', 'connections'], ['Sleep', 'sleep'], ['Food & body', 'intake'], ['Training', 'training'], ['Data', 'data']]) {
+      for (const [label, tab, group] of [['Body', 'body', ['sleep', 'heart', 'mind']], ['Lab', 'lab', ['connections', 'lab', 'timeline', 'data']], ['Fuel', 'intake', ['intake']], ['Training', 'training', ['training']]]) {
         await pg.evaluate(() => window.scrollTo(0, 600));
         await pg.locator('.secbar button', { hasText: label }).first().click(); await pg.waitForTimeout(300);
         const secs = await visibleSecs(pg);
-        check(`phone: ${label} tab shows only that section (${secs.join(', ')}), back at the top`, JSON.stringify(secs) === JSON.stringify([sec]) && await pg.evaluate(() => window.scrollY) === 0);
-        check(`phone: ${label} → #insights/${sec}`, await pg.evaluate(() => location.hash) === `#insights/${sec}`);
+        check(`phone: ${label} tab shows only its sections (${secs.join(', ')}), back at the top`, secs.length > 0 && secs.every((x) => group.includes(x)) && await pg.evaluate(() => window.scrollY) === 0);
+        check(`phone: ${label} → #insights/${tab}`, await pg.evaluate(() => location.hash) === `#insights/${tab}`);
         check(`phone: ${label} never scrolls sideways`, await pg.evaluate(() => document.documentElement.scrollWidth <= (window.matchMedia('(max-width: 700px)').matches ? 390 : window.innerWidth)));
       }
       await pg.screenshot({ path: OUT + 'phone-data.png' });
       await pg.reload(); await pg.waitForSelector('.secbar', { timeout: 8000 }).catch(() => {}); await pg.waitForTimeout(500);
-      check('phone: a reload keeps the tab', JSON.stringify(await visibleSecs(pg)) === '["data"]');
+      check('phone: a reload keeps the tab', JSON.stringify(await visibleSecs(pg)) === '["training"]');
       await pg.goto(APP + '#today'); await pg.waitForTimeout(300);
       await pg.goto(APP + '#insights/connections'); await pg.waitForTimeout(500);
-      check('phone: #insights/connections opens Connections', JSON.stringify(await visibleSecs(pg)) === '["connections"]');
+      { const v = await visibleSecs(pg); check(`phone: #insights/connections (an old page's name) opens Lab (${v.join(', ')})`, v.includes('connections') && v.every((x) => ['connections', 'lab', 'timeline', 'data'].includes(x))); }
+      // an old page's name lands on its section: #insights/mind → Body, scrolled to Mind (below the sticky tabs; no band here, so no Heart)
+      await pg.goto(APP + '#today'); await pg.waitForTimeout(300);
+      await pg.goto(APP + '#insights/mind'); await pg.waitForTimeout(1200);
+      { const top = await pg.evaluate(() => [...document.querySelectorAll('.inst [data-sec="mind"]')].find((e) => e.offsetParent)?.getBoundingClientRect().top ?? -1), cur = await pg.locator('.secbar button[aria-current="page"] > span').innerText().catch(() => '');
+        check(`phone: #insights/mind opens Body at Mind (${cur}, top ${Math.round(top)} px)`, cur.trim() === 'Body' && top >= 40 && top < 260); }
       await pg.goto(APP + '#insights/nonsense'); await pg.waitForTimeout(300);
-      check('phone: an unknown tab in the URL still shows a tab', (await visibleSecs(pg)).length === 1);
+      check('phone: an unknown tab in the URL still shows a tab', (await visibleSecs(pg)).length >= 1);
       await pg.goto(APP + '#insights/training'); await pg.waitForTimeout(500);
       const labs = await pg.locator('.gl-load svg text').evaluateAll((ts) => ts.filter((t) => /^\d+ \w{3}$/.test(t.textContent)).map((t) => t.getBBox()).map((r) => [r.x, r.x + r.width]));
       check(`phone: Training load week labels don't overlap (${labs.length})`, labs.length >= 2 && labs.every((r, i) => !i || r[0] >= labs[i - 1][1] + 2));
@@ -76,23 +83,29 @@ const visibleSecs = (pg) => pg.evaluate(() => [...new Set([...document.querySele
       check(`phone: small-chart labels are readable, not shrunk (smallest ${Math.min(...sizes).toFixed(1)} px tall)`, sizes.length > 0 && Math.min(...sizes) >= 9);
       // Swipe between tabs.
       await pg.goto(APP + '#insights/week'); await pg.waitForTimeout(400);
+      // five pages since 14 Nov (item 2): Trends → Body → Fuel → Training → Lab
       await swipe(pg, '.gl-week', -140);
-      check('phone: swipe left on Overview opens Timeline', await hash(pg) === '#insights/timeline' && JSON.stringify(await visibleSecs(pg)) === '["timeline"]');
+      check('phone: swipe left on Trends opens Body', await hash(pg) === '#insights/body' && (await visibleSecs(pg)).every((x) => ['sleep', 'heart', 'mind'].includes(x)));
+      await pg.goto(APP + '#insights/lab'); await pg.waitForTimeout(400);
+      await pg.locator('.mg-canvas').evaluate((el) => el.scrollIntoView({ block: 'center' })); await pg.waitForTimeout(150);
       await swipe(pg, '.mg-canvas', -140);
-      check('phone: dragging the timeline itself pans it, not the tab', await hash(pg) === '#insights/timeline');
+      check('phone: dragging the timeline itself pans it, not the tab', await hash(pg) === '#insights/lab');
       await swipe(pg, '.secbar', 140);
-      check('phone: scrolling the tab bar doesn\'t switch tab', await hash(pg) === '#insights/timeline');
+      check('phone: scrolling the tab bar doesn\'t switch tab', await hash(pg) === '#insights/lab');
+      await pg.locator('.master').evaluate((el) => el.scrollIntoView({ block: 'center' })); await pg.waitForTimeout(150);
       await swipe(pg, '.master', 140, 0);
-      check('phone: swipe right elsewhere on Timeline goes back to Overview', await hash(pg) === '#insights/week');
+      check('phone: swipe right elsewhere on Lab goes back to Training', await hash(pg) === '#insights/training');
+      await pg.goto(APP + '#insights/week'); await pg.waitForTimeout(400);
       await swipe(pg, '.gl-week', 140);
       check('phone: swipe right on the first tab stays put', await hash(pg) === '#insights/week');
       await swipe(pg, '.gl-week', -110, 90);
       check('phone: a diagonal scroll is not a swipe', await hash(pg) === '#insights/week');
       await swipe(pg, '.gl-week', -140, 0, 1200);
       check('phone: a slow drag is not a swipe', await hash(pg) === '#insights/week');
-      await pg.goto(APP + '#insights/data'); await pg.waitForTimeout(400);
+      await pg.goto(APP + '#insights/lab'); await pg.waitForTimeout(400);
+      await pg.locator('.gl-cover').evaluate((el) => el.scrollIntoView({ block: 'center' })); await pg.waitForTimeout(150);
       await swipe(pg, '.gl-cover', -140);
-      check('phone: swipe left on the last tab stays put', await hash(pg) === '#insights/data');
+      check('phone: swipe left on the last tab stays put', await hash(pg) === '#insights/lab');
       await pg.waitForTimeout(2000); // let the sample sync up before the laptop signs in
     }
     await ctx.close();

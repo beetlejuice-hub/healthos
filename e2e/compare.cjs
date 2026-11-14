@@ -78,7 +78,7 @@ function world({ days, perMg = 0.035, seed = 7 }) {
   await pg.waitForSelector('.master');
   await pg.getByRole('button', { name: 'Compare', exact: true }).click();
   await pg.waitForSelector('.cmp'); await settled(pg);
-  check('Compare opens from the Timeline page, and the address says so', /#insights\/timeline\/compare$/.test(pg.url()) && await pg.locator('.master').count() === 0);
+  check('Compare opens from the timeline in Lab, and the address says so', /#insights\/lab\/compare$/.test(pg.url()) && await pg.locator('.master').count() === 0);
   // Heart rate needs 14 days of band data; the first load brings a week, so wait for the older weeks to arrive.
   await pg.waitForFunction(() => +document.querySelector('.cmp')?.dataset.days >= 13 && document.querySelector('.cmp')?.dataset.sure !== 'working', null, { timeout: 15000 }).catch(() => {});
   await pg.waitForTimeout(300);
@@ -112,7 +112,7 @@ function world({ days, perMg = 0.035, seed = 7 }) {
   await pg.goto(APP + '#insights/timeline/compare'); await pg.reload(); await pg.waitForSelector('.cmp');
   check('the address opens Compare directly', await pg.locator('.cmp').count() === 1 && await pg.getByRole('button', { name: 'Compare', exact: true }).getAttribute('aria-pressed') === 'true');
   await pg.getByRole('button', { name: 'Read', exact: true }).click(); await pg.waitForSelector('.master');
-  check('Read goes back to the panes', await pg.locator('.cmp').count() === 0 && /#insights\/timeline$/.test(pg.url()));
+  check('Read goes back to the panes', await pg.locator('.cmp').count() === 0 && /#insights\/lab$/.test(pg.url()));
   await ctx.close();
 
   // ---- phone

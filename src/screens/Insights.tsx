@@ -16,7 +16,7 @@ import { Glance } from "../components/Glance";
 import { Mind } from "../components/Mind";
 import { Connections } from "../components/Connections";
 import { Body } from "../components/Body";
-import { SectionBar, TABS } from "../components/SectionBar";
+import { PARTS, partsOnPage, SectionBar, tabFor, TABS } from "../components/SectionBar";
 import { Tip } from "../components/Tip";
 import { Top } from "../components/Top";
 import { Coverage, Methods, SuppMatrix, TrainingLoad } from "../components/Stack";
@@ -52,19 +52,14 @@ const sgn = (v: number, f = f1) => `${v >= 0 ? "+" : "−"}${f(Math.abs(v))}`;
 
 /** What each page is about, under its title. */
 const PAGE_SUB: Record<string, string> = {
-  week: "Your week against your own usual weeks — never against other people.",
-  timeline: "Every metric on one clock. Read a day, or compare two things.",
-  heart: "One day against your usual, each morning's resting heart rate and HRV, and what goes with them moving.",
-  sleep: "Your own morning rating, and the band's nights.",
-  mind: "How you felt, when, and around what.",
+  week: "How you're doing: every trend, what to look at, and your week against your own usual weeks.",
+  body: "Your nights, your heart, and how you felt.",
   intake: "What you ate and drank, and your weight.",
   training: "What you trained, and what you took.",
-  connections: "What goes with better or worse days — with how sure each one is.",
-  lab: "Your body's own numbers: fitness age, what each drink, a smoking day or late caffeine went with, when you're wound up, your body clock.",
-  data: "How complete the picture is, and how the numbers are made.",
+  lab: "What goes with what, your body's own numbers, everything on one timeline, and how the numbers are made.",
 };
 /** The period switch matters on these pages only. */
-const PERIOD_PAGES = new Set(["week", "sleep", "mind", "intake", "training"]);
+const PERIOD_PAGES = new Set(["week", "body", "intake", "training"]);
 
 /** True on a phone-width screen, kept current. */
 function usePhone() {
@@ -76,7 +71,9 @@ function usePhone() {
 
 /** A phone tab from the URL; an unknown `#insights/x` keeps the current one. */
 const ALL_TABS = TABS.map(([t]) => t);
-const tabOf = (t?: string) => (t && ALL_TABS.includes(t) ? t : undefined);
+/** An old page's name (#insights/sleep) opens its new page (Body); the section is jumped to once it's there. */
+const tabOf = (t?: string) => (t && ALL_TABS.includes(tabFor(t)) ? tabFor(t) : undefined);
+const partOf = (t?: string) => (t && Object.values(PARTS).some((ps) => ps.some(([x]) => x === t)) && !ALL_TABS.includes(t) ? t : undefined);
 
 export function Insights() {
   const now = useNow(60_000);
@@ -96,6 +93,9 @@ export function Insights() {
   // One page at a time, on a laptop (sidebar) and a phone (tabs); #insights/<page> opens one directly.
   const phone = usePhone();
   const [tab, setTab] = useState<string>(() => tabOf(readRoute()[1]) ?? "week");
+  // the section an old page's name pointed at (#insights/heart → Body, at Heart), jumped to once it's drawn
+  const [jump, setJump] = useState<string | undefined>(() => partOf(readRoute()[1]));
+  const [parts, setParts] = useState<[string, string][]>([]);
   // Tabs with something in them (SectionBar finds out after render; until then assume all, so a phone never paints the whole page first).
   const [tabs, setTabs] = useState<string[]>(ALL_TABS);
   const onTabs = useCallback((ts: string[]) => setTabs((p) => (p.join() === ts.join() ? p : ts)), []);
@@ -105,8 +105,9 @@ export function Insights() {
   const [cmp, setCmp] = useState(() => location.hash.split("/")[2] === "compare");
   const cmpRef = useRef(cmp);
   useEffect(() => { cmpRef.current = cmp; }, [cmp]);
-  const openTab = useCallback((t: string) => { setTab(t); history.replaceState(null, "", `#insights/${t}${t === "timeline" && cmpRef.current ? "/compare" : ""}`); window.scrollTo(0, 0); }, []);
-  const setMode = (on: boolean) => { setCmp(on); cmpRef.current = on; history.replaceState(null, "", `#insights/timeline${on ? "/compare" : ""}`); };
+  const openTab = useCallback((t: string) => { setTab(t); history.replaceState(null, "", `#insights/${t}${t === "lab" && cmpRef.current ? "/compare" : ""}`); window.scrollTo(0, 0); }, []);
+  const setMode = (on: boolean) => { setCmp(on); cmpRef.current = on; history.replaceState(null, "", `#insights/lab${on ? "/compare" : ""}`); };
+  const toPart = (sec: string) => { document.querySelector(`.inst [data-sec="${sec}"]`)?.scrollIntoView({ block: "start", behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" }); };
   // Swipe sideways to the next or previous tab — but not on anything that already drags sideways
   // (the timeline, its overview, the tab bar, wide tables) or on a form control.
   const inst = useRef<HTMLDivElement>(null);
@@ -129,8 +130,15 @@ export function Insights() {
     el.addEventListener("touchstart", down, { passive: true }); el.addEventListener("touchend", up, { passive: true });
     return () => { el.removeEventListener("touchstart", down); el.removeEventListener("touchend", up); };
   }, [shown, tabs, openTab, phone]);
-  useEffect(() => { const on = () => { const t = tabOf(readRoute()[1]); if (t) setTab(t); if (t === "timeline") setCmp(location.hash.split("/")[2] === "compare"); }; addEventListener("hashchange", on); return () => removeEventListener("hashchange", on); }, []);
-  const showOnGraph = (f: GraphFocus) => { setFocus(f); cmpRef.current = false; setCmp(false); openTab("timeline"); };
+  useEffect(() => { const on = () => { const r = readRoute()[1], t = tabOf(r); if (t) setTab(t); setJump(partOf(r)); if (r === "timeline" || r === "lab") setCmp(location.hash.split("/")[2] === "compare"); }; addEventListener("hashchange", on); return () => removeEventListener("hashchange", on); }, []);
+  // the open page's sections with something in them (after it's drawn), and the jump an old page's name asked for
+  useEffect(() => { const t = setTimeout(() => setParts(shown ? partsOnPage(shown) : []), 50); return () => clearTimeout(t); }, [shown, s.entries.length, band]);
+  useEffect(() => {
+    if (!jump || tabFor(jump) !== shown) return;
+    const t = setTimeout(() => { toPart(jump); setJump(undefined); }, 250);
+    return () => clearTimeout(t);
+  }, [jump, shown]); // eslint-disable-line react-hooks/exhaustive-deps
+  const showOnGraph = (f: GraphFocus) => { setFocus(f); cmpRef.current = false; setCmp(false); openTab("lab"); setJump("timeline"); };
   const enrich = useEnrich();
   const report = useMemo(() => notice(s.entries, s.goals, now, currentKg(s.entries, s.settings.bodyKg, now), { workouts: s.workouts, supplements: s.supplements, settings: s.settings, enrich }), [enrich, s.entries, s.goals, now, s.settings, s.workouts, s.supplements]);
   // Show a section only once there's something in it; list the rest in one line each, so a new
@@ -169,6 +177,8 @@ export function Insights() {
     if (kcal) v.intake = `${Math.round(kcal).toLocaleString("en-GB")} kcal`;
     const week = s.workouts.filter((w) => now - w.startedAt < 7 * 86_400_000).length;
     if (week) v.training = `${week} this wk`;
+    // the five pages (item 2): Body shows last night's sleep, else the heart rate
+    if (v.sleep ?? v.heart) v.body = (v.sleep ?? v.heart)!;
     if (report.found.length) v.connections = `${report.found.length} found`;
     return v;
   }, [s.entries, s.workouts, band, now, today, report]);
@@ -177,6 +187,8 @@ export function Insights() {
     <div className="ins-shell">
     {!nothing && <SectionBar version={`${s.entries.length}-${period}-${tab}-${band ? 1 : 0}`} tab={shown ?? tab} onTabs={onTabs} onTab={openTab} values={values} />}
     <div className="inst" ref={inst} data-tab={nothing ? undefined : shown}>
+      {/* item 2: inside Body and Lab, a chip a section — a tap goes to it */}
+      {!nothing && parts.length > 1 && <nav className="secparts" aria-label="Sections">{parts.map(([x, name]) => <button type="button" key={x} data-part={x} onClick={() => toPart(x)}>{name}</button>)}</nav>}
       <header>
         <div>
           <h1>{shown ? TABS.find(([t]) => t === shown)?.[1] : "Insights"}</h1>
@@ -184,11 +196,11 @@ export function Insights() {
         </div>
         <div className="ins-ctrls">
           {sample && <span className="badge">INCLUDES SAMPLE DATA · remove it in Settings</span>}
-          {!nothing && shown === "timeline" && <div className="iseg" role="group" aria-label="Read or compare">
+          {!nothing && shown === "lab" && <div className="iseg" role="group" aria-label="Read or compare">
             <button type="button" aria-pressed={!cmp} onClick={() => setMode(false)}>Read</button>
             <button type="button" aria-pressed={cmp} onClick={() => setMode(true)}>Compare</button>
           </div>}
-          {!nothing && (!shown || (PERIOD_PAGES.has(shown) && !(shown === "sleep" && bandNights))) && <div className="iseg" role="group" aria-label="Period for the charts">
+          {!nothing && (!shown || PERIOD_PAGES.has(shown)) && <div className="iseg" role="group" aria-label="Period for the charts">
             {([[7, "7 days"], [30, "30 days"], [84, "12 weeks"]] as const).map(([n, l]) => <button type="button" key={n} aria-pressed={period === n} onClick={() => setPeriod(n)}>{l}</button>)}
           </div>}
         </div>
@@ -201,15 +213,16 @@ export function Insights() {
       {!nothing && <LookAt now={now} />}
       {!nothing && <Glance now={now} trendDays={period} report={report} />}
       {!nothing && <div className="gl" data-sec="week"><Top days={gdays} /></div>}
-      {!nothing && (cmp && shown === "timeline" ? <Compare data={data} band={band} now={now} logged={logged} />
-        : <MasterGraph data={data} supplements={s.supplements} focus={focus} days={gdays} band={band} onView={loadBandBefore} />)}
+      {/* item 2 (14 Nov): the page order is the reading order — Body: sleep, heart, mind; Lab: findings, body lab, the timeline, data */}
+      {!nothing && <SleepNights data={data} band={band} now={now} entries={s.entries} halfLifeMin={s.settings.halfLifeMin} />}
       {!nothing && <HeartPage data={data} band={band} now={now} entries={s.entries} halfLifeMin={s.settings.halfLifeMin} />}
       {!nothing && <MindPage data={data} band={band} now={now} entries={s.entries} halfLifeMin={s.settings.halfLifeMin} days={gdays} period={period} />}
       {!nothing && <Mind days={gdays} now={now} period={period} />}
       {!nothing && <Connections days={gdays} />}
       {!nothing && <div data-sec="connections" className="sec-wrap"><LinkMapCard now={now} /><ConnectDots now={now} /><BestDays now={now} /><Combos now={now} /><Ripples now={now} /><OneList report={report} items={scouted} onShow={showOnGraph} /></div>}
       {!nothing && <BodyLab band={band} entries={s.entries} now={now} active={shown === "lab" || !shown} />}
-      {!nothing && <SleepNights data={data} band={band} now={now} entries={s.entries} halfLifeMin={s.settings.halfLifeMin} />}
+      {!nothing && (cmp && shown === "lab" ? <Compare data={data} band={band} now={now} logged={logged} />
+        : <MasterGraph data={data} supplements={s.supplements} focus={focus} days={gdays} band={band} onView={loadBandBefore} />)}
       {!nothing && <Body days={gdays} period={period} now={now} bandNights={bandNights} />}
       {!nothing && (has.sets || has.cardio) && <TrainingPage now={now} />}
       {!nothing && (has.sets || has.supps) && <>

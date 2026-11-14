@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Fewer Insights pages, and the Sunday story</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  /* HealthOS Insights ("instrument"), its own tokens; one dark world by choice */
+  --bg: #0a0c0e; --i-bg: #0d1012; --panel: #12171a; --panel-2: #171e22; --line: #222b2f; --line-2: #2c373c;
+  --ink: #dce3e5; --ink-2: #93a0a4; --dim: #5b676b; --good: #4fc27a; --bad: #f07a6a; --gym: #ffd166; --ok: #a8dcc0;
+  --sans: "IBM Plex Sans", system-ui, sans-serif; --mono: "IBM Plex Mono", ui-monospace, monospace; --cond: "Barlow Condensed", "Arial Narrow", sans-serif;
+  /* layout: two parts, each a note and phones side by side */
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--sans); }
+.wrap { max-width: 1320px; margin: 0 auto; padding: 28px 18px 70px; display: grid; gap: 40px; }
+h1 { font: 700 30px/1.1 var(--cond); letter-spacing: .02em; text-transform: uppercase; margin: 0; }
+h2 { font: 700 25px var(--cond); letter-spacing: .03em; text-transform: uppercase; margin: 0; }
+.lede, .part > p { max-width: 780px; color: var(--ink-2); font-size: 14.5px; line-height: 1.55; margin: 6px 0 0; }
+.lede b, .part > p b { color: var(--ink); }
+.k { font: 500 10px var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--ink-2); }
+.part { display: grid; gap: 14px; }
+.boards { display: flex; flex-wrap: wrap; gap: 26px; align-items: flex-start; }
+.board { display: grid; gap: 10px; width: 390px; max-width: 100%; }
+.board > header b { font: 700 21px var(--cond); letter-spacing: .03em; text-transform: uppercase; display: block; }
+.board > header span { font-size: 13.5px; color: var(--ink-2); line-height: 1.45; }
+.phone { width: 390px; max-width: 100%; background: var(--i-bg); border: 1px solid var(--line-2); border-radius: 30px; padding: 14px 12px 18px; display: grid; gap: 10px; align-content: start; min-height: 640px; position: relative; overflow: hidden; }
+.tabs { display: flex; gap: 4px; overflow-x: auto; padding-bottom: 2px; }
+.tabs span { white-space: nowrap; font-size: 13px; padding: 6px 10px; border-radius: 14px; color: var(--ink-2); }
+.tabs span.on { background: var(--ink); color: var(--i-bg); font-weight: 600; }
+.p { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 11px 13px; display: grid; gap: 6px; }
+.p b { font-weight: 600; } .note { font-size: 11.5px; color: var(--dim); margin: 0; line-height: 1.45; }
+.say { font-size: 13.5px; margin: 0; line-height: 1.45; }
+.sub { display: flex; gap: 6px; flex-wrap: wrap; } .sub span { font: 500 11px var(--mono); padding: 3px 8px; border: 1px solid var(--line-2); border-radius: 10px; color: var(--ink-2); }
+.sub span.on { border-color: var(--ink-2); color: var(--ink); }
+.map { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; }
+.map .p ul { margin: 0; padding-left: 18px; font-size: 13px; color: var(--ink-2); display: grid; gap: 3px; }
+.from { font: 500 10px var(--mono); color: var(--dim); }
+/* story */
+.story { position: absolute; inset: 0; background: linear-gradient(170deg, #1d2a24, #0d1012 70%); padding: 18px 18px 22px; display: grid; grid-template-rows: auto auto 1fr auto; gap: 14px; }
+.bars { display: flex; gap: 4px; } .bars i { flex: 1; height: 3px; border-radius: 2px; background: #ffffff33; } .bars i.done { background: #fff; }
+.story .k { color: #cfe; }
+.story h3 { font: 700 34px/1.05 var(--cond); text-transform: uppercase; margin: 0; letter-spacing: .02em; }
+.story .big { font: 600 56px/1 var(--sans); }
+.story .line { font-size: 16px; line-height: 1.45; color: #e6eeea; margin: 0; }
+.story .tap { font-size: 12px; color: #ffffff88; display: flex; justify-content: space-between; }
+.story button { all: unset; cursor: pointer; }
+.chips { display: flex; gap: 6px; flex-wrap: wrap; } .chips span { background: #ffffff14; border-radius: 12px; padding: 6px 10px; font-size: 13px; }
+.mini { display: grid; gap: 6px; }
+.row { display: flex; justify-content: space-between; font-size: 14px; } .row b { font-variant-numeric: tabular-nums; }
+.pill { font: 600 12px var(--sans); background: var(--gym); color: #1a1406; border-radius: 10px; padding: 7px 12px; justify-self: start; }
+.pick { font-size: 13px; color: var(--ink-2); max-width: 780px; margin: 0; } .pick b { color: var(--ink); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="k">HealthOS · open list items 2 and 12</div>
+    <h1>Fewer Insights pages, and the Sunday story</h1>
+    <p class="lede">Insights has <b>ten pages</b> today. That's a lot of places to look, and things you want sit on pages you never open.
+      And there's no moment where the week is <b>summed up for you</b>. Two directions for each; example numbers.</p>
+  </header>
+
+  <section class="part">
+    <h2>2 · Insights in five</h2>
+    <p>Ten pages become <b>five</b>, by the question each answers: <b>Trends</b> (how am I doing), <b>Body</b> (sleep, heart, mind), <b>Fuel</b> (food and weight), <b>Training</b>, and <b>Lab</b> (what goes with what, tests, how the numbers are made). Nothing is lost; pages become sections.</p>
+    <div class="map">
+      <div class="p"><span class="k">Trends</span><ul><li>Every trend <span class="from">← Overview</span></li><li>What to look at</li><li>Your week <span class="from">← Overview</span></li></ul></div>
+      <div class="p"><span class="k">Body</span><ul><li>Sleep <span class="from">← Sleep</span></li><li>Heart <span class="from">← Heart</span></li><li>Mind <span class="from">← Mind</span></li></ul></div>
+      <div class="p"><span class="k">Fuel</span><ul><li>Food days, macros, drinks, weight <span class="from">← Food &amp; body</span></li></ul></div>
+      <div class="p"><span class="k">Training</span><ul><li>As it is now <span class="from">← Training</span></li></ul></div>
+      <div class="p"><span class="k">Lab</span><ul><li>The map and the links <span class="from">← Findings</span></li><li>Body lab <span class="from">← Body lab</span></li><li>Compare two things <span class="from">← Timeline</span></li><li>How the numbers are made <span class="from">← Data</span></li></ul></div>
+    </div>
+    <div class="boards">
+      <section class="board"><header><b>A · Five tabs, sections inside</b><span>Five tabs across the top. Body has Sleep · Heart · Mind as chips that jump within one page. Old links (#insights/sleep) still land in the right place.</span></header>
+        <div class="phone"><div class="tabs"><span>Trends</span><span class="on">Body</span><span>Fuel</span><span>Training</span><span>Lab</span></div>
+          <div class="sub"><span class="on">Sleep</span><span>Heart</span><span>Mind</span></div>
+          <div class="p"><span class="k">Last night</span><p class="say"><b>88</b> good · 7 h 17 asleep, in bed 23:30</p><p class="note">…the Sleep page as it is now…</p></div>
+          <div class="p"><span class="k">Heart</span><p class="say">Resting 52 · HRV 50, above your usual 46</p><p class="note">…then Heart, then Mind, one scroll…</p></div>
+          <div class="p"><span class="k">Mind</span><p class="say">Mood 6.4 · energy 6.1 · this week</p></div></div></section>
+      <section class="board"><header><b>B · Trends as the hub</b><span>One page of every trend. Tap a trend to open its own page (sleep, heart…). There are no tabs; Lab and Training are two buttons at the bottom.</span></header>
+        <div class="phone"><div class="p"><span class="k">Every trend · 90 days</span>
+          <div class="mini"><div class="row"><span>Sleep score</span><b>84 ↗</b></div><div class="row"><span>HRV</span><b>50 ↘</b></div><div class="row"><span>Resting heart</span><b>52 ↘</b></div><div class="row"><span>Weight</span><b>82.1 ↘</b></div><div class="row"><span>Strength</span><b>+11 % ↗</b></div><div class="row"><span>Mood</span><b>6.4 →</b></div></div>
+          <p class="note">tap one: its page opens</p></div>
+          <div class="p"><span class="k">What to look at</span><p class="say">HRV is slipping. Drinks and later bedtimes go with lower HRV the next day.</p></div>
+          <div class="sub"><span>Training ›</span><span>Lab ›</span></div></div></section>
+    </div>
+    <p class="pick"><b>My pick: A.</b> Five tabs is a number you can hold in your head, and nothing moves further away than one tap.</p>
+  </section>
+
+  <section class="part">
+    <h2>12 · The Sunday story</h2>
+    <p>Sunday evening, a <b>60-second story</b>: your week in six full-screen cards, tap to go on. Strength, cardio, sleep, the strongest link, and <b>one thing to try</b> next week, with a button that starts it. A push at 19:00 opens it, and it stays on Today until Monday.</p>
+    <div class="boards">
+      <section class="board"><header><b>A · Full-screen cards (clickable)</b><span>Like a phone story: tap right to go on, left to go back. One big number and one line each.</span></header>
+        <div class="phone" id="story"></div></section>
+      <section class="board"><header><b>B · One scrolling page</b><span>The same six as one page on Today, read top to bottom. Calmer, less of a moment.</span></header>
+        <div class="phone"><div class="p"><span class="k">Your week · 9–15 Nov</span><p class="say"><b>A strong week.</b> 3 sessions, squat +2.5 kg, 52 min of zone 2, sleep 7 h 22 on average.</p></div>
+          <div class="p"><span class="k">Sleep</span><p class="say">Your best night was Thursday (91). Weekends started 1 h 10 later.</p></div>
+          <div class="p"><span class="k">What went with what</span><p class="say">Two drinks on Friday, HRV 9 lower on Saturday — again.</p></div>
+          <div class="p"><span class="k">Next week, try</span><p class="say">In bed by 23:30 on 5 nights.</p><span class="pill">Start it</span></div></div></section>
+    </div>
+    <p class="pick"><b>My pick: A</b>, opened by a Sunday 19:00 push, and kept on Today as "Your week ›" until Monday.</p>
+  </section>
+</div>
+<script>
+const cards = [
+  { k: "Your week · 9–15 Nov", h: "A strong week", big: "3", line: "sessions, your usual. Squat up 2.5 kg, and 52 minutes of zone 2." },
+  { k: "Strength", h: "Getting stronger", big: "+1.1 %", line: "a week across 14 lifts. Bench stalled three weeks; squat leads." },
+  { k: "Cardio", h: "Fitter on walks", big: "−8 bpm", line: "at 115 steps a minute since August. 52 of a 150-minute zone-2 aim this week." },
+  { k: "Sleep", h: "7 h 22 a night", big: "84", line: "average score. Thursday was your best (91). Weekends started 1 h 10 later." },
+  { k: "What went with what", h: "Drinks, again", big: "−9", line: "ms of HRV the day after Friday's two drinks — the strongest link in your data." },
+  { k: "Next week, try", h: "In bed by 23:30", big: "5", line: "nights of 7. Your best nights all started by then. The app checks it for you.", btn: "Start it" },
+];
+let i = 0;
+function draw() {
+  const c = cards[i], el = document.getElementById("story");
+  el.innerHTML = `<div class="story"><div class="bars">${cards.map((_, k) => `<i class="${k <= i ? "done" : ""}"></i>`).join("")}</div>
+    <div><div class="k">${c.k}</div><h3>${c.h}</h3></div>
+    <div style="align-self:center"><div class="big">${c.big}</div><p class="line">${c.line}</p>${c.btn ? `<p style="margin-top:14px"><span class="pill">${c.btn}</span></p>` : ""}</div>
+    <div class="tap"><button type="button" id="back">‹ back</button><span>${i + 1} of ${cards.length}</span><button type="button" id="next">${i === cards.length - 1 ? "done" : "next ›"}</button></div></div>`;
+  el.querySelector("#back").onclick = () => { i = Math.max(0, i - 1); draw(); };
+  el.querySelector("#next").onclick = () => { i = (i + 1) % cards.length; draw(); };
+}
+draw();
+</script>
+</body>
+</html>

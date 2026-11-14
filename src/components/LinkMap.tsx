@@ -22,7 +22,7 @@ export function LookAt({ now }: { now: number }) {
   const a = useMemo(() => (links.length ? lookAt(linkMap(links, things, today), things, today) : null), [links, things, today]);
   if (!a) return null;
   return (
-    <section className="p w12 la" aria-label="What to look at" data-outcome={a.outcome.key}>
+    <section className="p w12 la" aria-label="What to look at" data-outcome={a.outcome.key} data-sec="week">
       <h2>What to look at <span>from every trend and the links that hold</span></h2>
       <p className="la-say">{lookWords(a)}</p>
       <p className="note-i">Goes with, not causes: an experiment on you can tell. <a href="#insights/connections" className="linkish">See the map ›</a></p>

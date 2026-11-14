@@ -39,13 +39,13 @@ const { chromium, APP, OUT, handle } = require('./harness.cjs');
     await pg.getByRole('button', { name: '30 days', exact: true }).click(); await pg.waitForTimeout(150);
     check(name + ': page never scrolls sideways', await pg.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth));
     const secs = await pg.locator('.secbar button > span').allInnerTexts();
-    check(name + ': the page list has the pages (' + secs.join(', ') + ')', ['Overview', 'Timeline', 'Findings', 'Data'].every((p) => secs.includes(p)));
+    check(name + ': the page list has the pages (' + secs.join(', ') + ')', ['Trends', 'Body', 'Lab'].every((p) => secs.includes(p))); // five pages since 14 Nov (item 2)
     if (name === 'laptop') { // pages as a sidebar on a laptop (owner, 8 Oct); phone tabs: e2e/phone.cjs
-    await pg.locator('.secbar button', { hasText: 'Findings' }).click(); await pg.waitForTimeout(500);
+    await pg.locator('.secbar button', { hasText: 'Lab' }).click(); await pg.waitForTimeout(500);
     const top = await pg.locator('#ins-connections').evaluate((el) => el.getBoundingClientRect().top);
-    check(name + ` : Findings opens as its own page, at the top (${Math.round(top)} px), Overview gone`, top >= 0 && top < 260 && !(await pg.locator('#ins-glance').isVisible()));
-    check(name + ': the sidebar stays and marks it', await pg.locator('.secbar').isVisible() && await pg.locator('.secbar button[aria-current="page"] > span').innerText() === 'Findings');
-    await pg.locator('.secbar button', { hasText: 'Overview' }).click(); await pg.waitForTimeout(400);
+    check(name + ` : Lab (Findings first) opens as its own page, at the top (${Math.round(top)} px), Overview gone`, top >= 0 && top < 260 && !(await pg.locator('#ins-glance').isVisible()));
+    check(name + ': the sidebar stays and marks it', await pg.locator('.secbar').isVisible() && await pg.locator('.secbar button[aria-current="page"] > span').innerText() === 'Lab');
+    await pg.locator('.secbar button', { hasText: 'Trends' }).click(); await pg.waitForTimeout(400);
     }
     await pg.evaluate(() => window.scrollTo(0, 0)); await pg.waitForTimeout(200);
     // One tooltip, styled, instead of the browser's: pointing at a vitals row shows its numbers.

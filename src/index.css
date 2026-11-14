@@ -1091,15 +1091,10 @@ a { color: inherit; }
 /* Insights on a phone (owner, 5 Oct: "pls make the phone layout"): the section bar is tabs, one section
    at a time. data-tab is only set at phone width, so the laptop keeps the whole page. */
 .inst[data-tab="week"] [data-sec]:not([data-sec="week"]),
-.inst[data-tab="timeline"] [data-sec]:not([data-sec="timeline"]),
-.inst[data-tab="heart"] [data-sec]:not([data-sec="heart"]),
-.inst[data-tab="mind"] [data-sec]:not([data-sec="mind"]),
-.inst[data-tab="connections"] [data-sec]:not([data-sec="connections"]),
-.inst[data-tab="sleep"] [data-sec]:not([data-sec="sleep"]),
+.inst[data-tab="body"] [data-sec]:not([data-sec="sleep"]):not([data-sec="heart"]):not([data-sec="mind"]),
 .inst[data-tab="intake"] [data-sec]:not([data-sec="intake"]),
 .inst[data-tab="training"] [data-sec]:not([data-sec="training"]),
-.inst[data-tab="lab"] [data-sec]:not([data-sec="lab"]),
-.inst[data-tab="data"] [data-sec]:not([data-sec="data"]) { display: none !important; }
+.inst[data-tab="lab"] [data-sec]:not([data-sec="connections"]):not([data-sec="lab"]):not([data-sec="timeline"]):not([data-sec="data"]) { display: none !important; }
 .inst .sec-wrap { display: grid; gap: 16px; }
 .lanes-t { display: flex; justify-content: space-between; align-items: center; width: 100%; background: none; border: 0; padding: 0 0 4px; color: inherit; font: inherit; cursor: pointer; }
 .lanes-t .dimt { font-family: var(--f-mono); font-size: 10.5px; }
@@ -2861,3 +2856,32 @@ button.vs-i { border: 0; text-align: left; font: inherit; cursor: pointer; width
 /* item 10 (14 Nov): the lock-screen widget's setup */
 .ws-steps { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
 .ws-script { width: 100%; font: 11px var(--f-mono); background: var(--c-card-2); color: var(--c-ink-2); border: 0; border-radius: 10px; padding: 10px; resize: vertical; }
+/* item 15 (14 Nov): which cards are used */
+.uc-h { font-size: 13px; margin-top: 4px; }
+.uc-list { margin: 0; padding: 0; list-style: none; display: grid; gap: 4px; }
+.uc-list li { display: flex; justify-content: space-between; gap: 10px; font-size: 13.5px; }
+.uc-list small { color: var(--c-ink-2); white-space: nowrap; }
+.uc-list.quiet span { color: var(--c-ink-2); }
+
+/* item 12 (14 Nov): the Sunday story, full screen */
+.story { position: fixed; inset: 0; z-index: 50; background: linear-gradient(170deg, #1d2a24, #0f1012 72%); color: #f3f3f1; display: grid; grid-template-rows: auto auto 1fr auto; gap: 16px;
+  padding: calc(14px + env(safe-area-inset-top, 0px)) 22px calc(18px + env(safe-area-inset-bottom, 0px)); font-family: var(--f-bar); cursor: pointer; user-select: none; }
+.story-bars { display: flex; gap: 4px; } .story-bars i { flex: 1; height: 3px; border-radius: 2px; background: #ffffff33; } .story-bars i.on { background: #fff; }
+.story-x { position: absolute; top: calc(22px + env(safe-area-inset-top, 0px)); right: 14px; background: none; border: 0; color: #fff; font-size: 28px; line-height: 1; padding: 8px; min-width: 44px; min-height: 44px; }
+.story-k { font: 600 12px var(--f-bar); letter-spacing: .1em; text-transform: uppercase; color: #cfe8dc; }
+.story h2 { margin: 4px 44px 0 0; font: 700 38px/1.02 var(--f-cond); text-transform: uppercase; letter-spacing: .02em; }
+.story-body { align-self: center; display: grid; gap: 10px; max-width: 520px; }
+.story-big { font: 600 64px/1 var(--f-plex, var(--f-bar)); font-variant-numeric: tabular-nums; }
+.story-body p { margin: 0; font-size: 18px; line-height: 1.45; color: #e6eeea; }
+.story-body .pill-btn { justify-self: start; margin-top: 8px; min-height: 44px; }
+.story-done { color: var(--ok) !important; font-size: 15px !important; }
+.story-foot { display: flex; justify-content: space-between; font-size: 12.5px; color: #ffffffa0; }
+
+/* item 2 (14 Nov): five pages, a chip a section inside Body and Lab */
+.secparts { display: flex; gap: 6px; flex-wrap: wrap; position: sticky; top: 0; z-index: 3; padding: 6px 0; background: color-mix(in srgb, var(--i-bg) 92%, transparent); }
+.secparts button { background: none; border: 1px solid var(--i-line-2); color: var(--i-ink-2); border-radius: 14px; padding: 6px 12px; font: 500 12.5px var(--f-plex); min-height: 34px; }
+/* a jump to a section (the chips, an old page's name) stops below the sticky tabs and chips, not under them */
+.inst [data-sec] { scroll-margin-top: 112px; }
+@media (min-width: 900px) { .inst [data-sec] { scroll-margin-top: 64px; } }
+.sl-mini .what { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; } /* a long "that night" ran past the card (found 14 Nov) */
+.sl-mini { min-width: 0; overflow: hidden; }
