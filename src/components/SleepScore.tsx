@@ -8,6 +8,8 @@
  * usual, and says the zone in words, so it never rests on colour alone ("i like the ranges and dots etc i just dont get it").
  */
 
+import { useState } from "react";
+
 type Zone = "ideal" | "fair" | "poor";
 type ShownPart = {
   id: string; name: string; got: number; max: number; why: string;
@@ -35,11 +37,17 @@ function ZoneBar({ value, scale: [a, b], zones, zone, usual }: { value: number; 
   );
 }
 
-export function SleepScore({ s, label = "Sleep score", leftWhy = sleepLeft, leftNote }: { s: Shown; label?: string; leftWhy?: (l: { id: string; name: string }) => string; /** the whole line, said its own way (the food score) */ leftNote?: string | null }) {
+/** Whether the sleep score's parts were left open (owner, 14 Nov, item 4: "the score's eight bars behind a tap"). */
+const FOLD_KEY = "healthos.ui.sscore";
+
+export function SleepScore({ s, label = "Sleep score", leftWhy = sleepLeft, leftNote, fold = false, numberless = false }: { s: Shown; label?: string; leftWhy?: (l: { id: string; name: string }) => string; /** the whole line, said its own way (the food score) */ leftNote?: string | null;
+  /** the parts behind a tap, its summary saying where they landed; left open, it opens open next time */ fold?: boolean;
+  /** the word, not the number (item 3, 14 Nov: only readiness and the sleep score stay numbers) */ numberless?: boolean }) {
   const zoned = s.parts.some((p) => p.zones);
-  return (
-    <div className="sl-score" data-score={s.score} aria-label={`${label} ${s.score} out of 100, ${s.word}`}>
-      <div className="sl-score-n"><b>{s.score}</b><span>/ 100 · </span><span className={zoned ? `zw ${s.score >= 80 ? "ideal" : s.score >= 60 ? "fair" : "poor"}` : undefined}>{s.word}</span></div>
+  const [open] = useState(() => { try { return localStorage.getItem(FOLD_KEY) === "1"; } catch { return false; } });
+  const tally = (["ideal", "fair", "poor"] as const).map((z) => [z, s.parts.filter((p) => p.zone === z).length] as const).filter(([, n]) => n > 0);
+
+  const parts = (<>
       <div className="sl-score-parts" role="list">
         {s.parts.map((p) => p.zones && p.scale && p.value != null && p.zone ? (
           <div key={p.id} className="sl-sp z" role="listitem" data-part={p.id} data-got={p.got} data-zone={p.zone}
@@ -67,6 +75,16 @@ export function SleepScore({ s, label = "Sleep score", leftWhy = sleepLeft, left
         </p>
       )}
       {s.left.length > 0 && <p className="sl-note">{leftNote ?? <>Not in it yet: {s.left.map(leftWhy).filter((v, i, a) => a.indexOf(v) === i).join(", ")} — scored out of the rest.</>}</p>}
+  </>);
+  return (
+    <div className="sl-score" data-score={s.score} aria-label={`${label} ${s.score} out of 100, ${s.word}`}>
+      <div className="sl-score-n">{numberless ? <b className="word">{s.word[0].toUpperCase() + s.word.slice(1)}</b> : <><b>{s.score}</b><span>/ 100 · </span><span className={zoned ? `zw ${s.score >= 80 ? "ideal" : s.score >= 60 ? "fair" : "poor"}` : undefined}>{s.word}</span></>}</div>
+      {fold ? (
+        <details className="sl-score-fold" open={open} onToggle={(e) => { const o = (e.currentTarget as HTMLDetailsElement).open; try { localStorage.setItem(FOLD_KEY, o ? "1" : "0"); } catch { /* private mode */ } }}>
+          <summary>How the {s.score} is made: {s.parts.length} parts{tally.length ? <> · {tally.map(([z, n], k) => <span key={z} className={`zw ${z}`}>{k ? " · " : ""}{n} {z}</span>)}</> : null}</summary>
+          {parts}
+        </details>
+      ) : parts}
     </div>
   );
 }

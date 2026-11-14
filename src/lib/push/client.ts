@@ -74,7 +74,7 @@ export const status = () => api<{ devices: DeviceStatus[]; next: number | null }
 export async function syncPlan(force = false): Promise<void> {
   if (!isOn()) return;
   const s = getState();
-  const reminders = plan({ now: Date.now(), entries: s.entries, supplements: s.supplements, bedMinute: s.settings.bedMinute, prefs: s.settings.notify ?? DEFAULT_NOTIFY });
+  const reminders = plan({ now: Date.now(), entries: s.entries, supplements: s.supplements, bedMinute: s.settings.bedMinute, prefs: s.settings.notify ?? DEFAULT_NOTIFY, halfLifeMin: s.settings.halfLifeMin });
   const body = JSON.stringify(reminders);
   let last: string | null = null;
   try { last = localStorage.getItem(SENT_KEY); } catch { /* blocked storage */ }

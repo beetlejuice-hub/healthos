@@ -25,18 +25,20 @@ export function FoodScoreDays({ days, today }: { days: string[]; today: string }
   if (!scored.length) return null;
   const sel = scored.find((x) => x.day === pick) ?? scored[scored.length - 1];
   const avg = Math.round(scored.reduce((a, x) => a + x.s.score, 0) / scored.length);
+  // words, not numbers (owner, 14 Nov, item 3: "fewer scores" — readiness and the sleep score stay numbers)
+  const n = (z: "ideal" | "fair" | "poor") => scored.filter((x) => zoneOf(x.s.score) === z).length;
   const best = scored.reduce((a, x) => (x.s.score > a.s.score ? x : a)), low = scored.reduce((a, x) => (x.s.score < a.s.score ? x : a));
   const L = 26, R = 6, top = 6, ph = 110, H = top + ph + 20, cw = (w - L - R) / list.length, bw = Math.max(3, Math.min(22, cw - 3));
   const Y = (v: number) => top + ph - (v / 100) * ph, x = (i: number) => L + i * cw + (cw - bw) / 2;
   const label = (d: string) => dayLabel(atMinute(d, 720)), date = (d: string) => label(d).slice(4);
   return (
     <Panel cls="gl-foodscore" kick="Food score" title="Your food, day by day"
-      ans={<>Average <b>{avg}</b>/100 over {scored.length} day{scored.length === 1 ? "" : "s"} logged in full{scored.length > 2 ? <> · best {label(best.day)} ({best.s.score}), lowest {label(low.day)} ({low.s.score})</> : null}.</>}
+      ans={<>Of {scored.length} day{scored.length === 1 ? "" : "s"} logged in full: <b>{n("ideal")} good</b>, {n("fair")} fair, {n("poor")} off goal{scored.length > 2 ? <> · best {label(best.day)}, weakest {label(low.day)}</> : null}.</>}
       meta={`${list.length} days`}
-      foot={<><span className="lgd"><i style={{ background: COLOR.ideal }} />70+</span><span className="lgd"><i style={{ background: COLOR.fair }} />55–69</span><span className="lgd"><i style={{ background: COLOR.poor }} />under 55</span><span>· a gap: not logged in full · tap a day</span></>}>
+      foot={<><span className="lgd"><i style={{ background: COLOR.ideal }} />good</span><span className="lgd"><i style={{ background: COLOR.fair }} />fair</span><span className="lgd"><i style={{ background: COLOR.poor }} />off goal</span><span>· a gap: not logged in full · tap a day</span></>}>
       <div ref={ref} className="gl-chart">
         <svg viewBox={`0 0 ${w} ${H}`} width={w} height={H} role="img" aria-label={`Food score each day: average ${avg}`}>
-          {[0, 50, 100].map((v) => <g key={v}><line x1={L} x2={w - R} y1={Y(v)} y2={Y(v)} className={v ? "grid" : "axis"} /><text x={L - 6} y={Y(v) + 3.5} textAnchor="end">{v}</text></g>)}
+          {[0, 55, 70].map((v) => <g key={v}><line x1={L} x2={w - R} y1={Y(v)} y2={Y(v)} className={v ? "grid" : "axis"} />{v ? <text x={L - 6} y={Y(v) + 3.5} textAnchor="end">{v === 70 ? "good" : "fair"}</text> : null}</g>)}
           {list.map((d, i) => {
             const on = d.day === sel.day;
             if (!d.s) return <rect key={d.day} x={x(i)} y={Y(0) - 2} width={bw} height={2} rx={1} fill="var(--i-line-2, var(--c-track))" />;
@@ -44,7 +46,7 @@ export function FoodScoreDays({ days, today }: { days: string[]; today: string }
             return <g key={d.day} className="fs-day" data-day={d.day} data-score={d.s.score} onClick={() => setPick(d.day)} style={{ cursor: "pointer" }}>
               <rect x={L + i * cw} y={top} width={cw} height={ph} fill="transparent" />
               <path d={`M${x(i)},${Y(0)} V${y + r} q0,-${r} ${r},-${r} H${x(i) + bw - r} q${r},0 ${r},${r} V${Y(0)} Z`} fill={COLOR[zoneOf(d.s.score)]} opacity={on ? 1 : 0.55} />
-              {on && <text x={x(i) + bw / 2} y={y - 4} textAnchor="middle" className="fs-n">{d.s.score}</text>}
+              {on && <text x={x(i) + bw / 2} y={y - 4} textAnchor="middle" className="fs-n">{d.s.word}</text>}
             </g>;
           })}
           {list.map((d, i) => (i === 0 || i === list.length - 1 || (list.length <= 14 && i % 2 === 0) ? <text key={d.day} x={x(i) + bw / 2} y={H - 4} textAnchor="middle" className="fs-t">{date(d.day)}</text> : null))}
@@ -52,7 +54,7 @@ export function FoodScoreDays({ days, today }: { days: string[]; today: string }
       </div>
       <div className="fs-sel" data-day={sel.day}>
         <p className="fs-head"><b>{dayLabel(atMinute(sel.day, 720))}</b> · {Math.round(sel.s.kcal).toLocaleString("en-GB")} kcal logged</p>
-        <SleepScore s={sel.s} label="Food score" leftNote={leftLine(sel.s.left)} />
+        <SleepScore s={sel.s} label="Food score" leftNote={leftLine(sel.s.left)} numberless />
       </div>
     </Panel>
   );

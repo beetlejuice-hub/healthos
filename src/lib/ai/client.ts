@@ -2,9 +2,10 @@
  * The app's side of the AI: send a request to the Worker with your session, keep the latest usage
  * (calls today, cost) for Settings, and build the context the AI is told — on demand, at call time.
  */
+import { linksFor } from "../linkscache";
 import { vsNow } from "../vsnow";
 import { foundLines } from "./found";
-import { connect, linkLines, thingsFrom } from "../connect";
+import { linkLines } from "../connect";
 import { AI_ERRORS, MONTHLY_USD, READ_ROUNDS, isLooks, type AiError } from "./tasks";
 import { droppedWords, withRetry } from "./retry";
 import { pickLead } from "./lead";
@@ -166,9 +167,8 @@ export function leadNow(state: State = getState(), now = Date.now()) {
 /** Connecting the dots now (PLAN 206, lib/connect): the app's links over 120 days, in words, surest first. */
 export function linksNow(state: State = getState(), now = Date.now(), n = 10): string[] {
   try {
-    const today = localDay(now), band = bandNow();
-    const th = thingsFrom(withImports(withBand(dailyFacts(state.entries, state.workouts, state.settings, addDays(today, -120), addDays(today, -1)), band, today), state.imports), band);
-    return linkLines(connect(th), th, n);
+    const { things, links } = linksFor(state.entries, state.workouts, state.settings, bandNow(), state.imports, localDay(now));
+    return linkLines(links, things, n);
   } catch { return []; }
 }
 

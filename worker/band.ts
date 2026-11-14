@@ -19,6 +19,7 @@ import type { Vo2Day } from "../src/lib/vo2";
 import { cadencePairs, recoveryOf, type CadPair } from "../src/lib/cadence";
 import { keepSamples, readPostWhy, type HealthSample } from "../src/lib/healthimport";
 import { POINTS, summarize, thin, type Pt } from "../src/lib/placepoints";
+import { widgetLines, widgetView, type WidgetSnap } from "../src/lib/widget";
 import type { Places } from "../src/lib/timeline";
 
 export type BandEnv = {
@@ -385,6 +386,22 @@ export class BandHub {
         await this.storage.put("places:sum", sum);
       }
       return json({ key, last, places: sum?.places ?? null, points: sum?.points ?? 0 });
+    }
+    // the lock-screen widget (item 10, 14 Nov): the key's hash, the app's snapshot, and what the widget shows now
+    if (path === "widget-key") { await this.storage.put("widget:key", String(body.hash ?? "")); return json({ ok: true }); }
+    if (path === "widget-snap") {
+      const s = body as Partial<WidgetSnap>;
+      if (typeof s.at !== "number" || typeof s.day !== "string" || !Array.isArray(s.doses)) return json({ error: "not a snapshot" }, 400);
+      await this.storage.put("widget:snap", { ...s, doses: s.doses.filter((d) => typeof d?.at === "number" && typeof d?.mg === "number").slice(-40) });
+      return json({ ok: true });
+    }
+    if (path === "widget-get") {
+      const hash = await this.storage.get<string>("widget:key"), given = String(body.hash ?? "");
+      if (!hash || hash.length !== given.length || [...hash].reduce((d, c, i) => d | (c.charCodeAt(0) ^ given.charCodeAt(i)), 0) !== 0) return json({ error: "wrong key — make a new one in HealthOS → Settings → Lock-screen widget" }, 401);
+      const snap = await this.storage.get<WidgetSnap>("widget:snap");
+      if (!snap) return json({ lines: ["HealthOS", "open the app once to fill this in"], ageMin: null });
+      const view = widgetView(snap, this.now());
+      return json({ lines: widgetLines(view), ageMin: view.ageMin, view });
     }
     if (path === "health-data") return json({ samples: (await this.storage.get<HealthSample[]>("health:samples")) ?? [], last: (await this.storage.get("health:last")) ?? null, fail: (await this.storage.get("health:fail")) ?? null, key: !!(await this.storage.get<string>("health:key")) });
     if (path === "status") return json(await this.status());

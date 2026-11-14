@@ -355,6 +355,23 @@ describe("BandHub", () => {
     expect((rolls().at(-1)!.json!.range as { startTime: string }).startTime).toBe("2026-10-06T22:15:00Z");
   });
 
+  it("item 10 (14 Nov): the lock-screen widget — its key's hash, the app's snapshot, what it shows now; a wrong key is refused", async () => {
+    const { h, at } = setup();
+    const get = async (hash: string) => (await h.fetch(post("widget-get", { hash }))).json() as Promise<{ lines?: string[]; error?: string; ageMin?: number | null }>;
+    await h.fetch(post("widget-key", { hash: "a".repeat(64) }));
+    expect((await get("b".repeat(64))).error).toMatch(/wrong key/);
+    expect((await get("a".repeat(64))).lines).toEqual(["HealthOS", "open the app once to fill this in"]);
+    const day = new Date(T0).toISOString().slice(0, 10);
+    expect((await h.fetch(post("widget-snap", { at: 1 }))).status).toBe(400);
+    await h.fetch(post("widget-snap", { at: T0, day, tz: 0, readiness: { score: 81, word: "good" }, sleep: 84, stack: { taken: 2, total: 5 }, doses: [{ at: T0 - 3600_000, mg: 100 }], halfLifeMin: 300, bed: T0 + 12 * 3600_000, next: "Pull" }));
+    at(T0 + 30 * 60_000);
+    const r = await get("a".repeat(64));
+    expect(r.ageMin).toBe(30);
+    expect(r.lines![0]).toBe("Ready 81 · Sleep 84 · Stack 2/5");
+    expect(r.lines![1]).toMatch(/^☕ \d+ mg · \d+ at 22:00$/);
+    expect(r.lines![2]).toBe("Next: Pull");
+  });
+
   it("PLAN 218: each pull keeps the 5-minute windows (steps a minute, heart rate); the first goes over the 120 days held", async () => {
     // a walk 08:00–08:15 at 115 steps a minute and 110 bpm (a reading every 15 s)
     const w0 = Date.UTC(2026, 9, 7, 8), hr = Array.from({ length: 60 }, (_, i) => hrPoint(w0 + i * 15_000, 110));

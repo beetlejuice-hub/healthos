@@ -39,9 +39,9 @@ const ENTRIES = [
   await pg.goto(APP + '#today'); await pg.reload(); await pg.waitForSelector('#feel');
   await openCard(pg, 'fuel'); // Today A (28 Oct): the Food card opens from its tile; its head keeps the one-line read
   const fold = await pg.locator('#fuel .fold-head').innerText().catch(() => '');
-  check(`Today's Food card, its head: yesterday's score (${fold.split('\n').slice(0, 2).join(' · ')})`, /yesterday 32\/100/.test(fold));
+  check(`Today's Food card, its head: yesterday's score (${fold.split('\n').slice(0, 2).join(' · ')})`, /yesterday off goal/.test(fold));
   const line = await pg.locator('.fuel-score').innerText().catch(() => '');
-  check(`…open: what it was and what cost it (${line})`, line === "Yesterday's food 32/100 · off goal — protein low (46 g of 150) ›");
+  check(`…open: what it was and what cost it (${line})`, line === "Yesterday's food: off goal, protein low (46 g of 150) ›");
   await pg.locator('.fuel-score').screenshot({ path: OUT + 'dayscore-today.png' }).catch(() => {});
   await pg.locator('.fuel-score').click(); await pg.waitForTimeout(400);
   check(`a tap opens Insights → Intake (${await pg.evaluate(() => location.hash)})`, await pg.evaluate(() => location.hash) === '#insights/intake');
@@ -50,7 +50,7 @@ const ENTRIES = [
   const bars = await panel.locator('.fs-day').evaluateAll((g) => g.map((x) => [x.dataset.day, +x.dataset.score]));
   check(`a bar a day that was logged in full (${JSON.stringify(bars)})`, JSON.stringify(bars) === JSON.stringify([[D1, 100], [D2, 32]]));
   const ans = await panel.locator('.gp-ans').innerText().catch(() => '');
-  check(`…the average over them (${ans})`, /^Average 66\/100 over 2 days logged in full\.$/.test(ans));
+  check(`…the average over them (${ans})`, /^Of 2 days logged in full: 1 good, 0 fair, 1 off goal\.$/.test(ans));
   const parts = () => panel.locator('.sl-sp').evaluateAll((els) => els.map((e) => [e.dataset.part, +e.dataset.got]));
   check(`yesterday's parts, as worked out by hand (${JSON.stringify(await parts())})`, JSON.stringify(await parts()) === JSON.stringify([['protein', 0], ['spread', 3], ['kcal', 15], ['fiber', 6], ['plants', 0], ['limits', 7.7], ['late', 0], ['alcohol', 0]]));
   check(`fits the phone (${await pg.evaluate(() => document.documentElement.scrollWidth)} px)`, await pg.evaluate(() => document.documentElement.scrollWidth) <= 390);

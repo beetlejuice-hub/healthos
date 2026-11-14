@@ -40,7 +40,7 @@ const { chromium, APP, OUT, handle, rate } = require('./harness.cjs');
   await card.getByRole('button', { name: 'Turn on' }).click();
   await pg.waitForFunction(() => document.querySelector('.card.notif')?.textContent?.includes('on for this device'), null, { timeout: 8000 }).catch(() => {});
   // four kinds since the slump ping (PLAN 177) — that one off until you turn it on
-  check('turned on: card says so, kinds shown', /on for this device/.test(await card.innerText()) && await card.locator('input[type=checkbox]').count() === 4);
+  check('turned on: card says so, kinds shown', /on for this device/.test(await card.innerText()) && await card.locator('input[type=checkbox]').count() === 5); // + wind down (item 9, 14 Nov)
   check('the slump ping is off by default', !(await card.locator('.notif-kind', { hasText: 'Before your afternoon slump' }).locator('input').isChecked()));
   check('asked for permission from the tap', await pg.evaluate(() => window.__asked === true));
   check('service worker registered for real', await pg.evaluate(async () => !!(await navigator.serviceWorker.getRegistration('/sw.js'))));
@@ -49,7 +49,7 @@ const { chromium, APP, OUT, handle, rate } = require('./harness.cjs');
   check('device sent to the server, signed in', sub && sub.body.subscription.endpoint === 'https://fcm.example/1' && /Chrome/.test(sub.body.device) && /^Bearer /.test(sub.auth));
   const plan1 = calls.filter((c) => c.op === 'schedule').pop()?.body.reminders ?? [];
   const fmt = (r) => `${String(new Date(r.at).getHours()).padStart(2, '0')}:${String(new Date(r.at).getMinutes()).padStart(2, '0')} ${r.title}`;
-  check(`plan sent (${plan1.slice(0, 4).map(fmt).join(' | ')} …)`, fmt(plan1[0]) === '13:00 How now?' && plan1.some((r) => fmt(r) === '22:00 Evening stack'));
+  check(`plan sent (${plan1.slice(0, 4).map(fmt).join(' | ')} …)`, fmt(plan1[0]) === '13:00 How now?' && plan1.some((r) => fmt(r) === '22:00 Evening stack · Wind down')); // the wind-down at 22:30 joins it
   await pg.screenshot({ path: OUT + 'push-settings.png', fullPage: false, clip: { x: 0, y: Math.max(0, (await card.boundingBox()).y - 10), width: 390, height: 520 } });
 
   // A check-in at 12:00 → the 13:00 nudge is dropped from the next plan.

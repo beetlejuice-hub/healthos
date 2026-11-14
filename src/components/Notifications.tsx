@@ -14,6 +14,7 @@ const KINDS: [keyof NotifyPrefs, string, string][] = [
   ["supps", "Supplements", "30 minutes after a slot, if something in it isn't ticked"],
   ["weigh", "Morning weigh-in", "09:30, if you haven't weighed yet"],
   ["slump", "Before your afternoon slump", "15 min before the hour your energy usually dips — once your check-ins show one"],
+  ["winddown", "Wind down", "30 min before your bedtime, with the caffeine still in you then"],
 ];
 
 const delivered = (d: DeviceStatus) => !d.last ? "nothing sent yet" : d.last.status >= 200 && d.last.status < 300 ? `delivered ${dayLabel(d.last.at)} ${clock(d.last.at)}` : d.last.status === 0 ? `couldn't reach its push service ${clock(d.last.at)}` : `refused (${d.last.status}) ${clock(d.last.at)}`;
@@ -51,7 +52,7 @@ export function Notifications() {
         <div className="notif-kinds">
           {KINDS.map(([k, name, when]) => (
             <label key={k} className="notif-kind">
-              <input type="checkbox" checked={!!prefs[k]} onChange={(e) => setPref(k, e.target.checked)} />
+              <input type="checkbox" checked={k === "winddown" ? prefs[k] !== false : !!prefs[k]} onChange={(e) => setPref(k, e.target.checked)} />
               <span><b>{name}</b><small>{when}</small></span>
             </label>
           ))}

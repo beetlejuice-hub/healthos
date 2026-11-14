@@ -20,8 +20,18 @@ describe("reminder plan", () => {
       "13:00 How now? · Midday stack", // 13:00 and 13:30: one buzz, not two
       "17:30 How now?",
       "21:00 How was today?",
-      "22:00 Evening stack",
+      "22:00 Evening stack · Wind down", // the wind-down at 22:30 (bed 23:00) joins the stack's buzz
     ]);
+  });
+
+  it("wind down (item 9, 14 Nov): 30 min before bed, with the caffeine left then; a bedtime after midnight; switched off", () => {
+    const quiet = { ...DEFAULT_NOTIFY, checkins: false, supps: false, weigh: false };
+    const wd = (rs: Reminder[]) => rs.filter((r) => r.tag === "winddown").map((r) => `${new Date(r.at).getDate()} ${String(new Date(r.at).getHours()).padStart(2, "0")}:${String(new Date(r.at).getMinutes()).padStart(2, "0")} ${r.body}`);
+    const coffee: Entry[] = [{ id: "c", kind: "drink", at: T(2, 16), name: "Coffee", ml: 250, caffeineMg: 200, alcoholG: 0, kcal: 5 } as Entry];
+    expect(wd(plan({ ...ctx(T(2, 17), coffee, quiet), halfLifeMin: 300 }))[0]).toMatch(/^2 22:30 Bed at 23:00: lights low, phone away\. About \d+0 mg of caffeine will still be in you then\.$/);
+    expect(wd(plan(ctx(T(2, 17), [], quiet)))[0]).toBe("2 22:30 Bed at 23:00: lights low, phone away.");
+    expect(wd(plan(ctx(T(2, 17), [], quiet, 30)))[0]).toBe("3 00:00 Bed at 00:30: lights low, phone away.");
+    expect(wd(plan(ctx(T(2, 17), [], { ...quiet, winddown: false })))).toEqual([]);
   });
 
   it("rating at 12:50 cancels the 13:00 nudge; ticking theanine at midday drops it from the merge", () => {

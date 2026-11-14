@@ -4189,3 +4189,29 @@ both reads and the questions. Phases in that order; #152 RPE waits (owner).
      nightrows.test, e2e brief (Sleep part); the Sleep suites open the fold.
    - Not yet: the score's eight bars behind a tap on a phone (suites read them; next pass), Sleep B (the wall) as the
      second view.
+
+222. [ ] **The open list, his picks** (owner, 14 Nov, to the list of changes: "Do 2,3 4 8 9 maybe, can we do 10? Can we do
+   lock screen widget? 12 14 15 is good idea but lmk before deleting, 16 18 · These can be done"). Claimed 14 Nov.
+   - 16 the links worked out once, not 3–4 times a screen · 4 the sleep score's bars behind a tap · 8 zone-2 minutes a
+     week · 3 fewer scores (readiness and the sleep score stay numbers; the rest become lines) · 2 Insights from 10 pages
+     to fewer (canvas first) · 9 a wind-down push · 10 a lock-screen widget (Scriptable, free) · 12 the Sunday story
+     (canvas first) · 15 which cards he opens, counted on the phone — and 14, the Today pattern, removed only when he
+     says · 18 the flaky suites.
+   - Done 14 Nov: **16** lib/linkscache — the links worked out once for the map, Connecting the dots, What to look at, the
+     trend wall and the AI (the last answer kept while the store and the band hand out the same objects); test counts the
+     runs. **4** the sleep score's parts behind a tap on Sleep ("How the 88 is made: 11 parts · 9 ideal · 2 fair"),
+     remembered; "that night" moved into the line on top (no repeat). **8** components/Zone2Card (lib/zone2): every
+     band minute at 60–70 % of max, in a workout or not, a week at a time against a quiet 150 (the WHO's moderate
+     minutes; zone 2 its easy end), the usual from weeks the band saw well, weeks it saw little of drawn faint; without an
+     age or max it says so. **3** the food day and sleep regularity as words, not /100 (Today: "Yesterday's food: good,
+     protein low"; Insights: "Of 26 days logged in full: 25 good, 1 fair, 0 off goal"); readiness and the sleep score stay
+     numbers. **9** a "Wind down" push 30 min before bedtime with the caffeine left then (on by default, Settings →
+     Notifications); the quiet hours read 00:00–06:00 as the evening before when bed is after midnight (a 00:00 wind-down
+     for 00:30 was dropped as "before 08:00"). **10** the lock-screen widget: Settings → Lock-screen widget makes a key and
+     the Scriptable script; Today leaves a snapshot (readiness, sleep, stack, caffeine doses, bedtime, next, the phone's
+     time zone) once a key exists — when it changes, else every 30 min; GET /api/widget works the caffeine out at that
+     moment (lib/widget, worker handleWidget). Tests: linkscache, zone2, plan (wind down), widget, band.test (widget),
+     e2e zone2, widget, push. **18** part: tellmore and weekreport wait for what the band brings in.
+   - Not verified: Scriptable on the real phone (the script's API is Scriptable's documented one). Still failing: e2e
+     checkin — its raw-storage creatine seed is replaced by the first sync after "Cut 150 anyway" (the handler runs; the
+     state reverts); the app isn't at fault, the suite needs to add creatine through the app.

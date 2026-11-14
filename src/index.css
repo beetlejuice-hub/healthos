@@ -2848,3 +2848,16 @@ button.vs-i { border: 0; text-align: left; font: inherit; cursor: pointer; width
 .brief-row { min-height: 50px; } .brief-row.done span { color: var(--ok); }
 .brief-acts { display: flex; gap: 6px; }
 .brief-row.done .pill-btn:disabled { opacity: .5; }
+/* item 4 (14 Nov): the sleep score's parts behind a tap */
+.sl-score-fold > summary { cursor: pointer; list-style: none; font-size: 13px; color: var(--i-ink-2); padding: 6px 0; display: flex; gap: 6px; flex-wrap: wrap; align-items: baseline; }
+.sl-score-fold > summary::-webkit-details-marker { display: none; }
+.sl-score-fold > summary::after { content: "›"; margin-left: auto; transition: transform .15s; }
+.sl-score-fold[open] > summary::after { transform: rotate(90deg); }
+.sl-score-fold[open] > summary { margin-bottom: 8px; }
+/* item 8 (14 Nov): zone 2 a week */
+.z2-aim { stroke: var(--i-ink-2); stroke-dasharray: 3 3; }
+.z2-bar { fill: color-mix(in srgb, var(--ok) 55%, transparent); } .z2-bar.now { fill: var(--ok); } .z2-bar.faint { fill: none; stroke: var(--ok); stroke-dasharray: 2 2; }
+.sl-score-n b.word { font: 600 26px var(--f-plex); }
+/* item 10 (14 Nov): the lock-screen widget's setup */
+.ws-steps { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
+.ws-script { width: 100%; font: 11px var(--f-mono); background: var(--c-card-2); color: var(--c-ink-2); border: 0; border-radius: 10px; padding: 10px; resize: vertical; }

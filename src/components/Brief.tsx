@@ -5,7 +5,9 @@
  * first lift's target. Each row only when it applies; nothing to say and nothing to do → nothing drawn.
  */
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { sendWidget } from "../lib/widget-client";
+import type { Dose } from "../lib/caffeine";
 import { useBand } from "../lib/band-client";
 import { briefLine, briefWatch, checkInDue, GREET, usualOf } from "../lib/brief";
 import type { Moment } from "../lib/moment";
@@ -20,7 +22,8 @@ import type { EntryOf } from "../lib/types";
 
 export type BriefStack = { title: string; body: string; many: boolean; onTook: () => void; onPick: () => void };
 
-export function Brief({ now, moment, cafBed, bed, stack }: { now: number; moment: Moment; cafBed: number; bed: number; stack: BriefStack | null }) {
+export function Brief({ now, moment, cafBed, bed, stack, widget }: { now: number; moment: Moment; cafBed: number; bed: number; stack: BriefStack | null;
+  /** what the lock-screen widget needs besides what's here (item 10, 14 Nov) */ widget?: { stack: { taken: number; total: number }; doses: Dose[]; halfLifeMin: number } }) {
   const band = useBand().data, entries = useStore((s) => s.entries), workouts = useStore((s) => s.workouts), templates = useStore((s) => s.templates);
   const today = localDay(now);
   const sets = useMemo(() => entries.filter((e): e is EntryOf<"set"> => e.kind === "set") as LoggedSet[], [entries]);
@@ -40,6 +43,14 @@ export function Brief({ now, moment, cafBed, bed, stack }: { now: number; moment
   const trainedToday = workouts.some((w) => w.startedAt >= dayStart.getTime() && w.startedAt <= now);
   const next = !running && !trainedToday && new Date(now).getHours() < 21 ? nextTemplate(templates, workouts) : undefined;
   const first = next ? targetsFor(next, sets).find((t) => t.kg != null) ?? null : null;
+  // the lock-screen widget's snapshot, left on the server while Today is open — once a widget key exists (item 10)
+  const widgetOn = useStore((s) => s.settings.widget);
+  const nextName = next?.name ?? null;
+  useEffect(() => {
+    if (!widgetOn || !widget) return;
+    void sendWidget({ at: now, day: today, tz: new Date(now).getTimezoneOffset(), readiness: facts.ready ? { score: Math.round(facts.ready.score), word: facts.ready.word } : null,
+      sleep: facts.night ? Math.round(facts.night.score) : null, stack: widget.stack, doses: widget.doses.filter((d) => d.at > now - 36 * 3600_000), halfLifeMin: widget.halfLifeMin, bed, next: nextName }, now);
+  }, [widgetOn, widget, facts, today, bed, nextName, now]);
   const lastFeel = entries.filter((e) => e.kind === "feel" && e.at <= now).reduce<number | null>((a, e) => (a == null || e.at > a ? e.at : a), null);
   const feelDue = checkInDue(lastFeel, now);
   // a row that's been done stays, as done, until Today is opened again: a row vanishing under a finger moved the page,

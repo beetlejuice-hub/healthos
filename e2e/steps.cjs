@@ -60,7 +60,7 @@ function world() {
   await pg.goto(APP);
   await pg.fill('input[type=email]', 'lukacsarnold9+healthtest@gmail.com'); await pg.fill('input[type=password]', 'secret123');
   await pg.getByRole('button', { name: 'Sign in' }).click(); await pg.waitForSelector('text=Settings');
-  await pg.evaluate(() => localStorage.setItem('healthos.ui.smore', '1')); await pg.reload(); await pg.waitForSelector('nav.tabs'); // Sleep's \"over time\", open
+  await pg.evaluate(() => localStorage.setItem('healthos.ui.smore', '1') || localStorage.setItem('healthos.ui.sscore', '1')); await pg.reload(); await pg.waitForSelector('nav.tabs'); // Sleep's \"over time\", open
   await pg.evaluate((es) => { const k = 'healthos.v1:u-test', s = JSON.parse(localStorage.getItem(k) || '{}'); s.entries = es; s.workouts = []; localStorage.setItem(k, JSON.stringify(s)); }, w.entries);
 
   // ---- Heart: today's walk explained by the steps, the strip under the chart

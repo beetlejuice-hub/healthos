@@ -64,6 +64,8 @@ function world() {
     // Today, Monday: last week's report in "For you"
     await pg.goto(APP + '#today'); await pg.reload();
     const there = await forYou(pg, 'week');
+    // the resting heart rate comes with the band's data, a moment after the rest (item 18: flaky under load)
+    if (there) await pg.waitForFunction(() => /resting HR/.test(document.querySelector('.fy-item[data-current] .weekask')?.textContent || ''), null, { timeout: 10000 }).catch(() => {});
     const ask = there ? (await pg.locator('.fy-item[data-current] .weekask').innerText()).replace(/\s+/g, ' ') : '';
     check(`${width}: Monday's "For you" has last week (${ask})`, there && /^Your week Mon 26 Oct – Sun 1 Nov A stronger week 2 of 2 sessions · Squat \+3 kg, barbell row \+1\.3 kg · 2 PBs · cardio 30 min · resting HR 53 \(−2\) See it/i.test(ask));
     if (width === 390) await pg.locator('.fy').screenshot({ path: OUT + 'weekreport-ask.png' });

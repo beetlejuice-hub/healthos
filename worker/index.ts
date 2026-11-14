@@ -175,6 +175,37 @@ export async function handleHealth(req: Request, env: Env, f: typeof fetch = fet
 }
 
 /**
+ * The lock-screen widget (owner, 14 Nov, item 10: "Can we do lock screen widget?"). Scriptable on his iPhone reads a small
+ * snapshot the app leaves whenever it's open (lib/widget); the caffeine is worked out at the moment it asks. Each account's
+ * snapshot and key hash live in its BandHub:
+ *   POST /api/widget/key  → { key, url } (signed in; a new key replaces the old — only its hash is kept)
+ *   POST /api/widget/snap ← a WidgetSnap (signed in)
+ *   GET  /api/widget      (Authorization: Bearer <account>.<secret>) → { lines, ageMin, view }
+ */
+export async function handleWidget(req: Request, env: Env, f: typeof fetch = fetch): Promise<Response> {
+  if (!env.BAND) return json({ error: "the widget isn't set up on this server" }, 503);
+  const url = new URL(req.url), op = url.pathname.replace(/^\/api\/widget\/?/, "");
+  const hub = (id: string) => env.BAND!.get(env.BAND!.idFromName(id));
+  if (op === "") {
+    const [id, secret] = (req.headers.get("authorization") ?? "").replace(/^Bearer\s+/i, "").trim().split(".");
+    if (!id || !secret || !/^[\w-]{2,64}$/.test(id) || !/^[0-9a-f]{48}$/.test(secret)) return json({ error: "wrong key — make a new one in HealthOS → Settings → Lock-screen widget" }, 401);
+    return hub(id).fetch(new Request("https://band/widget-get", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ hash: await sha256(secret) }) }));
+  }
+  if (op !== "key" && op !== "snap") return json({ error: "not found" }, 404);
+  if (req.method !== "POST") return json({ error: "POST only" }, 405);
+  const user = await whoIs(req, env, { fetch: (u, i) => f(u, i), now: Date.now });
+  if (!user) return json({ error: "sign in first" }, 401);
+  if (op === "key") {
+    const secret = [...crypto.getRandomValues(new Uint8Array(24))].map((b) => b.toString(16).padStart(2, "0")).join("");
+    await hub(user.id).fetch(new Request("https://band/widget-key", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ hash: await sha256(secret) }) }));
+    return json({ key: `${user.id}.${secret}`, url: `${url.origin}/api/widget` });
+  }
+  const raw = await req.text();
+  if (raw.length > 8192) return json({ error: "too big" }, 413);
+  return hub(user.id).fetch(new Request("https://band/widget-snap", { method: "POST", headers: { "content-type": "application/json" }, body: raw }));
+}
+
+/**
  * Places on their own (PLAN 212; owner, 11 Nov: "For the damn google maps pls automate it, somehow"). Overland (iOS)
  * posts GeoJSON points here in the background; the app makes the key (and Overland's setup link) and pulls each day's
  * places, worked out in the account's BandHub:
@@ -233,6 +264,7 @@ export default {
     if (url.pathname.startsWith("/api/band/") || url.pathname === "/api/google/callback") return handleBand(req, env);
     if (url.pathname.startsWith("/api/health/")) return handleHealth(req, env);
     if (url.pathname.startsWith("/api/places/")) return handlePlaces(req, env);
+    if (url.pathname === "/api/widget" || url.pathname.startsWith("/api/widget/")) return handleWidget(req, env);
     if (url.pathname === "/now" || url.pathname === "/now/") {
       const page = await env.ASSETS.fetch(new Request(new URL("/", req.url)));
       return new Response(nowPage(await page.text()), { headers: { "content-type": "text/html; charset=utf-8", "cache-control": "no-cache" } });

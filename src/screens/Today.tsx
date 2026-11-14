@@ -156,6 +156,7 @@ export function Today() {
   );
   // the stack that's due leads Today's brief (renovation, canvas A) — and so isn't asked again in For you
   const lead = due.find((it): it is Extract<(typeof due)[number], { kind: "supp-due" | "supp-missed" }> => it.kind === "supp-due" || it.kind === "supp-missed") ?? null;
+  const widgetIn = useMemo(() => ({ stack, doses, halfLifeMin: s.settings.halfLifeMin }), [stack.taken, stack.total, doses.length, s.settings.halfLifeMin]); // eslint-disable-line react-hooks/exhaustive-deps
   const briefStack: BriefStack | null = lead ? { title: lead.title, body: lead.body, many: lead.suppIds.length > 1, onTook: () => answer(lead.suppIds, "taken", lead.slot), onPick: () => openCard("stack") } : null;
   const dueAsk = (it: (typeof due)[number]): Ask => ({ key: `due:${it.id}`, name: shortTitle(it.title), node: dueNode(it) });
   const later = (it: (typeof due)[number]) => it.kind === "weight" || it.kind === "food";
@@ -208,7 +209,7 @@ export function Today() {
       </div>
       <BandAlarm now={now} />
       {/* renovation (canvas A, "the morning brief"): last night, one thing to watch, what to do now */}
-      <Brief now={now} moment={moment} cafBed={cafBed} bed={bed} stack={briefStack} />
+      <Brief now={now} moment={moment} cafBed={cafBed} bed={bed} stack={briefStack} widget={widgetIn} />
 
       <Status kcal={totals.kcal} goalKcal={s.goals.kcal} protein={totals.p} goalP={s.goals.p} cafNow={cafNow} rising={cafComing >= 10} cafBed={cafBed} bed={bed} stack={stack} opened={opened} onTile={tile} />
       {opened === "stack" && <Stack now={now} onClose={close} />}
@@ -251,7 +252,7 @@ export function Today() {
 function Fuel({ totals, goals, usual, burned, yday, items, onOpen, yScore, onClose }: { totals: { kcal: number; p: number; c: number; f: number }; goals: { kcal: number; p: number; c: number; f: number }; usual: number | null; burned: number | null; yday: { ate: number; burned: number } | null; items: number; onOpen: () => void; yScore: DayScore | null; onClose: () => void }) {
   const pct = Math.min(1, totals.kcal / goals.kcal);
   return (
-    <FoldCard id="fuel" startOpen onClose={onClose} title="Food" read={<>goal {fmt(goals.kcal)} kcal{usual ? ` · usual day ${fmt(usual)}` : ""}{yScore ? ` · yesterday ${yScore.score}/100` : ""}</>}
+    <FoldCard id="fuel" startOpen onClose={onClose} title="Food" read={<>goal {fmt(goals.kcal)} kcal{usual ? ` · usual day ${fmt(usual)}` : ""}{yScore ? ` · yesterday ${yScore.word}` : ""}</>}
       more={<><b>{fmt(totals.kcal)}</b> kcal eaten · {totals.kcal <= goals.kcal ? `${fmt(goals.kcal - totals.kcal)} left` : `${fmt(totals.kcal - goals.kcal)} over`} · protein <b>{fmt(totals.p)}</b> / {goals.p} g{items ? ` · ${items} item${items === 1 ? "" : "s"}` : ""}</>}>
       <div className="fuel">
         <div className="ring">
@@ -278,7 +279,8 @@ function Fuel({ totals, goals, usual, burned, yday, items, onOpen, yScore, onClo
       </div>}
       {/* yesterday's food as a whole day, out of 100 (owner, 21 Oct: "food notrution score can be bult too") — its parts on Insights → Intake */}
       {yScore && <button type="button" className="linkish fuel-score" data-score={yScore.score} onClick={() => go("insights", "intake")}>
-        Yesterday's food <b>{yScore.score}</b>/100 · {yScore.word}{weakest(yScore) ? ` — ${weakest(yScore)}` : ""} ›</button>}
+        {/* a word, not a number (owner, 14 Nov, item 3: "fewer scores") */}
+        Yesterday's food: <b>{yScore.word}</b>{weakest(yScore) ? `, ${weakest(yScore)}` : ""} ›</button>}
       {/* what you ate, meal by meal — change or delete any of it, and yesterday's too (PLAN 128, #113) */}
       <button type="button" className="pill-btn fuel-open" onClick={onOpen}>What I ate{items ? ` · ${items} item${items === 1 ? "" : "s"}` : ""} ›</button>
     </FoldCard>

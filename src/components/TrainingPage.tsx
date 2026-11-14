@@ -18,6 +18,7 @@ import { equipOf } from "../lib/exsearch";
 import { StrengthCard } from "./StrengthCard";
 import { CardioCard } from "./CardioCard";
 import { CardioFit, useCardioFit } from "./CardioFit";
+import { Zone2Card } from "./Zone2Card";
 import { FitnessTop, NextCard, type NextCardio, type NextLift } from "./FitnessTop";
 import { cardioAnswer, cardioShort, recoveryAnswer, strengthAnswer, weightAnswer } from "../lib/fitness";
 import { overallStrength } from "../lib/strength";
@@ -75,7 +76,7 @@ export function TrainingPage({ now }: { now: number }) {
   }, [workouts, entries, now]);
   const since = fit ? dayLabel(fit.from).replace(/^\w+ /, "") : null;
   // cardio only so far (PLAN 146): its cards, with the answers and next on top
-  if (!ss.length) return <div className="tp" ref={ref} data-sec="training"><FitnessTop answers={answers} since={since} /><NextCard lift={null} cardio={cardioNext} /><CardioCard now={now} hr={band?.hr ?? NO_HR} /><CardioFit fit={fit} w={w} now={now} /></div>;
+  if (!ss.length) return <div className="tp" ref={ref} data-sec="training"><FitnessTop answers={answers} since={since} /><NextCard lift={null} cardio={cardioNext} /><CardioCard now={now} hr={band?.hr ?? NO_HR} /><Zone2Card now={now} hr={band?.hr ?? NO_HR} w={w} /><CardioFit fit={fit} w={w} now={now} /></div>;
   // what's next: the template after the last one done, its first lift as last time said (double progression)
   const next = nextTemplate(templates, workouts), first = next?.exercises[0];
   const lastOf = first ? [...ss].reverse().find((s) => s.sets.some((x) => x.exercise === first.name && !x.warmup)) : undefined;
@@ -109,6 +110,8 @@ export function TrainingPage({ now }: { now: number }) {
       </div>
       {strength.length > 0 && <MuscleStrengthRows rows={strength} />}
       <CardioCard now={now} hr={band?.hr ?? NO_HR} />
+      {/* item 8 (14 Nov): zone-2 minutes a week */}
+      <Zone2Card now={now} hr={band?.hr ?? NO_HR} w={wide ? Math.min(w, 640) : w} />
       {/* PLAN 218: fitness from the band's steps — walking, the stairmaster, running, recovery */}
       <CardioFit fit={fit} w={wide ? Math.min(w, 640) : w} now={now} />
       {/* folded (renovation part 1): what goes with a strong session, and what training goes with afterwards */}

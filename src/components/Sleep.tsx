@@ -101,12 +101,12 @@ function LastNight({ n, e, ns, band, data, wide, w, score }: { n: Night; e: Even
   return (
     <section className="sl-b" aria-label="The night in depth">
       {/* Sleep A: the night in one line, then its picture, then the numbers */}
-      <p className="sl-head" data-score={score.score}><b>{score.score}</b> <span className={`zw ${score.score >= 80 ? "ideal" : score.score >= 60 ? "fair" : "poor"}`}>{score.word}</span> · {dur(n.asleep)} asleep, in bed {clock(n.bed)}{(() => { const so = standout(n, e, ns, score); return so ? <> · <em>{so.label}</em></> : null; })()}</p>
+      <p className="sl-head" data-score={score.score}><b>{score.score}</b> <span className={`zw ${score.score >= 80 ? "ideal" : score.score >= 60 ? "fair" : "poor"}`}>{score.word}</span> · {dur(n.asleep)} asleep, in bed {clock(n.bed)}{(() => { const so = standout(n, e, ns, score); return so ? <> · <em>{so.label}</em>{so.also ? <> and {so.also}</> : null}</> : null; })()}</p>
       <div className={`sl-b-grid${wide ? " wide" : ""}`}>
         <div className="sl-p sl-chart"><NightChart n={n} ns={ns} band={band} data={data} w={cw - 2} wide={wide} /></div>
         <div className="sl-p sl-nums">
-          <NightWhat n={n} e={e} ns={ns} score={score} />
-          <SleepScore s={score} />
+          {/* "that night" is in the line on top now (Sleep A) */}
+          <SleepScore s={score} fold />
           <div className="sl-asleep"><b>{dur(n.asleep)}</b> <span>asleep · {dur((n.up - n.bed) / MIN)} in bed · {Math.round((n.asleep / ((n.up - n.bed) / MIN)) * 100)} % of it asleep</span></div>
           <NightMore n={n} />
           <Rows n={n} ns={ns} />
@@ -205,11 +205,6 @@ function NightChart({ n, ns, band, data, w, wide }: { n: Night; ns: Night[]; ban
 }
 
 /** The one thing that stood out that evening (owner, 15 Oct: "subtly show the thing that happened that night … the most significant thing"). */
-function NightWhat({ n, e, ns, score }: { n: Night; e: Evening; ns: Night[]; score: SleepScoreT }) {
-  const so = useMemo(() => standout(n, e, ns, score), [n, e, ns, score]);
-  if (!so) return null;
-  return <p className="sl-what" data-what={so.id}><span className="k">That night</span><b>{so.label}</b>{so.also && <span className="also">and {so.also}</span>}</p>;
-}
 
 /** Last night against your usual, a row a measure (Sleep A): this night, your usual, the change in better / worse colours. */
 function Rows({ n, ns }: { n: Night; ns: Night[] }) {
@@ -289,12 +284,13 @@ function NightLog({ ns, evs, sel, onSel, wide, w, workouts, meals }: { ns: Night
         <div className="sl-p sl-reg" data-score={reg ? Math.round(reg.score) : undefined}>
           <span className="cmp-k">Regularity</span>
           {reg ? <>
-            <div className="sl-reg-n"><b>{Math.round(reg.score)}</b><span>/ 100 · {reg.score >= 80 ? "steady" : reg.score >= 65 ? "fairly steady" : "varies a lot"}</span></div>
+            {/* a word, not a number (item 3, 14 Nov); the bar still shows where you sit against most adults */}
+            <div className="sl-reg-n"><b>{reg.score >= 80 ? "Steady" : reg.score >= 65 ? "Fairly steady" : "Varies a lot"}</b></div>
             <svg width="300" height="24" viewBox="0 0 300 24" aria-label={`Regularity ${Math.round(reg.score)} on a 0 to 100 scale; most adults are between 60 and 90`} role="img">
               <rect x="0" y="6" width="300" height="6" fill="var(--i-line)" /><rect x={180} y="6" width={90} height="6" fill="var(--i-ink-2)" fillOpacity=".3" />
               <circle cx={Math.max(6, Math.min(294, reg.score * 3))} cy="9" r="6" fill="var(--i-ink)" stroke="var(--i-panel)" strokeWidth="2" />
             </svg>
-            <div className="sl-reg-k"><span>0</span><span>most adults 60–90</span><span>100</span></div>
+            <div className="sl-reg-k"><span>irregular</span><span>most adults</span><span>regular</span></div>
             <p>How alike your days are: on {Math.round((reg.score + 100) / 2)} % of the day you were asleep or awake at the same times as the day before. Naps count.</p>
             {U.bed && U.wake && <p className="sl-mono">bedtime ±{Math.round((U.bed.hi - U.bed.lo) * 30)} min · wake ±{Math.round((U.wake.hi - U.wake.lo) * 30)} min · from {reg.pairs} pairs of days</p>}
           </> : <p>Needs 5 pairs of days in a row with the band on — keep wearing it to bed.</p>}

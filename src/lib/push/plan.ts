@@ -12,10 +12,13 @@ import { SLOTS, answerSlot, slotsOf } from "../types";
 import { atMinute, localDay, addDays } from "../time";
 import { dueOn } from "../schedule";
 import { slumpOf } from "../bodyclock";
+import { caffeineAt } from "../caffeine";
+import { caffeineDoses } from "../insights";
 
 export type Reminder = { at: number; title: string; body: string; url: string; tag: string };
 /** `slump` (PLAN 177): 15 minutes before your afternoon dip, once your check-ins show one — off unless you turn it on. */
-export type NotifyPrefs = { checkins: boolean; supps: boolean; weigh: boolean; slump?: boolean };
+/** `winddown` (owner, 14 Nov, item 9 of the open list): 30 minutes before bedtime — on unless turned off. */
+export type NotifyPrefs = { checkins: boolean; supps: boolean; weigh: boolean; slump?: boolean; winddown?: boolean };
 export const DEFAULT_NOTIFY: NotifyPrefs = { checkins: true, supps: true, weigh: true };
 
 export const PLAN = {
@@ -30,11 +33,15 @@ export const PLAN = {
   weighAt: 9 * 60 + 30,
   /** The slump ping comes this long before the slump hour; skipped if you rated in the hour before it. */
   slumpEarly: 15,
+  /** The wind-down comes this long before bedtime (the quiet starts 15 minutes before it). */
+  windDown: 30,
+  /** …and says the caffeine still in you at bedtime from this much. */
+  windCafMg: 30,
   mergeMin: 30,
   perDay: 6,
 };
 
-type Ctx = { now: number; entries: Entry[]; supplements: Supplement[]; bedMinute: number; prefs: NotifyPrefs };
+type Ctx = { now: number; entries: Entry[]; supplements: Supplement[]; bedMinute: number; prefs: NotifyPrefs; halfLifeMin?: number };
 
 export function plan(c: Ctx): Reminder[] {
   const out: Reminder[] = [];
@@ -63,6 +70,13 @@ export function plan(c: Ctx): Reminder[] {
 
     if (c.prefs.weigh && !todays.some((e) => e.kind === "weight")) add(PLAN.weighAt, { title: "Morning weigh-in", body: "Before food, after the toilet, same as always.", url: "/#today", tag: "weigh" });
 
+    // wind down: 30 minutes before bedtime (a bedtime after midnight is the evening before's), with the caffeine left then
+    if (c.prefs.winddown !== false) {
+      const bed = c.bedMinute < 6 * 60 ? c.bedMinute + 24 * 60 : c.bedMinute, caf = caffeineAt(caffeineDoses(c.entries).filter((d) => d.at <= c.now), at(bed), c.halfLifeMin);
+      const hm = `${String(Math.floor(bed / 60) % 24).padStart(2, "0")}:${String(bed % 60).padStart(2, "0")}`;
+      add(bed - PLAN.windDown, { title: "Wind down", body: `Bed at ${hm}: lights low, phone away.${caf >= PLAN.windCafMg ? ` About ${Math.round(caf / 10) * 10} mg of caffeine will still be in you then.` : ""}`, url: "/#insights/sleep", tag: "winddown" });
+    }
+
     if (slump) {
       const m = slump.from * 60 - PLAN.slumpEarly, t = at(m), hh = (h: number) => String(h).padStart(2, "0");
       if (!c.entries.some((e) => e.kind === "feel" && e.at > t - 60 * 60_000 && e.at <= t))
@@ -72,8 +86,10 @@ export function plan(c: Ctx): Reminder[] {
 
   // Quiet hours: nothing before 08:00 or from 15 min before bedtime (a bedtime after midnight counts for the evening before).
   const quiet = (t: number) => {
-    const d = new Date(t), min = d.getHours() * 60 + d.getMinutes();
+    const d = new Date(t), clock = d.getHours() * 60 + d.getMinutes();
     const bed = c.bedMinute < 6 * 60 ? c.bedMinute + 24 * 60 : c.bedMinute;
+    // 00:00–06:00 is still the evening before when bedtime is after midnight (a 00:00 wind-down for 00:30 was dropped as "before 08:00")
+    const min = bed >= 24 * 60 && clock < 6 * 60 ? clock + 24 * 60 : clock;
     return min < PLAN.quietUntil || min >= bed - PLAN.beforeBed;
   };
   const kept = out.filter((r) => !quiet(r.at)).sort((a, b) => a.at - b.at);

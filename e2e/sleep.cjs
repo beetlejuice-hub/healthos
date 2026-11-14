@@ -71,7 +71,7 @@ function world(seed = 5) {
     await pg.goto(APP);
     await pg.fill('input[type=email]', 'lukacsarnold9+healthtest@gmail.com'); await pg.fill('input[type=password]', 'secret123');
     await pg.getByRole('button', { name: 'Sign in' }).click(); await pg.waitForSelector('text=Settings');
-  await pg.evaluate(() => localStorage.setItem('healthos.ui.smore', '1')); await pg.reload(); await pg.waitForSelector('nav.tabs'); // Sleep's \"over time\", open
+  await pg.evaluate(() => localStorage.setItem('healthos.ui.smore', '1') || localStorage.setItem('healthos.ui.sscore', '1')); await pg.reload(); await pg.waitForSelector('nav.tabs'); // Sleep's \"over time\", open
     await pg.evaluate((w) => { const k = 'healthos.v1:u-test', s = JSON.parse(localStorage.getItem(k) || '{}'); s.entries = w.entries; s.workouts = w.workouts; localStorage.setItem(k, JSON.stringify(s)); }, w);
     await pg.goto(APP + '#insights/sleep'); await pg.reload();
     await pg.waitForSelector('.sl[data-nights]');
@@ -88,9 +88,9 @@ function world(seed = 5) {
   check(`B on top: "Last night · Wed 7 → Thu 8 Oct" (${await pg.locator('.sl .sl-title').innerText()})`, /Last night · Wed 7 → Thu 8 Oct/.test(await pg.locator('.sl .sl-title').innerText()));
   const facts = await pg.locator('.sl .sl-facts').innerText();
   check(`what was different: the two beers and the later, higher low (${facts.split('\n').slice(1, 4).join(' / ')})`, /2 drinks, the last \d+ (min|h \d\d) before bed\./.test(facts) && /Lowest heart rate \d\d at \d\d:\d\d, (1 h \d\d|\d+ min) later than usual \(usually about \d\d\)\./.test(facts));
-  const what = (await pg.locator('.sl .sl-what').innerText().catch(() => '')).replace(/\n/g, ' ');
+  const what = (await pg.locator('.sl .sl-head').innerText().catch(() => '')).replace(/\n/g, ' '); // the line on top since Sleep A (13 Nov)
   // owner, 15 Oct: "subtly show the thing that happened that night" — the two beers, and the HRV the drink nights were planted with
-  check(`that night: the two beers stand out, with the night's HRV beside them (${what})`, /^THAT NIGHT\s*2 drinks\s*and HRV \d+ % under your usual$/i.test(what));
+  check(`that night: the two beers stand out, with the night's HRV beside them (${what})`, /· 2 drinks and HRV \d+ % under your usual$/i.test(what));
   check('the night\'s numbers on the studies\' zones (8+ bars, a dot each), the nap and lowest heart rate under them', await pg.locator('.sl .sl-sp.z').count() >= 8 && await pg.locator('.sl .sl-sp.z .zb .dot').count() === await pg.locator('.sl .sl-sp.z').count()
     && /nap that day: (none|\d+ min) · lowest heart rate \d+ bpm at \d\d:\d\d/.test(await pg.locator('.sl .sl-more').innerText().catch(() => '')));
   const chartTxt = (await pg.locator('.sl .sl-chart svg text').allTextContents()).join('|');
