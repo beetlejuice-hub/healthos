@@ -3,6 +3,8 @@
  * (calls today, cost) for Settings, and build the context the AI is told — on demand, at call time.
  */
 import { linksFor } from "../linkscache";
+import { fitContext } from "./context";
+import { CONTEXT_LIMIT_LONG } from "./limits";
 import { vsNow } from "../vsnow";
 import { foundLines } from "./found";
 import { linkLines } from "../connect";
@@ -207,6 +209,9 @@ export function contextNow(state: State = getState(), now = Date.now(), { slim =
     ...(todaySoFar ? { todaySoFar: [totalsLine(state.entries, dayWindow(today)[0], now + 1, state.goals), ...timeline(state, atMinute(today, 0), now + 1, (at) => (at < dayWindow(today)[0] ? " (last night, after midnight)" : ""))].filter((l): l is string => !!l) } : {}) });
 }
 
+/** The deep dive's context: the overview and what's been dived into, fitted to what the Worker takes (17 Nov). */
+export const diveContext = (brief: string[]) => fitContext(`${contextNow()}\n${brief.join("\n")}`, CONTEXT_LIMIT_LONG - 2000);
+
 /** The chat's context (PLAN 67 phase 3): the overview only — the AI asks the app's tools for nights, days and the rest. */
 export const chatContext = (state: State = getState(), now = Date.now()) => contextNow(state, now, { slim: true });
 
@@ -232,7 +237,8 @@ export function nightContext(day: string, state: State = getState(), now = Date.
   const spans = cardioSpans(state.workouts ?? [], now), kg = currentKg(state.entries, 0, now) || null, hr = bandNow()?.hr ?? [];
   const today = spans.filter((s) => !s.running && s.start >= from && s.start < Math.min(to, now + 1));
   if (today.length) lifts.push(...today.map((s) => `Cardio: ${cardioLine(s, spans, hr, kg, maxHrOf(state.settings)?.bpm)}`), cardioWeekLines(spans, hr, kg, today[today.length - 1].end, 4, 0)[0]);
-  return `${contextNow(state, now, { todaySoFar: false })}\n## The day being read back: ${w.label} (${w.when}), as it happened — it runs to 04:00 the next morning\n${tl.length ? tl.map((l) => `- ${l}`).join("\n") : "- nothing logged"}${plates.length ? `\n## Plates that day, with the app's food score (0–100: goal 45 — protein per 100 kcal; quality 35 — Nutri-Score; timing 20 — hours before bed)\n${plates.map((l) => `- ${l}`).join("\n")}` : ""}${lifts.length ? `\n## The workout that day (each lift against the last time it was done; working sets only)\n${lifts.map((l) => (l.startsWith("- ") ? `  ${l}` : `- ${l}`)).join("\n")}` : ""}`;
+  // the overview gives way before the day does (lib/ai/context fitContext; the Worker's limit is CONTEXT_LIMIT_LONG)
+  return fitContext(`${contextNow(state, now, { todaySoFar: false })}\n## The day being read back: ${w.label} (${w.when}), as it happened — it runs to 04:00 the next morning\n${tl.length ? tl.map((l) => `- ${l}`).join("\n") : "- nothing logged"}${plates.length ? `\n## Plates that day, with the app's food score (0–100: goal 45 — protein per 100 kcal; quality 35 — Nutri-Score; timing 20 — hours before bed)\n${plates.map((l) => `- ${l}`).join("\n")}` : ""}${lifts.length ? `\n## The workout that day (each lift against the last time it was done; working sets only)\n${lifts.map((l) => (l.startsWith("- ") ? `  ${l}` : `- ${l}`)).join("\n")}` : ""}`, CONTEXT_LIMIT_LONG - 2000);
 }
 
 /** Downscale a photo to ≤1024 px JPEG before sending: cheaper, faster, and plenty to see a plate. */

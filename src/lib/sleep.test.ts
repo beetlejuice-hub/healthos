@@ -377,3 +377,21 @@ describe("the band's restless stretches (owner, 20 Oct: \"WE HAVE THIS IN THE AP
     expect([n.awake, n.wakes]).toEqual([b.awake, b.wakes]);
   });
 });
+
+// Audit, 17 Nov: a supplement started half-way and kept up, against HRV that drifts — the shuffle (which assumes nights
+// don't carry over) called it "clear" or "likely" in half of fake people with nothing planted. Now never surer than the
+// same difference with the nights counted as fewer. A real step on the same days is still found.
+describe("the grid when nights run in stretches", () => {
+  const world = (seed: number, phi: number, step: number) => { const { r, g } = rng(seed); let x = g();
+    return Array.from({ length: 60 }, (_, i) => { x = phi * x + Math.sqrt(1 - phi * phi) * g(); return { v: 50 + 8 * x + (i >= 30 ? step : 0), f: i >= 30, u: r() }; }); };
+  type W = ReturnType<typeof world>[number];
+  const cell = (ns: W[]) => goesWith<W, W>(ns, ns, { perms: 2000, factors: [{ id: "f", name: "f", has: (n) => n.f }], outcomes: [{ id: "o", name: "o", unit: "ms", better: 1, of: (n) => n.v }] })[0];
+  it("control: started half-way, HRV wandering at 0.8, no effect — clear or likely in at most 1 in 8", () => {
+    let said = 0; for (let k = 1; k <= 60; k++) if (cell(world(k, 0.8, 0)).sure !== "not clear") said++;
+    expect(said / 60).toBeLessThanOrEqual(0.125);
+  });
+  it("planted: the same, with HRV 12 higher from the start (1.5 usual spreads) on independent nights — found", () => {
+    let found = 0; for (let k = 1; k <= 30; k++) { const c = cell(world(k + 100, 0, 12)); if (c.sure !== "not clear" && c.toward === "better") found++; }
+    expect(found / 30).toBeGreaterThanOrEqual(0.9);
+  });
+});

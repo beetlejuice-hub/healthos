@@ -59,3 +59,23 @@ describe("every trend", () => {
     expect(typ).toBeGreaterThan(38); expect(typ).toBeLessThan(52);
   });
 });
+
+// Audit, 17 Nov: real days run together (a good week follows a good week). On flat noise that wanders like that, the
+// old engine (slope beyond twice an SE that assumed independent days) called a third of measures "moved" at lag-1
+// correlation 0.5 and over half at 0.8. Controls: flat wandering noise is called moved rarely; planted trends still found.
+describe("every trend — days that run together", () => {
+  const gauss = (seed: number) => { const u = rng(seed); return () => { let x = 0; for (let i = 0; i < 12; i++) x += u(); return x - 6; }; };
+  const wander = (seed: number, n: number, phi: number, drift = 0) => { const g = gauss(seed); let x = g(); return series(n, (i) => { x = phi * x + Math.sqrt(1 - phi * phi) * g(); return 50 + 5 * (x + (drift * i) / (n - 1)); }); };
+  const rate = (f: (k: number) => boolean, N = 200) => { let c = 0; for (let k = 0; k < N; k++) if (f(k)) c++; return c / N; };
+  it("flat noise with lag-1 correlation 0.5 or 0.8: called moved in at most ~12 % of measures (was 25–55 %)", () => {
+    for (const phi of [0, 0.5, 0.8]) for (const n of [30, 90]) {
+      const p = rate((k) => trendOf(m("x", 1, wander(1000 * n + k + phi * 1e5, n, phi)), TODAY, n)!.moved);
+      expect(p, `phi ${phi}, ${n} days`).toBeLessThan(phi === 0.8 && n === 30 ? 0.17 : 0.11);
+    }
+  });
+  it("a planted fall of one usual spread over 90 days is still found on independent days, and often when days run together", () => {
+    const found = (phi: number) => rate((k) => { const t = trendOf(m("x", 1, wander(7000 + k + phi * 1e5, 90, phi, -1)), TODAY, 90)!; return t.moved && t.way === "down"; });
+    expect(found(0)).toBeGreaterThan(0.6);
+    expect(found(0.5)).toBeGreaterThan(0.25);
+  });
+});

@@ -47,6 +47,19 @@ describe("scout", () => {
     expect(fooled / 60).toBeLessThanOrEqual(0.1);
   });
 
+  it("two unrelated things that both wander slowly aren't flagged (audit 17 Nov: 14–33 % of people before effective n)", () => {
+    for (const phi of [0.8, 0.95]) {
+      let hit = 0;
+      for (let k = 1; k <= 60; k++) {
+        const f = feelWorld({ seed: k, days: 60 }), { g } = rng(k + 999);
+        let a = g(), b = g();
+        f.forEach((d) => { a = phi * a + Math.sqrt(1 - phi * phi) * g(); b = phi * b + Math.sqrt(1 - phi * phi) * g(); d.steps = Math.round(8000 + 2500 * a); if (d.mood != null) d.mood = Math.max(1, Math.min(10, Math.round(6 + 1.5 * b))); });
+        if (scout(f, STACK).some((p) => [p.a.id, p.b.id].includes("steps") && [p.a.id, p.b.id].includes("mood"))) hit++;
+      }
+      expect(hit / 60, `carry-over ${phi}`).toBeLessThanOrEqual(0.05);
+    }
+  });
+
   it("a yes/no thing leads the sentence, and mostly-zero amounts compare against your zero days", () => {
     const f = feelWorld({ seed: 6, days: 60 });
     f.forEach((d) => { if (d.trained && d.kcal != null) d.kcal += 600; });

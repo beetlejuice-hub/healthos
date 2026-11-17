@@ -110,7 +110,7 @@ export function trainingWeeks(ss: Session[], entries: Entry[], now: number): Tra
 
 /** Do weeks you lift more go with more or less energy? Whole weeks only; the slope is per 1,000 kg. */
 export function weeksLink(ws: TrainingWeek[]): Slope {
-  return slopeTest(ws.filter((w) => !w.partial && w.energy != null && w.sessions > 0).map((w) => [w.kg / 1000, w.energy!] as [number, number]), { min: 8, seed: 23 });
+  return slopeTest(ws.filter((w) => !w.partial && w.energy != null && w.sessions > 0).map((w) => [w.kg / 1000, w.energy!] as [number, number]), { min: 8, seed: 23, ordered: true });
 }
 
 export type Recovery = { pts: { id: string; at: number; backMin: number }[]; notBack: number; slope: Slope; change: number | null };
@@ -136,6 +136,6 @@ export function recovery(ss: Session[], hr: HrMinute[], spans: Span[]): Recovery
     // not back only when the band was on for the 2 h after; taken off sooner, it's not known
     else if (around.some((m) => m[0] >= end + 110 * MIN)) notBack++;
   }
-  const t0 = pts[0]?.at ?? 0, slope = slopeTest(pts.map((p) => [(p.at - t0) / DAY, p.backMin] as [number, number]), { min: 8, seed: 29 });
+  const t0 = pts[0]?.at ?? 0, slope = slopeTest(pts.map((p) => [(p.at - t0) / DAY, p.backMin] as [number, number]), { min: 8, seed: 29, ordered: true });
   return { pts, notBack, slope, change: slope.slope == null ? null : slope.slope * ((pts[pts.length - 1].at - t0) / DAY) };
 }

@@ -4230,3 +4230,29 @@ both reads and the questions. Phases in that order; #152 RPE waits (owner).
      e2e usage, story, and glance, phone, bodylab, heart, heartpage, sleep, graph, compare moved to five pages.
      Also found: the small nightly cards on Sleep let a long "that night" run past the card (it showed once Mind shared a
      page with Sleep) — clipped now, the full text on hover; and tellmore's second page seeds through the harness now.
+
+223. [x] **AI "context too long", and an audit of the engines** (owner, 17 Nov, with a screenshot of the AI tab — the
+     morning read and questions "failed · context too long": "Fix ts brother. Also pls can u double check if the
+     calculations and findings are correct, uses a good engine and its smart?")
+   - **Context**: CONTEXT_MAX (44k) only ever trimmed the mood journal; the other sections grew past the Worker's 48,000
+     limit, so every read and question was refused. Now lib/ai/limits holds the numbers both sides use; `fitContext`
+     drops whole sections in a set order (journal, notes, early patterns … what the AI remembers last) and then trims the
+     oldest lines of the longest, and says what it left out ("ask the app's tools"). Night reads and deep dives get their
+     own, larger cap. Tests: fitcontext, worker ai (49k accepted, past the limit refused), e2e contextfit (60-day sample +
+     heavy notes fits, core sections kept).
+   - **Audit** (planted effects and controls, 100–300 fake people each). Real days carry over — a good week follows a
+     good week — and four engines assumed they don't:
+     - Trends ("getting better / slipping"): flat measures that wander were called moved in 25–27 % (carry-over 0.5)
+       and 54 % (0.8). Now 6–8 % and 8–14 %: effective n from the leftovers' lag-1 correlation, the t bar for that n.
+     - Early patterns (scout): two unrelated slowly-wandering things (steps, mood) flagged in 14 % / 33 % of people;
+       now 0 %. Bretherton effective n, as lib/connect already did. The planted ones still found.
+     - Cardio fitness line and recovery-time line (shuffle tests over weeks/sessions): 22–24 % "clear" on flat weeks
+       carrying over at 0.5; now 10–12 % (4–5 % without carry-over). 12 points can't do better honestly.
+     - Sleep / Heart / Training grid: a supplement started half-way and kept up, against drifting HRV, was "clear" or
+       "likely" in 16 % (0.5) and 52 % (0.8) with nothing planted; now 4 % and 8 %. Never surer than the same
+       difference with nights counted as fewer (regress `orderedP`).
+     - Already sound: lib/connect (links) — detrended, effective n, BH; about 1 in 10 null worlds shows one link,
+       labelled "worth watching". Combos (BH q 0.05, controls pass).
+     - Cost: on data that genuinely wanders a lot, real changes need longer to show (a 1-spread fall over 90 days is
+       found 35 % of the time at carry-over 0.5, was 63 %). That's the honest price.
+     - Not changed: body lab's slopes (x is a nightly amount, less prone; next to check).

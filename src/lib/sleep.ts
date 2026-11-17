@@ -8,7 +8,7 @@
  * how often chance alone does as well, with a stricter bar for "clear" because the grid tries many pairs at once.
  */
 
-import { bh } from "./regress";
+import { bh, orderedP } from "./regress";
 import type { HrMinute, SleepSession } from "./band";
 import { addDays, atMinute, localDay, minuteOfDay, startOfDay, MIN, HOUR } from "./time";
 import { usualSteps } from "./steps";
@@ -297,7 +297,10 @@ export function goesWith<N = Night, E = Evening>(ns: N[], evs: E[], opts: { perm
         for (let c = 0; c < G; c++) if (Math.abs(diffOf(c, sw[c])) >= Math.abs(obs[c]) - 1e-9) hits[c]++;
       }
       g.forEach((cell, c) => {
-        const p = (hits[c] + 1) / (perms + 1), d = obs[c];
+        // never surer than the same difference with the nights counted as fewer when the thing and the outcome both run
+        // in stretches — a supplement started mid-way and kept up, against HRV drifting (audit 17 Nov: "clear" in 37 % of
+        // fake people at a carry-over of 0.8 with nothing planted)
+        const p = Math.max((hits[c] + 1) / (perms + 1), orderedP(use.map((i) => (r.has[i] ? 1 : 0)), Array.from(vals[c]), obs[c])), d = obs[c];
         done.set(`${r.f.id}|${cell.o.id}`, { factor: r.f.id, outcome: cell.o.id, nWith, nWithout, diff: d, p, sure: p < bar.clear ? "clear" : "not clear", toward: d === 0 ? null : d * cell.o.better > 0 ? "better" : "worse" });
       });
     }

@@ -10,6 +10,7 @@
 
 import { callGemini, forGemini, geminiOrder, geminiUsd, GeminiMiss, type GeminiEnv } from "./gemini";
 import Anthropic from "@anthropic-ai/sdk";
+import { CONTEXT_LIMIT, CONTEXT_LIMIT_LONG } from "../src/lib/ai/limits";
 import {
   AI_ERRORS, type AiError, type Usage, DAILY_CAP, MODELS, MONTHLY_USD, RECENT_CALLS, SCHEMAS, logOf, SYSTEM, TIER, checkChat, modelFor, checkDescribe, checkDigest, checkNight, checkQuestions, checkReview, checkSupplement, costUsd, jsonFrom, DESCRIBE_SHAPE, CHAT_TOOLS, CHAT_ROUNDS, READ_ROUNDS, READ_TOOLS, checkReadCalls, checkDive, checkResearch, checkVerdict, type ChatTurn,
   type AiRequest, type DigestAnswer, type DiveAnswer, type VerdictAnswer, type ModelChoice, type NightAnswer, type SupplementAnswer, type Task, type UsageDoc,
@@ -96,15 +97,15 @@ function validate(b: AiRequest): string | null {
   const long = (s: unknown, n: number) => typeof s === "string" && s.length > n;
   switch (b.task) {
     case "describe": return !b.text && !b.image ? "say or show what it is" : long(b.text, 2000) ? "text too long" : b.image && (long(b.image.data, 2_000_000) || !/^image\/(jpeg|png|webp)$/.test(b.image.mediaType)) ? "image too big or wrong type" : null;
-    case "supplement": return !b.name || long(b.name, 100) || long(b.context, 48000) ? "bad supplement request" : null;
-    case "chat": return !Array.isArray(b.messages) || !b.messages.length || b.messages.length > 40 || b.messages.some((m) => long(m.text, 4000)) || long(b.context, 48000)
+    case "supplement": return !b.name || long(b.name, 100) || long(b.context, CONTEXT_LIMIT) ? "bad supplement request" : null;
+    case "chat": return !Array.isArray(b.messages) || !b.messages.length || b.messages.length > 40 || b.messages.some((m) => long(m.text, 4000)) || long(b.context, CONTEXT_LIMIT)
       || badTurn(b.turn, CHAT_ROUNDS) ? "bad chat request" : null;
-    case "questions": return long(b.context, 48000) ? "context too long" : null;
-    case "digest": return long(b.context, 48000) ? "context too long" : badTurn(b.turn, READ_ROUNDS) ? "bad look-ups" : null;
-    case "night": return !/^\d{4}-\d{2}-\d{2}$/.test(String(b.day)) ? "bad day" : long(b.context, 52000) ? "context too long" : badTurn(b.turn, READ_ROUNDS) ? "bad look-ups" : null;
-    case "review": return !["week", "month"].includes(b.kind) || ![b.from, b.to].every((d) => /^\d{4}-\d{2}-\d{2}$/.test(String(d))) ? "bad review" : long(b.context, 60000) ? "context too long" : null;
-    case "dive": return long(b.context, 60000) ? "context too long" : badTurn(b.turn, READ_ROUNDS) ? "bad look-ups" : null;
-    case "verdict": return long(b.context, 40000) ? "context too long" : null;
+    case "questions": return long(b.context, CONTEXT_LIMIT) ? "context too long" : null;
+    case "digest": return long(b.context, CONTEXT_LIMIT) ? "context too long" : badTurn(b.turn, READ_ROUNDS) ? "bad look-ups" : null;
+    case "night": return !/^\d{4}-\d{2}-\d{2}$/.test(String(b.day)) ? "bad day" : long(b.context, CONTEXT_LIMIT_LONG) ? "context too long" : badTurn(b.turn, READ_ROUNDS) ? "bad look-ups" : null;
+    case "review": return !["week", "month"].includes(b.kind) || ![b.from, b.to].every((d) => /^\d{4}-\d{2}-\d{2}$/.test(String(d))) ? "bad review" : long(b.context, CONTEXT_LIMIT_LONG) ? "context too long" : null;
+    case "dive": return long(b.context, CONTEXT_LIMIT_LONG) ? "context too long" : badTurn(b.turn, READ_ROUNDS) ? "bad look-ups" : null;
+    case "verdict": return long(b.context, CONTEXT_LIMIT) ? "context too long" : null;
     case "research": return long(b.context, 24000) ? "context too long" : badTurn(b.turn, READ_ROUNDS) ? "bad look-ups" : null;
     default: return "unknown task";
   }

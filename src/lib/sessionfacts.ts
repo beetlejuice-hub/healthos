@@ -11,6 +11,7 @@ import type { Entry } from "./types";
 import type { Night, Factor, Outcome, Sure } from "./sleep";
 import type { Session } from "./liftstrength";
 import { localDay, addDays, HOUR } from "./time";
+import { orderedP } from "./regress";
 import { suppByDay } from "./suppdays";
 
 export type SessionFacts = {
@@ -85,7 +86,15 @@ export const SESSION_OUTCOMES: Outcome<Session, SessionFacts>[] = [
 
 export type Slope = { pts: [number, number][]; slope: number | null; p: number | null; sure: Sure };
 /** Least-squares slope of y on x; how sure by shuffling which y went with which x (2,000 times). Bars as the grid's. */
-export function slopeTest(pts: [number, number][], opts: { perms?: number; seed?: number; min?: number } = {}): Slope {
+export function slopeTest(pts: [number, number][], opts: { perms?: number; seed?: number; min?: number;
+  /**
+   * The points are in time order (weeks, sessions) and next ones can carry over — a hot fortnight, a tired month.
+   * Shuffling assumes they don't: on flat weekly numbers that wander a little (lag-1 correlation 0.5), a 12-week line
+   * was called clear in 23 % of fake people, at 0.8 in 45 % (audit, 17 Nov). Ordered, the p-value is a t-test with
+   * the points counted as fewer (Bretherton's effective n from x's and the leftovers' lag-1 correlations) — and never
+   * surer than the shuffle.
+   */
+  ordered?: boolean } = {}): Slope {
   if (pts.length < (opts.min ?? 10)) return { pts, slope: null, p: null, sure: "too few" };
   const xs = pts.map((p) => p[0]), ys = pts.map((p) => p[1]), m = (a: number[]) => a.reduce((x, y) => x + y, 0) / a.length, mx = m(xs), my = m(ys);
   const sxx = xs.reduce((a, x) => a + (x - mx) ** 2, 0);
@@ -98,6 +107,7 @@ export function slopeTest(pts: [number, number][], opts: { perms?: number; seed?
     for (let i = sh.length - 1; i > 0; i--) { const j = Math.floor(rnd() * (i + 1)); [sh[i], sh[j]] = [sh[j], sh[i]]; }
     if (Math.abs(of(sh)) >= Math.abs(slope) - 1e-9) hits++;
   }
-  const p = (hits + 1) / (perms + 1);
+  let p = (hits + 1) / (perms + 1);
+  if (opts.ordered) p = Math.max(p, orderedP(xs, ys, slope));
   return { pts, slope, p, sure: p < 0.002 ? "clear" : p < 0.02 ? "likely" : "not clear" };
 }

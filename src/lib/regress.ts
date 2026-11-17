@@ -109,3 +109,23 @@ export function clearTogether<R extends { value: number; lo: number; hi: number;
   const ok = new Set(live.filter((_, k) => pass[k]));
   return ranges.map((r, i) => (r ? { ...r, clear: r.clear && ok.has(i) } : r));
 }
+
+/** Lag-1 correlation of `v` around its mean, 0–0.95 (`bias`: add the small-sample pull toward 0 back). */
+function lag1Of(v: number[], bias: boolean): number {
+  const m = v.reduce((a, x) => a + x, 0) / v.length;
+  let c0 = 0, c1 = 0; for (let i = 0; i < v.length; i++) { c0 += (v[i] - m) ** 2; if (i) c1 += (v[i] - m) * (v[i - 1] - m); }
+  const r = c0 ? (c1 / (v.length - 1)) / (c0 / v.length) : 0;
+  return Math.min(0.95, Math.max(0, bias ? r + (1 + 4 * r) / v.length : r));
+}
+/**
+ * The slope of y on x (pass it), two-sided p, with the points — in time order — counted as fewer when x and what the
+ * line leaves over both carry over from one to the next (Bretherton's effective n). For a yes/no x, the slope is the
+ * difference between yes and no. Audit, 17 Nov: shuffle tests assume no carry-over (lib/sessionfacts, lib/sleep).
+ */
+export function orderedP(xs: number[], ys: number[], slope: number): number {
+  const n = xs.length, mx = xs.reduce((a, x) => a + x, 0) / n, my = ys.reduce((a, y) => a + y, 0) / n;
+  const e = ys.map((y, i) => y - my - slope * (xs[i] - mx)), sxx = xs.reduce((a, x) => a + (x - mx) ** 2, 0);
+  const rr = lag1Of(xs, false) * lag1Of(e, true), nEff = Math.max(3, Math.min(n, (n * (1 - rr)) / (1 + rr)));
+  const se = Math.sqrt(e.reduce((a, x) => a + x * x, 0) / Math.max(1, n - 2) / sxx) * Math.sqrt(n / nEff);
+  return se > 0 ? pTwoSided(slope / se, Math.max(1, nEff - 2)) : 0;
+}

@@ -137,6 +137,14 @@ function rankCentred(v: number[], weekend: boolean[]): number[] {
   return r.map((x, i) => x - (weekend[i] ? (Number.isFinite(mw) ? mw : 0) : (Number.isFinite(md) ? md : 0)));
 }
 
+/** Lag-1 correlation of centred `v` over days next to each other (`at`: each value's day index), 0 or more. */
+function carry(v: number[], at: number[]): number {
+  let c1 = 0, c0 = 0, k1 = 0;
+  for (let k = 0; k < v.length; k++) { c0 += v[k] ** 2; if (k && at[k] === at[k - 1] + 1) { c1 += v[k] * v[k - 1]; k1++; } }
+  if (k1 < 5 || !c0) return 0;
+  return Math.min(0.95, Math.max(0, (c1 / k1) / (c0 / v.length)));
+}
+
 const corr = (a: number[], b: number[]) => {
   let sab = 0, saa = 0, sbb = 0;
   for (let i = 0; i < a.length; i++) { sab += a[i] * b[i]; saa += a[i] * a[i]; sbb += b[i] * b[i]; }
@@ -173,21 +181,26 @@ export function pair(a: Signal, b: Signal, lag: 0 | 1, facts: DayFacts[]): Patte
   // A supplement is never the outcome: same day it leads the sentence instead; the next day, or next to another
   // supplement (one stack, taken together), there's nothing to say.
   if (b.causeOnly) return lag === 0 && !a.causeOnly ? pair(b, a, 0, facts) : null;
-  const xs: number[] = [], ys: number[] = [], we: boolean[] = [], dayOf: string[] = [];
+  const xs: number[] = [], ys: number[] = [], we: boolean[] = [], dayOf: string[] = [], at: number[] = [];
   facts.forEach((d, i) => {
     const e = facts[i + lag]; if (!e) return;
     const x = a.get(d), y = b.get(e);
     if (x == null || y == null) return;
-    xs.push(x); ys.push(y); we.push(e.weekend); dayOf.push(d.day);
+    xs.push(x); ys.push(y); we.push(e.weekend); dayOf.push(d.day); at.push(i);
   });
   const n = xs.length;
   if (n < SCOUT.minDays || new Set(xs).size < 2 || new Set(ys).size < 2) return null;
   // a yes/no needs enough days each way: two drinking nights among three "without" days aren't a pattern
   if (a.yes) { const on = xs.filter((x) => x > 0).length; if (on < SCOUT.minSide || n - on < SCOUT.minSide) return null; }
-  const r = corr(rankCentred(xs, we), rankCentred(ys, we));
+  const rx = rankCentred(xs, we), ry = rankCentred(ys, we), r = corr(rx, ry);
   if (!Number.isFinite(r) || Math.abs(r) >= 1) return null;
-  const t = r * Math.sqrt((n - 2) / (1 - r * r));
-  const p = pTwoSided(t, n - 2);
+  // Two things that both wander slowly line up by chance far more often than day-by-day noise does (audit, 17 Nov:
+  // unrelated steps and mood, each carrying over from day to day, were flagged in 14 % of fake people at a day-to-day
+  // carry-over of 0.8 and 33 % at 0.95; 4 % with none). So the days count as fewer — Bretherton's effective n from
+  // each one's lag-1 correlation, as lib/connect does — and the p-value uses that many.
+  const nEff = Math.min(n, Math.max(4, n * (1 - carry(rx, at) * carry(ry, at)) / (1 + carry(rx, at) * carry(ry, at))));
+  const t = r * Math.sqrt((nEff - 2) / (1 - r * r));
+  const p = pTwoSided(t, nEff - 2);
   const sign: 1 | -1 = r >= 0 ? 1 : -1;
   // "How often it held", in plain counts.
   let held = 0, of = 0, onAvg: number | undefined, offAvg: number | undefined, days: string[];

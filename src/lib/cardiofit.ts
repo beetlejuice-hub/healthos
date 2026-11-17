@@ -66,7 +66,7 @@ export const firstWeek = (now: number, weeks: number = FIT.weeks) => weekStart(w
 /** A straight line through points (x in weeks): where it starts and ends, and whether the move is clear. */
 export function lineOf(pts: [number, number][], up: "lower" | "higher", min: number = FIT.minWeeks): Trend {
   if (pts.length < min) return null;
-  const s = slopeTest(pts, { min, perms: 2000, seed: 218 });
+  const s = slopeTest(pts, { min, perms: 2000, seed: 218, ordered: true });
   if (s.slope == null) return null;
   const xs = pts.map((q) => q[0]), mx = mean(xs), my = mean(pts.map((q) => q[1])), x0 = Math.min(...xs), x1 = Math.max(...xs);
   const from = my + s.slope * (x0 - mx), to = my + s.slope * (x1 - mx), change = to - from;

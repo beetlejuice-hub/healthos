@@ -118,8 +118,48 @@ export function feelNotes(state: Pick<State, "entries">, now: number): string[] 
     .map((e) => `${localDay(e.at)} ${clock(e.at)} ${feelText(e)} — "${e.note}"`);
 }
 
-/** The most the context may be (characters); the Worker accepts a little more. Oldest journal days go first. */
-export const CONTEXT_MAX = 44_000;
+/** The most the context may be (characters); the Worker accepts CONTEXT_LIMIT (owner, 17 Nov, a screenshot of every
+ * morning read and question failing "context too long": only the journal used to give way, so once the rest outgrew the
+ * Worker's 48,000 alone, every call was refused). Oldest journal days go first, then whole sections (fitContext). */
+export { CONTEXT_MAX, CONTEXT_LIMIT } from "./limits";
+import { CONTEXT_MAX } from "./limits";
+
+/**
+ * The sections that give way first when the whole is too long, least needed first — each matched by the start of its
+ * heading. What's left out is named at the end, so the model knows to ask the app's tools for it (they reach it all).
+ * About me, this morning, today so far, the last 14 days, training, the stack, what was found and what's running stay.
+ */
+export const GIVE_WAY = [
+  "Mood journal", "Things I noticed about myself", "My recent answers", "Early patterns", "How I feel by time of day",
+  "Why I felt that way", "What the reads already told me", "Mood engines", "Body lab", "On my list to look into",
+  "What helps me", "What I'm watching", "My nights from the band", "What the Sleep / Heart / Mind / Training grids",
+  "Connecting the dots", "What you remember about me",
+] as const;
+
+/** `text` cut to `max` characters by dropping whole sections in GIVE_WAY's order; then, if need be, the longest
+ * remaining section's oldest lines. Pure; a text already within `max` comes back as it was. */
+export function fitContext(text: string, max: number = CONTEXT_MAX): string {
+  if (text.length <= max) return text;
+  const parts = text.split(/\n(?=## )/), dropped: string[] = [];
+  const heading = (p: string) => (p.startsWith("## ") ? p.slice(3, p.indexOf("\n") > 0 ? p.indexOf("\n") : undefined) : "");
+  const note = () => (dropped.length ? `\n## Left out to fit (ask the app's tools for any of it)\n- ${dropped.join("; ")}` : "");
+  const total = () => parts.join("\n").length + note().length;
+  for (const g of GIVE_WAY) {
+    if (total() <= max) break;
+    for (let i = parts.length - 1; i >= 0; i--) if (heading(parts[i]).startsWith(g)) { dropped.push(heading(parts[i]).split(" (")[0].split(" —")[0]); parts.splice(i, 1); }
+  }
+  // still over: the longest section loses its oldest lines (its heading kept)
+  while (total() > max) {
+    let k = -1;
+    parts.forEach((p, i) => { if (p.startsWith("## ") && (k < 0 || p.length > parts[k].length)) k = i; });
+    if (k < 0) break;
+    const ls = parts[k].split("\n");
+    if (ls.length <= 2) { dropped.push(heading(parts[k])); parts.splice(k, 1); continue; }
+    const cut = Math.max(1, Math.ceil((total() - max) / Math.max(1, parts[k].length / (ls.length - 1))));
+    parts[k] = [ls[0], ...ls.slice(1 + Math.min(cut, ls.length - 2))].join("\n");
+  }
+  return parts.join("\n") + note();
+}
 
 const short = (k: string) => k[0].toUpperCase();
 
@@ -219,7 +259,7 @@ export function buildContext(input: ContextInput): string {
     + (input.lab?.length ? `\n## Body lab — the app's own tested numbers, only what's clear or likely (goes with, not causes)\n${input.lab.map((l) => `- ${l}`).join("\n")}` : "")
     + (input.found?.length ? `\n## What the app's own maths found (shown on Today and Insights — quote these numbers, never work your own; options, not orders)\n${input.found.map((l) => `- ${l}`).join("\n")}` : "")
     + (input.links?.length ? `\n## Connecting the dots — the app's own maths over 120 days (each pair the same day and 1–2 days on, against your recent level, days alike counted as fewer, corrected for checking many at once; goes with, not causes)\n${input.links.map((l) => `- ${l}`).join("\n")}` : "");
-  if (input.slim) return `${base}${eng}\n${ASK_MORE}`;
+  if (input.slim) return `${fitContext(`${base}${eng}`, CONTEXT_MAX - ASK_MORE.length - 1)}\n${ASK_MORE}`;
   const extra = eng
     + (input.nights?.length ? `\n## My nights from the band, newest last (the band's measures, then the evening before)\n${input.nights.map((l) => `- ${l}`).join("\n")}` : "");
   // The journal fills what's left, newest days kept: the oldest go first when it's too long.
@@ -227,7 +267,7 @@ export function buildContext(input: ContextInput): string {
   const room = CONTEXT_MAX - base.length - extra.length - 80;
   while (journal.length && journal.join("\n").length + journal.length * 2 > room) journal = journal.slice(1);
   const j = journal.length ? `\n## Mood journal, every check-in (E energy, M mood, F focus, S stress; [up to]; "my note") — ${journal.length} days\n${journal.map((l) => `- ${l}`).join("\n")}` : "";
-  return base + extra + j;
+  return fitContext(base + extra + j);
 }
 
 /** The chat's last section: everything left out is one question away. */

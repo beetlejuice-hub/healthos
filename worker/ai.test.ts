@@ -1,3 +1,4 @@
+import { CONTEXT_LIMIT } from "../src/lib/ai/limits";
 import { describe, expect, it } from "vitest";
 import Anthropic from "@anthropic-ai/sdk";
 import { handleAi, whyFailed } from "./ai";
@@ -377,7 +378,9 @@ describe("/api/ai", () => {
   it("a big context (two months of check-ins) is accepted; chat caches it", async () => {
     const big = "x".repeat(44_000);
     expect((await handleAi(post({ task: "questions", context: big, asked: [] }), env, world([{ text: JSON.stringify({ questions: [] }) }]).deps)).status).toBe(200);
-    expect((await handleAi(post({ task: "questions", context: "x".repeat(49_000), asked: [] }), env, world([]).deps)).status).toBe(400);
+    // the Worker takes what the app makes plus headroom (lib/ai/limits, 17 Nov): 49,000 is fine now, past the limit isn't
+    expect((await handleAi(post({ task: "questions", context: "x".repeat(49_000), asked: [] }), env, world([{ text: JSON.stringify({ questions: [] }) }]).deps)).status).toBe(200);
+    expect((await handleAi(post({ task: "questions", context: "x".repeat(CONTEXT_LIMIT + 1), asked: [] }), env, world([]).deps)).status).toBe(400);
     const w = world([{ text: JSON.stringify({ reply: "hi", remember: [] }) }]);
     await handleAi(post({ task: "chat", messages: [{ role: "user", text: "hi" }], context: big }), env, w.deps);
     expect((w.sent[0].body.system as { cache_control?: unknown }[])[1].cache_control).toEqual({ type: "ephemeral" });

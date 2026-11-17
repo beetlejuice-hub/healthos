@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { cadencePairs, mergePairs, recoveryOf, type CadPair } from "./cadence";
-import { FIT, firstWeek, laneLine, laneTrend, laneWindows, recoveryTrend, weekly, type Win } from "./cardiofit";
+import { FIT, firstWeek, laneLine, lineOf, laneTrend, laneWindows, recoveryTrend, weekly, type Win } from "./cardiofit";
 import type { HrMinute, StepBucket } from "./band";
 import type { Workout } from "./types";
 
@@ -151,5 +151,20 @@ describe("recovery over sessions, resting heart rate and VO2 max by week", () =>
     const w = weekly({ [day(from - D)]: 70, [day(from + D)]: 60, [day(from + 2 * D)]: 62, [day(NOW)]: 57 }, NOW);
     expect(w.map((x) => x.v)).toEqual([61, 57]);
     expect(weekly({ [day(NOW)]: { v: 43.5 } }, NOW)[0].v).toBe(43.5);
+  });
+});
+
+// Audit, 17 Nov: weeks carry over (a hot fortnight, a tired month), and the shuffle test assumed they don't — flat weekly
+// numbers with lag-1 correlation 0.5 got a "clear" line in 23 % of fake people. Now the points count as fewer.
+describe("the weekly line when weeks carry over", () => {
+  const gauss = (seed: number) => { let s = seed >>> 0; const u = () => { s = (s + 0x6d2b79f5) >>> 0; let t = s; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; return () => { let x = 0; for (let i = 0; i < 12; i++) x += u(); return x - 6; }; };
+  const weeks = (seed: number, phi: number, drop: number) => { const g = gauss(seed); let x = g(); return Array.from({ length: 12 }, (_, w) => { x = phi * x + Math.sqrt(1 - phi * phi) * g(); return [w, 140 - (drop * w) / 11 + 2 * x] as [number, number]; }); };
+  const rate = (f: (k: number) => boolean) => { let c = 0; for (let k = 0; k < 200; k++) if (f(k)) c++; return c / 200; };
+  it("control: flat weeks, independent or carrying over at 0.5 — a clear line in at most ~13 %", () => {
+    expect(rate((k) => lineOf(weeks(k + 1, 0, 0), "lower")?.word !== "same")).toBeLessThan(0.09);
+    expect(rate((k) => lineOf(weeks(k + 1, 0.5, 0), "lower")?.word !== "same")).toBeLessThan(0.15);
+  });
+  it("planted: 6 bpm lower over 12 weeks is still found most of the time", () => {
+    expect(rate((k) => lineOf(weeks(k + 500, 0, 6), "lower")?.word === "lower")).toBeGreaterThan(0.65);
   });
 });

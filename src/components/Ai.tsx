@@ -10,7 +10,7 @@ import { healthNow } from "../lib/health-client";
 import { SourceLink } from "./SourceLink";
 import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import { act, getState, newId, useStore, type Experiment } from "../lib/store";
-import { aiStatusNow, askAi, askRead, bandForRead, chatContext, contextNow, leadNow, linksNow, nightContext, refreshAiStatus, useAiStatus } from "../lib/ai/client";
+import { aiStatusNow, askAi, askRead, bandForRead, chatContext, contextNow, diveContext, leadNow, linksNow, nightContext, refreshAiStatus, useAiStatus } from "../lib/ai/client";
 import { leadLines, withLead } from "../lib/ai/lead";
 import { askChat } from "../lib/ai/chat";
 import { bandNow, bandSettled, onBandSettled, onNights } from "../lib/band-client";
@@ -155,7 +155,7 @@ export async function makeDive(key: string, skip: string[] = []): Promise<string
   const r = await attempt(`dive:${key}:${skip.length}`, async () => {
     const ai = getState().ai;
     if (!skip.length && ai.dive?.key === key) return null;
-    const r = await askRead({ task: "dive", context: `${contextNow()}\n${diveBrief(ai.dives ?? [], skip).join("\n")}` });
+    const r = await askRead({ task: "dive", context: diveContext(diveBrief(ai.dives ?? [], skip)) });
     if (!r.ok) return r;
     const at = Date.now(), { looked, ...answer } = r.answer;
     act.setAi((a) => ({
