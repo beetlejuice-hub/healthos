@@ -32,7 +32,7 @@ const XS = [
   await pg.reload(); await forYou(pg, 'experiment'); await pg.waitForSelector('.xp-strip', { timeout: 5000 }).catch(() => {});
   const lines = await pg.locator('.xp-strip li').evaluateAll((ls) => ls.map((l) => l.innerText.replace(/\s+/g, ' ').replace(/ ›$/, '')));
   check(`a line each: running with today's reminder, done with its result, stopped early says so (${lines.join(' | ')})`, lines.length === 3
-    && lines[0] === '🧪 No caffeine after 14:00 day 9 of 21 — today: last coffee by 14:00' && lines[1] === '🧪 Protein at breakfast worked for you · see why' && lines[2] === '🧪 Magnesium at 21:00 ended early — too few days to tell');
+    && lines[0] === '🧪 No caffeine after 14:00 day 9 of 21 — today: last coffee by 14:00' && lines[1] === '🧪 Protein at breakfast it helped · see why' && lines[2] === '🧪 Magnesium at 21:00 ended early — too few days to tell');
   check(`fits the phone (${await pg.evaluate(() => document.documentElement.scrollWidth)} px)`, await pg.evaluate(() => document.documentElement.scrollWidth) <= 390);
   await pg.locator('.xp-strip').screenshot({ path: OUT + 'xpstrip.png' });
   // a tap opens the experiments
@@ -40,7 +40,7 @@ const XS = [
   await pg.waitForTimeout(900);
   const where = await pg.evaluate(() => location.hash), box = await pg.locator('#experiments').boundingBox().catch(() => null);
   check(`a tap opens Insights → Training with the experiments in view (${where}, top ${box && Math.round(box.y)})`, where === '#insights/training' && !!box && box.y >= -5 && box.y < 844);
-  check('…with the verdict there', /worked for you\s*Energy went up 1\.2/.test(await pg.locator('#experiments').innerText()));
+  check('…with the verdict there', /it helped\s*Energy went up 1\.2/.test(await pg.locator('#experiments').innerText()));
   // back on Today: the done one has been seen, its line is gone; the others stay
   await pg.goto(APP + '#today'); await pg.waitForSelector('.xp-strip');
   const after = await pg.locator('.xp-strip li b').allInnerTexts();

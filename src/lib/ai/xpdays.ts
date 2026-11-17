@@ -17,12 +17,12 @@ export const XP = { askBack: 3, stretch: 2, from: 4 } as const;
 export const xpSkipped = (x: Pick<Experiment, "did" | "start">) => Object.keys(x.did ?? {}).filter((d) => x.did![d] === false && d >= x.start).sort();
 
 /** The first day after it: its days, one more for each you didn't do, at most twice its days. */
-export const xpEnd = (x: Pick<Experiment, "did" | "start" | "days">) => addDays(x.start, Math.min(x.days + xpSkipped(x).length, x.days * XP.stretch));
+export const xpEnd = (x: Pick<Experiment, "did" | "start" | "days" | "extra">) => addDays(x.start, Math.min(x.days + xpSkipped(x).length, x.days * XP.stretch) + (x.extra ?? 0));
 
 const between = (a: string, b: string) => Math.max(0, Math.round((Date.parse(b) - Date.parse(a)) / 86_400_000));
 
 /** The days that counted before `upto` (not included): the days in it, less the ones left out. */
-export function xpCounted(x: Pick<Experiment, "did" | "start" | "days">, upto: string): number {
+export function xpCounted(x: Pick<Experiment, "did" | "start" | "days" | "extra">, upto: string): number {
   const stop = [upto, xpEnd(x)].sort()[0];
   return between(x.start, stop) - xpSkipped(x).filter((d) => d < stop).length;
 }
@@ -39,4 +39,4 @@ export function xpToAsk(x: Experiment, today: string): string[] {
 }
 
 /** It has had its days: past its end, and its last day answered (or past being asked). */
-export const xpOver = (x: Experiment, today: string) => xpEnd(x) <= (x.ended ?? today) && (!!x.ended || !xpToAsk(x, today).length);
+export const xpOver = (x: Experiment, today: string) => !!x.early || (xpEnd(x) <= (x.ended ?? today) && (!!x.ended || !xpToAsk(x, today).length));

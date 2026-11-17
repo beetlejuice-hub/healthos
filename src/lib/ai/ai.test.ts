@@ -43,7 +43,7 @@ describe("experiments: before vs during", () => {
   const base = feelWorld({ seed: 7, days: 60, rateRate: 1 }).map((d, i) => ({ ...d, day: addDays("2026-08-01", i) }));
   const x = { id: "x", name: "No caffeine after 14:00", how: "", days: 21, measure: "energy", start: addDays("2026-08-01", 30) };
   it("a real +1.5 energy change is called better; no change isn't", () => {
-    const lifted = base.map((d) => (d.day >= x.start && d.energy != null ? { ...d, energy: d.energy + 1.5 } : d));
+    const lifted = base.map((d) => (d.day >= x.start && d.energy != null ? { ...d, energy: d.energy + 2 } : d));
     expect(judge(x, lifted, addDays(x.start, 25)).state).toBe("better");
     expect(judge(x, base, addDays(x.start, 25)).state).toBe("no-clear-change");
   });

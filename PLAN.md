@@ -4283,3 +4283,26 @@ both reads and the questions. Phases in that order; #152 RPE waits (owner).
    - **e2e checkin passes again** (owner, 17 Nov: "Make the checkin test pass"). The "Cut 150 anyway" tap worked all
      along: the suite's installed clock doesn't run on its own after the seed's reloads, so the store's 150 ms save never
      fired. The suite now runs the clock a second after the tap. The app wasn't at fault.
+
+225. [ ] **3 · 4 · 5** (owner, 17 Nov, from the list of ten: "3 4 5 … do what i listed skip others")
+   - **5 · Experiments that end themselves.** Why: an experiment asks every morning "did you do it?", runs its fixed days,
+     and then says "no clear change" even when it simply had too few days. What: (a) days the log can answer itself — no
+     drinks (alcohol logged?), no caffeine after 14:00, leaving out a supplement — are marked done or not without asking;
+     (b) from 7 days in it's checked every day and ends early once the answer is clear on a stricter bar than the end's
+     (so looking daily doesn't make chance look like an answer — tested on fake people with and without a planted effect);
+     (c) at its end, if it's unclear and wide, it runs up to 7 days more, once; (d) the result in plain words: "it
+     helped", "it made it worse", "no difference" (the range is tight around nothing), "can't tell" (the range is wide).
+   - Done 17 Nov (5): lib/ai/xpauto (the log's answers, the daily look, a week more, the plain words), wired into Today's
+     strip and the AI's tick; verdicts wait while a week more is due. Found on the way: the experiment test itself
+     (lib/ai/apply judge) had the same flaw as the engines in 223 — flat ratings that carry over got a verdict in 18 %
+     (0.4) and 37 % (0.7) of fake people; now the days count as fewer (`carried`). Whole run measured (200 fake people a
+     case): nothing planted → a verdict in 4 % / 11 % / 15 % (carry-over 0 / 0.4 / 0.7); energy +1.5 → "it helped" in
+     88 % / 63 %, a third of them before day 14. Early bar 99.8 %. Single-person planted tests moved from +1.5 to +2 (21
+     days of carried-over ratings honestly can't be sure of +1.5 every time). Tests: xpauto, verdict, guess, found, ai;
+     e2e xpauto (ends itself, the log answers, nothing asked), xpstrip and xpdid.
+   - **3 · What changed since you last looked.** Insights opens with one card: since your last visit (6+ hours ago),
+     which trends turned (steady → slipping…), which links are new or gone, which findings firmed up (early → likely →
+     clear). Up to 6 lines, each opens its place; nothing changed → one line saying so.
+   - **4 · Pin the AI's numbers.** The server checks every number in a read (summary, workout, the app-data items — not
+     studies) against the numbers it was given (the context and the app's tool answers, allowing for rounding). One it
+     wasn't given is marked in the read, dotted, "not one of your numbers"; Settings → AI counts them per read.

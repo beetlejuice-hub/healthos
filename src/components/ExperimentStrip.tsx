@@ -4,9 +4,9 @@
  * Insights → Training (lib/ai/experiment experimentStrip).
  */
 
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
 import { act, getState, offerUndo, useStore, type Experiment } from "../lib/store";
-import { experimentStrip } from "../lib/ai/experiment";
+import { experimentStrip, xpAutoRun } from "../lib/ai/experiment";
 import { XP, xpCounted, xpEnd, xpSkipped, xpToAsk } from "../lib/ai/xpdays";
 import { judge } from "../lib/ai/apply";
 import { dailyFacts } from "../lib/insights";
@@ -20,8 +20,10 @@ export function ExperimentStrip({ now }: { now: number }) {
   const lines = useMemo(() => {
     // the 120 days of facts only when one has finished without a verdict (the app's own result is shown then)
     let facts: ReturnType<typeof dailyFacts> | null = null;
-    return experimentStrip(xs, today, (x) => judge(x, (facts ??= dailyFacts(entries, workouts, settings, addDays(today, -120), addDays(today, -1))), today).state);
+    return experimentStrip(xs, today, (x) => judge(x, (facts ??= dailyFacts(entries, workouts, settings, addDays(today, -120), addDays(today, -1))), today));
   }, [xs, entries, workouts, settings, today]);
+  // the log's answers, an early end, a few more days (PLAN 225) — once a day's data changes
+  useEffect(() => { xpAutoRun(today); }, [today, entries]);
   if (!lines.length) return null;
   const open = (id: string, done: boolean) => {
     if (done) act.setAi((a) => ({ experiments: a.experiments.map((x) => (x.id !== id ? x : x.verdict ? { ...x, verdict: { ...x.verdict, seen: Date.now() } } : { ...x, seen: Date.now() })) }));

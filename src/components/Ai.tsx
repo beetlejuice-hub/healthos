@@ -34,7 +34,8 @@ import { DeepDive } from "./DeepDive";
 import { Looked } from "./Looked";
 import { NightPending, ReadPending } from "./ReadPending";
 import { DIVE, diveBrief, diveDue } from "../lib/ai/dive";
-import { RESULT_WORDS, verdictLines, verdictsDue } from "../lib/ai/experiment";
+import { RESULT_WORDS, verdictLines, verdictsDue, xpAutoRun } from "../lib/ai/experiment";
+import { plainResult } from "../lib/ai/xpauto";
 import { xpSkipped } from "../lib/ai/xpdays";
 import { ExperimentDays } from "./ExperimentStrip";
 import { judge } from "../lib/ai/apply";
@@ -357,7 +358,8 @@ export function useAiAuto(userId: string | undefined) {
       if ("topic" in next) void makeResearch(next.topic);
       // an experiment that ended gets its verdict (PLAN 160) — the 120 days of facts only when one might be due
       const st = getState();
-      if (ai.experiments.some((x) => !x.verdict && addDays(x.start, x.days) <= (x.ended ?? today)))
+      xpAutoRun(today);
+      if (ai.experiments.some((x) => !x.verdict && (!!x.early || addDays(x.start, x.days) <= (x.ended ?? today))))
         for (const d of verdictsDue(ai.experiments, dailyFacts(st.entries, st.workouts, st.settings, addDays(today, -120), addDays(today, -1)), today)) void makeVerdict(d.x, d.v);
     };
     tick();
@@ -715,7 +717,7 @@ export function Experiments() {
               </span>}
               {x.guess && <small className="xp-guessed">You guessed <b>{GUESS_WORDS[x.guess]}</b>{right == null ? " — the result isn't in yet" : right ? " — ✓ right" : " — ✗ not this time"}</small>}
               {/* when it ended: the AI's words on the app's result, what next, the studies (PLAN 160) */}
-              {x.verdict && <span className={`exp-v v-${x.verdict.state}`}><b className="exp-chip">{RESULT_WORDS[x.verdict.state]}</b> {x.verdict.text}
+              {x.verdict && <span className={`exp-v v-${x.verdict.state}`}><b className="exp-chip">{plainResult({ state: x.verdict.state, ci: v.ci }) ?? RESULT_WORDS[x.verdict.state]}</b> {x.verdict.text}
                 {x.verdict.next && <span className="exp-next"><b>Next:</b> {x.verdict.next}</span>}
                 {x.verdict.found.map((f) => <span key={f.source.url} className="exp-src"><SourceLink s={f.source} /></span>)}</span>}</span>
             {!x.ended ? <button type="button" className="pill-btn" onClick={() => act.setAi((a) => ({ experiments: a.experiments.map((y) => (y.id === x.id ? { ...y, ended: today } : y)) }))}>End</button>

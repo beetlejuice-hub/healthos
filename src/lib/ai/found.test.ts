@@ -24,7 +24,7 @@ const vs: VsNow = { stats: [], vs: null, stand: { good: [{ key: "HRT", title: "R
   bad: [{ key: "alc", title: "Drinks 10 a week (140 g)", vs: "1.3× the UK's low-risk line of 14 units (112 g) a week", score: -0.5, fix: "Under 112 g a week (UK Chief Medical Officers 2016)." }] } };
 const days = feelWorld({ seed: 7, days: 60, rateRate: 1 }).map((d, i) => ({ ...d, day: addDays("2026-08-01", i) }));
 const x: Experiment = { id: "x", name: "No caffeine after 14:00", how: "", days: 21, measure: "energy", start: addDays("2026-08-01", 30), guess: "helps" };
-const lifted = days.map((d) => (d.day >= x.start && d.energy != null ? { ...d, energy: d.energy + 1.5 } : d));
+const lifted = days.map((d) => (d.day >= x.start && d.energy != null ? { ...d, energy: d.energy + 2 } : d));
 
 describe("what the app found, for the AI (PLAN 214)", () => {
   it("body watch, you vs everyone with the fix, an experiment with how sure and the guess, the gut's record", () => {

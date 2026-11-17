@@ -48,7 +48,21 @@ const MEASURES: Measure[] = ["energy", "mood", "focus", "stress", "sleep"];
  * Sleep is the rating given the next morning, so a day's night is credited to that day (the
  * morning rating on the start day is the night before it began, and doesn't count as "during").
  */
-export function judge(x: Experiment, days: DayFacts[], today: string): Verdict {
+/**
+ * A step's standard error and degrees of freedom with the days counted as fewer when what the fit leaves over carries over
+ * from one day to the next (`days` in order; only neighbouring days count toward the correlation). The step itself runs in
+ * one block, so its own carry-over is taken as full.
+ */
+export function carried(days: string[], e: number[], se: number, df: number): { se: number; df: number } {
+  let c0 = 0, c1 = 0, k1 = 0;
+  for (let i = 0; i < e.length; i++) { c0 += e[i] ** 2; if (i && days[i] === addDays(days[i - 1], 1)) { c1 += e[i] * e[i - 1]; k1++; } }
+  const n = e.length, r0 = k1 >= 5 && c0 ? (c1 / k1) / (c0 / n) : 0, r = Math.min(0.9, Math.max(0, r0 + (1 + 4 * r0) / n));
+  const nEff = Math.max(4, (n * (1 - r)) / (1 + r));
+  return { se: se * Math.sqrt(n / nEff), df: Math.max(1, Math.min(df, nEff - 3)) };
+}
+
+/** `alpha`: the two-sided bar (0.05 at the end; stricter for a look before it, lib/ai/xpauto). */
+export function judge(x: Experiment, days: DayFacts[], today: string, alpha = 0.05): Verdict {
   const m: Measure = (MEASURES as string[]).includes(x.measure) ? (x.measure as Measure) : "energy";
   // its days: from the start to its end (PLAN 189: later when you said you didn't do it), or to when you stopped it
   const last = xpEnd(x), stop = [x.ended ?? today, last].sort()[0], from = addDays(x.start, -14);
@@ -58,15 +72,20 @@ export function judge(x: Experiment, days: DayFacts[], today: string): Verdict {
   const rows = days.filter((d) => d.day >= from && d.day < stop && value(d) != null && x.did?.[d.day] !== false);
   const before = rows.filter((d) => d.day < x.start), during = rows.filter((d) => d.day >= x.start);
   const mean = (r: DayFacts[]) => (r.length ? r.reduce((a, d) => a + value(d)!, 0) / r.length : null);
-  const daysIn = xpCounted(x, stop), going = stop < last;
+  // ended early because the answer was already clear (lib/ai/xpauto): judged on the days it had
+  const daysIn = xpCounted(x, stop), going = stop < last && !x.early;
   const base = { daysIn, before: mean(before), during: mean(during), n: [before.length, during.length] as [number, number] };
   if (before.length < 5 || during.length < 5) return { ...base, state: going ? "running" : "too-few" };
   const fit = ols(rows.map((d) => [1, d.day >= x.start ? 1 : 0, d.weekend ? 1 : 0]), rows.map((d) => value(d)!));
   if (!fit) return { ...base, state: "too-few" };
-  const diff = fit.coef[1], half = tCrit(fit.df) * fit.se[1];
+  // Ratings carry over from day to day (a good week follows a good week), and before/during is one block against another:
+  // with no allowance, flat ratings gave a verdict in 18 % of fake people at a carry-over of 0.4 and 37 % at 0.7 (audit,
+  // 17 Nov). So the days count as fewer — effective n from the leftovers' lag-1 correlation — for the range and its t.
+  const { se, df } = carried(rows.map((d) => d.day), rows.map((d) => value(d)! - fit.coef[0] - fit.coef[1] * (d.day >= x.start ? 1 : 0) - fit.coef[2] * (d.weekend ? 1 : 0)), fit.se[1], fit.df);
+  const diff = fit.coef[1], half = tCrit(df, alpha) * se;
   const ci: [number, number] = [diff - half, diff + half];
   const good = m === "stress" ? -1 : 1;
   const state = going ? "running" : ci[0] > 0 ? (good > 0 ? "better" : "worse") : ci[1] < 0 ? (good > 0 ? "worse" : "better") : "no-clear-change";
-  const t = fit.se[1] > 0 ? (good * diff) / fit.se[1] : 0, p = pT(Math.abs(t), fit.df), sure = t >= 0 ? 1 - p / 2 : p / 2;
+  const t = se > 0 ? (good * diff) / se : 0, p = pT(Math.abs(t), df), sure = t >= 0 ? 1 - p / 2 : p / 2;
   return { ...base, state, diff, ci, sure };
 }

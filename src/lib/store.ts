@@ -104,6 +104,12 @@ export type Experiment = { id: string; name: string; how: string; days: number; 
   guess?: "helps" | "same" | "hurts";
   /** Each morning's answer about the day before (PLAN 189): did you do it? A "no" day is left out and the experiment runs a day longer. */
   did?: Record<string, boolean>;
+  /** Ended before its days because the answer was already clear on the stricter bar (lib/ai/xpauto; owner, 17 Nov: "5"). */
+  early?: string;
+  /** Days added once at its end because the answer was unclear and wide (lib/ai/xpauto). */
+  extra?: number;
+  /** Days the log answered "did you do it?" for (no drinks, no caffeine after 14:00, a supplement left out): not asked. */
+  auto?: Record<string, boolean>;
   /** When it ended (PLAN 160): the AI's words on the app's result, what to do next, studies it leaned on. */
   verdict?: { at: number; state: "better" | "worse" | "no-clear-change"; text: string; next: string; found: DiveStudy[]; /** You opened it from Today. */ seen?: number };
   /** An ended one's line on Today was tapped (PLAN 160). */ seen?: number };
