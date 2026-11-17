@@ -681,6 +681,8 @@ export const AI_ERRORS = {
   "bad-key": "The Anthropic key was rejected — check ANTHROPIC_API_KEY in Cloudflare.",
   "no-key": "The AI is off: add ANTHROPIC_API_KEY in Cloudflare.",
   cap: "Today's AI limit is reached. It resets at midnight.",
+  "server-budget": "The server's AI budget for the month is used up, for every account. It resets on the 1st (AI_TOTAL_USD in Cloudflare).",
+  "not-allowed": "The AI on this server is only for the accounts named in AI_ALLOW (Cloudflare).",
   busy: "Too many AI calls in a minute — Anthropic asked to slow down.",
   overloaded: "Anthropic's servers are overloaded right now.",
   "ai-down": "Anthropic's service failed on its side.",

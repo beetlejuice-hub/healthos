@@ -33,7 +33,6 @@ import { WhyToday } from "../components/WhyToday";
 import { TipAsk } from "../components/TipAsk";
 import { WeekAsk } from "../components/WeekReport";
 import { WatchAsk, WatchDoneAsk, WatchOfferAsk } from "../components/Watching";
-import { TodayPattern } from "../components/TodayPattern";
 import { FoldCard } from "../components/FoldCard";
 import type { Drink, Entry, EntryOf, Slot } from "../lib/types";
 import { answerSlot, SLOTS, slotsOf } from "../lib/types";
@@ -240,13 +239,11 @@ export function Today() {
       {foodDay && <FoodDay day={foodDay} onClose={() => setFoodDay(null)} />}
       {/* renovation (canvas A): the reading part of Today folds away; left open, it opens open next time */}
       <details className="t2-more" open={moreOpen} onToggle={(e) => { const o = (e.currentTarget as HTMLDetailsElement).open; try { localStorage.setItem(TMORE_KEY, o ? "1" : "0"); } catch { /* private mode */ } }}>
-        <summary>More about today: why today, how you compare, a pattern, a lead</summary>
+        <summary>More about today: why today, how you compare, a lead</summary>
         {/* how you compare (PLAN 206; the game it sat in is gone: "simply dont wnat that complication") */}
         <HowYouCompare now={now} />
         {/* PLAN 208: what last night and yesterday push today's focus toward, from your own days */}
         <WhyToday now={now} />
-        {/* owner, 28 Oct: "Now the today page feels too empty" · "I liked charts and connecting dots" — picked a pattern, with today on it */}
-        <TodayPattern now={now} />
         <FromYourData now={now} />
       </details>
       <NoticeBox />

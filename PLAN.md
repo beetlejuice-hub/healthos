@@ -4256,3 +4256,27 @@ both reads and the questions. Phases in that order; #152 RPE waits (owner).
      - Cost: on data that genuinely wanders a lot, real changes need longer to show (a 1-spread fall over 90 days is
        found 35 % of the time at carry-over 0.5, was 63 %). That's the honest price.
      - Not changed: body lab's slopes (x is a nightly amount, less prone; next to check).
+
+224. [x] **"1 2 3 4"** (owner, 17 Nov, to the four next steps after 223)
+   - **1 · Body lab**: the last engine unaudited. Smoking against the heart numbers shuffled as if each night stood alone;
+     a quit half-way against drifting HRV was "sure" in 72 % of fake people with nothing planted (drinks 37 %). Now in
+     night order with the nights counted as fewer (`slopeTest(…, { ordered: true })`): 11 % and 14 % at carry-over 0.8,
+     6–7 % with none; a planted HRV drop on smoking nights still found. Tests in bodylab.test.
+   - **2 · Security review of the Worker**:
+     - **Fixed — the AI's money.** Anyone who signs up could use the AI on his key, and the daily cap and the month's
+       budget were read from the account's own "ai_usage" doc, a row that account can write: zero it and spend on. Now a
+       ledger only the Worker reaches (worker/ledger, the "_ai" BandHub) counts each account's calls and spend and every
+       account's together; the cap and budget use the larger of doc and ledger; past AI_TOTAL_USD (default twice the
+       month's budget, $40) the AI stops for everyone until the 1st. Optional AI_ALLOW (account ids or emails) keeps the
+       AI to the accounts named. Tests: ledger, worker ai (a wiped doc still capped, budget → Haiku, the ceiling, the
+       allow-list).
+     - **Fixed — push.** Any https address was taken as a device, so the server could be made to post anywhere on every
+       reminder; now only Apple, Google, Mozilla and Microsoft's push services.
+     - **Checked, sound**: Apple Health / widget / Overland keys (random 24 bytes, only the hash kept, constant-time
+       compare, checked before anything is stored); the Google sign-in state (HMAC, 15 minutes, names the account); the
+       Tempo key (constant-time); internal hub paths aren't reachable from outside; every other route signed in.
+   - **3 · Supabase**: the plugin isn't in this session and the sandbox can't reach the database, so from the schema:
+     row-level security on both tables, each row its owner's only, for reads and writes. Worth doing by him (one switch):
+     Supabase → Authentication → turn off new sign-ups — he's the only user, and it closes the door the AI ledger guards.
+   - **4 · The Today pattern card is gone** (and lib/todaypattern, its tests, its suite, its CSS); "From your data" now
+     offers any new lead.

@@ -1,7 +1,7 @@
 /**
  * Today: "From your data", one line (reform T4; owner, 29 Oct: Yes to "One line, the newest thing worth knowing, linked
  * to Findings. The rest is already on Findings."). It stacked three: Noticed ("You burn about 2,650 kcal a day"), New lead
- * and Next answer. Now the first of: a new lead you haven't looked at — not one the pattern card above already draws —
+ * and Next answer. Now the first of: a new lead you haven't looked at (the pattern card that drew one above it went, owner 17 Nov: "4") —
  * then Noticed's top finding (✕ hides it until its number changes), then the answer the app is nearest to. Nothing to
  * say → no card.
  */
@@ -12,7 +12,6 @@ import { useStore } from "../lib/store";
 import { notice } from "../lib/findings";
 import { currentKg } from "../lib/body";
 import { useScout } from "./Scout";
-import { useTodayPatterns } from "./TodayPattern";
 import { useBand } from "../lib/band-client";
 import { useEnrich } from "./useEvidence";
 import { allPhases, MI_KM, newBests, paceText, type DistUnit } from "../lib/cardiostats";
@@ -23,13 +22,13 @@ const SLOW = 10 * 60_000;
 export function FromYourData({ now }: { now: number }) {
   const entries = useStore((x) => x.entries), goals = useStore((x) => x.goals), settings = useStore((x) => x.settings);
   const workouts = useStore((x) => x.workouts), supplements = useStore((x) => x.supplements);
-  const scouted = useScout(), drawn = useTodayPatterns(now);
+  const scouted = useScout();
   // the findings engine every 10 minutes, not on every tick of Today's clock
   const slow = Math.floor(now / SLOW) * SLOW;
   const enrich = useEnrich();
   const n = useMemo(() => notice(entries, goals, slow, currentKg(entries, settings.bodyKg, slow), { workouts, supplements, settings, enrich }), [enrich, entries, goals, slow, settings, workouts, supplements]);
   const [hidden, setHidden] = useState(() => { try { return localStorage.getItem(HIDDEN) ?? ""; } catch { return ""; } });
-  const lead = scouted.find((x) => !x.memo && !drawn.some((c) => c.id === x.p.id));
+  const lead = scouted.find((x) => !x.memo);
   // a cardio best in the last 2 days (PLAN 191 phase 2: "personal bests on Today")
   const band = useBand().data, unit: DistUnit = settings.distUnit ?? "mi";
   const best = useMemo(() => newBests(allPhases(workouts, band?.hr ?? [], slow), slow - 2 * 86_400_000).at(-1) ?? null, [workouts, band, slow]);

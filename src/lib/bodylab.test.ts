@@ -105,3 +105,22 @@ describe("the month of cigarettes (SmokeB)", () => {
     expect(smokeMonth(spread.slice(0, 3), "2026-10-27").weekdays).toBeNull();
   });
 });
+
+// Audit, 17 Nov: smoking comes in stretches (then a quit) and HRV drifts. Shuffled as if each night stood alone, a quit
+// half-way against drifting HRV was "sure" in 72 % of fake people with nothing planted; now the nights count as fewer.
+describe("body lab when nights run in stretches", () => {
+  const gen = (seed: number) => { let s = seed >>> 0; const u = () => { s = (s + 0x6d2b79f5) >>> 0; let t = s; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; return { u, g: () => { let x = 0; for (let i = 0; i < 12; i++) x += u(); return x - 6; } }; };
+  const world = (seed: number, phi: number, hrvDrop = 0): LabNight[] => { const { u, g } = gen(seed); let x = g(), y = g();
+    return Array.from({ length: 60 }, (_, i) => { x = phi * x + Math.sqrt(1 - phi * phi) * g(); y = phi * y + Math.sqrt(1 - phi * phi) * g();
+      const smoked = i < 30;
+      return { night: { hrv: 50 + 8 * x - (smoked ? hrvDrop : 0), rhr: 55 + 3 * y, meanHr: 58 + 3 * y, deep: 80 } as unknown as Night, drinks: u() < 0.1 ? 1 : 0, cigs: smoked ? 5 : 0, lateMg: 0 }; }); };
+  const sure = (f: { sure: string }) => f.sure === "clear" || f.sure === "likely";
+  it("control: quit half-way, heart numbers wandering at 0.8, no effect — something 'sure' in at most 1 in 6", () => {
+    let said = 0; for (let k = 1; k <= 60; k++) if (smokeCompare(world(k, 0.8))!.rows.some((r) => sure(r.fit))) said++;
+    expect(said / 60).toBeLessThanOrEqual(1 / 6);
+  });
+  it("planted: HRV 12 lower on smoking nights (1.5 usual spreads), nights independent — found", () => {
+    let found = 0; for (let k = 1; k <= 30; k++) { const r = smokeCompare(world(k + 300, 0, 12))!.rows.find((x) => x.id === "hrv")!; if (sure(r.fit) && r.smoked < r.not) found++; }
+    expect(found / 30).toBeGreaterThanOrEqual(0.9);
+  });
+});

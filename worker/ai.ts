@@ -16,8 +16,26 @@ import {
   type AiRequest, type DigestAnswer, type DiveAnswer, type VerdictAnswer, type ModelChoice, type NightAnswer, type SupplementAnswer, type Task, type UsageDoc,
 } from "../src/lib/ai/tasks";
 import { checkFoundLinks, checkReadLinks, checkSupplementLinks } from "./links";
+import { ledgerAsOf, mineIn, type Ledger } from "./ledger";
 
-export type AiEnv = GeminiEnv & { ANTHROPIC_API_KEY?: string; SUPABASE_URL?: string; SUPABASE_KEY?: string; AI_DAILY_CAP?: string; AI_MONTHLY_USD?: string };
+type Hubs = { idFromName: (n: string) => unknown; get: (id: unknown) => { fetch: (r: Request) => Promise<Response> } };
+export type AiEnv = GeminiEnv & { ANTHROPIC_API_KEY?: string; SUPABASE_URL?: string; SUPABASE_KEY?: string; AI_DAILY_CAP?: string; AI_MONTHLY_USD?: string;
+  /** Who may use the AI: account ids or emails, comma-separated. Unset: every signed-in account (bounded by AI_TOTAL_USD). */
+  AI_ALLOW?: string;
+  /** Every account's AI spend together, a month, before it stops for everyone until the 1st (default: twice AI_MONTHLY_USD). */
+  AI_TOTAL_USD?: string;
+  /** The BandHub namespace: the "_ai" hub keeps the server's ledger (worker/ledger). Without it (tests), the doc alone. */
+  BAND?: Hubs };
+/** The server's ledger, read or added to (null when there's no hub or it can't be reached: the doc still counts). */
+async function ledger(env: AiEnv, day: string, add?: { user: string; usd: number; call: boolean }): Promise<Ledger | null> {
+  if (!env.BAND) return null;
+  try {
+    const hub = env.BAND.get(env.BAND.idFromName("_ai"));
+    const r = add ? await hub.fetch(new Request("https://band/ai-add", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ day, ...add }) }))
+      : await hub.fetch(new Request(`https://band/ai-ledger?day=${day}`));
+    return r.ok ? ledgerAsOf((await r.json()) as Ledger, day) : null;
+  } catch { return null; }
+}
 type Deps = { fetch: typeof fetch; now: () => number };
 
 const SB_URL = "https://ubfvaewfdbmecowoeuni.supabase.co";
@@ -29,13 +47,13 @@ const json = (body: unknown, status = 200) => new Response(JSON.stringify(body),
 /** "2026-10-01" in the user's time zone, so the cap resets at their midnight. */
 const dayIn = (ms: number, tz: string) => { try { return new Intl.DateTimeFormat("en-CA", { timeZone: tz, year: "numeric", month: "2-digit", day: "2-digit" }).format(ms); } catch { return new Date(ms).toISOString().slice(0, 10); } };
 
-export async function whoIs(req: Request, env: AiEnv, deps: Deps): Promise<{ id: string; token: string } | null> {
+export async function whoIs(req: Request, env: AiEnv, deps: Deps): Promise<{ id: string; token: string; email?: string } | null> {
   const token = (req.headers.get("authorization") ?? "").replace(/^Bearer\s+/i, "");
   if (!token) return null;
   const r = await deps.fetch(`${env.SUPABASE_URL ?? SB_URL}/auth/v1/user`, { headers: { apikey: env.SUPABASE_KEY ?? SB_KEY, authorization: `Bearer ${token}` } });
   if (!r.ok) return null;
-  const u = (await r.json()) as { id?: string };
-  return u.id ? { id: u.id, token } : null;
+  const u = (await r.json()) as { id?: string; email?: string };
+  return u.id ? { id: u.id, token, ...(u.email ? { email: u.email.toLowerCase() } : {}) } : null;
 }
 
 const EMPTY = (day: string): UsageDoc => ({ day, calls: 0, dayUsd: 0, month: day.slice(0, 7), monthUsd: 0, byModel: {} });
@@ -248,6 +266,8 @@ export async function handleAi(req: Request, env: AiEnv, deps: Deps = { fetch: (
   const url = new URL(req.url);
   const user = await whoIs(req, env, deps);
   if (!user) return json({ error: "sign in first" }, 401);
+  const allow = (env.AI_ALLOW ?? "").split(",").map((x) => x.trim().toLowerCase()).filter(Boolean);
+  if (allow.length && !allow.includes(user.id.toLowerCase()) && !(user.email && allow.includes(user.email))) return fail("not-allowed", 403);
   const cap = Number(env.AI_DAILY_CAP) || DAILY_CAP;
   const tz = url.searchParams.get("tz") || "Europe/Budapest";
   const today = dayIn(deps.now(), tz);
@@ -262,13 +282,19 @@ export async function handleAi(req: Request, env: AiEnv, deps: Deps = { fetch: (
   const problem = validate(body);
   if (problem) return json({ error: problem }, 400);
 
-  const usage = await readUsage(user, env, deps, today);
+  // the account's own doc is what Settings shows, but it's a row the account can write: the cap, the budget and the
+  // ceiling for every account together are checked against the server's ledger too (security review, 17 Nov)
+  const [usage, led] = await Promise.all([readUsage(user, env, deps, today), ledger(env, today)]);
+  const mine = led ? mineIn(led, user.id, today) : null;
+  const seen = mine ? { ...usage, calls: Math.max(usage.calls, mine.calls), monthUsd: Math.max(usage.monthUsd, mine.usd) } : usage;
+  const total = Number(env.AI_TOTAL_USD) || 2 * budget;
+  if (led && led.total >= total) return fail("server-budget", 429, { usage }, `$${total}`);
   // a chat message's tool rounds count as the one call it is (priced and logged each)
   const more = (body.task === "chat" || body.task === "digest" || body.task === "night" || body.task === "dive") && !!body.turn?.length;
-  if (usage.calls >= cap && !more) return fail("cap", 429, { usage }, String(cap));
+  if (seen.calls >= cap && !more) return fail("cap", 429, { usage }, String(cap));
 
   // yours for the task's tier; past the month's budget, the cheapest until the 1st
-  const choice: ModelChoice = modelFor(body.task, body.models, usage.monthUsd, budget);
+  const choice: ModelChoice = modelFor(body.task, body.models, seen.monthUsd, budget);
 
   // the light jobs on Gemini first — its free tier, then his credits — Claude only when neither answers (owner, 3 Nov)
   let paidMisses = 0;
@@ -280,6 +306,7 @@ export async function handleAi(req: Request, env: AiEnv, deps: Deps = { fetch: (
         const tokens = { input_tokens: u.in, output_tokens: u.out, cache_read_input_tokens: 0, cache_creation_input_tokens: 0, server_tool_use: { web_search_requests: 0 } };
         const next = await addSpend(user, env, deps, today, (x) => ({ ...x, calls: x.calls + 1, dayUsd: x.dayUsd + usd, monthUsd: x.monthUsd + usd, byTask: byTask(x, body.task, usd),
           recent: [...(x.recent ?? []), logOf(deps.now(), body.task, choice, tokens, usd, g.via)].slice(-RECENT_CALLS) })).catch(() => usage);
+        await ledger(env, today, { user: user.id, usd, call: true });
         return json({ answer, usage: next, costUsd: usd, model: choice, via: g.via });
       } catch (e) {
         // a paid call that answered in the wrong shape still cost something: carried onto what does answer
@@ -295,6 +322,7 @@ export async function handleAi(req: Request, env: AiEnv, deps: Deps = { fetch: (
     try { return { out: await callModel(body, choice, env.ANTHROPIC_API_KEY!, deps, today, spent) }; } catch (e) { return { e }; } finally {
       // whatever was spent is added, even when the call then failed (an answer in the wrong shape is still paid for)
       // (if Supabase can't be reached the answer still goes back; only the total misses it)
+      if (spent.usd > 0) await ledger(env, today, { user: user.id, usd: spent.usd, call: !more });
       if (spent.usd > 0) spent.next = await addSpend(user, env, deps, today, (u) => ({ ...u, calls: u.calls + (more ? 0 : 1), dayUsd: u.dayUsd + spent.usd, monthUsd: u.monthUsd + spent.usd,
         byModel: { ...u.byModel, [choice]: (u.byModel[choice] ?? 0) + spent.usd }, byTask: byTask(u, body.task, spent.usd), recent: [...(u.recent ?? []), logOf(deps.now(), body.task, choice, spent.usage, spent.usd)].slice(-RECENT_CALLS) })).catch(() => undefined);
     }

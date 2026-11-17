@@ -48,7 +48,7 @@ function doseLine(ls: LabNight[], of: (n: Night) => number | null | undefined): 
     const v = sorted(pts.filter((p) => p[0] === k).map((p) => p[1] - base));
     return v.length ? { k, n: v.length, lo: q(v, 0.25), mid: q(v, 0.5), hi: q(v, 0.75) } : null;
   }).filter((b): b is Bin => b != null);
-  return { bins, fit: slopeTest(pts, { min: LAB.minNights }), base };
+  return { bins, fit: slopeTest(pts, { min: LAB.minNights, ordered: true }), base };
 }
 
 /** Drinks that evening against sleeping heart rate and HRV: per drink (the fit) and per column. Null under the minimums. */
@@ -74,10 +74,14 @@ export function smokeCompare(ls: LabNight[]): SmokeCompare {
   const yes = dry.filter((l) => l.cigs! > 0), no = dry.filter((l) => l.cigs === 0);
   if (yes.length < LAB.minSide || no.length < LAB.minSide) return null;
   const rows = SMOKE_ROWS.flatMap((r) => {
-    const a = yes.flatMap((l) => { const v = r.of(l.night); return v == null ? [] : [v]; }), b = no.flatMap((l) => { const v = r.of(l.night); return v == null ? [] : [v]; });
+    // in night order: smoking comes in stretches (a month of it, then quitting) and HRV drifts — shuffled as if each
+    // night stood alone, a quit half-way against drifting HRV was "sure" in 72 % of fake people with no effect (audit
+    // 17 Nov); ordered, the nights count as fewer when both run in stretches
+    const pts = dry.flatMap((l) => { const v = r.of(l.night); return v == null ? [] : [[l.cigs! > 0 ? 1 : 0, v] as [number, number]]; });
+    const a = pts.filter((p) => p[0] === 1).map((p) => p[1]), b = pts.filter((p) => p[0] === 0).map((p) => p[1]);
     if (a.length < LAB.minSide || b.length < LAB.minSide) return [];
     // the slope on a 0/1 x is the difference of the two means; the shuffle says how often chance does as well
-    const fit = slopeTest([...a.map((v) => [1, v] as [number, number]), ...b.map((v) => [0, v] as [number, number])], { min: 2 * LAB.minSide });
+    const fit = slopeTest(pts, { min: 2 * LAB.minSide, ordered: true });
     return [{ id: r.id, name: r.name, unit: r.unit, smoked: q(sorted(a), 0.5), not: q(sorted(b), 0.5), fit }];
   });
   return rows.length ? { rows, smoked: yes.length, not: no.length, drinkNights: known.length - dry.length } : null;
@@ -88,7 +92,7 @@ export function lateCaffeine(ls: LabNight[]): { fit: Slope; per100: number | nul
   const pts = ls.flatMap((l) => (l.night.deep == null ? [] : [[l.lateMg, l.night.deep] as [number, number]]));
   const late = pts.filter((p) => p[0] > 0).length;
   if (pts.length < LAB.minNights || late < LAB.minSide || pts.length - late < LAB.minSide) return null;
-  const fit = slopeTest(pts, { min: LAB.minNights });
+  const fit = slopeTest(pts, { min: LAB.minNights, ordered: true });
   return { fit, per100: fit.slope != null ? fit.slope * 100 : null, late };
 }
 

@@ -17,7 +17,7 @@ function fakeStorage() {
 }
 
 const T0 = Date.UTC(2026, 9, 2, 11, 0);
-const sub = (n: number) => ({ endpoint: `https://push.example/${n}`, keys: { p256dh: "BCVxsr7N_eNgVRqvHtD0zTZsEc6-VV-JvLexhqUzORcxaOzi6-AYWXvTBHm4bjyPjs7Vd8pZGH6SRpkNtoIAiw4", auth: "BTBZMqHH6r4Tts7J_aSIgg" } });
+const sub = (n: number) => ({ endpoint: `https://fcm.googleapis.com/fcm/send/${n}`, keys: { p256dh: "BCVxsr7N_eNgVRqvHtD0zTZsEc6-VV-JvLexhqUzORcxaOzi6-AYWXvTBHm4bjyPjs7Vd8pZGH6SRpkNtoIAiw4", auth: "BTBZMqHH6r4Tts7J_aSIgg" } });
 const post = (path: string, body: unknown) => new Request(`https://push/${path}`, { method: "POST", body: JSON.stringify(body) });
 
 function hub(statusFor: (endpoint: string) => number = () => 201) {
@@ -66,7 +66,7 @@ describe("PushHub", () => {
     await h.fetch(post("schedule", { reminders: [{ at: T0 + 3_600_000, title: "How now?", body: "Tap a number.", url: "/#today", tag: "feel" }, { at: T0 + 5 * 3_600_000, title: "Weigh-in", body: "", url: "/#today", tag: "w" }] }));
     at(T0 + 3_600_000 + 2000);
     await h.alarm();
-    expect(sent.map((s) => [s.endpoint, s.message.title])).toEqual([["https://push.example/1", "How now?"], ["https://push.example/2", "How now?"]]);
+    expect(sent.map((s) => [s.endpoint, s.message.title])).toEqual([["https://fcm.googleapis.com/fcm/send/1", "How now?"], ["https://fcm.googleapis.com/fcm/send/2", "How now?"]]);
     expect(st.alarm()).toBe(T0 + 5 * 3_600_000);
   });
 
@@ -119,5 +119,13 @@ describe("/api/push on the Worker", () => {
     const r = (await (await h.fetch(post("alert", { title: "Band disconnected — reconnect now", body: "x".repeat(500), url: "https://evil.example", tag: "band-reconnect", sticky: true }))).json()) as { devices: number };
     expect(r.devices).toBe(2);
     expect(sent.map((s) => s.message)).toEqual([1, 2].map(() => ({ title: "Band disconnected — reconnect now", body: "x".repeat(240), url: "/", tag: "band-reconnect", sticky: true })));
+  });
+});
+
+describe("push: only the browsers' own push services (security review, 17 Nov)", () => {
+  it("Apple, Google, Mozilla and Microsoft are taken; anywhere else isn't", async () => {
+    const { pushHost } = await import("./push");
+    for (const ok of ["https://web.push.apple.com/abc", "https://fcm.googleapis.com/fcm/send/x", "https://updates.push.services.mozilla.com/wpush/v2/x", "https://wns2-db5p.notify.windows.com/w/?token=x"]) expect(pushHost(ok), ok).toBe(true);
+    for (const no of ["https://example.com/x", "https://push.apple.com.evil.example/x", "http://web.push.apple.com/x", "https://evilpush.apple.com.example/x", "not a url"]) expect(pushHost(no), no).toBe(false);
   });
 });

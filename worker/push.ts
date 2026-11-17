@@ -28,6 +28,18 @@ const MAX_REMINDERS = 40;
 
 const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json" } });
 
+/**
+ * Only the browsers' own push services (security review, 17 Nov): any https address was taken, so a signed-in account
+ * could have the server post to wherever it liked on every reminder. Apple (iPhone), Google (Chrome, Android, Edge on
+ * Android, Samsung), Mozilla (Firefox), Microsoft (Edge on Windows).
+ */
+export function pushHost(endpoint: string): boolean {
+  try {
+    const u = new URL(endpoint);
+    return u.protocol === "https:" && /(^|\.)(push\.apple\.com|fcm\.googleapis\.com|android\.googleapis\.com|push\.services\.mozilla\.com|notify\.windows\.com)$/.test(u.hostname);
+  } catch { return false; }
+}
+
 export class PushHub {
   storage: Storage;
   send: typeof sendPush;
@@ -72,7 +84,7 @@ export class PushHub {
     if (path === "key") return json({ publicKey: (await this.vapid()).publicKey });
     if (path === "subscribe") {
       const s = body.subscription as Subscription | undefined;
-      if (!s?.endpoint?.startsWith("https://") || !s.keys?.p256dh || !s.keys?.auth) return json({ error: "bad subscription" }, 400);
+      if (!s?.endpoint || !pushHost(s.endpoint) || !s.keys?.p256dh || !s.keys?.auth) return json({ error: "bad subscription" }, 400);
       const devs = (await this.devices()).filter((d) => d.endpoint !== s.endpoint);
       devs.push({ endpoint: s.endpoint, keys: s.keys, device: String(body.device ?? "device").slice(0, 60), addedAt: this.now() });
       await this.storage.put("devices", devs.slice(-8));

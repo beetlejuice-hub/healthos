@@ -592,3 +592,47 @@ describe("the light jobs on Gemini first", () => {
     expect(u.gemini).toEqual({ free: true, paid: false });
   });
 });
+
+// Security review, 17 Nov: the cap and the budget were read from the account's own doc — a row it can write — so anyone
+// who signed up could zero it and spend on. The server's ledger (worker/ledger, in the "_ai" hub) counts too.
+describe("/api/ai — the server's ledger and who may use it", () => {
+  const hub = () => {
+    let l: unknown = null;
+    const stub = { fetch: async (r: Request) => {
+      const u = new URL(r.url), { ledgerAdd, ledgerAsOf } = await import("./ledger");
+      if (u.pathname === "/ai-add") { const b = (await r.json()) as { day: string; user: string; usd: number; call: boolean }; l = ledgerAdd(l as never, b); return Response.json(l); }
+      return Response.json(ledgerAsOf(l as never, u.searchParams.get("day") ?? ""));
+    } };
+    return { idFromName: (n: string) => n, get: () => stub };
+  };
+  it("a doc wiped back to nothing doesn't reset the day's cap", async () => {
+    const BAND = hub(), e = { ...env, BAND, AI_DAILY_CAP: "2" };
+    for (let i = 0; i < 2; i++) { const w = world([{ text: JSON.stringify(coffee) }]); expect((await handleAi(post({ task: "describe", text: "x" }), e, w.deps)).status).toBe(200); }
+    const w = world([{ text: JSON.stringify(coffee) }]); // a fresh, empty doc: what wiping it looks like
+    expect((await handleAi(post({ task: "describe", text: "x" }), e, w.deps)).status).toBe(429);
+    expect(w.sent).toHaveLength(0);
+  });
+  it("past the month's budget on the ledger, the doc saying $0 still drops to Haiku", async () => {
+    const BAND = hub(), e = { ...env, BAND, AI_MONTHLY_USD: "0.0001", AI_TOTAL_USD: "100" };
+    await handleAi(post({ task: "describe", text: "x" }), e, world([{ text: JSON.stringify(coffee) }]).deps);
+    const w = world([{ text: "Fine." }]);
+    await handleAi(post({ task: "chat", messages: [{ role: "user", text: "hi" }], context: "c", models: { everyday: "sonnet" } }), e, w.deps);
+    expect(w.sent[0].body.model).toBe("claude-haiku-5-5");
+  });
+  it("every account together past AI_TOTAL_USD: stopped for all until the 1st", async () => {
+    const BAND = hub(), e = { ...env, BAND, AI_TOTAL_USD: "0.0001" };
+    expect((await handleAi(post({ task: "describe", text: "x" }), e, world([{ text: JSON.stringify(coffee) }]).deps)).status).toBe(200);
+    const w = world([{ text: JSON.stringify(coffee) }]);
+    const r = await handleAi(post({ task: "describe", text: "x" }), e, w.deps);
+    expect(r.status).toBe(429);
+    expect(((await r.json()) as { error: string }).error).toBe("server-budget");
+    expect(w.sent).toHaveLength(0);
+  });
+  it("AI_ALLOW set: only the accounts named", async () => {
+    const w = world([{ text: JSON.stringify(coffee) }]);
+    const no = await handleAi(post({ task: "describe", text: "x" }), { ...env, AI_ALLOW: "someone-else" }, w.deps);
+    expect(no.status).toBe(403);
+    expect(((await no.json()) as { error: string }).error).toBe("not-allowed");
+    expect((await handleAi(post({ task: "describe", text: "x" }), { ...env, AI_ALLOW: "someone-else, U1" }, w.deps)).status).toBe(200);
+  });
+});

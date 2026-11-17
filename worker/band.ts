@@ -10,6 +10,7 @@
  * Google's side: lib/band.ts (shapes from Google's own CLI).
  */
 
+import { ledgerAdd, ledgerAsOf, type Ledger } from "./ledger";
 import type { Storage } from "./push";
 import {
   GOOGLE_TOKEN, HEALTH_API, STEP_WINDOWS, readVo2, readVo2Samples, dailyFilter, dailyRollUpBody, readDailyKcal, wakeFor, mergeMinutes, mergeSteps, perMinute, readDaily, readHeartRate, readSleep, readSteps, rollUpBody, sampleFilter, sleepFilter,
@@ -345,6 +346,13 @@ export class BandHub {
       await this.storage.delete("nag");
       await this.storage.setAlarm(this.now() + 2000); // first pull right away, in the background
       return json({ ok: true });
+    }
+    // the AI's spend, on the server (worker/ledger; only the "_ai" hub, only the Worker reaches these paths)
+    if (path === "ai-ledger") return json(ledgerAsOf(await this.storage.get<Ledger>("ai:ledger"), String(url.searchParams.get("day") ?? "")));
+    if (path === "ai-add") {
+      const l = ledgerAdd(await this.storage.get<Ledger>("ai:ledger"), { day: String(body.day ?? ""), user: String(body.user ?? ""), usd: Number(body.usd), call: body.call === true });
+      await this.storage.put("ai:ledger", l);
+      return json(l);
     }
     // Apple Health in (PLAN 184): the key's hash (a new one replaces the old), what the Shortcut posts, what the app pulls
     if (path === "health-key") { await this.storage.put("health:key", String(body.hash ?? "")); return json({ ok: true }); }
