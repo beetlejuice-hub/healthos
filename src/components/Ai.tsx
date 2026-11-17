@@ -47,6 +47,7 @@ import { InboxCard } from "./Inbox";
 import { ReviewCard } from "./Review";
 import { dueReviews, monthFacts, monthLines, weekFacts, weekLines, type Due } from "../lib/review";
 import { Md } from "./Md";
+import { Pinned, PinnedNote } from "./Pinned";
 import { ReadItems } from "./ReadItems";
 import { digestDue, freshRead, morningShown, nightIn, nightShown } from "../lib/ai/morning";
 import { attempt, onRetryDue, tryNow } from "../lib/ai/attempts";
@@ -133,7 +134,7 @@ async function writeDigest(day: string) {
   const qs = keepNew(r.answer.questions ?? [], `${day}:m`);
   act.setAi((a) => ({
     ...wrote("digest", day, at)(a),
-    digest: { day, at, greeting: r.answer.greeting, ...checkDay(r.answer, true), items, ...(r.answer.looked ? { looked: r.answer.looked } : {}), ...(r.answer.unlinked?.length ? { unlinked: r.answer.unlinked } : {}) },
+    digest: { day, at, greeting: r.answer.greeting, ...checkDay(r.answer, true), items, ...(r.answer.looked ? { looked: r.answer.looked } : {}), ...(r.answer.unlinked?.length ? { unlinked: r.answer.unlinked } : {}), ...(r.answer.unpinned?.length ? { unpinned: r.answer.unpinned } : {}) },
     discoveries: keepDiscovery(a.discoveries, disc, day, "morning", at),
     cited: keepCited(a.cited, [...items.map((i) => i.source), n?.source, disc?.source], at),
     ...(led ? { leads: [...(a.leads ?? []), { id: lead.id, day }].slice(-60) } : {}),
@@ -413,8 +414,9 @@ export function MorningRead() {
       </button>
       <p className="greet">{d.greeting}</p>
       {/* no summary (owner, 10 Nov: "we should cut the summary, i never read"): your day against everyone else instead */}
-      {d.vs && <p className="rd-vs"><small>You vs everyone</small>{d.vs}</p>}
-      <ReadItems key={String(open)} items={d.items} open={open} onOpen={() => setOpen(true)} tip="Today" from="morning" day={d.day} />
+      {d.vs && <p className="rd-vs"><small>You vs everyone</small><Pinned text={d.vs} marks={d.unpinned} /></p>}
+      <ReadItems key={String(open)} items={d.items} open={open} onOpen={() => setOpen(true)} tip="Today" from="morning" day={d.day} unpinned={d.unpinned} />
+      {open && <PinnedNote marks={d.unpinned} />}
       {/* one left out over its link is said, not lost (PLAN 193) */}
       {open && unlinkedNote(d.items, d.unlinked) && <p className="note rd-unlinked">{unlinkedNote(d.items, d.unlinked)}</p>}
       <DiscoveryCard day={d.day} slot="morning" open={open} onOpen={() => setOpen(true)} />
@@ -455,20 +457,21 @@ export function NightRead() {
         <span className="k">Your day, read back</span><span className="when">{tonight ? "tonight" : "last night"} · <time>{clock(n.at)}</time></span>{fresh && <span className="rd-new">new</span>}
         <span className="chev" aria-hidden="true">{open ? "▴" : "▾"}</span>
       </button>
-      <p className={`greet${open ? "" : " clamp2"}`} onClick={() => !open && setOpen(true)}>{n.summary}</p>
+      <p className={`greet${open ? "" : " clamp2"}`} onClick={() => !open && setOpen(true)}><Pinned text={n.summary} marks={n.unpinned} /></p>
       {stale && <p className="night-stale">Written at {clock(n.at)} — since then you {stale.kcal >= 0 ? "logged" : "took off"} {num(stale.kcal)} kcal{stale.p ? ` and ${num(stale.p)} g protein` : ""}. The day now: <b>{stale.now.kcal.toLocaleString("en-GB")} kcal, {stale.now.p} g protein</b>.{" "}
         <button type="button" className="linkish" onClick={() => void makeNight(n.day, true)}>Read it again</button></p>}
       {n.vs && <p className="rd-vs"><small>You vs everyone</small>{n.vs}</p>}
       {open && <>
-        {n.notes && <p className="night-notes"><small>Your notes</small>{n.notes}</p>}
+        {n.notes && <p className="night-notes"><small>Your notes</small><Pinned text={n.notes} marks={n.unpinned} /></p>}
         {/* PLAN 129: on a workout day, the session against the last one — in the same call, no extra one */}
-        {n.workout && <div className="night-workout"><small>Your workout</small><p>{n.workout.summary}</p>
-          {n.workout.better.length > 0 && <ul>{n.workout.better.map((b, i) => <li key={i}>{b}</li>)}</ul>}
-          {n.workout.next && <p><b>Next time</b> {n.workout.next}</p>}</div>}
-        {n.change.length > 0 && <div className="night-change"><small>Tomorrow, maybe</small>{n.change.map((c, i) => <p key={i}><b>{c.what}</b> {c.why}</p>)}</div>}
+        {n.workout && <div className="night-workout"><small>Your workout</small><p><Pinned text={n.workout.summary} marks={n.unpinned} /></p>
+          {n.workout.better.length > 0 && <ul>{n.workout.better.map((b, i) => <li key={i}><Pinned text={b} marks={n.unpinned} /></li>)}</ul>}
+          {n.workout.next && <p><b>Next time</b> <Pinned text={n.workout.next} marks={n.unpinned} /></p>}</div>}
+        {n.change.length > 0 && <div className="night-change"><small>Tomorrow, maybe</small>{n.change.map((c, i) => <p key={i}><b><Pinned text={c.what} marks={n.unpinned} /></b> <Pinned text={c.why} marks={n.unpinned} /></p>)}</div>}
       </>}
       {/* the evening's study, thing to try and noticed (PLAN 157; owner, 21 Oct: "the same studt, try, and notiiced session at Eod") */}
-      {(n.items?.length ?? 0) > 0 && <ReadItems key={String(open)} items={n.items!} open={open} onOpen={() => setOpen(true)} tip="Tomorrow" from="evening" day={n.day} />}
+      {(n.items?.length ?? 0) > 0 && <ReadItems key={String(open)} items={n.items!} open={open} onOpen={() => setOpen(true)} tip="Tomorrow" from="evening" day={n.day} unpinned={n.unpinned} />}
+      {open && <PinnedNote marks={n.unpinned} />}
       {open && unlinkedNote(n.items ?? [], n.unlinked) && <p className="note rd-unlinked">{unlinkedNote(n.items ?? [], n.unlinked)}</p>}
       <DiscoveryCard day={n.day} slot="evening" open={open} onOpen={() => setOpen(true)} />
       {open && n.fun && <p className="rd-fun"><small>One more thing</small>{n.fun}</p>}
@@ -568,7 +571,7 @@ export function AiScreen() {
         if ("r" in x) return <ReviewCard key={x.key} r={x.r!} first={isNew} />;
         return "n" in x ? <InboxCard key={x.key} n={x.n!} now={now} first={isNew} /> : (
           <div key={x.key} className={`msg ${x.m!.role}${x.m!.unprompted ? " first" : ""}`} data-new={isNew || undefined}>
-            {x.m!.role === "assistant" ? <Md text={x.m!.text} /> : x.m!.text}
+            {x.m!.role === "assistant" ? <Md text={x.m!.text} unpinned={x.m!.unpinned} /> : x.m!.text}
             {x.m!.charts?.map((c, k) => <ChatChart key={k} c={c} />)}
             {x.m!.source && /^https:\/\//.test(x.m!.source.url) && <SourceLink className="msg-src" s={x.m!.source} />}
             {x.m!.proposals?.length ? <Proposals at={x.m!.at} list={x.m!.proposals} now={now} onAdded={(s) => { if (on) void researchSupplement(s); }} /> : null}

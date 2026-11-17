@@ -17,6 +17,7 @@ import {
 } from "../src/lib/ai/tasks";
 import { checkFoundLinks, checkReadLinks, checkSupplementLinks } from "./links";
 import { ledgerAsOf, mineIn, type Ledger } from "./ledger";
+import { unpinned } from "../src/lib/ai/pin";
 
 type Hubs = { idFromName: (n: string) => unknown; get: (id: unknown) => { fetch: (r: Request) => Promise<Response> } };
 export type AiEnv = GeminiEnv & { ANTHROPIC_API_KEY?: string; SUPABASE_URL?: string; SUPABASE_KEY?: string; AI_DAILY_CAP?: string; AI_MONTHLY_USD?: string;
@@ -259,6 +260,23 @@ export async function callModel(b: AiRequest, choice: ModelChoice, apiKey: strin
   return { refused: false as const, answer, usage };
 }
 
+/**
+ * Pin the AI's numbers (PLAN 225): what it was given — the context, the app's look-up answers (the user turns of the
+ * rounds), your messages — and the numbers in its answer that aren't among them. Studies and discoveries are left out:
+ * their numbers come from the paper, not from you.
+ */
+export function pinOf(b: AiRequest, answer: unknown): string[] {
+  const given: string[] = [];
+  if ("context" in b && typeof b.context === "string") given.push(b.context);
+  if (b.task === "chat") given.push(...b.messages.filter((m) => m.role === "user").map((m) => m.text));
+  if ("turn" in b && Array.isArray(b.turn)) given.push(...(b.turn as { role: string; content: unknown }[]).filter((t) => t.role === "user").map((t) => JSON.stringify(t.content)));
+  const a = answer as Partial<DigestAnswer & NightAnswer & { reply: string }>;
+  const items = (a.items ?? []).filter((i) => i.type !== "study");
+  const texts = [a.reply, a.summary, a.notes, a.vs, a.fun, a.workout?.summary, a.workout?.next, ...(a.workout?.better ?? []), ...(a.happened ?? []),
+    ...(a.change ?? []).flatMap((c) => [c.what, c.why]), ...items.flatMap((i) => [i.title, i.text, i.tip])].filter((t): t is string => typeof t === "string" && !!t);
+  return texts.length ? unpinned(texts, given) : [];
+}
+
 /** A failure as its code and plain words (AI_ERRORS), with any detail after: "… (ai-error 400: …)". */
 const fail = (code: AiError, status: number, extra: object = {}, detail?: string) => json({ error: code, message: `${AI_ERRORS[code]} (${code}${detail ? ` ${detail}` : ""})`, ...extra }, status);
 
@@ -331,7 +349,11 @@ export async function handleAi(req: Request, env: AiEnv, deps: Deps = { fetch: (
   const { out, e } = await run, next = spent.next ?? usage, cost = spent.usd;
   const web = spent.webFailed.length ? { webFailed: [...new Set(spent.webFailed)] } : {};
   if (out?.refused) return fail("refused", 422, { usage: next, costUsd: cost });
-  if (out) return json({ answer: out.answer, usage: next, costUsd: cost, model: choice, ...web });
+  if (out) {
+    const done = out.answer as { calls?: unknown[] };
+    const pins = (body.task === "chat" || body.task === "digest" || body.task === "night") && !done.calls?.length ? pinOf(body, out.answer) : [];
+    return json({ answer: pins.length ? { ...(out.answer as object), unpinned: pins } : out.answer, usage: next, costUsd: cost, model: choice, ...web });
+  }
   const [code, status, detail] = whyFailed(e);
   return fail(code, status, { usage: next, costUsd: cost, ...web }, detail);
 }

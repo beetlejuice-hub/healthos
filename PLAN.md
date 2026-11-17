@@ -4284,7 +4284,7 @@ both reads and the questions. Phases in that order; #152 RPE waits (owner).
      along: the suite's installed clock doesn't run on its own after the seed's reloads, so the store's 150 ms save never
      fired. The suite now runs the clock a second after the tap. The app wasn't at fault.
 
-225. [ ] **3 · 4 · 5** (owner, 17 Nov, from the list of ten: "3 4 5 … do what i listed skip others")
+225. [x] **3 · 4 · 5** (owner, 17 Nov, from the list of ten: "3 4 5 … do what i listed skip others")
    - **5 · Experiments that end themselves.** Why: an experiment asks every morning "did you do it?", runs its fixed days,
      and then says "no clear change" even when it simply had too few days. What: (a) days the log can answer itself — no
      drinks (alcohol logged?), no caffeine after 14:00, leaving out a supplement — are marked done or not without asking;
@@ -4312,3 +4312,10 @@ both reads and the questions. Phases in that order; #152 RPE waits (owner).
    - **4 · Pin the AI's numbers.** The server checks every number in a read (summary, workout, the app-data items — not
      studies) against the numbers it was given (the context and the app's tool answers, allowing for rounding). One it
      wasn't given is marked in the read, dotted, "not one of your numbers"; Settings → AI counts them per read.
+   - Done 17 Nov (4): lib/ai/pin (numbers as measurements — not times, dates, years, counts 0–10, links; rounding
+     allowed, "2,400" for 2,447; a difference of two same-size numbers on one line, "8 above your usual"); the Worker
+     lists `unpinned` on a read's or chat's final answer (worker ai pinOf: the context, your messages, the look-ups'
+     answers; studies not checked); Today's reads and the chat draw them dotted with why, and a line under the read.
+     Instead of a Settings count: the line under each read says how many. Found on the way: a difference of any two
+     numbers on a line pinned almost anything (52 − 4 = 48) — only same-size pairs now. Tests: pin, worker ai, e2e pinned;
+     e2e verdict's chip words follow 5 ("it helped").

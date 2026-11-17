@@ -123,7 +123,7 @@ export type SupplementAnswer = {
  * which the app sends back exactly as they came, one message each (Opus 5.5 ties its thinking to the conversation as sent).
  */
 export type ChatTurn = { role: "user" | "assistant"; content: unknown[] };
-export type ChatAnswer = { reply: string; remember: string[]; calls?: ToolCall[]; turn?: ChatTurn[] };
+export type ChatAnswer = { reply: string; remember: string[]; calls?: ToolCall[]; turn?: ChatTurn[]; /** PLAN 225: numbers in it the AI wasn't given (lib/ai/pin) */ unpinned?: string[] };
 export type ToolCall = { id: string; name: ChatToolName; input: Record<string, unknown> };
 
 /** What `series` and `show_chart` can draw: the At a glance measures and the band's. */
@@ -210,7 +210,7 @@ export type DigestNews = { title: string; text: string; source: { title: string;
 export type ReadDay = { summary?: string; slept?: string; felt?: string; fun?: string; vs?: string };
 /** The kinds of the items the Worker left out because their link didn't open or was about something else (PLAN 193). */
 export type Unlinked = { unlinked?: DigestItem["type"][] };
-export type DigestAnswer = Threads & ReadDay & Unlinked & { /** PLAN 187: one random study or forum post a read */ discovery?: Discovery | null; greeting: string; items: DigestItem[]; news?: DigestNews | null; /** 1–2, the kinds the app picked (PLAN 156). */ questions?: Question[] };
+export type DigestAnswer = Threads & ReadDay & Unlinked & { /** PLAN 225 (lib/ai/pin) */ unpinned?: string[]; /** PLAN 187: one random study or forum post a read */ discovery?: Discovery | null; greeting: string; items: DigestItem[]; news?: DigestNews | null; /** 1–2, the kinds the app picked (PLAN 156). */ questions?: Question[] };
 /**
  * The weekly deep dive (PLAN 160): the question it picked and why (from their data), what their own numbers say (from the
  * app's look-ups), 2–3 studies with their links, the verdict and how sure, and one experiment to try.
@@ -281,7 +281,7 @@ export function checkReadCalls(calls: unknown[], turn: unknown): ReadLooks {
  */
 export type Threads = { look_into?: string[]; looked_into?: string[] };
 /** The nightly read-back of your day (owner, 2 Oct: "summarizing what happened, what i should change"). */
-export type NightAnswer = Threads & Unlinked & Omit<ReadDay, "summary"> & { discovery?: Discovery | null; summary: string; happened: string[]; notes: string; change: { what: string; why: string; /** lib/ai/said */ topic?: string }[]; /** Lasting patterns worth remembering (kept in AI memory). */ remember: string[];
+export type NightAnswer = Threads & Unlinked & Omit<ReadDay, "summary"> & { /** PLAN 225 (lib/ai/pin) */ unpinned?: string[]; discovery?: Discovery | null; summary: string; happened: string[]; notes: string; change: { what: string; why: string; /** lib/ai/said */ topic?: string }[]; /** Lasting patterns worth remembering (kept in AI memory). */ remember: string[];
   /** On a day with a workout (PLAN 129): how it went against last time, what went up, one thing for next time. */
   workout?: { summary: string; better: string[]; next: string };
   /** The evening's three (PLAN 157; owner, 21 Oct: "the same studt, try, and notiiced session at Eod"), and its questions (PLAN 156). */

@@ -2880,3 +2880,7 @@ button.vs-i { border: 0; text-align: left; font: inherit; cursor: pointer; width
 .since-list li[data-tone="bad"] i { color: #e5604f; }
 .since-list span { overflow-wrap: anywhere; }
 .since-none { margin: 0; color: var(--i-ink-2); font-size: 14px; }
+
+/* PLAN 225: a number the AI wrote that the app didn't give it */
+.unpin { text-decoration: underline dotted; text-decoration-color: #e5a24f; text-underline-offset: 3px; text-decoration-thickness: 1.5px; cursor: help; }
+.unpin-note { font-size: 12px; }

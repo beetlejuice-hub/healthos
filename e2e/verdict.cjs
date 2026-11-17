@@ -55,7 +55,7 @@ const ANSWER = { text: 'Energy went up 2 points — the app\'s test says clear. 
   const rows = await pg.locator('#experiments .exp').allInnerTexts();
   const done = rows.find((r) => /No caffeine/.test(r)) ?? '', early = rows.find((r) => /Magnesium/.test(r)) ?? '';
   check(`on the experiment: the result, the words, what next, a checked study (${done.replace(/\s+/g, ' ').slice(0, 200)})`,
-    /worked for you\s*Energy went up 2 points/.test(done) && /Next: Keep the 14:00 cut-off/.test(done) && /Caffeine effects on sleep taken 6 hours before bed ↗\s*✓ checked/.test(done));
+    /it helped\s*Energy went up 2 points/.test(done) && /Next: Keep the 14:00 cut-off/.test(done) && /Caffeine effects on sleep taken 6 hours before bed ↗\s*✓ checked/.test(done));
   check(`one stopped early says so, not "running" (${early.replace(/\s+/g, ' ').slice(0, 160)})`, /ended early — too few days to tell/.test(early) && !/running/.test(early));
   check(`fits the phone (${await pg.evaluate(() => document.documentElement.scrollWidth)} px)`, await pg.evaluate(() => document.documentElement.scrollWidth) <= 390);
   await pg.locator('#experiments').screenshot({ path: OUT + 'verdict.png' }).catch(() => {});

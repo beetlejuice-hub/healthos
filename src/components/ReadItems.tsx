@@ -5,6 +5,7 @@
  * the caller, so folding the card closes the open item. ☆ saves one for later (PLAN 159).
  */
 
+import { Pinned } from "./Pinned";
 import { SourceLink } from "./SourceLink";
 import { useMemo, useState } from "react";
 import { act, useStore } from "../lib/store";
@@ -26,7 +27,7 @@ const KIND: Record<DigestItem["type"], string> = { fact: "Fun fact", study: "New
 /** How sure, in words (owner, 22 Oct: "make ai more smarter and cautious"). */
 export const SURE_WORDS: Record<Sure, string> = { yours: "your data", strong: "strong studies", some: "some studies", anecdote: "anecdote, not studied" };
 
-export function ReadItems({ items, open, onOpen, tip, from, day }: { items: DigestItem[]; open: boolean; onOpen: () => void; tip: "Today" | "Tomorrow"; from: "morning" | "evening"; day: string }) {
+export function ReadItems({ items, open, onOpen, tip, from, day, unpinned }: { items: DigestItem[]; open: boolean; onOpen: () => void; tip: "Today" | "Tomorrow"; from: "morning" | "evening"; day: string; /** PLAN 225 */ unpinned?: string[] }) {
   const experiments = useStore((s) => s.ai.experiments), saved = useStore((s) => s.ai.saved);
   const never = useStore((s) => s.ai.never), lifted = useStore((s) => s.ai.neverLifted), nv = useMemo(() => neverList(never, lifted), [never, lifted]);
   const entries = useStore((s) => s.entries), workouts = useStore((s) => s.workouts), settings = useStore((s) => s.settings), goals = useStore((s) => s.goals);
@@ -52,7 +53,7 @@ export function ReadItems({ items, open, onOpen, tip, from, day }: { items: Dige
           {on && <div className="mr-body">
             {/* a connection's links, each with how sure it is; then what it means */}
             {i.chain && <ol className="mr-chain">{i.chain.map((c, n) => <li key={n}><span>{c.step}</span><i className={`sure sure-${c.sure}`}>{SURE_WORDS[c.sure]}</i></li>)}</ol>}
-            <p>{i.sure && !i.chain && <i className={`sure sure-${i.sure}`}>{SURE_WORDS[i.sure]}</i>}{i.design && <i className="mr-design">{i.design}</i>}{i.text}</p>
+            <p>{i.sure && !i.chain && <i className={`sure sure-${i.sure}`}>{SURE_WORDS[i.sure]}</i>}{i.design && <i className="mr-design">{i.design}</i>}{i.type === "study" ? i.text : <Pinned text={i.text} marks={unpinned} />}</p>
             {i.tip && <p className="mr-tip"><small>{tip}</small>{i.tip}</p>}
             {i.lead ? <LeadChart lead={i.lead} /> : i.measure && vals && <DigestChart k={i.measure} vals={vals} today={today} goal={goalOf(i.measure)} />}
             {i.source && <SourceLink s={i.source} />}

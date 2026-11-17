@@ -35,9 +35,9 @@ export type AiState = {
   /** "What the AI knows about me": lines it added (you can delete any). */
   memory: { id: string; text: string; at: number }[];
   /** charts: what the AI asked to show under its reply (PLAN 67) — drawn from the app's data when shown. looked: the tools it used. */
-  chat: { role: "user" | "assistant"; text: string; at: number; unprompted?: boolean; charts?: ChartSpec[]; looked?: string[]; /** Changes it proposed, applied only on your tap (PLAN 98). */ proposals?: Proposal[]; /** A news message's source (#109). */ source?: { title: string; url: string } }[];
+  chat: { role: "user" | "assistant"; text: string; at: number; unprompted?: boolean; /** PLAN 225: its numbers the AI wasn't given */ unpinned?: string[]; charts?: ChartSpec[]; looked?: string[]; /** Changes it proposed, applied only on your tap (PLAN 98). */ proposals?: Proposal[]; /** A news message's source (#109). */ source?: { title: string; url: string } }[];
   /** The morning read, for the day it's for. */
-  digest: { day: string; /** When it was written (lib/ai/morning). */ at?: number; greeting: string; items: DigestItem[]; /** The day around the items (3 Nov). */ summary?: string; slept?: string; felt?: string; fun?: string; /** You against everyone else (PLAN 202, lib/norms). */ vs?: string; read?: boolean; /** When you first opened it (16 Oct: highlighted until then). */ seen?: number;
+  digest: { day: string; /** When it was written (lib/ai/morning). */ at?: number; greeting: string; items: DigestItem[]; /** PLAN 225 (lib/ai/pin) */ unpinned?: string[]; /** The day around the items (3 Nov). */ summary?: string; slept?: string; felt?: string; fun?: string; /** You against everyone else (PLAN 202, lib/norms). */ vs?: string; read?: boolean; /** When you first opened it (16 Oct: highlighted until then). */ seen?: number;
     /** The app's look-ups it was checked with (PLAN 160). */ looked?: string[]; /** The kinds the Worker left out over their links (PLAN 193). */ unlinked?: string[] } | null;
   /** The nightly read-back of a day (optional: older synced docs don't have it). */
   night?: (NightAnswer & { day: string; at: number; /** When you first opened it — a re-read is new again. */ seen?: number; /** The app's look-ups (PLAN 160). */ looked?: string[];

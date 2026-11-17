@@ -636,3 +636,23 @@ describe("/api/ai — the server's ledger and who may use it", () => {
     expect((await handleAi(post({ task: "describe", text: "x" }), { ...env, AI_ALLOW: "someone-else, U1" }, w.deps)).status).toBe(200);
   });
 });
+
+// PLAN 225 — pin the AI's numbers: the server marks a number in a read it wasn't given; a look-up's answer counts as given.
+describe("/api/ai — numbers the AI wasn't given", () => {
+  it("a morning read: a number from the context passes, a made-up one is listed; studies aren't checked", async () => {
+    const digest = { greeting: "Morning!", items: [
+      { type: "pattern", title: "HRV", text: "HRV was 52 ms against a usual 44 — and resting heart 49 bpm." },
+      { type: "study", title: "Sleep study", text: "In 312 adults, …", source: { title: "S", url: "https://example.org/s" } },
+    ] };
+    const w = world([{ text: JSON.stringify(digest) }], { pages: { "https://example.org/s": { html: "<title>S</title> Sleep study 312 adults" } } });
+    const r = (await (await handleAi(post({ task: "digest", context: "## Last night\n- HRV 52 ms (usual 44), resting heart 51 bpm", shown: [] }), env, w.deps)).json()) as { answer: { unpinned?: string[] } };
+    expect(r.answer.unpinned).toEqual(["49"]);
+  });
+  it("a chat reply: the app's look-up answer counts as given; nothing unpinned → no list", async () => {
+    const w = world([{ text: "Your mood on drink days averaged 5.8." }]);
+    const turn = [{ role: "assistant", content: [{ type: "tool_use", id: "t1", name: "compare", input: {} }] }, { role: "user", content: [{ type: "tool_result", tool_use_id: "t1", content: "mood with drinks 5.83 (12 days), without 6.71" }] }];
+    const r = (await (await handleAi(post({ task: "chat", messages: [{ role: "user", text: "drinks and mood?" }], context: "c", turn }), env, w.deps)).json()) as { answer: { reply: string; unpinned?: string[] } };
+    expect(r.answer.reply).toMatch(/5\.8/);
+    expect(r.answer.unpinned).toBeUndefined();
+  });
+});

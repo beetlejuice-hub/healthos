@@ -38,7 +38,7 @@ export async function askChat(msg: string, about?: string, again = false): Promi
       const last = typeof r.answer.reply === "string" ? r.answer.reply : "", whole = wholeReply(onTheWay, last);
       const at = Date.now(), reply = whole.trim() ? whole : "Got it.";
       act.setAi((a) => ({
-        chat: [...a.chat, { role: "assistant" as const, text: reply, at, ...(charts.length ? { charts: charts.slice(0, 2) } : {}), ...(looked.length ? { looked } : {}), ...(proposals.length ? { proposals } : {}) }].slice(-80),
+        chat: [...a.chat, { role: "assistant" as const, text: reply, at, ...(r.answer.unpinned?.length ? { unpinned: r.answer.unpinned } : {}), ...(charts.length ? { charts: charts.slice(0, 2) } : {}), ...(looked.length ? { looked } : {}), ...(proposals.length ? { proposals } : {}) }].slice(-80),
         memory: [...a.memory, ...learned.filter((x) => !a.memory.some((m) => m.text.toLowerCase() === x.toLowerCase())).map((x) => ({ id: newId(), text: x, at }))].slice(-40),
       }));
       return { ok: true, at, reply, proposals, charts, looked, learned };
