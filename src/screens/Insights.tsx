@@ -42,6 +42,7 @@ import { DOSE_MIN_DAYS, doseCompare } from "../lib/dose";
 import { ConnectDots } from "../components/ConnectDots";
 import { LinkMapCard, LookAt } from "../components/LinkMap";
 import { TrendWall } from "../components/TrendWall";
+import { SinceLast } from "../components/SinceLast";
 import { BestDays } from "../components/BestDays";
 import { Ripples } from "../components/Ripples";
 import { Combos } from "../components/Combos";
@@ -208,6 +209,8 @@ export function Insights() {
       {nothing && <div className="needs">Nothing logged yet. Log food, drinks and supplements for a few days and this fills in — or load sample data in Settings to see what it will look like.</div>}
       <Tip />
       {/* PLAN 207: every trend first (owner, 11 Nov: "nice letsgo. build all") */}
+      {/* PLAN 225 (owner, 17 Nov: "3"): what changed since the last visit, first */}
+      {!nothing && (shown ?? tab) === "week" && <SinceLast now={now} />}
       {!nothing && <TrendWall now={now} />}
       {/* renovation part 3: the outcome that's slipping, and what goes with it */}
       {!nothing && <LookAt now={now} />}

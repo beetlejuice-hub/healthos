@@ -61,11 +61,17 @@ function Panel({ t, n, onOpen }: { t: Trend; n: number; onOpen: () => void }) {
   );
 }
 
-export function TrendWall({ now }: { now: number }) {
+/** Every measure the trends are drawn from — also what "Since you last looked" compares (PLAN 225). */
+export function useMeasures(now: number): Measure[] {
   const entries = useStore((s) => s.entries), workouts = useStore((s) => s.workouts), settings = useStore((s) => s.settings);
   const band = useBand().data, today = localDay(now);
-  const [n, setN] = useState<number>(() => { try { return Number(localStorage.getItem("healthos.trendRange")) || 90; } catch { return 90; } });
-  const measures = useMemo((): Measure[] => {
+  return useMemo(() => measuresOf(entries, workouts, settings, band, now), [entries, workouts, settings, band, today, now]); // eslint-disable-line react-hooks/exhaustive-deps
+}
+
+/** The same, outside React (Since you last looked works them out once a visit). */
+export function measuresOf(entries: ReturnType<typeof getState>["entries"], workouts: ReturnType<typeof getState>["workouts"], settings: ReturnType<typeof getState>["settings"], band: ReturnType<typeof useBand>["data"], now: number): Measure[] {
+  const today = localDay(now);
+  {
     const from = addDays(today, -366), days = dailyFacts(entries, workouts, settings, from, addDays(today, -1));
     const s = (f: (d: (typeof days)[number]) => number | null | undefined) => { const o: Record<string, number> = {}; for (const d of days) { const v = f(d); if (v != null && Number.isFinite(v)) o[d.day] = v; } return o; };
     const ms: Measure[] = [];
@@ -97,7 +103,14 @@ export function TrendWall({ now }: { now: number }) {
       { key: "focus", name: "Focus", unit: "/10", better: 1, series: s((d) => d.focus) },
       { key: "strength", name: "Strength", unit: "index", better: 1, series: strength });
     return ms;
-  }, [entries, workouts, settings, band, today, now]);
+  }
+}
+
+export function TrendWall({ now }: { now: number }) {
+  const entries = useStore((s) => s.entries), workouts = useStore((s) => s.workouts);
+  const band = useBand().data, today = localDay(now);
+  const [n, setN] = useState<number>(() => { try { return Number(localStorage.getItem("healthos.trendRange")) || 90; } catch { return 90; } });
+  const measures = useMeasures(now);
   const trends = useMemo(() => measures.map((m) => trendOf(m, today, n)).filter((t): t is Trend => !!t), [measures, today, n]);
   const [big, setBig] = useState<string | null>(null);
   const open = big ? trends.find((t) => t.key === big) ?? null : null;

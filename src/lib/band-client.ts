@@ -123,6 +123,9 @@ export const bandNow = (): BandData | null => state.data;
 export const bandFrom = (): number => state.from;
 export const bandLatest = (): number | null => (state.status && state.status !== "off" ? state.status.latest : null);
 
+/** The band's state now, outside React. */
+export const getBand = (): State => state;
+
 export function useBand(): State {
   return useSyncExternalStore((f) => { subs.add(f); return () => subs.delete(f); }, () => state, () => state);
 }

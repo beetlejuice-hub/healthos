@@ -4303,6 +4303,12 @@ both reads and the questions. Phases in that order; #152 RPE waits (owner).
    - **3 · What changed since you last looked.** Insights opens with one card: since your last visit (6+ hours ago),
      which trends turned (steady → slipping…), which links are new or gone, which findings firmed up (early → likely →
      clear). Up to 6 lines, each opens its place; nothing changed → one line saying so.
+   - Done 17 Nov (3): lib/sincelast + components/SinceLast, first on the Trends page (only there). Trends over 30 days
+     (those with a better side), every link, every clear or likely finding; a visit is 6 h+ after the last look; the
+     card waits for the band (or 4 s) and works its list out once a visit — computed on every chunk of band data it
+     made the Heart page crawl (e2e heartpage 21 s → 61 s, caught before shipping). Tests: sincelast, e2e sincelast
+     (first visit only takes note; a planted visit before: weight turned, a new link, an old one gone; a reload keeps
+     the list; phone).
    - **4 · Pin the AI's numbers.** The server checks every number in a read (summary, workout, the app-data items — not
      studies) against the numbers it was given (the context and the app's tool answers, allowing for rounding). One it
      wasn't given is marked in the read, dotted, "not one of your numbers"; Settings → AI counts them per read.
