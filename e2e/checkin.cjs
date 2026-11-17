@@ -48,8 +48,7 @@ const { chromium, APP, OUT, handle, forYou, seed: seedState } = require('./harne
   // PLAN 134 (owner, 20 Oct: "My weight going up could be muscle too, the creatin hitting plus im back at gym"): two weeks
   // on, the scale up 0.2 a week — but creatine started 10 days ago. The cut is held and says why; still his to make.
   await pg.clock.fastForward(14 * 864e5); await seed(28, 0.2);
-  // through the harness's seed, which lets the app's first sync settle before anything is tapped (item 18: the cut was
-  // being saved over by that sync)
+  // through the harness's seed, which lets the app's first sync settle before anything is tapped
   await seedState(pg, APP + '#today', () => { const k = 'healthos.v1:u-test', s = JSON.parse(localStorage.getItem(k)), now = Date.now();
     s.supplements = [...(s.supplements || []).filter((x) => x.id !== 'creatine'), { id: 'creatine', name: 'Creatine', dose: '5 g', slot: 'morning', at: 480, active: true }];
     s.entries = [...s.entries.filter((e) => !String(e.id).startsWith('cr')), ...[10, 9, 8, 6, 4, 2, 1].map((d) => ({ id: 'cr' + d, kind: 'supp', at: now - d * 864e5, suppId: 'creatine', status: 'taken', slot: 'morning' }))];
@@ -59,7 +58,10 @@ const { chromium, APP, OUT, handle, forYou, seed: seedState } = require('./harne
   check(`creatine 10 days in, the scale up: the cut is held, and says why (${t3.slice(0, 220)}…)`, /gaining about 0\.\d\d kg a week, under 0\.3 — but creatine started .* holds 1–2 kg of water/.test(t3) && /keep 2,450 kcal/i.test(t3));
   check('…still his call: "Cut 150 anyway" next to Keep', await card.getByRole('button', { name: 'Cut 150 anyway' }).count() === 1 && await card.getByRole('button', { name: 'Keep 2,450' }).count() === 1);
   await card.evaluate((el) => el.scrollIntoView({ block: 'center' })); await pg.waitForTimeout(100); await card.screenshot({ path: OUT + 'checkin-creatine.png' });
-  await card.getByRole('button', { name: 'Cut 150 anyway' }).click(); await pg.waitForTimeout(200);
+  // the page's clock is the test's (installed above): after the seed's reloads it doesn't run on its own, so the store's
+  // 150 ms save never fired and the cut looked lost (17 Nov: the click worked all along — run the clock as a person's
+  // second would)
+  await card.getByRole('button', { name: 'Cut 150 anyway' }).click(); await pg.clock.runFor(1000); await pg.waitForTimeout(200);
   s = await st();
   check(`"Cut 150 anyway" cuts (${s.goals.kcal})`, s.goals.kcal === 2300 && s.settings.checkins.length === 3 && s.settings.checkins[2].kcalAfter === 2300);
   console.log('errors: ' + JSON.stringify(errs)); await b.close();

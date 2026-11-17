@@ -4280,3 +4280,6 @@ both reads and the questions. Phases in that order; #152 RPE waits (owner).
      Supabase → Authentication → turn off new sign-ups — he's the only user, and it closes the door the AI ledger guards.
    - **4 · The Today pattern card is gone** (and lib/todaypattern, its tests, its suite, its CSS); "From your data" now
      offers any new lead.
+   - **e2e checkin passes again** (owner, 17 Nov: "Make the checkin test pass"). The "Cut 150 anyway" tap worked all
+     along: the suite's installed clock doesn't run on its own after the seed's reloads, so the store's 150 ms save never
+     fired. The suite now runs the clock a second after the tap. The app wasn't at fault.
