@@ -17,6 +17,7 @@ import type { Experiment } from "../store";
 import type { Supplement } from "../types";
 import { judge, type Verdict } from "./apply";
 import { xpCounted, xpEnd, xpOver } from "./xpdays";
+import { blockOn } from "./blocks";
 
 export const XPA = { firstLook: 7, earlyAlpha: 0.002, flat: 0.5, extend: 7 } as const;
 
@@ -42,6 +43,7 @@ export function autoDays(x: Experiment, days: DayFacts[], supps: Pick<Supplement
   const end = [xpEnd(x), today].sort()[0], out: Record<string, boolean> = {};
   for (const d of days) {
     if (d.day < x.start || d.day >= end || x.did?.[d.day] != null) continue;
+    if (x.blocks && !blockOn(x.blocks, x.start, d.day)?.on) continue; // an OFF day: nothing to answer
     const v = rule(d);
     if (v != null) out[d.day] = v;
   }

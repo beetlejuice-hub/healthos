@@ -108,6 +108,8 @@ export type Experiment = { id: string; name: string; how: string; days: number; 
   early?: string;
   /** Days added once at its end because the answer was unclear and wide (lib/ai/xpauto). */
   extra?: number;
+  /** ON and OFF in alternating blocks (PLAN 227, lib/ai/blocks); without, the 14 days before against the days of it. */
+  blocks?: { len: number; order: ("on" | "off")[] };
   /** Days the log answered "did you do it?" for (no drinks, no caffeine after 14:00, a supplement left out): not asked. */
   auto?: Record<string, boolean>;
   /** When it ended (PLAN 160): the AI's words on the app's result, what to do next, studies it leaned on. */

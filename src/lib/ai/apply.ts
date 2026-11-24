@@ -14,6 +14,7 @@ import { ols, tCrit } from "../regress";
 import { pT } from "../connect";
 import { addDays } from "../time";
 import { xpCounted, xpEnd } from "./xpdays";
+import { blockOn, nap } from "./blocks";
 
 const fold = (s: string) => s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[^a-z0-9]+/g, " ").trim();
 
@@ -35,7 +36,8 @@ export function fromDescribed(it: DescribedItem, id: string, typed?: string): { 
 
 export type Verdict = { state: "running" | "too-few" | "better" | "worse" | "no-clear-change"; daysIn: number; before: number | null; during: number | null; diff?: number; ci?: [number, number]; n: [number, number];
   /** How sure it went the good way (PLAN 210; owner, 11 Nov: "how sure"): from the same fit, the chance the true difference is on the good side (a flat prior: one-sided t). */
-  sure?: number };
+  sure?: number;
+  /** ON beat OFF in this share of day pairs (PLAN 227: NAP, a second readout; before/during for the older kind). */ nap?: number };
 
 type Measure = "energy" | "mood" | "focus" | "stress" | "sleep";
 const MEASURES: Measure[] = ["energy", "mood", "focus", "stress", "sleep"];
@@ -65,27 +67,34 @@ export function carried(days: string[], e: number[], se: number, df: number): { 
 export function judge(x: Experiment, days: DayFacts[], today: string, alpha = 0.05): Verdict {
   const m: Measure = (MEASURES as string[]).includes(x.measure) ? (x.measure as Measure) : "energy";
   // its days: from the start to its end (PLAN 189: later when you said you didn't do it), or to when you stopped it
-  const last = xpEnd(x), stop = [x.ended ?? today, last].sort()[0], from = addDays(x.start, -14);
+  const last = xpEnd(x), stop = [x.ended ?? today, last].sort()[0], from = x.blocks ? x.start : addDays(x.start, -14);
   const next = new Map(days.map((d) => [d.day, d.sleep]));
   const value = (d: DayFacts): number | null => (m === "sleep" ? next.get(addDays(d.day, 1)) ?? null : (d[m] as number | null));
-  // a day you said you didn't do it is left out — it's neither before nor during
-  const rows = days.filter((d) => d.day >= from && d.day < stop && value(d) != null && x.did?.[d.day] !== false);
-  const before = rows.filter((d) => d.day < x.start), during = rows.filter((d) => d.day >= x.start);
+  // a day you said you didn't do it is left out — it's neither before nor during. In blocks (PLAN 227): ON days against
+  // OFF days of the same weeks, each block's washout day left out; "before" is OFF and "during" ON.
+  const place = (d: DayFacts) => (x.blocks ? blockOn(x.blocks, x.start, d.day) : null);
+  const isOn = (d: DayFacts) => (x.blocks ? !!place(d)?.on : d.day >= x.start);
+  const rows = days.filter((d) => d.day >= from && d.day < stop && value(d) != null && !(x.blocks && place(d)?.washout) && !(isOn(d) && x.did?.[d.day] === false) && (x.blocks || x.did?.[d.day] !== false));
+  const before = rows.filter((d) => !isOn(d)), during = rows.filter(isOn);
   const mean = (r: DayFacts[]) => (r.length ? r.reduce((a, d) => a + value(d)!, 0) / r.length : null);
   // ended early because the answer was already clear (lib/ai/xpauto): judged on the days it had
   const daysIn = xpCounted(x, stop), going = stop < last && !x.early;
   const base = { daysIn, before: mean(before), during: mean(during), n: [before.length, during.length] as [number, number] };
   if (before.length < 5 || during.length < 5) return { ...base, state: going ? "running" : "too-few" };
-  const fit = ols(rows.map((d) => [1, d.day >= x.start ? 1 : 0, d.weekend ? 1 : 0]), rows.map((d) => value(d)!));
+  // (a straight line over the weeks was tried in blocks, 24 Nov: it found more, +1.5 in 39–47 % against 27–38 %, but
+  // called drift alone in 10–14 % against 4–8 % — not a better trade for an app that mustn't sound sure on noise)
+  const xs = (d: DayFacts) => [1, isOn(d) ? 1 : 0, d.weekend ? 1 : 0];
+  const fit = ols(rows.map(xs), rows.map((d) => value(d)!));
   if (!fit) return { ...base, state: "too-few" };
   // Ratings carry over from day to day (a good week follows a good week), and before/during is one block against another:
   // with no allowance, flat ratings gave a verdict in 18 % of fake people at a carry-over of 0.4 and 37 % at 0.7 (audit,
   // 17 Nov). So the days count as fewer — effective n from the leftovers' lag-1 correlation — for the range and its t.
-  const { se, df } = carried(rows.map((d) => d.day), rows.map((d) => value(d)! - fit.coef[0] - fit.coef[1] * (d.day >= x.start ? 1 : 0) - fit.coef[2] * (d.weekend ? 1 : 0)), fit.se[1], fit.df);
+  const { se, df } = carried(rows.map((d) => d.day), rows.map((d) => value(d)! - xs(d).reduce((a, v, i) => a + v * fit.coef[i], 0)), fit.se[1], fit.df);
   const diff = fit.coef[1], half = tCrit(df, alpha) * se;
   const ci: [number, number] = [diff - half, diff + half];
   const good = m === "stress" ? -1 : 1;
   const state = going ? "running" : ci[0] > 0 ? (good > 0 ? "better" : "worse") : ci[1] < 0 ? (good > 0 ? "worse" : "better") : "no-clear-change";
   const t = se > 0 ? (good * diff) / se : 0, p = pT(Math.abs(t), df), sure = t >= 0 ? 1 - p / 2 : p / 2;
-  return { ...base, state, diff, ci, sure };
+  const pairs = nap(during.map((d) => value(d)!), before.map((d) => value(d)!), good);
+  return { ...base, state, diff, ci, sure, ...(pairs != null ? { nap: pairs } : {}) };
 }

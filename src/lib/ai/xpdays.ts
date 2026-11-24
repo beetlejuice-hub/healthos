@@ -10,6 +10,7 @@
 
 import type { Experiment } from "../store";
 import { addDays } from "../time";
+import { blockOn } from "./blocks";
 
 export const XP = { askBack: 3, stretch: 2, from: 4 } as const;
 
@@ -33,7 +34,8 @@ export function xpToAsk(x: Experiment, today: string): string[] {
   const end = xpEnd(x), out: string[] = [];
   for (let k = 1; k <= XP.askBack; k++) {
     const d = addDays(today, -k);
-    if (d >= x.start && d < end && x.did?.[d] == null) out.push(d);
+    // in blocks (PLAN 227) only an ON day is asked about: an OFF day is as usual
+    if (d >= x.start && d < end && x.did?.[d] == null && (!x.blocks || blockOn(x.blocks, x.start, d)?.on)) out.push(d);
   }
   return out;
 }

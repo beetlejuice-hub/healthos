@@ -4369,5 +4369,14 @@ both reads and the questions. Phases in that order; #152 RPE waits (owner).
      30 min with 3 h+ debt, ±15 min), and your body clock (MCTQ: mid-sleep on free mornings corrected for catching up,
      "earlier than most / about average / later than most", with how much weekends shift). A "Sleep timing" panel on
      Sleep. Not yet: the window in the wind-down push. Tests: sleeptiming, e2e sleep.
-   - **4 · Randomised-block experiments** — next.
+   - **4 · Randomised-block experiments** — done. New experiments of 14+ days run ON and OFF in alternating 4-day
+     blocks, each pair's order at random, rounded up to whole pairs (14 → 16); the first day of each switch is left out
+     (lib/ai/blocks). The same test (lib/ai/apply judge: ON against OFF, weekends out, days counted as fewer when they
+     carry over) plus NAP, the share of (ON, OFF) pairs where ON was better. Only ON days are asked about or answered
+     from the log; Today's strip says "today ON: …" / "today OFF: as usual". Shorter ones keep before/during (one pair
+     is too few days). Measured (300 fake people a case): energy drifting 2 points a month with nothing planted —
+     before/during gave a verdict in 26 % (16 days) and 38 % (24 days), blocks in 7 % and 4 %. The price: a real +1.5 is
+     found in 27–38 % (before/during 52–61 %, partly flattered by drift); the early end and the week more work on top.
+     A time trend in the block fit was tried: more found (39–47 %) but drift called in 10–14 % — not kept. Tests: blocks,
+     e2e xpblocks.
    - **5 · HRV band, session RPE, soreness** — next.

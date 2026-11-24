@@ -4,12 +4,17 @@ import { act, getState, newId, type Experiment } from "../store";
 import type { DigestItem } from "./tasks";
 import { addDays, localDay } from "../time";
 import { judge, type Verdict } from "./apply";
+import { blockOn, makeBlocks } from "./blocks";
 import { xpCounted, xpEnd, xpOver, xpSkipped, xpToAsk } from "./xpdays";
 import { dailyFacts, type DayFacts } from "../insights";
 import { plainResult, xpAutoPatches, xpLook } from "./xpauto";
 
 export function startExperiment(p: NonNullable<DigestItem["protocol"]>) {
-  const x: Experiment = { id: newId(), name: p.name, how: p.how, days: p.days, measure: p.measure, start: localDay(Date.now()) };
+  const id = newId();
+  // 14 days or more (PLAN 227): ON and OFF in alternating 4-day blocks, each pair's order at random — rounded up to whole
+  // pairs (14 → 16). Shorter ones keep before-against-during: one pair of blocks is too few days to tell.
+  const b = p.days >= 14 ? makeBlocks(p.days, [...id].reduce((a, c) => (a * 31 + c.charCodeAt(0)) >>> 0, 7)) : null;
+  const x: Experiment = { id, name: p.name, how: p.how, days: b ? b.days : p.days, measure: p.measure, start: localDay(Date.now()), ...(b ? { blocks: b.blocks } : {}) };
   act.setAi((a) => ({ experiments: [...a.experiments, x] }));
 }
 
@@ -51,6 +56,7 @@ export function verdictLines(x: Experiment, v: Verdict & { state: Final }): stri
   return [
     "## The experiment",
     `- ${x.name}: ${x.how}`,
+    ...(x.blocks ? [`- Done in alternating ${x.blocks.len}-day blocks, ON and OFF in a random order, each block's first day left out — so "before" below means OFF days and "during" ON days of the same weeks.`] : []),
     ...(x.early ? [`- It ended early on ${x.early}: the app's daily check found the answer already clear on its stricter bar (99.8 %).`] : []),
     ...(x.extra ? [`- It ran ${x.extra} days longer than planned: at its end the answer was unclear.`] : []),
     `- ${x.days} days from ${x.start}, measured on ${x.measure} (1–10)${xpSkipped(x).length ? `; ${xpSkipped(x).length} day${xpSkipped(x).length === 1 ? "" : "s"} they said they didn't do it left out (${xpSkipped(x).join(", ")})` : ""}`,
@@ -69,7 +75,9 @@ export function experimentStrip(xs: Experiment[], today: string, result: (x: Exp
     const end = xpEnd(x), out = xpSkipped(x).filter((d) => d < today).length, day = xpCounted(x, today) + 1, total = x.days + (x.extra ?? 0);
     const left = out ? ` · ${out} left out` : "", todo = x.how ? ` — today: ${x.how.charAt(0).toLowerCase()}${x.how.slice(1)}` : "";
     const more = x.extra ? ` · ${x.extra} more days: not clear yet` : "";
-    if (!x.ended && end > today) return [{ id: x.id, done: false, text: x.name, sub: `day ${Math.max(1, day)} of ${total}${more}${left}${todo}` }];
+    const bl = x.blocks ? blockOn(x.blocks, x.start, today) : null;
+    const todayIs = bl ? (bl.on ? ` — today ON: ${x.how ? x.how.charAt(0).toLowerCase() + x.how.slice(1) : "do it"}` : " — today OFF: as usual") : todo;
+    if (!x.ended && end > today) return [{ id: x.id, done: false, text: x.name, sub: `day ${Math.max(1, day)} of ${total}${more}${left}${todayIs}` }];
     // its days are in, but the last one isn't answered yet: it waits for that
     if (!x.ended && !x.verdict && xpToAsk(x, today).length) return [{ id: x.id, done: false, text: x.name, sub: `${total} of ${total} days${left} — did you do it yesterday?` }];
     const v = result(x), plain = v.state === "too-few" ? null : plainResult(v);
