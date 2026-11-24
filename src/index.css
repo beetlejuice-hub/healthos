@@ -2934,3 +2934,8 @@ button.vs-i { border: 0; text-align: left; font: inherit; cursor: pointer; width
 .rl-band { fill: var(--ok); opacity: .12; }
 .rl-line { fill: none; stroke: var(--i-ink); stroke-width: 1.8; }
 .rl-dot.below { fill: var(--warn); } .rl-dot.above { fill: var(--ok); }
+
+/* PLAN 228: the day a trend stepped to a new level */
+.tw-cp { stroke: var(--i-ink-2); stroke-dasharray: 3 3; stroke-width: 1.2; }
+.tw-cp.better { stroke: #3fb36a; } .tw-cp.worse { stroke: #e5604f; }
+.tw-step { color: var(--i-ink); }

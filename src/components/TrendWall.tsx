@@ -23,6 +23,7 @@ import type { EntryOf } from "../lib/types";
 import { linksNow } from "../lib/ai/client";
 import { getState } from "../lib/store";
 import { TrendBig } from "./TrendBig";
+import { changePoints, type Change } from "../lib/changepoint";
 
 const hm = (h: number) => { const m = Math.round(h * 60) % 1440; return `${String(Math.floor(m / 60)).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}`; };
 const FMT: Record<string, (v: number) => string> = {
@@ -40,7 +41,10 @@ function change(t: Trend, n: number): string {
   return `${amount} in ${n === 365 ? "a year" : `${n} days`}`;
 }
 
-function Panel({ t, n, onOpen }: { t: Trend; n: number; onOpen: () => void }) {
+/** A step in words: "stepped up 4 bpm on 14 Nov". */
+const stepWords = (c: Change, t: Trend, f: (v: number) => string) => `stepped ${c.step > 0 ? "up" : "down"} ${f(Math.abs(c.step))}${t.unit && !["/10", "a day"].includes(t.unit) ? ` ${t.unit}` : ""} on ${new Date(`${c.day}T12:00:00`).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}`;
+
+function Panel({ t, n, onOpen, cps }: { t: Trend; n: number; onOpen: () => void; /** PLAN 228: the days it stepped to a new level */ cps: Change[] }) {
   const f = FMT[t.key] ?? ((v: number) => v.toFixed(1)), pad = (t.hi - t.lo) * 0.08 || 1;
   const X = (i: number) => 2 + (i / Math.max(1, n - 1)) * 296, Y = (v: number) => 94 - ((v - (t.lo - pad)) / (t.hi - t.lo + 2 * pad)) * 88;
   const last = t.avg[t.avg.length - 1];
@@ -53,10 +57,11 @@ function Panel({ t, n, onOpen }: { t: Trend; n: number; onOpen: () => void }) {
       <span className="tw-now"><b>{f(t.now)}</b><small>{t.unit ? `${t.unit} · ` : ""}7-day average</small></span>
       <svg viewBox="0 0 300 100" className="tw-svg" role="img" aria-label={`${t.name}: 7-day average ${f(t.now)}, ${t.moved ? (t.way === "up" ? "up" : "down") : "steady"} over the ${RANGES[n].toLowerCase()}`}>
         {t.days.map((d) => <circle key={d.day} cx={X(d.i)} cy={Y(d.v)} r={n > 120 ? 1.6 : 2.4} className={`tw-dot ${d.tone}`}><title>{`${new Date(`${d.day}T12:00:00`).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}: ${f(d.v)}`}</title></circle>)}
+        {cps.map((c) => { const d = t.days.find((x) => x.day === c.day); return d ? <line key={c.day} x1={X(d.i)} x2={X(d.i)} y1={4} y2={96} className={`tw-cp ${c.step * t.better > 0 ? "better" : c.step * t.better < 0 ? "worse" : ""}`} data-cp={c.day} /> : null; })}
         <polyline points={t.avg.map((a) => `${X(a.i).toFixed(1)},${Y(a.v).toFixed(1)}`).join(" ")} className="tw-avg" />
         <circle cx={X(last.i)} cy={Y(last.v)} r="4.5" className="tw-end" />
       </svg>
-      <small className="tw-foot">{t.days.length} days · range {f(t.lo)}–{f(t.hi)}</small>
+      <small className="tw-foot">{cps.length ? <span className="tw-step">{stepWords(cps[cps.length - 1], t, f)} · </span> : null}{t.days.length} days · range {f(t.lo)}–{f(t.hi)}</small>
     </section>
   );
 }
@@ -112,6 +117,9 @@ export function TrendWall({ now }: { now: number }) {
   const [n, setN] = useState<number>(() => { try { return Number(localStorage.getItem("healthos.trendRange")) || 90; } catch { return 90; } });
   const measures = useMeasures(now);
   const trends = useMemo(() => measures.map((m) => trendOf(m, today, n)).filter((t): t is Trend => !!t), [measures, today, n]);
+  // the days each stepped to a new level, inside the range shown (PLAN 228) — daily measures only (strength is weekly,
+  // VO2 max a few readings)
+  const cps = useMemo(() => new Map(measures.filter((m) => !["strength", "vo2"].includes(m.key)).map((m) => [m.key, changePoints(m.series, { from: addDays(today, -(n - 1)), to: today })])), [measures, today, n]);
   const [big, setBig] = useState<string | null>(null);
   const open = big ? trends.find((t) => t.key === big) ?? null : null;
   // the surest link the app found (PLAN 207, M): one line under the trends, opening Findings
@@ -128,7 +136,7 @@ export function TrendWall({ now }: { now: number }) {
         </div>
         <div className="tw-range" role="group" aria-label="Range">{TRENDS.ranges.map((k) => <button key={k} type="button" aria-pressed={n === k} onClick={() => pick(k)}>{RANGES[k]}</button>)}</div>
       </div>
-      <div className="tw-grid">{trends.map((t) => <Panel key={t.key} t={t} n={n} onOpen={() => setBig(t.key)} />)}</div>
+      <div className="tw-grid">{trends.map((t) => <Panel key={t.key} t={t} n={n} onOpen={() => setBig(t.key)} cps={cps.get(t.key) ?? []} />)}</div>
       {open && <TrendBig t={open} n={n} ranges={RANGES} onRange={pick} f={FMT[open.key] ?? ((v: number) => v.toFixed(1))} onClose={() => setBig(null)} />}
       {top && <a className="tw-link" href="#insights/connections"><small>Connected in your days</small><b>{top.split(" (90 %")[0]}.</b><span>All the connections, and what they started ›</span></a>}
     </section>

@@ -4392,3 +4392,16 @@ both reads and the questions. Phases in that order; #152 RPE waits (owner).
      the line); experiments from 14 days now run 16 (blocks), so e2e ai, deepdive, leads, top updated; "Still checking"
      folding all open questions hid the "rate a few times a day" ask (now: other asks always show, the questions fold
      after three). These e2e breaks went out with 2 and 4 — CI doesn't run e2e; caught by the full run before 5.
+
+228. [x] **Change points, and Today's size limit** (owner, 24 Nov: "Lets do 3, raise the today limit")
+   - lib/changepoint: the days a measure stepped to a new level. Optimal partitioning for shifts in the mean (PELT's
+     pruning, plus every 3rd day over a year then the exact day nearby) with a penalty 2.5 · σ² · (1+r)/(1−r) · ln n — σ
+     and the carry-over r from the day-to-day differences (a step is one of them). A steady slope isn't a step: one slope
+     shared by every piece, found by turns from two starts (none, and the straight line), the better kept. Four tries to
+     get there, each measured (200 fake people a case, 120 days): one line out first ate real steps; a line per piece
+     mimicked wander; the middle daily change as the slope was far too noisy; the final one — a step called in noise
+     0 / 3.5 / 6.5 % (carry-over 0 / 0.5 / 0.8), in a steady slope 0.5 / 3.5 / 7.5 %, in a smooth 2.4 kg weight fall 0 %;
+     a 2-spread step found within a week 91 / 36 / 16 %. Every trend panel (all but strength and VO2 max) gets a dashed
+     mark on the day, green or red by whether that way is better, and "stepped up 5 bpm on 25 Oct". A year of 15
+     measures: 42 ms (a median recomputed inside a loop had made it 1.6 s — found by timing it).
+   - e2e lazyload's limit on Today's first file: 900 kB → 1 MB (it's 897 kB). Tests: changepoint, e2e changepoints.

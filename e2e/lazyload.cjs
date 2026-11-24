@@ -1,7 +1,7 @@
 // A faster first load (PLAN 195; owner, 4 Nov: "4"): Insights, Log, Workout and Settings come in their own files, after
 // Today. Planted: the Insights file missing once (an old page open across a deploy) — the page reloads once and Insights
 // opens. Missing every time (offline): a line and Try again, no blank page, no reload loop. Control: nothing missing —
-// Insights opens with no reload. Today's first file is under 900 kB (it was 1.5 MB).
+// Insights opens with no reload. Today's first file is under 1 MB (it was 1.5 MB; the limit was 900 kB until 24 Nov — owner: "raise the today limit").
 const fs = require('fs'), path = require('path');
 const { chromium, APP, handle } = require('./harness.cjs');
 
@@ -25,7 +25,7 @@ async function open(b, misses) {
   const b = await chromium.launch();
   const check = (label, ok) => { console.log((ok ? 'PASS ' : 'FAIL ') + label); if (!ok) process.exitCode = 1; };
   const dist = process.env.E2E_DIST, first = fs.readdirSync(path.join(dist, 'assets')).filter((f) => /^index-.*\.js$/.test(f)).map((f) => fs.statSync(path.join(dist, 'assets', f)).size)[0];
-  check(`Today's first file: ${Math.round(first / 1000)} kB (it was 1,515 kB)`, first < 900_000);
+  check(`Today's first file: ${Math.round(first / 1000)} kB (it was 1,515 kB)`, first < 1_000_000);
 
   let { ctx, pg, errs, reloads } = await open(b, 0);
   check(`control: nothing missing — Insights opens, no reload (${reloads} reloads)`, reloads === 0 && await pg.locator('.inst').count() > 0);
