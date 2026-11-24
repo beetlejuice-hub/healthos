@@ -168,6 +168,11 @@ function world(seed = 5) {
   check(`phone: the lowest heart rate's label stays inside the chart, night after night (${sticks.join('; ') || 'all inside'})`, sticks.length === 0);
   await pg.locator('.sl .sl-b').screenshot({ path: OUT + 'sleep-b-phone.png' });
   await pg.locator('.sl .sl-a').screenshot({ path: OUT + 'sleep-a-phone.png' });
+  // PLAN 227: sleep timing — debt against a need, tonight's window, body clock (each when there's enough)
+  const tm = pg.locator('.sl .sl-timing');
+  const parts = await tm.locator('[data-part]').evaluateAll((d) => d.map((x) => x.dataset.part));
+  check(`phone: sleep timing — debt and tonight's window (${parts.join(', ')}: ${(await tm.innerText().catch(() => '')).replace(/\s+/g, ' ').slice(0, 220)})`, parts.includes('debt') && parts.includes('window') && /\d\d:\d\d–\d\d:\d\d/.test(await tm.innerText()));
+  await tm.screenshot({ path: OUT + 'sleep-timing-phone.png' }).catch(() => {});
   await pg.locator('.sl .sl-c').screenshot({ path: OUT + 'sleep-c-phone.png' });
   await ctx.close();
 

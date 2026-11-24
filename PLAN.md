@@ -4362,6 +4362,12 @@ both reads and the questions. Phases in that order; #152 RPE waits (owner).
      saying it. The grids' waiting rows now say what they need ("caffeine at bed — 5 more nights with it"), nearest
      first; Insights' "Still checking" lists every open question (three shown, the rest folded) with a line on why the
      minimum and that other things on the same days can still explain one that shows. e2e sleep updated.
-   - **3 · Sleep debt, bedtime window, regularity, chronotype** — next.
+   - **3 · Sleep debt, bedtime window, regularity, chronotype** — done. Regularity (the Sleep Regularity Index) and the
+     weekend shift already were on Sleep; new lib/sleeptiming: the debt over the last 14 nights against your need (the
+     hours your nights rated best when clear or likely, else 7½ h said as a default; recent nights count more, a long
+     night pays half back), tonight's window (your usual wake for that kind of morning − need − time to fall asleep −
+     30 min with 3 h+ debt, ±15 min), and your body clock (MCTQ: mid-sleep on free mornings corrected for catching up,
+     "earlier than most / about average / later than most", with how much weekends shift). A "Sleep timing" panel on
+     Sleep. Not yet: the window in the wind-down push. Tests: sleeptiming, e2e sleep.
    - **4 · Randomised-block experiments** — next.
    - **5 · HRV band, session RPE, soreness** — next.

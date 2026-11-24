@@ -9,7 +9,9 @@ import type { BandData } from "../lib/band";
 import { loadBandBefore } from "../lib/band-client";
 import type { Lanes } from "../lib/insights";
 import { clockH, facts, firstAt, FACTORS, goesWith, OUTCOMES, suppFactors, regularity, usual, usualNightHr, weekendShift, type Cell, type Evening, type Factor, type Night, type Outcome, type Range, MIN_SIDE } from "../lib/sleep";
-import { addDays, atMinute, clock, dayLabel, DAY, HOUR, MIN } from "../lib/time";
+import { addDays, atMinute, clock, dayLabel, DAY, HOUR, localDay, MIN } from "../lib/time";
+import { bedWindow, chronotype, sleepDebt, TIMING } from "../lib/sleeptiming";
+import { bestBand, SLEEP_EDGES } from "../lib/sleepneed";
 import { shade, NO_SHADE } from "../lib/shade";
 import type { Entry } from "../lib/types";
 import { useNights } from "./useNights";
@@ -296,6 +298,8 @@ function NightLog({ ns, evs, sel, onSel, wide, w, workouts, meals }: { ns: Night
           </> : <p>Needs 5 pairs of days in a row with the band on — keep wearing it to bed.</p>}
         </div>
       </div>
+      {/* PLAN 227 (owner, 24 Nov: "3"): sleep debt, tonight's window, chronotype — from the band's nights */}
+      <SleepTiming ns={ns} evs={evs} />
       <div className="sl-p sl-log">
         <div className="sl-log-key">
           <span><i style={{ background: ST.deep, height: 15 }} /><i style={{ background: ST.light, height: 11 }} /><i style={{ background: ST.rem, height: 7 }} /><i style={{ background: ST.awake, height: 3 }} /> deep · light · REM · awake — <b>taller and darker is deeper sleep</b></span>
@@ -430,6 +434,38 @@ function Opened({ ns, evs, cell, w, outcomes, factors, what }: { ns: Night[]; ev
       </svg>
       <p className="sl-open-v"><b>{words}</b> on {what} with it · {cell.sure}{cell.p != null ? ` (p ${cell.p < 0.001 ? "<0.001" : cell.p.toFixed(3)})` : ""}</p>
       <p className="sl-note">Every {what.replace(/s$/, "")} is a dot, so you can see what the average hides. {what === "nights" ? "Evenings with one thing often have others too (drinks, weekends, late bedtimes)" : `${what[0].toUpperCase()}${what.slice(1)} with one thing often have others too`} — read the rows together.</p>
+    </div>
+  );
+}
+
+/**
+ * Sleep timing (PLAN 227, lib/sleeptiming): the debt over the last 14 nights against your need — the hours your nights
+ * rated best when that's clear or likely (lib/sleepneed), else 7½ h said as a default — tonight's window, and your
+ * chronotype with how far weekends shift it. Each part only when there's enough.
+ */
+function SleepTiming({ ns, evs }: { ns: Night[]; evs: Evening[] }) {
+  const now = Date.now(), today = localDay(now);
+  const t = useMemo(() => {
+    const b = bestBand(ns.flatMap((n, i) => (evs[i]?.rating != null ? [[n.asleep / 60, evs[i].rating!] as [number, number]] : [])), SLEEP_EDGES, "hours", 1);
+    const mine = b.best && (b.sure === "clear" || b.sure === "likely") ? (b.best.lo + Math.min(b.best.hi, b.best.lo + 1)) / 2 : null;
+    const need = mine ?? TIMING.need, debt = sleepDebt(ns, need, now);
+    const tomorrow = new Date(now).getHours() >= 12 ? addDays(today, 1) : today;
+    return { need, mine: mine != null, debt, win: bedWindow(ns, need, debt?.hours ?? 0, tomorrow, now), chrono: chronotype(ns.filter((n) => n.up > now - 42 * 86_400_000)) };
+  }, [ns, evs, now, today]);
+  if (!t.debt && !t.win && !t.chrono) return null;
+  const h = (x: number) => `${Math.floor(x)} h ${String(Math.round((x % 1) * 60)).padStart(2, "0")}`;
+  return (
+    <div className="sl-p sl-timing" aria-label="Sleep timing" data-debt={t.debt?.hours}>
+      <span className="cmp-k">Sleep timing</span>
+      <div className="slt-grid">
+        {t.debt && <div data-part="debt"><small>Sleep debt</small><b>{t.debt.hours < 0.5 ? "none" : h(t.debt.hours)}</b>
+          <span>over your last {t.debt.nights} nights, against {h(t.need)} a night{t.mine ? " — the hours your nights rated best" : " (the usual adult 7–9 h; yours once your ratings show it)"}</span></div>}
+        {t.win && <div data-part="window"><small>Tonight, to bed</small><b>{t.win.from}–{t.win.to}</b>
+          <span>for your usual {t.win.wake} wake{(t.debt?.hours ?? 0) >= 3 ? ", 30 min earlier to pay some debt back" : ""}</span></div>}
+        {t.chrono && <div data-part="chrono"><small>Your body clock</small><b>{t.chrono.word}</b>
+          <span>mid-sleep on free mornings {t.chrono.msfsc}{t.chrono.jetlagMin >= 30 ? ` · weekends ${h(t.chrono.jetlagMin / 60)} later than weekdays` : ""}</span></div>}
+      </div>
+      <p className="sl-mono">From the band's nights. Goes with how you've slept, not a rule.</p>
     </div>
   );
 }
