@@ -2904,3 +2904,8 @@ button.vs-i { border: 0; text-align: left; font: inherit; cursor: pointer; width
 .wh-z { font: 600 9.5px var(--f-bar); opacity: .8; }
 .wh-read { margin: 0; font-size: 12px; color: var(--c-dim); min-height: 1.4em; }
 .wh.empty p { margin: 0; }
+
+/* PLAN 227: body watch — what goes with it, feeling ill?, its record */
+.bw-why { margin: 0; font-size: 13.5px; color: var(--c-ink-2); } .bw-why b { color: var(--c-ink); }
+.bw-ask { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: 13.5px; }
+.bw-said { color: var(--c-ink-2); }

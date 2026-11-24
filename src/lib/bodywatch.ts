@@ -84,3 +84,58 @@ export function bodyWatch(band: WatchBand, day: string, ill: Set<string>, outDay
   return { day, signals, off, alert, running, past, track };
 }
 const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
+
+/**
+ * Why this morning might look like this (PLAN 227; owner, 24 Nov: "i like 1" — the overnight strain check). In the one
+ * prospective test of such alerts, only 4–10 % were real infections (Esmaeilpour 2024); most go with drinks, a hard
+ * day, a short night or travel. So what your own log holds for the evening and day before is said with it — "goes with",
+ * never "it's the drinks". From the day table's row for the morning (lib/daytable: its night before, its evening before).
+ */
+export type Why = { id: "drinks" | "short" | "late" | "away" | "hard"; say: string };
+export const WHY = { drinks: 2, shortH: 1, lateH: 1.5, awayH: 8 } as const;
+export function whyOn(row: { drinks: number | null; asleep: number | null; bed: number | null; away: number | null } | undefined, usualAsleep: number | null, hard: boolean): Why[] {
+  if (!row) return [];
+  const out: Why[] = [];
+  if (row.drinks != null && row.drinks >= WHY.drinks) out.push({ id: "drinks", say: `${Math.round(row.drinks)} drinks the evening before` });
+  if (hard) out.push({ id: "hard", say: "a big training day before" });
+  if (row.asleep != null && usualAsleep != null && row.asleep <= usualAsleep - WHY.shortH) out.push({ id: "short", say: `a short night (${Math.floor(row.asleep)} h ${String(Math.round((row.asleep % 1) * 60)).padStart(2, "0")})` });
+  if (row.bed != null && row.bed >= WHY.lateH) out.push({ id: "late", say: `in bed ${Math.round(row.bed * 60 / 15) * 15 >= 120 ? `${Math.round(row.bed * 10) / 10} h` : `${Math.round(row.bed * 60)} min`} later than usual` });
+  if (row.away != null && row.away >= WHY.awayH) out.push({ id: "away", say: "a long day away from home" });
+  return out;
+}
+
+/**
+ * Its record on you (PLAN 227): every past alert (each run's first morning) — before feeling ill within 2 days, with
+ * something in the log that goes with it, you said you were fine, or nothing to explain it — and every time you logged
+ * feeling ill (a run's first day) with the band on in the 3 days before: did an alert come first? The research's honest
+ * numbers, measured on you rather than borrowed.
+ */
+export type WatchRecord = { alerts: number; ill: number; explained: number; fine: number; unexplained: number; illnesses: number; caught: number; perMonth: number | null };
+export function watchRecord(band: WatchBand, day: string, ill: Set<string>, why: (d: string) => Why[], fine: Set<string>): WatchRecord {
+  const days = Object.keys(band.rhr ?? {}).filter((d) => d < addDays(day, -WATCH.illWithin)).sort();
+  const alertDays = new Set(days.filter((d) => alertOn(band, d)));
+  let alerts = 0, nIll = 0, explained = 0, nFine = 0, unexplained = 0;
+  for (const d of days) {
+    if (!alertDays.has(d) || alertDays.has(addDays(d, -1))) continue;
+    alerts++;
+    if ([0, 1, 2].some((k) => ill.has(addDays(d, k)))) nIll++;
+    else if (why(d).length) explained++;
+    else if (fine.has(d)) nFine++;
+    else unexplained++;
+  }
+  const onsets = [...ill].filter((d) => !ill.has(addDays(d, -1)) && d <= day && [1, 2, 3].filter((k) => band.rhr?.[addDays(d, -k)] != null).length >= 2);
+  const caught = onsets.filter((d) => [0, 1, 2, 3].some((k) => alertDays.has(addDays(d, -k)))).length;
+  const span = days.length;
+  return { alerts, ill: nIll, explained, fine: nFine, unexplained, illnesses: onsets.length, caught, perMonth: span >= 28 ? Math.round(((unexplained + nFine) / span) * 30 * 10) / 10 : null };
+}
+
+/** The record in a sentence or two; null before there's anything to say. */
+export function recordWords(r: WatchRecord): string | null {
+  if (!r.alerts && !r.illnesses) return null;
+  const times = (k: number) => (k === 1 ? "once" : k === 2 ? "twice" : `${k} times`);
+  const parts = [
+    r.alerts ? `It showed up ${times(r.alerts)} before: ${[r.ill && `${r.ill} before you logged feeling ill`, r.explained && `${r.explained} after drinks, a big day or a short night`, (r.fine + r.unexplained) && `${r.fine + r.unexplained} with nothing to explain it`].filter(Boolean).join(", ")}.` : "",
+    r.illnesses ? `Of the ${r.illnesses === 1 ? "one time" : `${r.illnesses} times`} you logged feeling ill, it came first ${r.caught === 0 ? "never" : times(r.caught)}.` : "",
+  ];
+  return parts.filter(Boolean).join(" ");
+}

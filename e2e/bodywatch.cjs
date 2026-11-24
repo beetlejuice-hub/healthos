@@ -50,6 +50,9 @@ const day = (t) => { const d = new Date(t); return `${d.getFullYear()}-${String(
       s.entries.push({ id: 'i2', kind: 'feel', at: noon(EPIS[1] - 2), mood: 4, energy: 3, stress: 5, note: 'think I have the flu' });
       for (let k = 0; k < 4; k++) s.entries.push({ id: 'o' + k, kind: 'drink', at: noon(EPIS[2] + 1) + (8 + k) * 36e5, name: 'Beer', ml: 500, caffeineMg: 0, alcoholG: 20, kcal: 200 });
       s.entries.push({ id: 'f', kind: 'food', at: noon(EPIS[2] + 1), name: 'Lunch', grams: 400, macros: { kcal: 800, p: 40, c: 90, f: 30 } });
+      // PLAN 227: 3 beers yesterday evening — today's card says what goes with it
+      for (let k = 0; k < 3; k++) s.entries.push({ id: 'y' + k, kind: 'drink', at: noon(1) + (8 + k) * 36e5, name: 'Beer', ml: 500, caffeineMg: 0, alcoholG: 20, kcal: 200 });
+      s.entries.push({ id: 'fy', kind: 'food', at: noon(1), name: 'Lunch', grams: 400, macros: { kcal: 800, p: 40, c: 90, f: 30 } });
       localStorage.setItem(k, JSON.stringify(s));
     }, [KEY, NOW, D, EPIS]);
     await pg.goto(APP + '#today'); await pg.reload(); await pg.waitForSelector('#feel');
@@ -65,7 +68,14 @@ const day = (t) => { const d = new Date(t); return `${d.getFullYear()}-${String(
   check(`the card: 3 of 5 off, 2nd morning (${t.slice(0, 160)})`, await bw.getAttribute('data-off') === '3' && /3 of 5 off · 2nd morning/i.test(t) && /Your body looks like it's working on something — resting heart rate, HRV and skin temperature are off your usual, 2 mornings running\./.test(t));
   const off = await bw.locator('li.off').evaluateAll((l) => l.map((e) => e.dataset.id).sort().join(','));
   check(`marked off: resting heart rate, HRV, skin (${off}); breathing, oxygen usual`, off === 'hrv,rhr,skin' && /Breathing usual/.test(t) && /Blood oxygen usual/.test(t));
-  check(`your own track record (${flat(await bw.locator('.bw-track').innerText().catch(() => ''))})`, /This pattern showed up 3 times before\. Twice you logged feeling ill within 2 days; once it came the morning after a night out\./.test(t));
+  check(`its record on you (${flat(await bw.locator('.bw-track').innerText().catch(() => ''))})`, /Its record on you: It showed up 3 times before: 2 before you logged feeling ill, 1 after drinks, a big day or a short night\. Of the 2 times you logged feeling ill, it came first twice\./.test(t));
+  check(`goes with: yesterday evening's 3 strong beers = 4 standard drinks (${flat(await bw.locator('.bw-why').innerText().catch(() => ''))})`, /Goes with: 4 drinks the evening before/.test(t));
+  await bw.getByRole('button', { name: 'No, fine' }).click(); await pg.waitForTimeout(300);
+  const said = await pg.evaluate((k) => JSON.parse(localStorage.getItem(k)).entries.filter((e) => e.kind === 'answer' && e.key.startsWith('watch:')).map((e) => e.answer), KEY);
+  check(`"No, fine": kept as your answer, said back (${said}; ${flat(await bw.locator('.bw-ask').innerText())})`, said.join() === 'fine' && /Noted: you feel fine/.test(await bw.locator('.bw-ask').innerText()));
+  await bw.getByRole('button', { name: "I'm ill after all" }).click(); await pg.waitForTimeout(300);
+  const said2 = await pg.evaluate((k) => JSON.parse(localStorage.getItem(k)).entries.filter((e) => e.kind === 'answer' && e.key.startsWith('watch:')).map((e) => e.answer), KEY);
+  check(`changed to ill: one answer, now "ill" (${said2})`, said2.join() === 'ill');
   check(`not a diagnosis, nothing to do`, /Not a diagnosis/.test(t) && !/you should|take it easy|rest today/i.test(t));
   await bw.screenshot({ path: OUT + 'bodywatch-1280.png' });
   await ctx.close();

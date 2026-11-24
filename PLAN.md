@@ -4347,3 +4347,17 @@ both reads and the questions. Phases in that order; #152 RPE waits (owner).
      training, an "I was sick" log to score it); a minimum-data gate on every correlation; sleep debt, bedtime window,
      regularity and chronotype; randomised-block experiments; the HRV band with session RPE. Many study numbers came from
      abstracts (several hosts blocked) — the report says which. Nothing from it is claimed yet: his picks first.
+
+227. [ ] **The research's top five** (owner, 24 Nov, on docs/research/2026-11-24-smarter-engines.md: "i like 1 2 3 4 5")
+   - **1 · Overnight strain check** — done. Body watch (PLAN 210) already alerted on resting HR, HRV, skin, breathing,
+     oxygen against your usual. Added what the research said it lacked: what the log holds for the evening and day
+     before (lib/bodywatch whyOn: 2+ drinks, a big training day — volume in your top quarter or an hour of cardio — a
+     night 1 h+ shorter than usual, bed 1.5 h+ later, 8 h+ away) said as "goes with"; "Feeling ill? Yes / No, fine",
+     one answer a morning, changeable (answer entry "watch:<day>"); and its record on you (watchRecord: each past
+     alert before feeling ill, explained, or unexplained; each logged illness caught or missed). The note now says the
+     research's number: about 1 alert in 10 came before an infection. Tests: bodywatch (planted: 4 alerts — 2 ill, 1
+     drinks, 1 unexplained; 3 illnesses, 2 caught), e2e bodywatch.
+   - **2 · Minimum-data gate on every link** — next.
+   - **3 · Sleep debt, bedtime window, regularity, chronotype** — next.
+   - **4 · Randomised-block experiments** — next.
+   - **5 · HRV band, session RPE, soreness** — next.

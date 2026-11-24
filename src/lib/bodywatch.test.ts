@@ -4,7 +4,7 @@
 // track record counts the three past episodes, twice ill, once after a night out. Controls: noise only — no alert and no
 // past; one signal off alone — no alert; two off on one morning only — no alert.
 import { describe, expect, it } from "vitest";
-import { bodyWatch, illDays, type WatchBand } from "./bodywatch";
+import { bodyWatch, illDays, recordWords, watchRecord, whyOn, type WatchBand } from "./bodywatch";
 import type { Entry } from "./types";
 import { addDays } from "./time";
 
@@ -55,4 +55,26 @@ describe("body watch (PLAN 210)", () => {
     const es = [{ id: "a", kind: "feel", at: at("2026-11-01"), body: { sick: 1 } }, { id: "b", kind: "feel", at: at("2026-11-03"), note: "think I have the flu" }, { id: "c", kind: "feel", at: at("2026-11-04"), note: "sick of rain" }] as unknown as Entry[];
     expect([...illDays(es, day)].sort()).toEqual(["2026-11-01", "2026-11-03"]);
   });
+});
+
+// PLAN 227 — the overnight strain check, explained and scored. Known answers: the same planted world, the third episode
+// the morning after 4 drinks; one more alert planted with nothing in the log (a false one); and an illness logged with
+// no alert before it (a miss). The record: 4 alerts — 2 before feeling ill, 1 after drinks, 1 with nothing to explain it;
+// of 3 illnesses, 2 caught.
+describe("the strain check, explained and scored (PLAN 227)", () => {
+  const FALSE = addDays(TODAY, -20), MISS = addDays(TODAY, -10);
+  const sick = [...SICK, ...pair(FALSE)];
+  const ill = new Set([addDays(EPIS[0], 1), addDays(EPIS[1], 2), MISS]);
+  const why = (d: string) => (d === EPIS[2] ? whyOn({ drinks: 4, asleep: 7, bed: 0, away: 0 }, 7.5, false) : []);
+  it("what the log holds says why it might look like this", () => {
+    expect(whyOn({ drinks: 4, asleep: 5.5, bed: 2, away: 9 }, 7.4, true).map((w) => w.id)).toEqual(["drinks", "hard", "short", "late", "away"]);
+    expect(whyOn({ drinks: 1, asleep: 7.2, bed: 0.3, away: 2 }, 7.4, false)).toEqual([]);
+    expect(whyOn({ drinks: 3, asleep: null, bed: null, away: null }, null, false)[0].say).toBe("3 drinks the evening before");
+  });
+  it("its record on you: hits, explained, unexplained; illnesses caught and missed", () => {
+    const r = watchRecord(world(sick), TODAY, ill, why, new Set());
+    expect(r).toMatchObject({ alerts: 4, ill: 2, explained: 1, unexplained: 1, fine: 0, illnesses: 3, caught: 2 });
+    expect(recordWords(r)).toBe("It showed up 4 times before: 2 before you logged feeling ill, 1 after drinks, a big day or a short night, 1 with nothing to explain it. Of the 3 times you logged feeling ill, it came first twice.");
+  });
+  it("control: noise only — nothing to say", () => expect(recordWords(watchRecord(world(), TODAY, new Set(), () => [], new Set()))).toBeNull());
 });

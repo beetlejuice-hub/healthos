@@ -5,14 +5,24 @@
  * check stays one of the asks, as before (it steps aside when this shows). Numbers from lib/bodywatch; it never says what to do.
  */
 
-import { useBodyWatch } from "./useBodyWatch";
+import { act, getState } from "../lib/store";
+import { useBodyWatch, watchKey } from "./useBodyWatch";
 
 const STEP = { rhr: 3, hrv: 10, skin: 0.5, breath: 1, spo2: 1.5 } as const;
+
+const useStoreAnswers = (day: string) => getState().entries.find((e) => e.kind === "answer" && e.key === watchKey(day))?.id ?? null;
 
 /** A standing card above "For you" on the mornings it alerts (not one of the asks that wait their turn); nothing otherwise. */
 export function BodyWatch({ now }: { now: number }) {
   const w = useBodyWatch(now);
   if (!w?.alert) return null;
+  const day = w.day;
+  // one answer a morning, changeable: it's what scores the watch on you (PLAN 227)
+  const setAnswer = (a: "ill" | "fine") => {
+    const prev = useStoreAnswers(day);
+    if (prev) act.updateEntry(prev, { answer: a } as never);
+    else act.addEntry({ kind: "answer", at: Date.now(), key: watchKey(day), question: "Feeling ill? (body watch)", answer: a });
+  };
   const names = w.off.map((s) => (s.id === "rhr" ? "resting heart rate" : s.id === "hrv" ? "HRV" : s.name.toLowerCase()));
   const list = names.length > 1 ? `${names.slice(0, -1).join(", ")} and ${names.at(-1)}` : names[0];
   return (
@@ -31,8 +41,15 @@ export function BodyWatch({ now }: { now: number }) {
           </li>
         );
       })}</ul>
-      {w.track && <p className="bw-track"><b>Your own track record:</b> {w.track}</p>}
-      <small className="note">Not a diagnosis. In band studies, resting heart rate and skin temperature often rose 1–3 days before cold or flu symptoms — and after drinks or a very hard day.</small>
+      {/* PLAN 227: what the log holds for the evening and day before — most such mornings are these, not a bug */}
+      {w.why.length > 0 && <p className="bw-why" data-why={w.why.map((x) => x.id).join(" ")}><b>Goes with:</b> {w.why.map((x) => x.say).join(", ")} — mornings like this often follow that.</p>}
+      <div className="bw-ask" role="group" aria-label="Feeling ill?">
+        {w.answer ? <span className="bw-said">{w.answer === "ill" ? "Noted: feeling ill — it counts toward its record." : "Noted: you feel fine — it counts toward its record."}
+          {" "}<button type="button" className="linkish" onClick={() => setAnswer(w.answer === "ill" ? "fine" : "ill")}>{w.answer === "ill" ? "I'm fine after all" : "I'm ill after all"}</button></span>
+          : <><span>Feeling ill?</span><button type="button" className="pill-btn" onClick={() => setAnswer("ill")}>Yes, a bit or more</button><button type="button" className="pill-btn" onClick={() => setAnswer("fine")}>No, fine</button></>}
+      </div>
+      {(w.record ?? w.track) && <p className="bw-track"><b>Its record on you:</b> {w.record ?? w.track}</p>}
+      <small className="note">Not a diagnosis. In band studies, resting heart rate and skin temperature often rose 1–3 days before cold or flu symptoms — but most such mornings followed drinks, a hard day or a short night (only about 1 in 10 alerts came before an infection).</small>
     </section>
   );
 }
