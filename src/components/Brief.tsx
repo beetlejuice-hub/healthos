@@ -7,6 +7,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { sendWidget } from "../lib/widget-client";
+import { useStrain } from "./useStrain";
 import type { Dose } from "../lib/caffeine";
 import { useBand } from "../lib/band-client";
 import { briefLine, briefWatch, checkInDue, GREET, usualOf } from "../lib/brief";
@@ -37,7 +38,9 @@ export function Brief({ now, moment, cafBed, bed, stack, widget, onStory }: { no
     return { night: n ? { asleepMin: n.asleep, score: sleepScore(n, rating, ns).score } : null, hrv: h != null && usual != null ? { today: h, usual } : null, ready: r ? { score: r.score, word: r.word } : null };
   }, [band, entries, sets, today, now]);
   const b = { moment, ...facts, cafBed, bedClock: clock(bed) };
-  const line = briefLine(b), watch = briefWatch(b);
+  // PLAN 227: strain building (HRV under its normal 3+ days with resting heart rate up) says so here first
+  const strain = useStrain(now), sw = strain.strain ? `Strain building: HRV under your normal ${strain.s!.below} days${strain.strain.rhrUp != null ? `, resting heart rate +${Math.round(strain.strain.rhrUp)}` : ""}${strain.goes.length ? ` — goes with ${strain.goes[0]}` : ""}.` : null;
+  const line = briefLine(b), watch = sw ?? briefWatch(b);
   // the session up next, until 21:00, when none is running or was started today
   const running = workouts.some((w) => w.endedAt == null);
   const dayStart = new Date(now); dayStart.setHours(5, 0, 0, 0);

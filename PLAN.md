@@ -4348,7 +4348,7 @@ both reads and the questions. Phases in that order; #152 RPE waits (owner).
      regularity and chronotype; randomised-block experiments; the HRV band with session RPE. Many study numbers came from
      abstracts (several hosts blocked) — the report says which. Nothing from it is claimed yet: his picks first.
 
-227. [ ] **The research's top five** (owner, 24 Nov, on docs/research/2026-11-24-smarter-engines.md: "i like 1 2 3 4 5")
+227. [x] **The research's top five** (owner, 24 Nov, on docs/research/2026-11-24-smarter-engines.md: "i like 1 2 3 4 5")
    - **1 · Overnight strain check** — done. Body watch (PLAN 210) already alerted on resting HR, HRV, skin, breathing,
      oxygen against your usual. Added what the research said it lacked: what the log holds for the evening and day
      before (lib/bodywatch whyOn: 2+ drinks, a big training day — volume in your top quarter or an hour of cardio — a
@@ -4379,4 +4379,16 @@ both reads and the questions. Phases in that order; #152 RPE waits (owner).
      found in 27–38 % (before/during 52–61 %, partly flattered by drift); the early end and the week more work on top.
      A time trend in the block fit was tried: more found (39–47 %) but drift called in 10–14 % — not kept. Tests: blocks,
      e2e xpblocks.
-   - **5 · HRV band, session RPE, soreness** — next.
+   - **5 · HRV band, session RPE, soreness** — done. lib/strain: HRV's 7-day average of ln(ms) against a normal band from
+     the 60 days before last week (mean ± ½ SD), its day-to-day swing against the baseline weeks' range, resting heart
+     rate's 7 days against the same 60; "strain building" when HRV is under its band 3+ days with resting heart rate 2+
+     bpm up or a swing past anything those 60 days had (past their 90th percentile, an HRV drop alone got a note in
+     25 % of fake people — tightened). Session RPE: "How hard? 1–10" beside "How did it go?" (finish, cardio Save, a
+     past session, the app's auto-finish); load = how hard × minutes, this week against the 4 weeks before. "Recovery and
+     load" first on Training; Today's brief says strain building. Soreness was already a check-in chip ("sore"), so the
+     engines already link it — no new tap. Tests: strain (40 fake people a case), e2e recoveryload.
+   - **Found on the way**: Workout → Recent took the last five in saved order, not by date (fixed: by start time);
+     Today's first file went to 900.3 kB, over its 900 kB guard (the strain hook moved to its own file: 897 kB — close to
+     the line); experiments from 14 days now run 16 (blocks), so e2e ai, deepdive, leads, top updated; "Still checking"
+     folding all open questions hid the "rate a few times a day" ask (now: other asks always show, the questions fold
+     after three). These e2e breaks went out with 2 and 4 — CI doesn't run e2e; caught by the full run before 5.

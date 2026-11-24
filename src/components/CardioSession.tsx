@@ -15,6 +15,8 @@ import { currentKg } from "../lib/body";
 import { clock } from "../lib/time";
 import type { Workout } from "../lib/types";
 import { ZoneBar } from "./ZoneBar";
+import { FeelSlider } from "./FeelSlider";
+import { rpeWord } from "../lib/strain";
 import { WorkoutHr } from "./WorkoutHr";
 
 const hms = (ms: number) => { const s = Math.max(0, Math.floor(ms / 1000)), h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), ss = String(s % 60).padStart(2, "0"); return h ? `${h}:${String(m).padStart(2, "0")}:${ss}` : `${m}:${ss}`; };
@@ -60,6 +62,8 @@ export function CardioSession({ w }: { w: Workout }) {
       <div className="tile finish">
         <span className="k">{clock(w.startedAt)}–{clock(stopAt)}</span>
         <CardioNumbers what={what} start={w.startedAt} end={stopAt} w={w} />
+        {/* PLAN 227: session RPE — how hard × minutes is the week's load */}
+        <FeelSlider label="How hard?" name="cardio-rpe" value={w.rpe} word={rpeWord} color="var(--hr)" onChange={(v) => act.updateWorkout(w.id, { rpe: v })} />
         <PhaseRows w={w} end={stopAt} />
         <label className="kfield">How did it feel?<textarea rows={2} value={w.note ?? ""} placeholder="Easy pace, legs heavy…" onChange={(e) => act.updateWorkout(w.id, { note: e.target.value })} /></label>
       </div>

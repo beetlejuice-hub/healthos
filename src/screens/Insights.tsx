@@ -302,9 +302,10 @@ function OneList({ report, items, onShow }: { report: Report; items: Scouted[]; 
       <div className="fl-folds">
         {report.checking.length > 0 && <div className="checking">
           <h3>Still checking</h3>
-          {report.checking.slice(0, 3).map((c) => <CheckRow key={c.id} c={c} />)}
-          {report.checking.length > 3 && <details className="chk-more"><summary>{report.checking.length - 3} more waiting on days</summary>
-            {report.checking.slice(3).map((c) => <CheckRow key={c.id} c={c} />)}</details>}
+          {/* the questions' rows fold after three; the other asks (rate more, weigh in…) always show */}
+          {(() => { const fx = report.checking.filter((c) => c.id.startsWith("fx-")), shown = new Set([...report.checking.filter((c) => !c.id.startsWith("fx-")), ...fx.slice(0, 3)].map((c) => c.id)), rest = fx.slice(3);
+            return <>{report.checking.filter((c) => shown.has(c.id)).map((c) => <CheckRow key={c.id} c={c} />)}
+              {rest.length > 0 && <details className="chk-more"><summary>{rest.length} more waiting on days</summary>{rest.map((c) => <CheckRow key={c.id} c={c} />)}</details>}</>; })()}
           <p className="note chk-why">Each needs 5+ days with and 5+ without before it says anything — fewer, and chance looks like a pattern. Other things that changed on the same days can still explain one that shows; an experiment on you can tell.</p>
         </div>}
         {report.none.length > 0 && <details className="checking none">

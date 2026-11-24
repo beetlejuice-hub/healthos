@@ -164,6 +164,8 @@ export type Workout = {
   breakAt?: number;
   /** How it went, 1–10 (PLAN 202; owner, 10 Nov: "Do a 1-10 slider for workouts"). */
   rating?: number;
+  /** How hard it was, 1–10 (PLAN 227: session RPE; × minutes = its load, lib/strain). */
+  rpe?: number;
   /** A cardio session's phases, in order (lib/cardiostats; PLAN 191: "incline walk then normal running"): each ends where
    * the next starts, the last at the session's end; `km` and `incline` as the treadmill said, typed on Save. */
   phases?: CardioPhase[];

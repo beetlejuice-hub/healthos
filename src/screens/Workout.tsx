@@ -1,4 +1,5 @@
 import { SessionSheet } from "../components/SessionSheet";
+import { rpeWord } from "../lib/strain";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { act, newId, useStore } from "../lib/store";
 import { e1rm, exerciseHistory, isBest, isDumbbell, oneDumbbell, kgStep, stepKg, warmKg, warmsUp, mainMuscle, nextTemplate, restLeft, sessionPlan, sessionSummary, templateProblems, volume, type Suggestion } from "../lib/training";
@@ -66,7 +67,8 @@ function Pick() {
   const sets = useMemo(() => entries.filter((e): e is SetE => e.kind === "set"), [entries]);
   const [editing, setEditing] = useState<Template | "new" | null>(null);
   const [open, setOpen] = useState<string | null>(null);
-  const recent = [...workouts].filter((w) => w.endedAt).slice(-5).reverse(), now = Date.now();
+  // by when they started, not the order they were saved in (an import or a sync can differ — 24 Nov, e2e recoveryload)
+  const recent = [...workouts].filter((w) => w.endedAt).sort((a, b) => a.startedAt - b.startedAt).slice(-5).reverse(), now = Date.now();
   const band = useBand().data;
   const spans = useMemo(() => cardioSpans(workouts, Date.now()), [workouts]);
   const next = nextTemplate(templates, workouts) ?? templates[0];
@@ -540,6 +542,8 @@ function FinishSheet({ w, onBack }: { w: Workout; onBack: () => void }) {
         {sum.bests.length > 0 && <div className="fin-bests"><span className="k" style={{ color: "var(--gym)" }}>New bests</span>{sum.bests.map((b) => <p key={b.exercise}><b>{b.exercise}</b> {b.kg} kg × {b.reps} · est. 1RM {b.e1rm} kg</p>)}</div>}
         {/* 1–10 (PLAN 202; owner, 10 Nov: "Do a 1-10 slider for workouts"): what sleep, food and how you felt go with */}
         <FeelSlider label="How did it go?" name="workout" value={w.rating} word={workoutWord} color="var(--gym)" onChange={(v) => act.updateWorkout(w.id, { rating: v })} />
+        {/* PLAN 227: session RPE — how hard × minutes is the week's load (lib/strain) */}
+        <FeelSlider label="How hard?" name="workout-rpe" value={w.rpe} word={rpeWord} color="var(--hr)" onChange={(v) => act.updateWorkout(w.id, { rpe: v })} />
         <label className="kfield">In your words<textarea rows={2} value={w.note ?? ""} placeholder="Strong today, left shoulder a bit off…" onChange={(e) => act.updateWorkout(w.id, { note: e.target.value })} /></label>
       </div>
       <button type="button" className="go" onClick={() => act.endWorkout(w.id)}>Finish</button>

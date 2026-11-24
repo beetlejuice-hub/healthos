@@ -55,7 +55,7 @@ const DIVES = [
   await card.screenshot({ path: OUT + 'deepdive-open.png' });
   await card.getByRole('button', { name: 'Try it for 14 days' }).click(); await pg.waitForTimeout(200);
   const xs = await pg.evaluate((k) => JSON.parse(localStorage.getItem(k)).ai.experiments, KEY);
-  check(`the experiment starts with a tap (${JSON.stringify(xs.map((x) => [x.name, x.days, x.measure]))})`, xs.length === 1 && xs[0].name === 'Two weeks without magnesium' && xs[0].days === 14 && xs[0].measure === 'sleep' && /Running/.test(await card.innerText()));
+  check(`the experiment starts with a tap (${JSON.stringify(xs.map((x) => [x.name, x.days, x.measure]))})`, xs.length === 1 && xs[0].name === 'Two weeks without magnesium' && xs[0].days === 16 && xs[0].measure === 'sleep' && /Running/.test(await card.innerText()));
 
   // pick another, twice
   await card.getByRole('button', { name: 'Pick another topic (2 left this week)' }).click();

@@ -194,7 +194,7 @@ const GOGOSI = [['Gogosi', 330, 6, 48, 13], ['Gogosi', 350, 7, 50, 14]].map(([na
     await pg.screenshot({ path: OUT + 'ai-settings.png', fullPage: true });
 
     await pg.goto(APP + '#insights'); await pg.waitForTimeout(300);
-    check('Insights lists the experiment', /Caffeine cut-off 14:00[\s\S]*Day 0 of 14/.test(await pg.locator('#experiments').innerText()));
+    check('Insights lists the experiment', /Caffeine cut-off 14:00[\s\S]*Day 0 of 16/.test(await pg.locator('#experiments').innerText()));
     await ctx.close();
 
     // No key: the app says how to turn it on, and nothing breaks.

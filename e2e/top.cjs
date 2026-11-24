@@ -33,10 +33,10 @@ const { chromium, APP, OUT, handle } = require('./harness.cjs');
       const caf = pg.locator('.top-card', { hasText: 'Caffeine after 14:00 goes with' }), btn = caf.locator('.top-try');
       check('the card offers a two-week test', /Try 14 days:\s*No caffeine after 14:00/.test(await btn.innerText()));
       await btn.click(); await pg.waitForTimeout(300);
-      check('starting it marks the card running', /Running · day 1 of 14/.test(await caf.innerText()));
+      check('starting it marks the card running', /Running · day 1 of 16/.test(await caf.innerText()));
       check('and it appears in Experiments', /No caffeine after 14:00/.test(await pg.locator('#experiments').innerText()));
       await pg.reload(); await pg.waitForSelector('.top-card', { timeout: 8000 }).catch(() => {}); await pg.waitForTimeout(300);
-      check('still running after a reload', /Running · day 1 of 14/.test(await caf.innerText()));
+      check('still running after a reload', /Running · day 1 of 16/.test(await caf.innerText()));
     }
     check(name + ': page never scrolls sideways', await pg.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth));
     await pg.locator('.gl-top').screenshot({ path: OUT + `top-${name}.png` });

@@ -5,6 +5,7 @@
  * the minute it came down, with Undo. Shown on Today's running line and on the workout screen.
  */
 
+import { rpeWord } from "../lib/strain";
 import { useEffect, useMemo, useState } from "react";
 import { SessionSheet } from "./SessionSheet";
 import { useBand } from "../lib/band-client";
@@ -64,6 +65,7 @@ export function RateWorkout({ now }: { now: number }) {
     <div className="card catchup rateworkout" role="region" aria-label="How the workout went">
       <h3>{w.template} <span>{clock(w.startedAt)}–{clock(w.endedAt)}{w.autoEnded ? " · finished by itself" : ""}</span></h3>
       <FeelSlider label="How did it go?" name="workout" value={undefined} word={workoutWord} color="var(--gym)" onChange={(v) => act.updateWorkout(w.id, { rating: v })} />
+      <FeelSlider label="How hard?" name="workout-rpe" value={undefined} word={rpeWord} color="var(--hr)" onChange={(v) => act.updateWorkout(w.id, { rpe: v })} />
       {/* PLAN 216: its times, how it ended, what you did, a comment */}
       <button type="button" className="linkish" onClick={() => setOpen(true)}>Open the session ›</button>
       {open && <SessionSheet id={w.id} onClose={() => setOpen(false)} />}

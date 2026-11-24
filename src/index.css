@@ -2922,3 +2922,15 @@ button.vs-i { border: 0; text-align: left; font: inherit; cursor: pointer; width
 .slt-grid small { font: 500 10.5px var(--f-mono); letter-spacing: .06em; text-transform: uppercase; color: var(--i-dim); }
 .slt-grid b { font: 500 22px var(--f-cond, inherit); color: var(--i-ink); }
 .slt-grid span { font-size: 12.5px; color: var(--i-ink-2); line-height: 1.4; overflow-wrap: anywhere; }
+
+/* PLAN 227: recovery and load */
+.rl { display: grid; gap: 10px; }
+.rl-strain { margin: 0; padding: 10px 12px; border-radius: 10px; background: color-mix(in srgb, var(--warn) 12%, transparent); font-size: 14px; line-height: 1.45; color: var(--i-ink); }
+.rl-hrv { display: grid; gap: 6px; }
+.rl-k { display: grid; gap: 1px; }
+.rl-k small { font: 500 10.5px var(--f-mono); letter-spacing: .06em; text-transform: uppercase; color: var(--i-dim); }
+.rl-k b { font: 500 21px var(--f-cond, inherit); color: var(--i-ink); }
+.rl-k span { font-size: 12.5px; color: var(--i-ink-2); }
+.rl-band { fill: var(--ok); opacity: .12; }
+.rl-line { fill: none; stroke: var(--i-ink); stroke-width: 1.8; }
+.rl-dot.below { fill: var(--warn); } .rl-dot.above { fill: var(--ok); }

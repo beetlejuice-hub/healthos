@@ -6,6 +6,7 @@
  * and your comment.
  */
 
+import { rpeWord } from "../lib/strain";
 import { WorkoutHr } from "./WorkoutHr";
 import { useMemo, useState } from "react";
 import { useBand } from "../lib/band-client";
@@ -102,6 +103,8 @@ export function SessionSheet({ id, onClose }: { id: string; onClose: () => void 
           {!sets.length && w.kind !== "cardio" && <p className="note">No sets logged.</p>}
         </div>
         <FeelSlider label="How did it go?" name="session" value={w.rating} word={workoutWord} color="var(--gym)" onChange={(v) => act.updateWorkout(w.id, { rating: v })} />
+        {/* PLAN 227: session RPE — how hard × minutes is the week's load (lib/strain) */}
+        <FeelSlider label="How hard?" name="session-rpe" value={w.rpe} word={rpeWord} color="var(--hr)" onChange={(v) => act.updateWorkout(w.id, { rpe: v })} />
         <label className="ss-note">Comment<textarea defaultValue={w.note ?? ""} placeholder="How it felt, what was off, anything" rows={3} onBlur={(e) => { const v = e.target.value.trim(); if (v !== (w.note ?? "")) act.updateWorkout(w.id, { note: v || undefined }); }} /></label>
       </section>
     </>

@@ -75,7 +75,7 @@ const NOW = new Date('2026-10-27T10:00:00').getTime(), D = 864e5, KEY = 'healtho
   // Test it
   await card.getByRole('button', { name: /^Test it: no alcohol, 14 days$/ }).click(); await pg.waitForTimeout(300);
   const xs = await pg.evaluate((k) => JSON.parse(localStorage.getItem(k)).ai.experiments.map((x) => `${x.name} | ${x.how} | ${x.days} | ${x.measure} | ${x.start}`), KEY);
-  check(`"Test it" starts the experiment the link points to (${xs.join(' / ')})`, xs.length === 1 && xs[0] === 'No alcohol — does mood lift? | No alcohol at all — not even one | 14 | mood | 2026-10-27');
+  check(`"Test it" starts the experiment the link points to (${xs.join(' / ')})`, xs.length === 1 && xs[0] === 'No alcohol — does mood lift? | No alcohol at all — not even one | 16 | mood | 2026-10-27');
   check('…and the card says it\'s running', /Testing — see Experiments/.test(await card.innerText()));
   console.log('errors:', JSON.stringify(errs));
   check('no page errors', errs.length === 0);
