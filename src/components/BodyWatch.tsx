@@ -10,7 +10,7 @@ import { useBodyWatch, watchKey } from "./useBodyWatch";
 
 const STEP = { rhr: 3, hrv: 10, skin: 0.5, breath: 1, spo2: 1.5 } as const;
 
-const useStoreAnswers = (day: string) => getState().entries.find((e) => e.kind === "answer" && e.key === watchKey(day))?.id ?? null;
+const answerIdOf = (day: string) => getState().entries.find((e) => e.kind === "answer" && e.key === watchKey(day))?.id ?? null;
 
 /** A standing card above "For you" on the mornings it alerts (not one of the asks that wait their turn); nothing otherwise. */
 export function BodyWatch({ now }: { now: number }) {
@@ -19,7 +19,7 @@ export function BodyWatch({ now }: { now: number }) {
   const day = w.day;
   // one answer a morning, changeable: it's what scores the watch on you (PLAN 227)
   const setAnswer = (a: "ill" | "fine") => {
-    const prev = useStoreAnswers(day);
+    const prev = answerIdOf(day);
     if (prev) act.updateEntry(prev, { answer: a } as never);
     else act.addEntry({ kind: "answer", at: Date.now(), key: watchKey(day), question: "Feeling ill? (body watch)", answer: a });
   };
