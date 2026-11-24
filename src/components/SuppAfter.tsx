@@ -10,7 +10,9 @@ import type { BandData } from "../lib/band";
 import { afterEach } from "../lib/hrusual";
 import type { Lanes } from "../lib/insights";
 import { useStore } from "../lib/store";
-import { feelAfter, FEEL_AFTER_MIN, type FeelKey } from "../lib/suppafter";
+import { doseTiming, feelAfter, FEEL_AFTER_MIN, type FeelKey } from "../lib/suppafter";
+import { nights as nightsOf } from "../lib/sleep";
+import { go } from "../lib/nav";
 import { Aligned } from "./HeartEffects";
 import { useWidth } from "./useWidth";
 import { suppByDay } from "../lib/suppdays";
@@ -20,19 +22,30 @@ const sgn = (v: number, d = 1) => { const t = Math.abs(v).toFixed(d); return Num
 /** Intakes before the heart-rate side says anything. */
 const HR_MIN = 6;
 
+const PICK = "healthos.suppafter";
+/** From Today's Stack (PLAN 226): a supplement's name opens what happens after it. */
+export function openSuppAfter(id: string) {
+  try { sessionStorage.setItem(PICK, id); } catch { /* private mode: the first one shows */ }
+  go("insights", "training");
+  setTimeout(() => document.getElementById("supp-after")?.scrollIntoView({ block: "start", behavior: "smooth" }), 300);
+}
+
+const NIGHT_WORDS: Record<string, [string, string]> = { asleep: ["asleep", "min"], deep: ["deep sleep", "min"], latency: ["to fall asleep", "min"], hrv: ["HRV", "ms"] };
+
 export function SuppAfter({ band, data }: { band: BandData | null; data: Lanes }) {
   const entries = useStore((s) => s.entries), supps = useStore((s) => s.supplements);
   const byDay = useMemo(() => suppByDay(entries), [entries]);
-  const taken = useMemo(() => supps.map((s) => ({ s, times: entries.flatMap((e) => (e.kind === "supp" && e.suppId === s.id && e.status === "taken" ? [e.at] : [])),
+  const taken = useMemo(() => supps.map((s) => ({ s, times: entries.flatMap((e) => (e.kind === "supp" && e.suppId === s.id && e.status === "taken" && !e.guessed ? [e.at] : [])),
     // days it's known for: taken, said "didn't", or not logged on a day you used the app (lib/suppdays; owner, 20 Oct) —
     // the days that can stand for "without"
     known: new Set([...byDay].filter(([, m]) => m.has(s.id)).map(([d]) => d)),
     offDays: [...byDay.values()].filter((m) => m.get(s.id) === false).length })).filter((x) => x.times.length >= 3), [entries, supps, byDay]);
-  const [pick, setPick] = useState<string | null>(null);
+  const [pick, setPick] = useState<string | null>(() => { try { return sessionStorage.getItem(PICK); } catch { return null; } });
   const cur = taken.find((x) => x.s.id === pick) ?? taken[0];
   const caf = useMemo(() => data.doses.filter((d) => d.mg >= 40).map((d) => d.at), [data.doses]);
   const hr = useMemo(() => (cur && band?.hr.length ? afterEach(cur.times, band.hr, data.workouts, { avoid: caf, minN: HR_MIN, known: cur.known }) : null), [cur, band, data.workouts, caf]);
   const feels = useMemo(() => (cur ? KEYS.map(([k]) => feelAfter(cur.times, data.checks, k, { known: cur.known })) : []), [cur, data.checks]);
+  const night = useMemo(() => (cur && band?.sleep.length ? doseTiming(cur.times, nightsOf(band.sleep, band.hr, band.rhr, band.hrv)) : null), [cur, band]);
   const [ref, w] = useWidth<HTMLDivElement>();
   if (!cur) return null;
   const name = cur.s.name;
@@ -62,6 +75,16 @@ export function SuppAfter({ band, data }: { band: BandData | null; data: Lanes }
             <td className="n">{f.diff == null ? <span className="dimt">{FEEL_AFTER_MIN}+ each</span> : <>{sgn(f.diff)} <span className={`tag ${f.sure === "clear" || f.sure === "likely" ? "s" : "w"}`}>{f.sure}</span></>}</td></tr>
         ))}
       </tbody></table></div>
+      {/* that night, by when you took it (PLAN 226) */}
+      <div className="sa-night" data-nights={night?.nights ?? 0}>
+        <h3>That night, by when you took it</h3>
+        {!night ? <p className="he-words">{band?.sleep.length ? `Needs ${name} on 10+ nights within 12 h of bed, at different times — some within 2 h of bed, some earlier.` : "Sleep: connect the band."}</p>
+          : <><p className="muted" style={{ margin: 0, fontSize: 12.5 }}>{night.close} nights taken within {night.cutH} h of bed against {night.early} earlier.</p>
+            <ul className="sa-night-list">{night.cells.map((c) => { const [what, unit] = NIGHT_WORDS[c.outcome]; return (
+              <li key={c.outcome} data-out={c.outcome} data-sure={c.sure}>{c.diff == null ? `${what}: too few nights`
+                : c.sure === "clear" || c.sure === "likely" ? <>Taken close to bed goes with <b>{sgn(c.diff, unit === "ms" ? 1 : 0)} {unit}</b> {what} <span className={`tag s`}>{c.sure}</span></>
+                  : <>{what}: no clear difference ({sgn(c.diff, unit === "ms" ? 1 : 0)} {unit})</>}</li>); })}</ul></>}
+      </div>
       {noOff && <p className="he-words" data-off="none">Days without {name} are the days you used the app and didn't log it, or answered “Didn't take”. You've logged it every day so far, so there's nothing to compare with yet. Took it but forgot to log? Tell the morning catch-up — that day turns into taken.</p>}
       <p className="muted" style={{ margin: 0, fontSize: 12.5 }}>{sameTime
         ? `You take ${name} at the same time every day, so there's nothing to compare yet — the days you skip it, or take it at another time, are the comparison.`

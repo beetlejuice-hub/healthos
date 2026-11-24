@@ -4319,3 +4319,17 @@ both reads and the questions. Phases in that order; #152 RPE waits (owner).
      Instead of a Settings count: the line under each read says how many. Found on the way: a difference of any two
      numbers on a line pinned almost anything (52 − 4 = 48) — only same-size pairs now. Tests: pin, worker ai, e2e pinned;
      e2e verdict's chip words follow 5 ("it helped").
+
+226. [ ] **Four from 24 Nov** (owner: "THE APP SHOULD LOG THE TIME WHEN I LOG THE SUPPLEMENTS SO IT CAN SEE WHAT HAPPENS
+     AFTER TAKING, NOT JUST ON THE DAY OF TAKING… sometimes ai writes the morning read first, then gets yesterdats sleep
+     data … We should add a heart rate graph for the workouts especially to cardio … make a max effort lookout research")
+   - **Supplements, after taking** — done. The time was already kept on every tap, and Insights → Training's "After a
+     supplement" (PLAN 63) already read heart rate 30–90 min after and check-ins 1–4 h after — but it was out of sight.
+     Now: a supplement's name in Today's Stack opens it, on that supplement; new "That night, by when you took it"
+     (lib/suppafter doseTiming: nights taken within 2 h of bed against earlier — or split at your middle time — on the
+     Sleep grid's test: asleep, deep, falling asleep, HRV). Two time slips fixed: a "didn't take" turned "took" kept the
+     earlier time (now the tap's); a next-morning catch-up answer has the plan's time, so it's marked `guessed` and left
+     out of the hours-after look. Tests: suppafter (planted +25 min deep found, 20 null worlds ≤ 1), e2e suppafter.
+   - **Morning read and last night** — next.
+   - **Heart rate in workouts** — next.
+   - **Research** — repos, smarter engines, what to track: a report.

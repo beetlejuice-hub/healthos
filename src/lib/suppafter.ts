@@ -8,7 +8,7 @@
  */
 
 import type { Check } from "./feelgraph";
-import type { Sure } from "./sleep";
+import { goesWith, OUTCOMES, type Cell, type Evening, type Night, type Sure } from "./sleep";
 import { localDay, minuteOfDay } from "./time";
 
 export type FeelKey = "mood" | "energy" | "stress" | "focus";
@@ -52,4 +52,35 @@ export function feelAfter(times: number[], checks: Check[], key: FeelKey, opts: 
   }
   const p = (hits + 1) / (perms + 1);
   return { key, nWith, nWithout, diff, p, sure: p < 0.00125 ? "clear" : p < 0.0125 ? "likely" : "not clear" };
+}
+
+/**
+ * That night, by when you took it (PLAN 226; owner, 24 Nov: "log the time when i log the supplements so it can see what
+ * happens after taking, not just on the day of taking"). The nights it was taken in the 12 hours before bed, split by how
+ * long before bed: within `closeH` hours against earlier (or, when one side is short, at the middle of your times) — then
+ * the Sleep grid's own test (lib/sleep goesWith: the shuffle, and the nights counted as fewer when they run in stretches)
+ * on asleep, deep, how long it took to fall asleep and HRV. Goes with, not causes. Pure.
+ */
+export const DOSE_TIMING = { closeH: 2, windowH: 12, minEach: 5 } as const;
+export type DoseTiming = { nights: number; cutH: number; close: number; early: number; cells: Cell[] };
+
+export function doseTiming(times: number[], ns: Night[], perms = 2000): DoseTiming | null {
+  const rows = ns.flatMap((n) => {
+    const before = times.filter((t) => t <= n.bed && t > n.bed - DOSE_TIMING.windowH * 3_600_000);
+    return before.length ? [{ n, h: (n.bed - Math.max(...before)) / 3_600_000 }] : [];
+  });
+  if (rows.length < 2 * DOSE_TIMING.minEach) return null;
+  let cut: number = DOSE_TIMING.closeH;
+  const closeN = rows.filter((r) => r.h <= cut).length;
+  if (closeN < DOSE_TIMING.minEach || rows.length - closeN < DOSE_TIMING.minEach) {
+    const hs = rows.map((r) => r.h).sort((a, b) => a - b);
+    cut = hs[Math.floor(hs.length / 2) - 1];
+    if (!(hs[hs.length - 1] - hs[0] >= 1)) return null; // all at about the same time: nothing to compare
+  }
+  const close = rows.filter((r) => r.h <= cut).length;
+  if (close < DOSE_TIMING.minEach || rows.length - close < DOSE_TIMING.minEach) return null;
+  const outs = OUTCOMES.filter((o) => ["asleep", "deep", "latency", "hrv"].includes(o.id));
+  const cells = goesWith(rows.map((r) => r.n), rows.map((r) => ({ h: r.h })) as unknown as Evening[], {
+    perms, factors: [{ id: "close", name: "close to bed", has: (_, e) => (e as unknown as { h: number }).h <= cut }], outcomes: outs });
+  return { nights: rows.length, cutH: Math.round(cut * 10) / 10, close, early: rows.length - close, cells };
 }

@@ -32,7 +32,7 @@ export function CatchUp({ now }: { now: number }) {
     setNo(next); try { localStorage.setItem(NO_KEY, JSON.stringify(next)); } catch { /* private window: asked again next time */ }
   };
   const answer = (g: Gap, yes: boolean) => {
-    if (g.kind === "supp") { const e = act.addEntry({ kind: "supp", at: g.at, suppId: g.suppId, status: yes ? "taken" : "skipped", slot: g.slot }); offerUndo([e.id], `${g.name} ${yes ? "taken" : "skipped"} ${when(g.slot)}`); return; }
+    if (g.kind === "supp") { const e = act.addEntry({ kind: "supp", at: g.at, suppId: g.suppId, status: yes ? "taken" : "skipped", slot: g.slot, guessed: true }); offerUndo([e.id], `${g.name} ${yes ? "taken" : "skipped"} ${when(g.slot)}`); return; }
     if (g.kind === "drink") { if (!yes) { dismiss([g.key]); return; } const e = act.addEntry({ ...g.usual, at: g.at }); offerUndo([e.id], `${g.name} logged for yesterday`); return; }
     if (!yes) { dismiss([g.key]); return; }
     try { sessionStorage.setItem(LOG_FOR_KEY, JSON.stringify({ day: yday, time: MEAL_AT[g.meal] })); } catch { /* Log opens on today; the day can be picked there */ }

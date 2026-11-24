@@ -1,9 +1,10 @@
 import { describe, expect, it } from "vitest";
+import type { Night } from "./sleep";
 import type { HrMinute } from "./band";
 import { rng } from "./bench";
 import type { Check } from "./feelgraph";
 import { afterEach } from "./hrusual";
-import { feelAfter } from "./suppafter";
+import { feelAfter, doseTiming } from "./suppafter";
 import { addDays, atMinute, MIN } from "./time";
 
 const D0 = "2026-09-01";
@@ -81,5 +82,40 @@ describe("days without it are days it was answered (PLAN 74)", () => {
     expect(naive.sure === "clear" || naive.sure === "likely").toBe(true); // the old way: forgetful bad days read as "without"
     const fair = feelAfter(times, checks, "mood", { known });
     expect(fair.sure).toBe("too few");
+  });
+});
+
+// PLAN 226 — that night, by dose time. Planted: magnesium within 2 h of bed goes with 25 min more deep sleep; control:
+// the same times, nothing planted — not called; all at one time of evening — nothing to compare.
+describe("that night, by when you took it", () => {
+  const H = 3_600_000;
+  const world = (seed: number, plant: number) => {
+    let x = seed; const r = () => { x = (x * 16807) % 2147483647; return x / 2147483647; };
+    const g = () => (r() + r() + r() - 1.5) * 1.2;
+    const ns: Night[] = [], times: number[] = [];
+    for (let i = 0; i < 40; i++) {
+      const bed = Date.UTC(2026, 9, 1, 22) + i * 24 * H, close = r() < 0.5;
+      times.push(bed - (close ? 1 : 4 + r() * 2) * H);
+      ns.push({ bed, eve: `d${i}`, asleep: 420 + g() * 20, deep: 80 + g() * 10 + (close ? plant : 0), latency: 15 + g() * 4, hrv: 50 + g() * 5 } as unknown as Night);
+    }
+    return { ns, times };
+  };
+  it("planted: 25 min more deep when taken close to bed — found, the others not", () => {
+    const { ns, times } = world(5, 25), t = doseTiming(times, ns)!;
+    expect(t.cutH).toBe(2);
+    const deep = t.cells.find((c) => c.outcome === "deep")!;
+    expect(deep.sure === "clear" || deep.sure === "likely").toBe(true);
+    expect(deep.diff!).toBeGreaterThan(15);
+    expect(t.cells.filter((c) => c.outcome !== "deep").every((c) => c.sure === "not clear")).toBe(true);
+  });
+  it("control: nothing planted — nothing called, across 20 worlds at most one", () => {
+    let said = 0;
+    for (let k = 1; k <= 20; k++) if (doseTiming(world(k * 7, 0).times, world(k * 7, 0).ns)!.cells.some((c) => c.sure === "clear" || c.sure === "likely")) said++;
+    expect(said).toBeLessThanOrEqual(1);
+  });
+  it("taken at the same time every evening, or too few nights: nothing", () => {
+    const { ns } = world(3, 0);
+    expect(doseTiming(ns.map((n) => n.bed - 3 * H), ns)).toBeNull();
+    expect(doseTiming(world(3, 0).times.slice(0, 6), ns)).toBeNull();
   });
 });

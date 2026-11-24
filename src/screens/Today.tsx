@@ -39,6 +39,7 @@ import { answerSlot, SLOTS, slotsOf } from "../lib/types";
 import { dueOn, scheduleToday } from "../lib/schedule";
 import { parseFat } from "../lib/bodyfat";
 import { HowNow } from "../components/HowNow";
+import { openSuppAfter } from "../components/SuppAfter";
 import { SuppAmount } from "../components/SuppAmount";
 import { SuppQuick } from "../components/SuppQuick";
 import { Tonight } from "../components/Tonight";
@@ -425,7 +426,8 @@ function Stack({ now, onClose }: { now: number; onClose: () => void }) {
   const set = (id: string, slot: Slot, status: "taken" | "skipped") => {
     const cur = answers.get(key(id, slot));
     if (cur && cur.status === status) act.removeEntry(cur.id);
-    else if (cur) act.updateEntry(cur.id, { status } as Partial<Entry>);
+    // a "didn't" turned "took" was taken now (PLAN 226: the time is what the hours-after look reads)
+    else if (cur) act.updateEntry(cur.id, (status === "taken" ? { status, at: Date.now() } : { status }) as Partial<Entry>);
     else act.addEntry({ kind: "supp", at: Date.now(), suppId: id, status, slot });
   };
   const doses = supps.flatMap((s) => slotsOf(s).map((slot) => key(s.id, slot)));
@@ -450,7 +452,7 @@ function Stack({ now, onClose }: { now: number; onClose: () => void }) {
               const a = answers.get(key(s.id, slot.id));
               return (
                 <div className="stack-row" key={s.id}>
-                  <span style={{ opacity: a && a.status !== "taken" ? 0.6 : 1 }}>{s.name} {a?.status === "taken" ? <SuppAmount s={s} e={a} /> : <span style={{ color: "var(--c-dim)", fontSize: 12.5 }}>{s.dose}</span>}</span>
+                  <span style={{ opacity: a && a.status !== "taken" ? 0.6 : 1 }}><button type="button" className="linkish stack-name" aria-label={`What happens after ${s.name}`} onClick={() => openSuppAfter(s.id)}>{s.name}</button> {a?.status === "taken" ? <SuppAmount s={s} e={a} /> : <span style={{ color: "var(--c-dim)", fontSize: 12.5 }}>{s.dose}</span>}</span>
                   <div className="tick">
                     <button type="button" className="yes" aria-pressed={a?.status === "taken"} aria-label={`Took ${s.name}`} onClick={() => set(s.id, slot.id, "taken")}>✓</button>
                     <button type="button" className="no" aria-pressed={a?.status === "skipped"} aria-label={`Skipped ${s.name}`} onClick={() => set(s.id, slot.id, "skipped")}>✗</button>

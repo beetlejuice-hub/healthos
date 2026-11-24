@@ -117,6 +117,7 @@ export type Entry =
   | { id: string; kind: "food"; at: number; foodId?: string; name: string; grams: number; macros: Macros; /** As you counted it: 2 × "egg". */ count?: number; unit?: string }
   | { id: string; kind: "drink"; at: number; drinkId?: string; name: string; ml: number; caffeineMg: number; alcoholG: number; kcal: number; p?: number; c?: number; f?: number }
   | { id: string; kind: "supp"; at: number; suppId: string; status: "taken" | "skipped"; /** Which of its slots this answers (older answers: its first). */ slot?: Slot;
+    /** Its time is the plan's, not when it was taken (answered the next day, PLAN 226): left out of the hours-after look. */ guessed?: true;
       /** What you actually took when it isn't the plan's dose ("400 mg": one more capsule; owner, 9 Oct). */ amount?: string;
       /** Another intake in a slot already answered, logged with one tap like food (lib/supplog, PLAN 87): counted on top. */ again?: true }
   | { id: string; kind: "set"; at: number; workoutId: string; exercise: string; kg: number; reps: number; /** A lighter warm-up set before the working sets: shown, never counted (PLAN 80). */ warmup?: boolean }
