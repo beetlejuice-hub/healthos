@@ -13,7 +13,7 @@ import { act, getState, newId, useStore, type Experiment } from "../lib/store";
 import { aiStatusNow, askAi, askRead, bandForRead, chatContext, contextNow, diveContext, leadNow, linksNow, nightContext, refreshAiStatus, useAiStatus } from "../lib/ai/client";
 import { leadLines, withLead } from "../lib/ai/lead";
 import { askChat } from "../lib/ai/chat";
-import { bandNow, bandSettled, onBandSettled, onNights } from "../lib/band-client";
+import { bandNow, bandSettled, onBandSettled, onNights, useBand } from "../lib/band-client";
 import { vsBlock, vsOthers } from "../lib/norms";
 import { stepsByDay } from "../lib/steps";
 import { nights as bandNights } from "../lib/sleep";
@@ -34,7 +34,7 @@ import { DeepDive } from "./DeepDive";
 import { Looked } from "./Looked";
 import { NightPending, ReadPending } from "./ReadPending";
 import { DIVE, diveBrief, diveDue } from "../lib/ai/dive";
-import { RESULT_WORDS, verdictLines, verdictsDue, xpAutoRun } from "../lib/ai/experiment";
+import { RESULT_WORDS, verdictLines, verdictsDue, xpAutoRun, xpFacts } from "../lib/ai/experiment";
 import { plainResult } from "../lib/ai/xpauto";
 import { xpSkipped } from "../lib/ai/xpdays";
 import { ExperimentDays } from "./ExperimentStrip";
@@ -364,7 +364,7 @@ export function useAiAuto(userId: string | undefined) {
       const st = getState();
       xpAutoRun(today);
       if (ai.experiments.some((x) => !x.verdict && (!!x.early || addDays(x.start, x.days) <= (x.ended ?? today))))
-        for (const d of verdictsDue(ai.experiments, dailyFacts(st.entries, st.workouts, st.settings, addDays(today, -120), addDays(today, -1)), today)) void makeVerdict(d.x, d.v);
+        for (const d of verdictsDue(ai.experiments, xpFacts(st, today), today)) void makeVerdict(d.x, d.v);
     };
     tick();
     const t = setInterval(tick, 10 * 60_000);
@@ -699,7 +699,8 @@ export function Experiments() {
   const xs = useStore((s) => s.ai.experiments);
   const entries = useStore((s) => s.entries), workouts = useStore((s) => s.workouts), settings = useStore((s) => s.settings);
   const today = localDay(Date.now());
-  const days = useMemo(() => dailyFacts(entries, workouts, settings, addDays(today, -120), addDays(today, -1)), [entries, workouts, settings, today]);
+  const band = useBand().data;
+  const days = useMemo(() => xpFacts({ entries, workouts, settings }, today), [entries, workouts, settings, today, band]); // eslint-disable-line react-hooks/exhaustive-deps
   if (!xs.length) return null;
   const final = (s: string): Outcome | null => (s === "better" || s === "worse" || s === "no-clear-change" ? s : null);
   const gut = gutRecord(xs, (x) => final(judge(x, days, today).state));

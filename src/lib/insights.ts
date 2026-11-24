@@ -140,6 +140,8 @@ export type DayFacts = {
   feltHow?: Record<string, number>;
   /** From the band (lib/daysband withBand): minutes asleep the night that ended this morning, and the day's steps. */
   asleepMin?: number | null;
+  /** That morning's resting heart rate and HRV from the band (lib/daysband; PLAN 229: experiments can measure them). */
+  rhr?: number | null; hrv?: number | null;
   steps?: number | null;
   /** From Apple Health (lib/daysband withHealth): the day's average walking speed, km/h — PLAN 184 phase 2. */
   walkKmh?: number | null;

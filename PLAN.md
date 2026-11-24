@@ -4405,3 +4405,19 @@ both reads and the questions. Phases in that order; #152 RPE waits (owner).
      mark on the day, green or red by whether that way is better, and "stepped up 5 bpm on 25 Oct". A year of 15
      measures: 42 ms (a median recomputed inside a loop had made it 1.6 s — found by timing it).
    - e2e lazyload's limit on Today's first file: 900 kB → 1 MB (it's 897 kB). Tests: changepoint, e2e changepoints.
+
+229. [x] **Steps into the reads, and what changed around a step** (owner, 24 Nov: "2,3")
+   - **2 · The AI reads steps and strain**: lib/ai/stepsforai — each change point of the last 45 days (its levels, the
+     better or worse way, "a step, not a slope") with what moved around it, and HRV against its band, resting heart
+     rate, this week's load and "strain building", added to "What the app's own maths found" (quote, don't compute).
+     The trend measures moved from TrendWall into lib/measures so the AI and the pages read the same ones.
+   - **3 · What changed around it**: lib/aroundstep — for a step in how you are (resting heart rate, HRV, sleep,
+     regularity, bedtime, weight, mood, energy, focus — not in what you do: drinks around a drinks step is circular), the
+     fortnight before against the fortnight from it for drinks, late caffeine, caffeine, training days and volume,
+     calories (without the drinks' own), protein, steps, sleep, bedtime, each supplement (started / stopped); moved =
+     effect size 0.8+ and a change worth naming; "goes with". A card on Trends; "Test it on resting heart" (for things you
+     can leave out, when they went up) starts a block experiment on the measure that stepped — experiments can now
+     measure resting heart rate and HRV (lib/ai/apply MEASURES; the band's days in every judge, lib/ai/experiment xpFacts).
+   - Found on the way: the card's store selector built a new array each call — React's update loop (error 185) took
+     Insights down in e2e; selecting the stored list fixed it. Tests: aroundstep, stepsforai, e2e changepoints. The full
+     e2e run, 182 suites: all green.

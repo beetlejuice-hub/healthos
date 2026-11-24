@@ -9,20 +9,13 @@
 
 import { useMemo, useState } from "react";
 import { useBand } from "../lib/band-client";
-import { eveningInputs } from "../lib/eveninputs";
-import { dailyFacts } from "../lib/insights";
-import { clockH, evenings, nights, regularityByDay } from "../lib/sleep";
-import { sleepScore } from "../lib/sleepscore";
-import { stepsByDay } from "../lib/steps";
 import { useStore } from "../lib/store";
-import { overallStrength } from "../lib/strength";
 import { addDays, localDay } from "../lib/time";
-import type { LoggedSet } from "../lib/training";
 import { tally, trendOf, TRENDS, type Measure, type Trend } from "../lib/trends";
-import type { EntryOf } from "../lib/types";
 import { linksNow } from "../lib/ai/client";
 import { getState } from "../lib/store";
 import { TrendBig } from "./TrendBig";
+import { measuresOf } from "../lib/measures";
 import { changePoints, type Change } from "../lib/changepoint";
 
 const hm = (h: number) => { const m = Math.round(h * 60) % 1440; return `${String(Math.floor(m / 60)).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}`; };
@@ -73,43 +66,6 @@ export function useMeasures(now: number): Measure[] {
   return useMemo(() => measuresOf(entries, workouts, settings, band, now), [entries, workouts, settings, band, today, now]); // eslint-disable-line react-hooks/exhaustive-deps
 }
 
-/** The same, outside React (Since you last looked works them out once a visit). */
-export function measuresOf(entries: ReturnType<typeof getState>["entries"], workouts: ReturnType<typeof getState>["workouts"], settings: ReturnType<typeof getState>["settings"], band: ReturnType<typeof useBand>["data"], now: number): Measure[] {
-  const today = localDay(now);
-  {
-    const from = addDays(today, -366), days = dailyFacts(entries, workouts, settings, from, addDays(today, -1));
-    const s = (f: (d: (typeof days)[number]) => number | null | undefined) => { const o: Record<string, number> = {}; for (const d of days) { const v = f(d); if (v != null && Number.isFinite(v)) o[d.day] = v; } return o; };
-    const ms: Measure[] = [];
-    if (band) {
-      const ns = nights(band.sleep, band.hr, band.rhr, band.hrv).filter((x) => x.day > from && x.day <= today).sort((a, b) => a.bed - b.bed);
-      const evs = evenings(ns, eveningInputs(entries, workouts, settings.halfLifeMin));
-      const score: Record<string, number> = {}, asleep: Record<string, number> = {}, bed: Record<string, number> = {};
-      ns.forEach((x, i) => { score[x.day] = sleepScore(x, evs[i].rating, ns).score; asleep[x.day] = x.asleep / 60; bed[x.eve] = clockH(x.bed, x.eve); });
-      const steps = Object.fromEntries([...stepsByDay(band.steps ?? [], band.hr, today).entries()].filter(([d, v]) => d < today && v > 0).map(([d, v]) => [d, v / 1000]));
-      ms.push({ key: "score", name: "Sleep score", unit: "", better: 1, series: score }, { key: "asleep", name: "Asleep", unit: "", better: 1, series: asleep },
-        { key: "bed", name: "In bed", unit: "", better: -1, series: bed },
-        // PLAN 210: how alike the last 7 nights were, morning by morning (on the Sleep page as one number)
-        { key: "regular", name: "Sleep regularity", unit: "/100", better: 1, series: regularityByDay(ns) }, { key: "hrv", name: "HRV", unit: "ms", better: 1, series: band.hrv },
-        { key: "rhr", name: "Resting heart", unit: "bpm", better: -1, series: band.rhr },
-        { key: "vo2", name: "VO2 max", unit: "", better: 1, series: Object.fromEntries(Object.entries(band.vo2 ?? {}).map(([d, v]) => [d, v.v])) },
-        { key: "steps", name: "Steps", unit: "", better: 1, series: steps });
-    }
-    const weight: Record<string, number> = {};
-    for (const e of entries) if (e.kind === "weight") weight[localDay(e.at)] = e.kg;
-    const sets = entries.filter((e): e is EntryOf<"set"> => e.kind === "set") as LoggedSet[];
-    const strength = Object.fromEntries(overallStrength(sets, now).weeks.map((w) => [localDay(w.week), w.index]));
-    ms.push({ key: "weight", name: "Weight", unit: "kg", better: -1, series: weight },
-      { key: "protein", name: "Protein", unit: "g", better: 1, series: s((d) => d.proteinG) },
-      { key: "kcal", name: "Calories", unit: "kcal", better: 0, series: s((d) => d.kcal) },
-      { key: "drinks", name: "Drinks", unit: "a day", better: -1, series: s((d) => (d.logged ? d.alcoholG / 14 : null)) },
-      { key: "caffeine", name: "Caffeine", unit: "mg", better: 0, series: s((d) => (d.logged ? d.caffeineMg : null)) },
-      { key: "mood", name: "Mood", unit: "/10", better: 1, series: s((d) => d.mood) },
-      { key: "energy", name: "Energy", unit: "/10", better: 1, series: s((d) => d.energy) },
-      { key: "focus", name: "Focus", unit: "/10", better: 1, series: s((d) => d.focus) },
-      { key: "strength", name: "Strength", unit: "index", better: 1, series: strength });
-    return ms;
-  }
-}
 
 export function TrendWall({ now }: { now: number }) {
   const entries = useStore((s) => s.entries), workouts = useStore((s) => s.workouts);

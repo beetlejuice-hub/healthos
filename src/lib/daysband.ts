@@ -37,7 +37,7 @@ export function withHealth(days: DayFacts[], samples: HealthSample[]): DayFacts[
 export function withBand(days: DayFacts[], band: BandData | null, today: string): DayFacts[] {
   if (!band || !days.length) return days;
   const { slept, steps, late, reg } = ofBand(band, today);
-  return days.map((d) => ({ ...d, asleepMin: slept.get(d.day) ?? null, steps: steps.get(d.day) ?? null, bedLateH: late.get(d.day) ?? null, regular: reg[d.day] ?? null }));
+  return days.map((d) => ({ ...d, asleepMin: slept.get(d.day) ?? null, steps: steps.get(d.day) ?? null, bedLateH: late.get(d.day) ?? null, regular: reg[d.day] ?? null, rhr: band.rhr?.[d.day] ?? null, hrv: band.hrv?.[d.day] ?? null }));
 }
 
 /**

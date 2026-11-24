@@ -2939,3 +2939,12 @@ button.vs-i { border: 0; text-align: left; font: inherit; cursor: pointer; width
 .tw-cp { stroke: var(--i-ink-2); stroke-dasharray: 3 3; stroke-width: 1.2; }
 .tw-cp.better { stroke: #3fb36a; } .tw-cp.worse { stroke: #e5604f; }
 .tw-step { color: var(--i-ink); }
+
+/* PLAN 229: what changed around a step */
+.around { display: grid; gap: 10px; }
+.around-step { display: grid; gap: 4px; padding: 10px 0; border-top: 1px solid var(--i-line); }
+.around-step:first-of-type { border-top: 0; }
+.around-step > b { font-size: 14.5px; color: var(--i-ink); }
+.around-step[data-tone="worse"] > b::before { content: "↘ "; color: #e5604f; } .around-step[data-tone="better"] > b::before { content: "↗ "; color: #3fb36a; }
+.around-step ul { margin: 0; padding-left: 18px; display: grid; gap: 6px; font-size: 13.5px; color: var(--i-ink-2); }
+.around-step li { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }

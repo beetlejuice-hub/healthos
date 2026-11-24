@@ -16,7 +16,7 @@ import { changesSince, rollSeen, type Change, type Mark, type Seen, type SeenSto
 import { getState } from "../lib/store";
 import { addDays, localDay } from "../lib/time";
 import { trendOf } from "../lib/trends";
-import { measuresOf } from "./TrendWall";
+import { measuresOf } from "../lib/measures";
 import { useEnrich } from "./useEvidence";
 
 const KEY = "healthos.sincelast";

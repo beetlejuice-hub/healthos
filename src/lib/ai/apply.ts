@@ -39,8 +39,9 @@ export type Verdict = { state: "running" | "too-few" | "better" | "worse" | "no-
   sure?: number;
   /** ON beat OFF in this share of day pairs (PLAN 227: NAP, a second readout; before/during for the older kind). */ nap?: number };
 
-type Measure = "energy" | "mood" | "focus" | "stress" | "sleep";
-const MEASURES: Measure[] = ["energy", "mood", "focus", "stress", "sleep"];
+/** The ratings, and (PLAN 229) the band's resting heart rate and HRV — a step in one can be tested as an experiment. */
+type Measure = "energy" | "mood" | "focus" | "stress" | "sleep" | "rhr" | "hrv";
+export const MEASURES: Measure[] = ["energy", "mood", "focus", "stress", "sleep", "rhr", "hrv"];
 
 /**
  * Before vs during: the 14 days before the start against the days since, on what it measures.
@@ -92,7 +93,7 @@ export function judge(x: Experiment, days: DayFacts[], today: string, alpha = 0.
   const { se, df } = carried(rows.map((d) => d.day), rows.map((d) => value(d)! - xs(d).reduce((a, v, i) => a + v * fit.coef[i], 0)), fit.se[1], fit.df);
   const diff = fit.coef[1], half = tCrit(df, alpha) * se;
   const ci: [number, number] = [diff - half, diff + half];
-  const good = m === "stress" ? -1 : 1;
+  const good = m === "stress" || m === "rhr" ? -1 : 1;
   const state = going ? "running" : ci[0] > 0 ? (good > 0 ? "better" : "worse") : ci[1] < 0 ? (good > 0 ? "worse" : "better") : "no-clear-change";
   const t = se > 0 ? (good * diff) / se : 0, p = pT(Math.abs(t), df), sure = t >= 0 ? 1 - p / 2 : p / 2;
   const pairs = nap(during.map((d) => value(d)!), before.map((d) => value(d)!), good);

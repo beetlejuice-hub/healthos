@@ -7,6 +7,8 @@ import { judge, type Verdict } from "./apply";
 import { blockOn, makeBlocks } from "./blocks";
 import { xpCounted, xpEnd, xpOver, xpSkipped, xpToAsk } from "./xpdays";
 import { dailyFacts, type DayFacts } from "../insights";
+import { withBand } from "../daysband";
+import { getBand } from "../band-client";
 import { plainResult, xpAutoPatches, xpLook } from "./xpauto";
 
 export function startExperiment(p: NonNullable<DigestItem["protocol"]>) {
@@ -22,10 +24,15 @@ export function startExperiment(p: NonNullable<DigestItem["protocol"]>) {
  * Experiments that end themselves (PLAN 225): the days the log answers, ending early when clear, more days when unclear.
  * Run when Today shows the strip and on the AI's tick; writes only when something changed.
  */
+/** The days an experiment is judged on: the log's, with the band's (PLAN 229: resting heart rate and HRV can be measured). */
+export function xpFacts(st: Pick<ReturnType<typeof getState>, "entries" | "workouts" | "settings">, today: string): DayFacts[] {
+  return withBand(dailyFacts(st.entries, st.workouts, st.settings, addDays(today, -120), addDays(today, -1)), getBand().data, today);
+}
+
 export function xpAutoRun(today: string): void {
   const st = getState(), xs = st.ai.experiments.filter((x) => !x.ended && !x.verdict);
   if (!xs.length) return;
-  const days = dailyFacts(st.entries, st.workouts, st.settings, addDays(today, -120), addDays(today, -1));
+  const days = xpFacts(st, today);
   const patches = xpAutoPatches(xs, days, st.supplements, today);
   if (!patches.length) return;
   const by = new Map(patches.map((p) => [p.id, p.patch]));

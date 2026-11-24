@@ -43,6 +43,7 @@ import { ConnectDots } from "../components/ConnectDots";
 import { LinkMapCard, LookAt } from "../components/LinkMap";
 import { TrendWall } from "../components/TrendWall";
 import { SinceLast } from "../components/SinceLast";
+import { AroundSteps } from "../components/AroundSteps";
 import { BestDays } from "../components/BestDays";
 import { Ripples } from "../components/Ripples";
 import { Combos } from "../components/Combos";
@@ -211,6 +212,8 @@ export function Insights() {
       {/* PLAN 207: every trend first (owner, 11 Nov: "nice letsgo. build all") */}
       {/* PLAN 225 (owner, 17 Nov: "3"): what changed since the last visit, first */}
       {!nothing && (shown ?? tab) === "week" && <SinceLast now={now} />}
+      {/* PLAN 229: a step a measure took, what moved with it, and a test */}
+      {!nothing && (shown ?? tab) === "week" && <AroundSteps now={now} />}
       {!nothing && <TrendWall now={now} />}
       {/* renovation part 3: the outcome that's slipping, and what goes with it */}
       {!nothing && <LookAt now={now} />}

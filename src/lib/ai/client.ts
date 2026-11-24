@@ -2,6 +2,8 @@
  * The app's side of the AI: send a request to the Worker with your session, keep the latest usage
  * (calls today, cost) for Settings, and build the context the AI is told — on demand, at call time.
  */
+import { stepLines, strainLines } from "./stepsforai";
+import { measuresOf } from "../measures";
 import { linksFor } from "../linkscache";
 import { fitContext } from "./context";
 import { CONTEXT_LIMIT_LONG } from "./limits";
@@ -193,6 +195,8 @@ export function contextNow(state: State = getState(), now = Date.now(), { slim =
   // what Today and Insights show from the app's own maths (PLAN 214): body watch, you vs everyone, pairs, experiments
   const vs = vsNow({ band, entries: state.entries, days, age: state.settings.age, sex: state.settings.sex, bodyKg: state.settings.bodyKg, today, now });
   const found = foundLines({ band, entries: state.entries, days, experiments: state.ai.experiments, vs, today });
+  // steps a measure took, what moved around them, HRV against its band and this week's load (PLAN 229)
+  found.push(...stepLines(measuresOf(state.entries, state.workouts, state.settings, band, now), days, state.supplements, today), ...strainLines(band, state.workouts, today, now));
   return buildContext({ state, now, days, findings: report.found, patterns, weight: t ? { kg: t.nowKg, perWeek: t.perDay * 7 } : null, nights: nightsSeen, lab: labNow(state, band, now), links, found,
     // last night's skin temperature, breathing and blood oxygen against your usual, and the night check's line (PLAN 52)
     today: [...todayLines(ready), ...(band && ready ? nightCheckLines(nightCheck(today, band, heartSigns(ready))) : []),

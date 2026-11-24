@@ -6,7 +6,7 @@
 
 import { useEffect, useMemo } from "react";
 import { act, getState, offerUndo, useStore, type Experiment } from "../lib/store";
-import { experimentStrip, xpAutoRun } from "../lib/ai/experiment";
+import { experimentStrip, xpAutoRun, xpFacts } from "../lib/ai/experiment";
 import { XP, xpCounted, xpEnd, xpSkipped, xpToAsk } from "../lib/ai/xpdays";
 import { judge } from "../lib/ai/apply";
 import { dailyFacts } from "../lib/insights";
@@ -20,7 +20,7 @@ export function ExperimentStrip({ now }: { now: number }) {
   const lines = useMemo(() => {
     // the 120 days of facts only when one has finished without a verdict (the app's own result is shown then)
     let facts: ReturnType<typeof dailyFacts> | null = null;
-    return experimentStrip(xs, today, (x) => judge(x, (facts ??= dailyFacts(entries, workouts, settings, addDays(today, -120), addDays(today, -1))), today));
+    return experimentStrip(xs, today, (x) => judge(x, (facts ??= xpFacts({ entries, workouts, settings }, today)), today));
   }, [xs, entries, workouts, settings, today]);
   // the log's answers, an early end, a few more days (PLAN 225) — once a day's data changes
   useEffect(() => { xpAutoRun(today); }, [today, entries]);

@@ -35,7 +35,9 @@ const ymd = (t) => { const d = new Date(t); return `${d.getFullYear()}-${String(
     let x = 5; const r = () => { x = (x * 16807) % 2147483647; return x / 2147483647; };
     for (let i = 90; i >= 1; i--) { const day0 = new Date(new Date(now - i * D).setHours(0, 0, 0, 0)).getTime();
       s.entries.push({ id: 'w' + i, kind: 'weight', at: day0 + 7 * 36e5, kg: Math.round((81 - (90 - i) * 0.022 + (r() + r() + r() - 1.5) * 0.2) * 10) / 10 });
-      s.entries.push({ id: 'f' + i, kind: 'food', at: day0 + 13 * 36e5, name: 'e2e lunch', grams: 500, macros: { kcal: 2200, p: 140, c: 250, f: 70 } }); }
+      s.entries.push({ id: 'f' + i, kind: 'food', at: day0 + 13 * 36e5, name: 'e2e lunch', grams: 500, macros: { kcal: 2200, p: 140, c: 250, f: 70 } });
+      // PLAN 229: two drinks an evening from 25 Oct — what moved around the step
+      if (new Date(day0).toISOString().slice(0, 10) >= '2026-10-24') for (let k = 0; k < 2; k++) s.entries.push({ id: `d${i}-${k}`, kind: 'drink', at: day0 + (20 + k) * 36e5, name: 'e2e beer', ml: 330, caffeineMg: 0, alcoholG: 14, kcal: 140 }); }
     localStorage.setItem(k, JSON.stringify(s));
   }, [KEY, NOW, D]);
   await pg.goto(APP + '#insights/week'); await pg.reload();
@@ -51,6 +53,15 @@ const ymd = (t) => { const d = new Date(t); return `${d.getFullYear()}-${String(
   check(`HRV, flat: no mark (${(await cps('hrv')).join(', ')})`, (await cps('hrv')).length === 0);
   check(`weight, falling smoothly: no mark — a slope isn't a step (${(await cps('weight')).join(', ')})`, (await cps('weight')).length === 0);
   await panel('rhr').screenshot({ path: OUT + 'changepoints-rhr.png' });
+  // PLAN 229: what changed around it, and a test on resting heart
+  const ar = pg.getByRole('region', { name: 'What changed around a step' });
+  const at = (await ar.innerText().catch(() => '')).replace(/\s+/g, ' ');
+  check(`what changed around it: resting heart's step, drinks up (${at.slice(0, 220)})`, /Resting heart stepped up [456](\.\d)? bpm on 2[3-7] Oct/.test(at) && /drinks [0-9.]+ a week → 1[3-5](\.\d)? a week/.test(at));
+  await ar.getByRole('button', { name: 'Test it on resting heart' }).first().click(); await pg.waitForTimeout(300);
+  const xs = await pg.evaluate((k) => JSON.parse(localStorage.getItem(k)).ai.experiments.map((x) => [x.name, x.measure, x.days, !!x.blocks]), KEY);
+  check(`"Test it": an experiment on resting heart, in blocks (${JSON.stringify(xs)})`, xs.length === 1 && xs[0][0] === 'No drinks for 14 days' && xs[0][1] === 'rhr' && xs[0][2] === 16 && xs[0][3] === true);
+  check('…and the row says it\'s being tested', /being tested/.test(await ar.innerText()));
+  await ar.screenshot({ path: OUT + 'aroundsteps.png' });
   console.log('errors:', JSON.stringify(errs));
   check('no page errors', errs.length === 0);
   await b.close();
