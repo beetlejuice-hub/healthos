@@ -4320,7 +4320,7 @@ both reads and the questions. Phases in that order; #152 RPE waits (owner).
      numbers on a line pinned almost anything (52 − 4 = 48) — only same-size pairs now. Tests: pin, worker ai, e2e pinned;
      e2e verdict's chip words follow 5 ("it helped").
 
-226. [ ] **Four from 24 Nov** (owner: "THE APP SHOULD LOG THE TIME WHEN I LOG THE SUPPLEMENTS SO IT CAN SEE WHAT HAPPENS
+226. [x] **Four from 24 Nov** (owner: "THE APP SHOULD LOG THE TIME WHEN I LOG THE SUPPLEMENTS SO IT CAN SEE WHAT HAPPENS
      AFTER TAKING, NOT JUST ON THE DAY OF TAKING… sometimes ai writes the morning read first, then gets yesterdats sleep
      data … We should add a heart rate graph for the workouts especially to cardio … make a max effort lookout research")
    - **Supplements, after taking** — done. The time was already kept on every tap, and Insights → Training's "After a
@@ -4341,4 +4341,9 @@ both reads and the questions. Phases in that order; #152 RPE waits (owner).
      the small grey line), the cardio's "Save?", the cardio going now ("so far", redrawn each minute), and the lifting
      "Finish?". At least 40 bpm tall so a steady pace doesn't look like a saw. Tests: workouthr, e2e workouthr (a run
      with a planted Z5 push: zones, avg 154, peak 175 at 18:12, down 32; live; Save?), session, cardio.
-   - **Research** — repos, smarter engines, what to track: a report.
+   - **Research** — done: docs/research/2026-11-24-smarter-engines.md (5 researchers: repos, early warning, prediction
+     and n-of-1 methods, what to track, leading apps). Its ranked list, top first: the overnight strain check (Stanford's
+     NightSignal two-night resting-HR rule + HRV/breathing/temperature votes, alerts explained by logged alcohol and
+     training, an "I was sick" log to score it); a minimum-data gate on every correlation; sleep debt, bedtime window,
+     regularity and chronotype; randomised-block experiments; the HRV band with session RPE. Many study numbers came from
+     abstracts (several hosts blocked) — the report says which. Nothing from it is claimed yet: his picks first.
