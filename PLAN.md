@@ -4330,6 +4330,10 @@ both reads and the questions. Phases in that order; #152 RPE waits (owner).
      Sleep grid's test: asleep, deep, falling asleep, HRV). Two time slips fixed: a "didn't take" turned "took" kept the
      earlier time (now the tap's); a next-morning catch-up answer has the plan's time, so it's marked `guessed` and left
      out of the hours-after look. Tests: suppafter (planted +25 min deep found, 20 null worlds ≤ 1), e2e suppafter.
-   - **Morning read and last night** — next.
+   - **Morning read and last night** — done. Two holes: a sleep rating counted as "last night is in" even with the band
+     not synced yet (now, with a band that's been bringing nights in, only the band's night counts — the rating still
+     does with no band); and from 11:00 it wrote anyway and never again. Now a read written without last night is
+     marked `noNight`, the AI is told the newest night it has is the night before (never "last night"), and it's
+     written again, once, when the night comes. Tests: morning (rating vs band, the rewrite once).
    - **Heart rate in workouts** — next.
    - **Research** — repos, smarter engines, what to track: a report.

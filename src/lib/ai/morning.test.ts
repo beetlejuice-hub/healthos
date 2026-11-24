@@ -92,3 +92,23 @@ describe("the morning read leaves For you by itself (reform T3)", () => {
     expect([morningAway(null, at("20:00")), morningAway({ day: D }, at("20:00"))]).toEqual([false, false]);
   });
 });
+
+// PLAN 226 (owner, 24 Nov: "sometimes ai writes the morning read first, then gets yesterdays sleep data"): with a band
+// bringing nights in, a sleep rating doesn't stand in for last night; a read written without it (from 11:00) is written
+// again, once, when the night comes.
+describe("the morning read and last night", () => {
+  const T = (d: string, hm: string) => new Date(`2026-11-${d}T${hm}:00`).getTime();
+  const night = (end: number) => ({ id: String(end), start: end - 8 * 3_600_000, end, asleepMin: 420, awakeMin: 20, toFallAsleepMin: 10, nap: false, stageMin: {} }) as never;
+  const before = [night(T("23", "07:00")), night(T("22", "07:10"))];
+  it("band bringing nights in: the rating alone isn't last night; the band's night is", () => {
+    expect(nightIn(before, true, T("24", "07:30"))).toBe(false);
+    expect(nightIn([...before, night(T("24", "07:05"))], true, T("24", "07:30"))).toBe(true);
+  });
+  it("no band: the rating is last night", () => expect(nightIn([], true, T("24", "07:30"))).toBe(true));
+  it("written at 11:05 without last night: written again when it comes, and only then", () => {
+    const d = { day: "2026-11-24", at: T("24", "11:05"), noNight: true };
+    expect(digestDue(T("24", "11:40"), d, false)).toBeNull();
+    expect(digestDue(T("24", "11:40"), d, true)).toBe("2026-11-24");
+    expect(digestDue(T("24", "11:40"), { ...d, noNight: undefined }, true)).toBeNull();
+  });
+});

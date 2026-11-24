@@ -49,7 +49,7 @@ import { dueReviews, monthFacts, monthLines, weekFacts, weekLines, type Due } fr
 import { Md } from "./Md";
 import { Pinned, PinnedNote } from "./Pinned";
 import { ReadItems } from "./ReadItems";
-import { digestDue, freshRead, morningShown, nightIn, nightShown } from "../lib/ai/morning";
+import { digestDue, freshRead, morningShown, nightIn, nightShown, NO_NIGHT_LINE } from "../lib/ai/morning";
 import { attempt, onRetryDue, tryNow } from "../lib/ai/attempts";
 import { dayTotals, dayWindow, eveningOf, nightDue, nightStale, STALE } from "../lib/ai/nightread";
 import { addNever, addThreads, adviceOf, citedLines, closeThreads, dropCited, dropSaid, keepCited, keepSaid, liftNever, neverList, readItems, saidTopics, sameTopic, unlinkedNote, type Cited } from "../lib/ai/said";
@@ -109,7 +109,10 @@ const citedBlock = (cited: Cited[] | undefined): string[] => ((l) => (l.length ?
 async function writeDigest(day: string) {
   const ai = getState().ai;
   // written already (another tick, or another device's synced read)
-  if (ai.digest?.day === day && freshRead(ai.digest)) return null;
+  if (ai.digest?.day === day && freshRead(ai.digest) && !ai.digest.noNight) return null;
+  // last night in or not (PLAN 226): without it, the AI is told, and the read is written again when it comes
+  const rated0 = getState().entries.some((e) => e.kind === "sleep" && e.rating != null && localDay(e.at) === day);
+  const noNight = !nightIn(bandNow()?.sleep, rated0, Date.now());
   // one read a day, whichever device is first (PLAN 215)
   if (!(await claimRead("digest", day))) return ELSEWHERE;
   // this morning's angle and kind of new thing, in turn (PLAN 132–133)
@@ -122,7 +125,7 @@ async function writeDigest(day: string) {
     ...(ai.night && ai.night.day >= addDays(day, -1) ? ai.night.change.map((c) => `${ai.night!.day} read-back: ${c.what}`) : []),
   ];
   // it may check its claims with the app's own numbers first (PLAN 160)
-  const r = await askRead({ task: "digest", context: `${contextNow()}\n${brief.join("\n")}\n${lead ? `${leadLines(lead).join("\n")}\n` : ""}${askFor(day, "morning", follow).join("\n")}\n${discoveryLines(day, "morning", ai.discoveries).join("\n")}\n${citedBlock(ai.cited).join("\n")}\n${vsFor(day, "morning").join("\n")}`, shown: ai.shown.slice(-40) });
+  const r = await askRead({ task: "digest", context: `${contextNow()}\n${noNight ? `${NO_NIGHT_LINE}\n` : ""}${brief.join("\n")}\n${lead ? `${leadLines(lead).join("\n")}\n` : ""}${askFor(day, "morning", follow).join("\n")}\n${discoveryLines(day, "morning", ai.discoveries).join("\n")}\n${citedBlock(ai.cited).join("\n")}\n${vsFor(day, "morning").join("\n")}`, shown: ai.shown.slice(-40) });
   if (!r.ok) return r;
   // advice on a topic said in the last 5 days goes, whatever it's called now (lib/ai/said; owner, 28 Oct: "in the last
   // liike 7 days it only recommended me to take in more protein w breakfast… it can repeat sometimes but not every day")
@@ -134,7 +137,7 @@ async function writeDigest(day: string) {
   const qs = keepNew(r.answer.questions ?? [], `${day}:m`);
   act.setAi((a) => ({
     ...wrote("digest", day, at)(a),
-    digest: { day, at, greeting: r.answer.greeting, ...checkDay(r.answer, true), items, ...(r.answer.looked ? { looked: r.answer.looked } : {}), ...(r.answer.unlinked?.length ? { unlinked: r.answer.unlinked } : {}), ...(r.answer.unpinned?.length ? { unpinned: r.answer.unpinned } : {}) },
+    digest: { day, at, greeting: r.answer.greeting, ...checkDay(r.answer, true), items, ...(noNight && !(ai.digest?.day === day && ai.digest.noNight) ? { noNight: true } : {}), ...(r.answer.looked ? { looked: r.answer.looked } : {}), ...(r.answer.unlinked?.length ? { unlinked: r.answer.unlinked } : {}), ...(r.answer.unpinned?.length ? { unpinned: r.answer.unpinned } : {}) },
     discoveries: keepDiscovery(a.discoveries, disc, day, "morning", at),
     cited: keepCited(a.cited, [...items.map((i) => i.source), n?.source, disc?.source], at),
     ...(led ? { leads: [...(a.leads ?? []), { id: lead.id, day }].slice(-60) } : {}),
