@@ -2890,3 +2890,17 @@ button.vs-i { border: 0; text-align: left; font: inherit; cursor: pointer; width
 .sa-night { display: grid; gap: 6px; margin: 4px 0; }
 .sa-night h3 { margin: 0; font-size: 14px; }
 .sa-night-list { margin: 0; padding-left: 18px; display: grid; gap: 3px; font-size: 13.5px; }
+
+/* PLAN 226: a workout's heart rate — the line by zone over zone bands */
+.wh { display: grid; gap: 4px; }
+.wh-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; flex-wrap: wrap; font-size: 13px; color: var(--c-ink-2); }
+.wh-head > b { color: var(--c-ink); font-size: 14px; } .wh-head span b { color: var(--c-ink); }
+.wh .ss-hrl.wh-base { stroke: var(--c-track); stroke-width: 1; }
+.wh-run { fill: none; stroke-width: 2.4; stroke-linejoin: round; stroke-linecap: round; }
+.wh-grid { stroke: var(--c-track); stroke-width: 1; opacity: .6; }
+.wh-avg { stroke: var(--c-ink); stroke-dasharray: 3 4; opacity: .55; }
+.wh-peak { fill: var(--c-ink); stroke: var(--c-card); stroke-width: 1.5; }
+.wh-hit { stroke: var(--c-ink-2); stroke-width: 1; opacity: .6; }
+.wh-z { font: 600 9.5px var(--f-bar); opacity: .8; }
+.wh-read { margin: 0; font-size: 12px; color: var(--c-dim); min-height: 1.4em; }
+.wh.empty p { margin: 0; }

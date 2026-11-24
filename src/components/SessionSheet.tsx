@@ -6,6 +6,7 @@
  * and your comment.
  */
 
+import { WorkoutHr } from "./WorkoutHr";
 import { useMemo, useState } from "react";
 import { useBand } from "../lib/band-client";
 import { workingHr } from "../lib/autofinish";
@@ -28,27 +29,6 @@ function atTime(v: string, ref: number, after?: number): number | null {
   let t = d.getTime();
   if (after != null && t <= after) t += 24 * 60 * MIN;
   return t;
-}
-
-function SessionHr({ hr, start, end, line, parts }: { hr: [number, number, ...number[]][]; start: number; end: number; line: number | null; parts: SessionPart[] }) {
-  const last = Math.max(end, ...parts.map((p) => p.end)), from = start - 10 * MIN, to = last + 30 * MIN, pts = hr.filter((m) => m[0] >= from && m[0] <= to);
-  if (pts.length < 5) return null;
-  const vals = pts.map((m) => m[1]), lo = Math.min(...vals, line ?? Infinity) - 5, hi = Math.max(...vals, line ?? 0) + 5;
-  const X = (t: number) => ((t - from) / (to - from)) * 340, Y = (v: number) => 110 - ((v - lo) / (hi - lo)) * 100;
-  return (
-    <figure className="ss-hr">
-      <svg viewBox="0 0 340 128" role="img" aria-label={`Heart rate from ${clock(from)} to ${clock(to)}${line ? `, the working line at ${line}` : ""}, the session ${clock(start)}–${clock(end)}`}>
-        {/* each part shaded on its own (PLAN 217): lifting, then the cardio after it */}
-        {parts.map((p, i) => <g key={i}><rect x={X(p.start)} y={4} width={Math.max(1, X(p.end) - X(p.start))} height={108} className={`ss-span${p.cardio ? " cardio" : ""}`} />
-          {parts.length > 1 && X(p.end) - X(p.start) > 30 && <text x={X(p.start) + 3} y={108} className="ss-t">{p.name}</text>}</g>)}
-        {line && <><line x1={0} x2={340} y1={Y(line)} y2={Y(line)} className="ss-line" /><text x={4} y={Y(line) - 4} className="ss-t">working {line}</text></>}
-        <polyline points={pts.map((m) => `${X(m[0]).toFixed(1)},${Y(m[1]).toFixed(1)}`).join(" ")} className="ss-hrl" />
-        <line x1={X(end)} x2={X(end)} y1={4} y2={112} className="ss-end" />
-        <text x={Math.min(300, X(end) + 4)} y={14} className="ss-t on">ended {clock(end)}</text>
-        <text x={2} y={125} className="ss-t">{clock(from)}</text><text x={338} y={125} className="ss-t" textAnchor="end">{clock(to)}</text>
-      </svg>
-    </figure>
-  );
 }
 
 export function SessionSheet({ id, onClose }: { id: string; onClose: () => void }) {
@@ -109,7 +89,7 @@ export function SessionSheet({ id, onClose }: { id: string; onClose: () => void 
           <label>to<input type="time" value={cEnd} onChange={(e) => setCEnd(e.target.value)} /></label>
           <button type="button" className="pill-btn pri" disabled={!cChanged} onClick={saveCardio}>Save cardio</button>
         </div>}
-        {band && <SessionHr hr={band.hr} start={w.startedAt} end={w.endedAt} line={story?.line ?? line} parts={parts} />}
+        {band && <WorkoutHr hr={band.hr} start={w.startedAt} end={w.endedAt} line={story?.line ?? line} parts={parts} />}
         {band && <div className="ss-parts" aria-label="Heart-rate zones">
           {parts.length > 1 && parts.map((p, i) => <div key={i} className={`ss-part${p.cardio ? " is-cardio" : ""}`} data-part={p.cardio ? "cardio" : "lifting"}>
             <p><b>{p.name}</b> <span>{partLine(p)}</span></p>{!p.noEnd && <ZoneBar hr={band.hr} start={p.start} end={p.end} quiet />}</div>)}

@@ -15,6 +15,7 @@ import { currentKg } from "../lib/body";
 import { clock } from "../lib/time";
 import type { Workout } from "../lib/types";
 import { ZoneBar } from "./ZoneBar";
+import { WorkoutHr } from "./WorkoutHr";
 
 const hms = (ms: number) => { const s = Math.max(0, Math.floor(ms / 1000)), h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), ss = String(s % 60).padStart(2, "0"); return h ? `${h}:${String(m).padStart(2, "0")}:${ss}` : `${m}:${ss}`; };
 
@@ -31,6 +32,7 @@ export function CardioNumbers({ what, start, end, w }: { what: string; start: nu
       <div><b>{hr ? hr.avg : "—"}</b><span>{hr ? `avg bpm · peak ${hr.peak}` : "avg bpm"}</span></div>
       <div><b>{kc ? `~${kc.kcal}` : "—"}</b><span>kcal</span></div>
     </div>
+    {band && <WorkoutHr hr={band.hr} start={start} end={end} />}
     {hr && band && <ZoneBar hr={band.hr} start={start} end={end} />}
     <p className="s cardio-how">
       {hr ? `Heart rate from the band: ${hr.n} of ${min} minutes. ` : band ? "No heart rate from the band for it yet — it syncs a few minutes behind and fills in by itself. " : "Connect the band (Settings) for heart rate. "}
@@ -73,6 +75,8 @@ export function CardioSession({ w }: { w: Workout }) {
         {cur && <p className="s cardio-phase">{phaseWords(w.phases!)} · phase {w.phases!.length} · this phase {hms(now - cur.start)}</p>}
         <p className="s">{live ? <>♥ <b>{live[1]}</b> bpm · {clock(live[0])}</> : band ? "Heart rate shows when the band syncs — usually a few minutes behind." : "Connect the band for heart rate."}</p>
       </div>
+      {/* the heart rate so far, by zone (PLAN 226) — redrawn each minute, not each second */}
+      {band && live && <div className="tile"><WorkoutHr hr={band.hr} start={w.startedAt} end={Math.floor(now / 60_000) * 60_000} live /></div>}
       <div className="tile">
         <label className="kfield">{cur ? "This phase" : "What"}<input value={cur ? cur.what : typed} aria-label="Cardio kind" onChange={(e) => setWhat(e.target.value)} /></label>
         <div className="picks" aria-label="Kind">{CARDIO_CHIPS.filter((c) => c !== (cur?.what ?? what)).map((c) => <button type="button" key={c} onClick={() => setWhat(c)}>{c}</button>)}</div>

@@ -4335,5 +4335,10 @@ both reads and the questions. Phases in that order; #152 RPE waits (owner).
      does with no band); and from 11:00 it wrote anyway and never again. Now a read written without last night is
      marked `noNight`, the AI is told the newest night it has is the night before (never "last night"), and it's
      written again, once, when the night comes. Tests: morning (rating vs band, the rewrite once).
-   - **Heart rate in workouts** — next.
+   - **Heart rate in workouts** — done. components/WorkoutHr (lib/workouthr): the band's minutes from 5 before to 10
+     after, the line coloured by zone over faint zone bands (Z1–Z5 by % of max), the average dashed, the peak marked,
+     the end, "down N in 2 min after" (lib/cadence recoveryOf); tap for a minute. On a past session's sheet (replacing
+     the small grey line), the cardio's "Save?", the cardio going now ("so far", redrawn each minute), and the lifting
+     "Finish?". At least 40 bpm tall so a steady pace doesn't look like a saw. Tests: workouthr, e2e workouthr (a run
+     with a planted Z5 push: zones, avg 154, peak 175 at 18:12, down 32; live; Save?), session, cardio.
    - **Research** — repos, smarter engines, what to track: a report.

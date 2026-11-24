@@ -24,6 +24,7 @@ import { checkSet, type Guard } from "../lib/sanity";
 import { StrengthCard } from "../components/StrengthCard";
 import { bandLatest, useBand } from "../lib/band-client";
 import { ZoneBar } from "../components/ZoneBar";
+import { WorkoutHr } from "../components/WorkoutHr";
 import { WeekEntry, WeekReport } from "../components/WeekReport";
 import { readRoute } from "../lib/nav";
 import { BreakOrDone, useAutoFinish } from "../components/AutoFinish";
@@ -534,6 +535,7 @@ function FinishSheet({ w, onBack }: { w: Workout; onBack: () => void }) {
         </div>
         {sum.vsLast != null && <p className="s">{Math.round(sum.vsLast * 100)}% of last {w.template}'s volume.</p>}
         {/* how hard the heart worked, from the band (PLAN 52; owner, 21 Oct: "3 per workout") */}
+        {band && <WorkoutHr hr={band.hr} start={w.startedAt} end={now} live />}
         {band && <ZoneBar hr={band.hr} start={w.startedAt} end={now} upTo={bandLatest()} />}
         {sum.bests.length > 0 && <div className="fin-bests"><span className="k" style={{ color: "var(--gym)" }}>New bests</span>{sum.bests.map((b) => <p key={b.exercise}><b>{b.exercise}</b> {b.kg} kg × {b.reps} · est. 1RM {b.e1rm} kg</p>)}</div>}
         {/* 1–10 (PLAN 202; owner, 10 Nov: "Do a 1-10 slider for workouts"): what sleep, food and how you felt go with */}
