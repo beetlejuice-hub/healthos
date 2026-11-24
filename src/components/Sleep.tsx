@@ -8,7 +8,7 @@ import { useEffect, useMemo, useState } from "react";
 import type { BandData } from "../lib/band";
 import { loadBandBefore } from "../lib/band-client";
 import type { Lanes } from "../lib/insights";
-import { clockH, facts, firstAt, FACTORS, goesWith, OUTCOMES, suppFactors, regularity, usual, usualNightHr, weekendShift, type Cell, type Evening, type Factor, type Night, type Outcome, type Range } from "../lib/sleep";
+import { clockH, facts, firstAt, FACTORS, goesWith, OUTCOMES, suppFactors, regularity, usual, usualNightHr, weekendShift, type Cell, type Evening, type Factor, type Night, type Outcome, type Range, MIN_SIDE } from "../lib/sleep";
 import { addDays, atMinute, clock, dayLabel, DAY, HOUR, MIN } from "../lib/time";
 import { shade, NO_SHADE } from "../lib/shade";
 import type { Entry } from "../lib/types";
@@ -369,7 +369,9 @@ export function GoesWith({ ns, evs, wide, w, outcomes = OUTCOMES, factors = FACT
   };
   const shown = factors.filter((f) => cells.some((c) => c.factor === f.id && c.sure !== "too few"));
   const coming = useMemo(() => tagsComing(evs), [evs]);
-  const hidden = factors.filter((f) => !shown.includes(f)).map((f) => { const c = cells.find((x) => x.factor === f.id)!; return `${f.name.toLowerCase()} (${c.nWith} with, ${c.nWithout} without)`; });
+  // what each waiting row needs, said as days to come (PLAN 227: "needs 2 more nights without"), the nearest first
+  const hidden = factors.filter((f) => !shown.includes(f)).map((f) => { const c = cells.find((x) => x.factor === f.id)!; return { c, need: Math.max(0, MIN_SIDE - c.nWith) + Math.max(0, MIN_SIDE - c.nWithout), name: f.name }; })
+    .sort((a, b) => a.need - b.need).map(({ c, name }) => `${name.toLowerCase()} — ${[c.nWith < MIN_SIDE && `${MIN_SIDE - c.nWith} more ${copy.what} with it`, c.nWithout < MIN_SIDE && `${MIN_SIDE - c.nWithout} more without`].filter(Boolean).join(" and ")}`);
   if (ns.length < copy.minNights) return <section className="sl-p sl-c" aria-label={copy.title}><span className="cmp-k">{copy.title}</span><p>Needs at least {copy.minNights} {copy.what} with the band, and 5 with and 5 without each thing — {ns.length} {copy.what} so far.</p></section>;
   return (
     <section className="sl-p sl-c" aria-label={copy.title}>
@@ -398,7 +400,7 @@ export function GoesWith({ ns, evs, wide, w, outcomes = OUTCOMES, factors = FACT
       {scroll && <p className="sl-note sl-swipe">Swipe the grid sideways for every column →</p>}
       {/* folded: with food and activities (PLAN 88) the list got long; the summary says how many, a tap says which */}
       {hidden.length > 0 && <details className="sl-note sl-hidden"><summary>Not enough {copy.what} yet for {hidden.length} more {hidden.length === 1 ? "row" : "rows"} — 5 with and 5 without each</summary>
-        <p>{hidden.join(", ")}.</p></details>}
+        <ul className="sl-wait">{hidden.map((h) => <li key={h}>{h}</li>)}</ul></details>}
       {coming.length > 0 && <p className="sl-note sl-coming">Your last-night tags get a row from 5 nights each: {coming.map((c) => `${nightLabel(c.tag)} ${c.n} of 5`).join(", ")}.</p>}
       <div className="sl-c-key"><span><i style={{ background: "var(--z-ideal)" }} />{copy.toward}</span><span><i style={{ background: "var(--z-poor)" }} />the other way</span></div>
     </section>

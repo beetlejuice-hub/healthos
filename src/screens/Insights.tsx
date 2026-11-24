@@ -302,12 +302,10 @@ function OneList({ report, items, onShow }: { report: Report; items: Scouted[]; 
       <div className="fl-folds">
         {report.checking.length > 0 && <div className="checking">
           <h3>Still checking</h3>
-          {report.checking.map((c) => (
-            <div className="chk" key={c.id}>
-              <span>{c.question}<small>needs {c.missing}</small></span>
-              <span className="bar" aria-label={`${Math.round(c.progress * 100)}% of the data needed`}><i style={{ width: `${Math.round(c.progress * 100)}%` }} /></span>
-            </div>
-          ))}
+          {report.checking.slice(0, 3).map((c) => <CheckRow key={c.id} c={c} />)}
+          {report.checking.length > 3 && <details className="chk-more"><summary>{report.checking.length - 3} more waiting on days</summary>
+            {report.checking.slice(3).map((c) => <CheckRow key={c.id} c={c} />)}</details>}
+          <p className="note chk-why">Each needs 5+ days with and 5+ without before it says anything — fewer, and chance looks like a pattern. Other things that changed on the same days can still explain one that shows; an experiment on you can tell.</p>
         </div>}
         {report.none.length > 0 && <details className="checking none">
           <summary>Checked — no effect <span>{report.none.length}</span></summary>
@@ -418,5 +416,15 @@ function DoseEffects() {
         );
       })}
     </section>
+  );
+}
+
+/** One "still checking" row: the question, what it needs, how far along (PLAN 227: all of them, three shown). */
+function CheckRow({ c }: { c: { id: string; question: string; missing: string; progress: number } }) {
+  return (
+    <div className="chk">
+      <span>{c.question}<small>needs {c.missing}</small></span>
+      <span className="bar" aria-label={`${Math.round(c.progress * 100)}% of the data needed`}><i style={{ width: `${Math.round(c.progress * 100)}%` }} /></span>
+    </div>
   );
 }

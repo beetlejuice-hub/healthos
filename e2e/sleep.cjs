@@ -135,7 +135,7 @@ function world(seed = 5) {
   check(`nothing planted in the other rows — none of them clear (${others.join('; ') || 'none'})`, others.length === 0);
   // folded since PLAN 88 (the list got long): a tap shows which
   await pg.locator('.sl .sl-hidden summary').click();
-  check('things no night (or every night) had are named once, not drawn as empty rows', await pg.locator('.sl .sl-mf').count() === 3 && /Not enough nights yet for \d+ more rows[\s\S]*caffeine at bed ≥ 30 mg \(0 with, 30 without\)/.test(await pg.locator('.sl .sl-c').innerText()));
+  check('things no night (or every night) had are named once, not drawn as empty rows', await pg.locator('.sl .sl-mf').count() === 3 && /Not enough nights yet for \d+ more rows[\s\S]*caffeine at bed ≥ 30 mg — 5 more nights with it/.test(await pg.locator('.sl .sl-c').innerText()));
   check('a clear cell is opened to show every night behind it', await pg.locator('.sl .sl-open').count() === 1 && await pg.locator('.sl .sl-open circle').count() >= nN - 2);
   await cell('Trained that day', 'Deep').click();
   check('tapping another cell opens it', (await pg.locator('.sl .sl-open').getAttribute('data-factor')) === 'trained' && (await pg.locator('.sl .sl-open').getAttribute('data-outcome')) === 'deep');

@@ -4357,7 +4357,11 @@ both reads and the questions. Phases in that order; #152 RPE waits (owner).
      alert before feeling ill, explained, or unexplained; each logged illness caught or missed). The note now says the
      research's number: about 1 alert in 10 came before an infection. Tests: bodywatch (planted: 4 alerts — 2 ill, 1
      drinks, 1 unexplained; 3 illnesses, 2 caught), e2e bodywatch.
-   - **2 · Minimum-data gate on every link** — next.
+   - **2 · Minimum-data gate on every link** — done, smaller than it sounded: every engine already had its gate (5 with
+     and 5 without for the grids and the findings, 8 for early patterns, 21 days for links) — what was missing was
+     saying it. The grids' waiting rows now say what they need ("caffeine at bed — 5 more nights with it"), nearest
+     first; Insights' "Still checking" lists every open question (three shown, the rest folded) with a line on why the
+     minimum and that other things on the same days can still explain one that shows. e2e sleep updated.
    - **3 · Sleep debt, bedtime window, regularity, chronotype** — next.
    - **4 · Randomised-block experiments** — next.
    - **5 · HRV band, session RPE, soreness** — next.

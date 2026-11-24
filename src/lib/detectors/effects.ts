@@ -201,7 +201,8 @@ export function effectFindings(facts: DayFacts[], supplements: Supplement[]): Ef
     for (const r of open) if (!byQ.has(r.q.id) || r.need < byQ.get(r.q.id)!.need) byQ.set(r.q.id, r);
     // The shortcut first: a supplement you take every day can only be answered by skipping it a bit.
     const stuck = (r: Result) => r.q.id.startsWith("supp-") && r.nOff < r.nOn;
-    const pick = [...byQ.values()].sort((a, b) => Number(stuck(b)) - Number(stuck(a)) || a.need - b.need).slice(0, 3);
+    // every open question, the nearest first (PLAN 227: the page shows three and folds the rest — nothing waits unseen)
+    const pick = [...byQ.values()].sort((a, b) => Number(stuck(b)) - Number(stuck(a)) || a.need - b.need);
     for (const r of pick) {
       const few = Math.min(r.nOn, r.nOff), side = r.nOff < r.nOn ? 1 : 0;
       const days = (n: number, what: string) => `${n} more ${n === 1 ? what.replace(/^days|^evenings/, (w) => w.slice(0, -1)) : what}`;
